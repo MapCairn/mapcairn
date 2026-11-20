@@ -1558,11 +1558,242 @@ describe("hardening from the second review", () => {
   ])("treats a remote or outside target as outside: %s", (command) => {
     expect(bash(command).allow).toBe(false);
   });
+});
 
-  it("allows rsync and scp inside a worktree", () => {
-    const wt = ".claude/worktrees/review-12";
-    expect(bash(`rsync -a AGENTS.md ${wt}/copy.md`).allow).toBe(true);
-    expect(bash(`rsync -at AGENTS.md ${wt}/copy.md`).allow).toBe(true);
-    expect(bash(`scp AGENTS.md ${wt}/copy.md`).allow).toBe(true);
+describe("hardening of the write guard (#534)", () => {
+  const w = ".claude/worktrees/review-12";
+
+  describe("assignments that append or set an array element", () => {
+    it.each([
+      "NODE_OPTIONS+=--require=/x node a.js",
+      "PATH+=:/x git status",
+      "PATH[0]=/x git status",
+      "PATH[1]+=/x git status",
+      "GIT_DIR[0]=/x git status",
+      "export PATH+=:/x",
+      "declare -x NODE_OPTIONS+=--require=/x",
+      "env HOME+=/x git status",
+      "LESSKEYIN[0]=x git log",
+    ])("names the variable in %s", (command) => {
+      const decision = bash(command);
+      expect(decision.allow).toBe(false);
+      expect(decision.reason).toMatch(/the variable/);
+    });
+
+    it.each([
+      "LESSON+=1 echo hi",
+      "CI[0]=1 git status",
+      "grep 'PATH=' .github",
+      "grep 'PATH+=' .github",
+      "echo HOME=1",
+      "LESSON=1 echo hi",
+    ])("allows %s", (command) => {
+      expect(bash(command).allow).toBe(true);
+    });
+  });
+
+  describe("statements that start with a modifier", () => {
+    it.each([
+      "noglob PATH=/x git log",
+      "nocorrect HOME=/x git log",
+      "- PATH=/x git log",
+      "noglob nocorrect NODE_OPTIONS=--require=/x node a.js",
+      "FOO=1 noglob PATH=/x git log",
+    ])("reads the assignments after the modifier in %s", (command) => {
+      const decision = bash(command);
+      expect(decision.allow).toBe(false);
+      expect(decision.reason).toMatch(/the variable/);
+    });
+
+    it.each([
+      "coproc PATH=/x git log",
+      "coproc git status",
+      "coproc NAME { git status; }",
+    ])("refuses coproc: %s", (command) => {
+      const decision = bash(command);
+      expect(decision.allow).toBe(false);
+      expect(decision.reason).toMatch(/coproc/);
+    });
+
+    it("still runs the program that follows a modifier through its rules", () => {
+      expect(bash("noglob git push").allow).toBe(false);
+      expect(bash("noglob git status").allow).toBe(true);
+    });
+  });
+
+  describe("variables that load code or change where a program writes", () => {
+    it.each([
+      "LESSKEYIN=x git log",
+      "LESSKEYIN_SYSTEM=x git log",
+      "LESSKEY_CONTENT=x git log",
+      "LESSKEY_CONTENT_SYSTEM=x git log",
+      "LESSMETACHARS=x git log",
+      "LESSMETAESCAPE=x git log",
+      "LESSNOCONFIG=1 git log",
+      "LESSUTFCHARDEF=x git log",
+      "LESSBINFMT=x git log",
+      "LESSUTFBINFMT=x git log",
+      "LESSECHO=x git log",
+      "LESSCOLOR=x git log",
+      "NODE_PATH=/x node a.js",
+      "NPM_CONFIG_PREFIX=/x git log",
+      "npm_config_userconfig=/x git log",
+      "PYTHONSTARTUP=/x git log",
+      "PYTHONPATH=/x git log",
+      "PERL5OPT=-Mx git log",
+      "PERL5LIB=/x git log",
+      "RUBYOPT=-rx git log",
+      "RUBYLIB=/x git log",
+      "ZDOTDIR=/x git log",
+      "SHELLOPTS=xtrace git log",
+      "BASHOPTS=x git log",
+      "PROMPT_COMMAND=x git log",
+      "IFS=x git log",
+      "CDPATH=/x git log",
+      "PS4=x git log",
+      "make PATH=/x all",
+      "gmake NODE_OPTIONS=--require=/x all",
+    ])("refuses %s", (command) => {
+      const decision = bash(command);
+      expect(decision.allow).toBe(false);
+      expect(decision.reason).toMatch(/the variable/);
+    });
+
+    it.each([
+      "LESSON=1 echo hi",
+      "LESSONS=1 git log",
+      "NODE_ENV=test git status",
+      "NODE_PATHS=1 git status",
+      "PYTHONDONTWRITEBYTECODE=1 git status",
+      "make all",
+      "make -n all",
+      "grep -rn 'LESSKEYIN=' .",
+      "grep -rn 'NODE_PATH=' scripts",
+      "grep 'NPM_CONFIG_PREFIX=' .github",
+    ])("allows %s", (command) => {
+      expect(bash(command).allow).toBe(true);
+    });
+  });
+
+  describe("rsync and scp", () => {
+    it.each([
+      `rsync -e 'sh -c x' a ${w}/b`,
+      `rsync --rsh='sh -c x' a ${w}/b`,
+      `rsync --rsync-path='x' a ${w}/b`,
+      `rsync --log-file=/x a ${w}/b`,
+      `rsync --write-batch=/x a ${w}/b`,
+      `rsync --only-write-batch=/x a ${w}/b`,
+      `rsync --backup-dir=/x -b a ${w}/b`,
+      `rsync --partial-dir=/x a ${w}/b`,
+      `rsync --temp-dir=/x a ${w}/b`,
+      `rsync -a host:/etc/x ${w}/b`,
+      `rsync -a a ${w}/b`,
+      `scp -S /x a ${w}/b`,
+      `scp -o ProxyCommand=x a ${w}/b`,
+      `scp -F /x a ${w}/b`,
+      `scp -J host a ${w}/b`,
+      `scp host:/etc/x ${w}/b`,
+      `scp a ${w}/b`,
+      `cd ${w} && rsync -a a b`,
+    ])("refuses %s", (command) => {
+      const decision = bash(command);
+      expect(decision.allow).toBe(false);
+      expect(decision.reason).toMatch(/rsync|scp/);
+      expect(decision.reason).toMatch(/cannot read/);
+    });
+
+    it("refuses them behind a wrapper", () => {
+      expect(bash(`env FOO=1 rsync -a a ${w}/b`).allow).toBe(false);
+      expect(bash(`timeout 5 scp a ${w}/b`).allow).toBe(false);
+    });
+  });
+
+  describe("a shell started with -c", () => {
+    it.each([
+      "sh script.sh -c 'git push'",
+      "bash script.sh -c 'ls'",
+      "sh ./run.sh -c ls",
+      "sh -- -c 'git push'",
+      "sh -- script.sh -c 'git push'",
+      "sh -",
+    ])("does not take -c after the script for the command: %s", (command) => {
+      const decision = bash(command);
+      expect(decision.allow).toBe(false);
+      expect(decision.reason).toMatch(/without -c/);
+    });
+
+    it.each([
+      "bash -o xtrace -c 'git status'",
+      "bash +o xtrace -c 'git status'",
+      "bash -O extglob -c 'git status'",
+      "bash +O extglob -c 'git status'",
+      "bash -oc 'git status'",
+      "bash --rcfile /x -c 'git status'",
+      "bash --rcfile=/x -c 'git status'",
+      "bash --init-file /x -c 'git status'",
+      "bash --init-file=/x -c 'git status'",
+      "fish -C 'rm x' -c 'git status'",
+      "bash --unknown -c 'git status'",
+      "bash -euo pipefail -c 'git status'",
+    ])("refuses an option the guard cannot read: %s", (command) => {
+      const decision = bash(command);
+      expect(decision.allow).toBe(false);
+      expect(decision.reason).toMatch(/option/);
+    });
+
+    it.each([
+      "bash -i -c 'git status'",
+      "bash -ic 'git status'",
+      "bash -ci 'git status'",
+      "zsh -i -lc 'git status'",
+    ])("refuses -i with -c, which reads start-up files: %s", (command) => {
+      const decision = bash(command);
+      expect(decision.allow).toBe(false);
+      expect(decision.reason).toMatch(/interactive/);
+    });
+
+    it.each([
+      "sh -c 'git status'",
+      "bash -lc 'git status'",
+      "bash -ec 'git status'",
+      "bash -e -c 'git status'",
+      "bash -c -e 'git status'",
+      "bash --norc -c 'git status'",
+      "bash --noprofile --norc -c 'git status'",
+      "bash -c -- 'git status'",
+      "bash -c 'git status' name arg",
+      "sh -c 'git log | head -5'",
+    ])("allows %s", (command) => {
+      expect(bash(command).allow).toBe(true);
+    });
+
+    it("still reads the command it runs", () => {
+      expect(bash("bash --norc -c 'git push'").allow).toBe(false);
+      expect(bash("bash -e -c 'rm -rf packages'").allow).toBe(false);
+    });
+  });
+
+  describe("commands the reviewers use", () => {
+    it.each([
+      "gh pr diff 534",
+      "gh pr view 534 --json title",
+      "gh issue view 534",
+      "gh pr checks 534",
+      "git show HEAD",
+      "git show abc123:scripts/agents/guardCommands.mjs",
+      "git fetch origin main",
+      "git fetch origin pull/534/head",
+      "git diff origin/main...HEAD -- scripts",
+      "git log --oneline -n 5",
+      "grep -rn 'guardWrites' docs scripts",
+      "grep -rn 'PATH=' .github",
+      "rg -n 'LESS' scripts",
+      "node scripts/agents/thread.mjs issue 534",
+      "npx --no-install vitest run packages/core/src/lint/guardWrites.test.ts",
+      "ls -la scripts/agents | head",
+      "cat scripts/agents/guardCommands.mjs | wc -l",
+    ])("allows %s", (command) => {
+      expect(bash(command).allow).toBe(true);
+    });
   });
 });

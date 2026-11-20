@@ -12,7 +12,7 @@
  * under `.claude/worktrees/<name>/`. Everything else that writes to the
  * repository, to the remote or to GitHub is blocked. What the guard cannot
  * read it refuses: a program named by a variable, a glob or a brace list, a
- * wrapper with options, a shell without `-c`, and a command longer than
+ * wrapper with options, a shell without a leading `-c`, `rsync`, `scp`, and a command longer than
  * `MAX_COMMAND_LENGTH` or with more than `MAX_STATEMENTS` statements.
  */
 import { checkGh } from "./guardGh.mjs";
@@ -51,8 +51,15 @@ const MAX_SHELL_DEPTH = 4;
 /** Output a command may write to without touching a file. */
 const NULL_DEVICES = new Set(["/dev/" + "null", "/dev/stdout", "/dev/stderr"]);
 
-/** Words that start a statement without being the command. */
+/**
+ * Words that start a statement without being the command. `noglob`,
+ * `nocorrect` and `-` are zsh precommand modifiers that pass the rest of the
+ * statement through, so the words after them are read as the statement.
+ */
 const KEYWORDS = new Set([
+  "noglob",
+  "nocorrect",
+  "-",
   "if",
   "then",
   "else",
@@ -84,10 +91,7 @@ const WRITES_ALL = new Set([
 ]);
 
 /** Commands that write to the last path they are given, or to the `-t` folder. */
-const WRITES_LAST = new Set(["cp", "ln", "install", "rsync", "scp"]);
-
-/** Commands whose last word may be a `host:path` on another machine. */
-const REMOTE_TARGETS = new Set(["rsync", "scp"]);
+const WRITES_LAST = new Set(["cp", "ln", "install"]);
 
 /** Programs that run another command in a way the guard cannot read. */
 const UNREADABLE = [
@@ -120,16 +124,34 @@ const UNREADABLE = [
   "chrt",
   "unbuffer",
   "rlwrap",
+  "coproc",
+  "rsync",
+  "scp",
 ];
 
-/** Programs whose words are assignments to variables. */
+/**
+ * Programs whose words are assignments to variables: the shell builtins that
+ * set them, and `make`, which exports a variable given on its command line to
+ * every recipe it runs. Other programs may be given `PATH=` as an ordinary
+ * argument (`grep 'PATH=' .github`), so their words are not read as assignments.
+ */
 const ASSIGNERS = new Set([
   "export",
   "declare",
   "typeset",
   "local",
   "readonly",
+  "integer",
+  "float",
+  "make",
+  "gmake",
 ]);
+
+/**
+ * The start of an assignment: a name, an optional array index, an optional `+`
+ * for append, then `=`.
+ */
+const ASSIGNMENT = String.raw`(?:\[[^\]]*\])?\+?=`;
 
 /** Shells that run the text after `-c` as a command. */
 const SHELLS = [
@@ -146,12 +168,48 @@ const SHELLS = [
 ];
 
 /**
+ * What may follow `LESS` in the name of a variable that `less` reads (its
+ * manual lists them), as an alternation. `LESS` alone is risky too, and a name
+ * such as `LESSON` is not on the list.
+ */
+const LESS_NAMES = [
+  "OPEN",
+  "CLOSE",
+  "KEY",
+  "KEY_SYSTEM",
+  "KEY_CONTENT",
+  "KEY_CONTENT_SYSTEM",
+  "KEYIN",
+  "KEYIN_SYSTEM",
+  "CHARSET",
+  "CHARDEF",
+  "UTFCHARDEF",
+  "BINFMT",
+  "UTFBINFMT",
+  "EDIT",
+  "ECHO",
+  "COLOR",
+  "COLORING",
+  "HISTFILE",
+  "HISTSIZE",
+  "SECURE",
+  "ANSIENDCHARS",
+  "ANSIMIDCHARS",
+  "GLOBALTAGS",
+  "METACHARS",
+  "METAESCAPE",
+  "NOCONFIG",
+].join("|");
+
+/**
  * Variables that change what a command runs or which files it reads, so a
  * reviewer may not set them: git's, the home and config folders, the search
  * path, pagers and editors, and the loader and startup-file variables.
  */
-const RISKY_VARIABLE =
-  /^(GIT_\w*|HOME|XDG_\w*|PATH|PAGER|EDITOR|VISUAL|LESS(OPEN|CLOSE|KEY|KEY_SYSTEM|CHARSET|CHARDEF|EDIT|HISTFILE|HISTSIZE|SECURE|ANSIENDCHARS|ANSIMIDCHARS|GLOBALTAGS|COLORING)?|LD_\w*|DYLD_\w*|NODE_OPTIONS|BASH_ENV|ENV|SSH_\w*)=/i;
+const RISKY_VARIABLE = new RegExp(
+  `^(?:GIT_\\w*|HOME|XDG_\\w*|PATH|PAGER|EDITOR|VISUAL|LESS(?:${LESS_NAMES})?|LD_\\w*|DYLD_\\w*|NODE_OPTIONS|NODE_PATH|NPM_CONFIG_\\w*|PYTHON(?:STARTUP|PATH|HOME)|PERL5(?:OPT|LIB)|RUBY(?:OPT|LIB)|ZDOTDIR|SHELLOPTS|BASHOPTS|PROMPT_COMMAND|IFS|CDPATH|PS4|BASH_ENV|ENV|SSH_\\w*)${ASSIGNMENT}`,
+  "i",
+);
 
 /** Package-manager commands that add a package when given a name. */
 const INSTALLS_PACKAGES = new Set([
@@ -221,9 +279,6 @@ function checkPathWrites(program, targets, walk) {
   }
   for (const target of targets) {
     const place = resolvePath(target, walk.cwd, walk.context.platform, true);
-    if (isRemote(program, target)) {
-      return `${program} would copy to ${target}, on another machine`;
-    }
     if (canWrite(place, walk.context)) {
       continue;
     }
@@ -232,21 +287,6 @@ function checkPathWrites(program, targets, walk) {
       : `${program} would write to ${target}, which is not a plain path inside .claude/worktrees/<name>/`;
   }
   return undefined;
-}
-
-/**
- * Whether a target of `rsync` or `scp` is `host:path` or `user@host:path`.
- *
- * @param {string} program
- * @param {string} target
- * @returns {boolean}
- */
-function isRemote(program, target) {
-  return (
-    REMOTE_TARGETS.has(program) &&
-    /^[^/\\:]+:/.test(target) &&
-    !/^[a-zA-Z]:[\\/]/.test(target)
-  );
 }
 
 /**
@@ -321,9 +361,7 @@ function pathTargets(program, args) {
   if (!WRITES_LAST.has(program)) {
     return { targets: positional, sources: [], missing: false };
   }
-  const directory = REMOTE_TARGETS.has(program)
-    ? { found: false, folder: undefined }
-    : targetDirectory(args);
+  const directory = targetDirectory(args);
   if (directory.found) {
     const skip = directory.folder === undefined ? [] : [directory.folder];
     const sources = positional.filter((arg) => !skip.includes(arg));
@@ -473,9 +511,55 @@ function checkFind(args) {
     : undefined;
 }
 
+/** Short options of a shell that change nothing the guard has to read. */
+const PLAIN_SHELL_OPTIONS = /^-[abefhiklmnpuvxc]+$/;
+
+/** Long options of a shell that change nothing the guard has to read. */
+const PLAIN_LONG_SHELL_OPTIONS = /^--(norc|noprofile|posix|login|restricted)$/;
+
 /**
- * Decides on a shell: only one started with `-c` can be read, and its command
- * is read as one of ours, a level deeper.
+ * Reads the options at the front of a shell's words, up to the first operand
+ * (or `--`). Only these set the command: `-c` after the script runs the script.
+ *
+ * @param {string[]} args
+ * @returns {{ command: boolean, operand: number, reason?: string }}
+ */
+function readShellOptions(args) {
+  let command = false;
+  let interactive = false;
+  let index = 0;
+  for (; index < args.length; index += 1) {
+    const arg = args[index] ?? "";
+    if (arg === "--") {
+      index += 1;
+      break;
+    }
+    if (!/^[-+]./.test(arg)) {
+      break;
+    }
+    if (!PLAIN_SHELL_OPTIONS.test(arg) && !PLAIN_LONG_SHELL_OPTIONS.test(arg)) {
+      return {
+        command,
+        operand: index,
+        reason: `the shell option ${arg} can load a start-up file or run a command the guard cannot read`,
+      };
+    }
+    command ||= /^-[a-z]*c/.test(arg);
+    interactive ||= /^-[a-z]*i/.test(arg);
+  }
+  return interactive && command
+    ? {
+        command,
+        operand: index,
+        reason:
+          "an interactive shell with -c reads start-up files the guard cannot read",
+      }
+    : { command, operand: index };
+}
+
+/**
+ * Decides on a shell: only one started with `-c` among its leading options can
+ * be read, and its command is read as one of ours, a level deeper.
  *
  * @param {string} program
  * @param {string[]} args
@@ -483,12 +567,14 @@ function checkFind(args) {
  * @returns {string | undefined}
  */
 function checkShell(program, args, walk) {
-  const flag = args.findIndex((arg) => /^-[a-z]*c[a-z]*$/.test(arg));
-  const text = args.slice(flag + 1).find((arg) => !arg.startsWith("-"));
-  if (flag === -1) {
-    return `${program} without -c runs a script or reads commands the guard cannot see, so a reviewer may not use it`;
+  const { command, operand, reason } = readShellOptions(args);
+  if (reason !== undefined) {
+    return reason;
   }
-  return checkCommand(text ?? "", { ...walk, depth: walk.depth + 1 });
+  if (!command) {
+    return `${program} without -c among its leading options runs a script or reads commands the guard cannot see, so a reviewer may not use it`;
+  }
+  return checkCommand(args[operand] ?? "", { ...walk, depth: walk.depth + 1 });
 }
 
 /**
@@ -530,7 +616,7 @@ for (const program of ["npm", "pnpm", "yarn", "bun"]) {
  * @returns {boolean}
  */
 function isAssignment(word) {
-  return /^[A-Za-z_][A-Za-z0-9_]*=/.test(word);
+  return /^[A-Za-z_][A-Za-z0-9_]*(?:\[[^\]]*\])?\+?=/.test(word);
 }
 
 /**
