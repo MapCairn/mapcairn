@@ -80,6 +80,7 @@ describe("RELEASE_AGE_EXCLUSIONS", () => {
       "--min-release-age-exclude=@mapcairn/react",
       "--min-release-age-exclude=@mapcairn/theme",
       "--min-release-age-exclude=@mapcairn/map",
+      "--min-release-age-exclude=@mapcairn/adapter-maplibre",
       "--min-release-age-exclude=@mapcairn/sdk",
     ]);
   });
@@ -503,6 +504,7 @@ describe("provenanceReport", () => {
     "@mapcairn/react",
     "@mapcairn/theme",
     "@mapcairn/map",
+    "@mapcairn/adapter-maplibre",
     "@mapcairn/sdk",
   ];
   const answers = (provenance: boolean | null) =>

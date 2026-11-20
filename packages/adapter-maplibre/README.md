@@ -2,11 +2,23 @@
 
 The MapLibre GL JS adapter for MapCairn's `MapAdapter` port, and the styles that fit the engine into the map region. It is the one place in the SDK that imports a map engine: `@mapcairn/map` draws the interface and asks a `MapAdapter` for the map, and this package is the adapter that draws it with MapLibre. It builds on [`@mapcairn/core`](https://github.com/MapCairn/mapcairn/tree/main/packages/core) and [`@mapcairn/theme`](https://github.com/MapCairn/mapcairn/tree/main/packages/theme) only.
 
-**Status:** a release candidate, not published to npm yet. The package is private and is not in the release set, so there is nothing to install. It is built and tested in the repository now, and the reference host uses it. [Plan 0016](https://github.com/MapCairn/mapcairn/blob/main/docs/plans/0016-adapter-maplibre-package.md) describes how it will join the release. The API is still settling, so a breaking change can land before `0.1.0`; the [changelog](https://github.com/MapCairn/mapcairn/blob/main/CHANGELOG.md) lists each one.
+**Status:** a release candidate, for early adopters. It is released with the other SDK packages from `0.1.0-rc.3`, and the reference host uses it. [Plan 0016](https://github.com/MapCairn/mapcairn/blob/main/docs/plans/0016-adapter-maplibre-package.md) describes how it joined the release. The API is still settling, so a breaking change can land before `0.1.0`; the [changelog](https://github.com/MapCairn/mapcairn/blob/main/CHANGELOG.md) lists each one. Until `0.1.0`, add `@next` to the package name in the install commands below.
+
+If you install [`@mapcairn/sdk`](https://github.com/MapCairn/mapcairn/tree/main/packages/sdk), you have this package already: it re-exports it at `@mapcairn/sdk/adapter-maplibre`, and its root stays free of the map engine.
+
+## Install
+
+```bash
+npm install @mapcairn/adapter-maplibre@next maplibre-gl
+pnpm add @mapcairn/adapter-maplibre@next maplibre-gl
+yarn add @mapcairn/adapter-maplibre@next maplibre-gl
+```
+
+`maplibre-gl` is a peer dependency, so the app chooses the engine version (`^6.18.0`).
 
 ## Usage
 
-Once it is published, an app installs this package with `maplibre-gl`, which is a peer dependency, so the app chooses the engine version (`^6.18.0`). Import the engine styles once, and give the adapter the URL of the engine's worker:
+Import the engine styles once, and give the adapter the URL of the engine's worker:
 
 ```ts
 import "@mapcairn/adapter-maplibre/styles.css";

@@ -1,2 +1,3 @@
 @import "@mapcairn/theme/tokens.css";
 @import "@mapcairn/map/styles.css";
+@import "@mapcairn/adapter-maplibre/styles.css";

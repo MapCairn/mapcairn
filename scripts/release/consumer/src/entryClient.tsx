@@ -3,6 +3,7 @@
 import "./reset.css";
 import "@mapcairn/theme/tokens.css";
 import "@mapcairn/map/styles.css";
+import "@mapcairn/adapter-maplibre/styles.css";
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { App } from "./App.js";

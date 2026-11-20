@@ -95,7 +95,7 @@ const sdkDependencies = (range: string) => ({
   "@mapcairn/theme": range,
 });
 
-/** A repository shaped like this one: five SDK packages, a host and an example. */
+/** A repository shaped like this one: six SDK packages, a host and an example. */
 function repository(
   options: { versions?: Record<string, string>; changelog?: string } = {},
 ): string {
@@ -255,6 +255,7 @@ describe("workspaces", () => {
     expect(
       readWorkspaceManifests(root).map((entry: { file: string }) => entry.file),
     ).toEqual([
+      "packages/adapter-maplibre/package.json",
       "packages/core/package.json",
       "packages/map/package.json",
       "packages/react/package.json",
@@ -300,7 +301,7 @@ describe("workspaces", () => {
 });
 
 describe("applyRelease", () => {
-  it("sets the five versions and every internal range in all seven workspaces", () => {
+  it("sets the six versions and every internal range in all eight workspaces", () => {
     const root = repository();
     const { tools, calls } = fakeTools();
     const result = applyRelease({
@@ -315,6 +316,7 @@ describe("applyRelease", () => {
       dryRun: false,
     });
     expect(result.files).toEqual([
+      "packages/adapter-maplibre/package.json",
       "packages/core/package.json",
       "packages/map/package.json",
       "packages/react/package.json",
@@ -419,6 +421,7 @@ describe("applyRelease", () => {
   it("refuses a version that is not newer, an invalid one and an earlier prerelease", () => {
     const root = repository({
       versions: {
+        "adapter-maplibre": "0.2.0",
         core: "0.2.0",
         map: "0.2.0",
         react: "0.2.0",
@@ -440,7 +443,7 @@ describe("applyRelease", () => {
     ).toThrow(ReleaseError);
   });
 
-  it("refuses when the five versions differ", () => {
+  it("refuses when the six versions differ", () => {
     const root = repository({ versions: { theme: "0.0.1" } });
     expect(() =>
       applyRelease({
@@ -763,9 +766,17 @@ describe("applyRelease with the real npm", () => {
     );
     write(
       root,
+      "packages/adapter-maplibre/package.json",
+      manifest("@mapcairn/adapter-maplibre", "0.0.0", {
+        dependencies: { "@mapcairn/core": "0.0.0", "@mapcairn/theme": "0.0.0" },
+      }),
+    );
+    write(
+      root,
       "packages/sdk/package.json",
       manifest("@mapcairn/sdk", "0.0.0", {
         dependencies: {
+          "@mapcairn/adapter-maplibre": "0.0.0",
           "@mapcairn/core": "0.0.0",
           "@mapcairn/map": "0.0.0",
           "@mapcairn/react": "0.0.0",

@@ -7,7 +7,8 @@ import { describe, expect, it } from "vitest";
 
 /**
  * Keeps the umbrella package (`@mapcairn/sdk`) a set of re-exports that cannot
- * drift from the four packages it stands for. The checks read manifests,
+ * drift from the packages it stands for: the four at its root, and the MapLibre
+ * adapter at its `./adapter-maplibre` subpath only. The checks read manifests,
  * committed API reports and source text only; the runtime check is in
  * `packages/sdk/src/umbrella.test.ts`.
  */
@@ -18,6 +19,9 @@ const REPO = path.resolve(
 );
 const UMBRELLA = "packages/sdk";
 const PACKAGES = ["core", "map", "react", "theme"] as const;
+/** The package the umbrella carries at a subpath only, never at its root, so the root holds no map engine. */
+const ADAPTER = "adapter-maplibre";
+const SUBPATH_ONLY = [ADAPTER] as const;
 const SOURCE_CONDITION = "@mapcairn/source";
 
 interface Manifest {
@@ -46,21 +50,21 @@ function subpathOf(name: string, key: string): string {
   return key === "." ? `./${name}` : `./${name}/${key.slice(2)}`;
 }
 
-/** The file name the umbrella uses for a subpath: `./core/contracts` is `coreContracts`. */
+/** The file name the umbrella uses for a subpath: `./core/contracts` is `coreContracts`, `./adapter-maplibre` is `adapterMaplibre`. */
 function fileOf(subpath: string): string {
   return subpath
     .slice(2)
-    .split("/")
+    .split(/[/-]/)
     .map((part, index) =>
       index === 0 ? part : `${part[0]?.toUpperCase()}${part.slice(1)}`,
     )
     .join("");
 }
 
-/** What each of the four packages offers as a code entry point, by the umbrella's subpath. */
+/** What each of the five packages offers as a code entry point, by the umbrella's subpath. */
 function mirroredEntryPoints(): Map<string, string> {
   const wanted = new Map<string, string>();
-  for (const name of PACKAGES) {
+  for (const name of [...PACKAGES, ...SUBPATH_ONLY]) {
     for (const [key, target] of Object.entries(
       manifestAt(`packages/${name}`).exports,
     )) {
@@ -117,7 +121,7 @@ function collisions(): Map<string, string[]> {
  * list of names) and the package it comes from.
  */
 const REEXPORT =
-  /^export\s+(?:type\s+)?(\*|\{[^}]*\})\s+from\s+"@mapcairn\/(core|map|react|theme)(\/contracts)?"$/;
+  /^export\s+(?:type\s+)?(\*|\{[^}]*\})\s+from\s+"@mapcairn\/(core|map|react|theme|adapter-maplibre)(\/contracts)?"$/;
 
 /**
  * The statements of a source text, without comments. The project's own
@@ -177,10 +181,10 @@ describe("@mapcairn/sdk manifest", () => {
     }
   });
 
-  it("depends on the four packages at their exact version and on nothing else", () => {
+  it("depends on the four packages and the adapter at their exact version and on nothing else", () => {
     expect(manifest.dependencies).toEqual(
       Object.fromEntries(
-        PACKAGES.map((name) => [
+        [...PACKAGES, ...SUBPATH_ONLY].map((name) => [
           `@mapcairn/${name}`,
           manifestAt(`packages/${name}`).version,
         ]),
@@ -188,8 +192,11 @@ describe("@mapcairn/sdk manifest", () => {
     );
   });
 
-  it("takes React from the host and repeats core's optional vitest peer", () => {
+  it("takes React and the map engine from the host, at the adapter's range, and repeats core's optional vitest peer", () => {
     expect(manifest.peerDependencies).toEqual({
+      "maplibre-gl": manifestAt(`packages/${ADAPTER}`).peerDependencies?.[
+        "maplibre-gl"
+      ],
       react: "^19.0.0",
       "react-dom": "^19.0.0",
       vitest: manifestAt("packages/core").peerDependencies?.vitest,
@@ -220,7 +227,7 @@ describe("@mapcairn/sdk manifest", () => {
     expect(read(`${UMBRELLA}/LICENSE`)).toBe(read("LICENSE"));
   });
 
-  it("exports the root, one subpath for each code entry point of the four packages, and its stylesheet", () => {
+  it("exports the root, one subpath for each code entry point of the five packages, and its stylesheet", () => {
     expect(Object.keys(manifest.exports).sort()).toEqual(
       [".", "./styles.css", ...mirroredEntryPoints().keys()].sort(),
     );
@@ -266,7 +273,7 @@ describe("@mapcairn/sdk source", () => {
     );
   });
 
-  it("holds only re-exports of the four packages", () => {
+  it("holds only re-exports of the five packages", () => {
     for (const file of sourceFiles()) {
       expect(codeOfItsOwn(read(`${UMBRELLA}/src/${file}`)), file).toEqual([]);
     }
@@ -277,6 +284,16 @@ describe("@mapcairn/sdk source", () => {
       expect(
         statementsOf(read(`${UMBRELLA}/src/${fileOf(subpath)}.ts`)),
       ).toEqual([`export * from "${specifier}"`]);
+    }
+  });
+
+  it("leaves the adapter and the engine out of the root and every subpath but its own", () => {
+    for (const file of sourceFiles()) {
+      const text = read(`${UMBRELLA}/src/${file}`);
+      const mentions = /adapter-maplibre|maplibre-gl/.test(
+        statementsOf(text).join("\n"),
+      );
+      expect(mentions, file).toBe(file === "adapterMaplibre.ts");
     }
   });
 
@@ -306,9 +323,9 @@ describe("@mapcairn/sdk source", () => {
     expect(written.get("ReadingDirection")).toBe("@mapcairn/core");
   });
 
-  it("ships a two-line stylesheet that imports the tokens before the map's styles", () => {
+  it("ships a three-line stylesheet that imports the tokens, then the map's styles, then the engine's", () => {
     expect(read(`${UMBRELLA}/src/styles.css`)).toBe(
-      '@import "@mapcairn/theme/tokens.css";\n@import "@mapcairn/map/styles.css";\n',
+      '@import "@mapcairn/theme/tokens.css";\n@import "@mapcairn/map/styles.css";\n@import "@mapcairn/adapter-maplibre/styles.css";\n',
     );
   });
 });
@@ -326,6 +343,7 @@ describe("the checks themselves", () => {
     expect(codeOfItsOwn('export * from "lucide-react";\n')).toHaveLength(1);
     expect(codeOfItsOwn('export * from "./local";\n')).toHaveLength(1);
     expect(codeOfItsOwn('export * from "@mapcairn/web";\n')).toHaveLength(1);
+    expect(codeOfItsOwn('export * from "maplibre-gl";\n')).toHaveLength(1);
   });
 
   it("read the names, the renames and the kinds of export an API report holds", () => {

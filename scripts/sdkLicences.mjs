@@ -7,7 +7,7 @@
  *   node scripts/sdkLicences.mjs
  *   node scripts/sdkLicences.mjs --root <dir>   read a different checkout (the tests do)
  *
- * The SDK packages (`core`, `map`, `react`, `theme` and `sdk`) must not carry anything
+ * The SDK packages (every name in `scripts/sdkPackages.mjs`) must not carry anything
  * that needs a licence agreement of its own. This walks the production
  * dependencies of those packages, direct and transitive, through
  * `package-lock.json`, and fails when a package's licence is not on the
@@ -22,13 +22,19 @@
  *   (npm installs them, so they ship), followed down the whole tree, fail when
  *   the licence is not allowed. An optional dependency that the
  *   lockfile does not hold (it is for another platform) is skipped.
- * - `peerDependencies` and `devDependencies` of the SDK packages are listed and
+ * - `peerDependencies` and `devDependencies` of an SDK package are listed and
  *   never fail: a peer is the host's own choice, and a dev dependency is not
- *   shipped.
+ *   shipped. The exception is an SDK package that another SDK package depends
+ *   on (the MapLibre adapter, which the umbrella depends on): npm installs its
+ *   required peers for every app that installs the package that needs it, so
+ *   its required peers, and their trees, are judged like dependencies. Its
+ *   optional peers are still only listed.
  * - `packages/web` and `examples/embed` are not held to the rule. The host
  *   and the example may use other licences. The output says so.
  * - The SDK packages themselves are workspace links in the lockfile. They are
- *   followed but not judged, because their licence is the repository's.
+ *   followed but not judged, because their licence is the repository's. A link
+ *   from one SDK package to another is followed into the other's required
+ *   peers, as above.
  *
  * The allowlist file has two parts. `licences` is the permissive base list of
  * SPDX identifiers, each with a note. `packages` allows one package under a licence that is not
@@ -191,7 +197,8 @@ function licenceOf(entry) {
  * @typedef {object} LicenceReport
  * @property {number} checked Production packages whose licence was judged.
  * @property {Failure[]} failures
- * @property {Record<string, string[]>} peers Peer dependency names, by SDK package.
+ * @property {Record<string, string[]>} peers Peer dependency names that are not judged, by SDK package.
+ * @property {Record<string, string[]>} judgedPeers Required peer names that are judged because another SDK package depends on the package, by SDK package.
  * @property {Record<string, string[]>} dev Dev dependency names, by SDK package.
  */
 
@@ -213,6 +220,7 @@ export function checkSdkLicences({ lockfile, manifests, allowlist }) {
   /** @type {Failure[]} */
   const failures = [];
   const peers = {};
+  const judgedPeers = {};
   const dev = {};
   const seen = new Set();
   const absent = new Set();
@@ -226,9 +234,16 @@ export function checkSdkLicences({ lockfile, manifests, allowlist }) {
     const entry = packages[key];
     if (entry.link) {
       const target = packages[entry.resolved];
-      if (target !== undefined && !SDK_PACKAGE_PATHS.includes(entry.resolved)) {
-        walk(entry.resolved, target, requiredBy, true);
+      if (target === undefined) {
+        return;
       }
+      if (SDK_PACKAGE_PATHS.includes(entry.resolved)) {
+        const label = target.name ?? entry.resolved;
+        judgedPeers[label] = requiredPeers(target);
+        walk(entry.resolved, target, label, true);
+        return;
+      }
+      walk(entry.resolved, target, requiredBy, true);
       return;
     }
     const name =
@@ -250,6 +265,21 @@ export function checkSdkLicences({ lockfile, manifests, allowlist }) {
   };
 
   /**
+   * The peers npm installs for `source`: every peer that is not optional.
+   *
+   * @param {Record<string, any>} source
+   * @returns {string[]}
+   */
+  const requiredPeers = (source) => {
+    const optionalPeers = Object.entries(source.peerDependenciesMeta ?? {})
+      .filter(([, meta]) => meta?.optional)
+      .map(([name]) => name);
+    return Object.keys(source.peerDependencies ?? {}).filter(
+      (name) => !optionalPeers.includes(name),
+    );
+  };
+
+  /**
    * Visits what `source` needs. `followPeers` is false only for an SDK
    * package's own manifest, whose peers are the host's choice; for any other
    * package npm installs its required peers, so they ship and are judged.
@@ -259,14 +289,7 @@ export function checkSdkLicences({ lockfile, manifests, allowlist }) {
    */
   const walk = (from, source, requiredBy, followPeers) => {
     const optional = Object.keys(source.optionalDependencies ?? {});
-    const optionalPeers = Object.entries(source.peerDependenciesMeta ?? {})
-      .filter(([, meta]) => meta?.optional)
-      .map(([name]) => name);
-    const peerNames = followPeers
-      ? Object.keys(source.peerDependencies ?? {}).filter(
-          (name) => !optionalPeers.includes(name),
-        )
-      : [];
+    const peerNames = followPeers ? requiredPeers(source) : [];
     const names = [
       ...Object.keys(source.dependencies ?? {}),
       ...optional,
@@ -300,8 +323,14 @@ export function checkSdkLicences({ lockfile, manifests, allowlist }) {
     walk(path, manifest, label, false);
   }
 
+  for (const [label, judged] of Object.entries(judgedPeers)) {
+    peers[label] = (peers[label] ?? []).filter(
+      (name) => !judged.includes(name),
+    );
+  }
+
   const checked = [...seen].filter((key) => !packages[key].link).length;
-  return { checked, failures, peers, dev };
+  return { checked, failures, peers, judgedPeers, dev };
 }
 
 /**
@@ -329,6 +358,13 @@ export function reportLines(report) {
     if (names.length > 0) {
       lines.push(
         `sdk licences: ${label} peer dependencies, not checked: ${names.join(", ")}`,
+      );
+    }
+  }
+  for (const [label, names] of Object.entries(report.judgedPeers)) {
+    if (names.length > 0) {
+      lines.push(
+        `sdk licences: ${label} required peer dependencies, checked because another SDK package depends on it: ${names.join(", ")}`,
       );
     }
   }

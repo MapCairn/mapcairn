@@ -6,6 +6,7 @@
 // modules with different contexts, so the names would not be the same object
 // and the page would not render. Prints the markup and what it compared.
 
+import { createMapLibreMapAdapter as adapterOfPackage } from "@mapcairn/adapter-maplibre";
 import { createFakeServices as createFakeServicesOfCore } from "@mapcairn/core";
 import { MapChrome } from "@mapcairn/map";
 import {
@@ -15,6 +16,7 @@ import {
   TooltipProvider,
   MapChrome as UmbrellaMapChrome,
 } from "@mapcairn/sdk";
+import { createMapLibreMapAdapter as adapterOfUmbrella } from "@mapcairn/sdk/adapter-maplibre";
 import { createElement } from "react";
 import { renderToString } from "react-dom/server";
 
@@ -41,5 +43,6 @@ process.stdout.write(
     html,
     sameChrome: UmbrellaMapChrome === MapChrome,
     sameServices: createFakeServices === createFakeServicesOfCore,
+    sameAdapter: adapterOfUmbrella === adapterOfPackage,
   }),
 );

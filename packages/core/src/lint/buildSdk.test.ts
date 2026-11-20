@@ -56,8 +56,8 @@ describe("SDK_BUILD_ORDER", () => {
       "react",
       "theme",
       "map",
-      "sdk",
       "adapter-maplibre",
+      "sdk",
     ]);
   });
 });

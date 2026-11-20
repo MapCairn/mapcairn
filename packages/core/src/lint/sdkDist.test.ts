@@ -349,9 +349,9 @@ describe("@mapcairn/adapter-maplibre dist", () => {
 });
 
 describe("@mapcairn/sdk dist", () => {
-  it("ships a stylesheet that imports the tokens before the map's styles, and an empty declaration for it", () => {
+  it("ships a stylesheet that imports the tokens, then the map's styles, then the engine's, and an empty declaration for it", () => {
     expect(read("sdk", "styles.css")).toBe(
-      '@import "@mapcairn/theme/tokens.css";\n@import "@mapcairn/map/styles.css";\n',
+      '@import "@mapcairn/theme/tokens.css";\n@import "@mapcairn/map/styles.css";\n@import "@mapcairn/adapter-maplibre/styles.css";\n',
     );
     expect(read("sdk", "styles.css.d.ts").trim()).toBe("export {};");
   });
@@ -360,6 +360,18 @@ describe("@mapcairn/sdk dist", () => {
     for (const file of distFiles("sdk").filter((f) => f.endsWith(".js"))) {
       expect(read("sdk", file), file).not.toMatch(/\.css["']/);
     }
+  });
+
+  it("reaches the adapter and the engine from the adapter subpath only, so the root and the other subpaths carry no engine", () => {
+    const reachesAdapter = new Set(
+      distFiles("sdk")
+        .filter((f) => /\.(js|d\.ts)$/.test(f))
+        .filter((file) =>
+          /adapter-maplibre|maplibre-gl/.test(read("sdk", file)),
+        )
+        .map((file) => file.replace(/\.d\.ts$|\.js$/, "")),
+    );
+    expect([...reachesAdapter]).toEqual(["adapterMaplibre"]);
   });
 
   it("keeps every export a star re-export of its package, never a copy of its declarations", () => {

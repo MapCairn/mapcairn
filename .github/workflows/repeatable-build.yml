@@ -1,6 +1,6 @@
 name: Repeatable build
 
-# Builds the site and the four SDK packages twice from a clean state and
+# Builds the site and the SDK packages twice from a clean state and
 # compares every output file, the SDK `dist` folders and the packed tarballs.
 # It runs weekly and on request, not on pull requests, so a difference never
 # blocks a change; it fails the run so the difference is seen and fixed.
@@ -42,11 +42,11 @@ jobs:
       - name: Hash the first build
         run: |
           (cd packages/web/.cloudflare/output && find . -type f -print0 | sort -z | xargs -0 sha256sum) > "${RUNNER_TEMP}/first.sha256"
-          for package in core react theme map sdk; do
+          for package in core react theme map adapter-maplibre sdk; do
             find "packages/${package}/dist" -type f -print0 | sort -z | xargs -0 sha256sum >> "${RUNNER_TEMP}/first.sha256"
           done
           mkdir "${RUNNER_TEMP}/first-tarballs"
-          for package in core react theme map sdk; do
+          for package in core react theme map adapter-maplibre sdk; do
             npm pack --ignore-scripts --workspace "packages/${package}" --pack-destination "${RUNNER_TEMP}/first-tarballs"
           done
           (cd "${RUNNER_TEMP}/first-tarballs" && sha256sum -- *.tgz) >> "${RUNNER_TEMP}/first.sha256"
@@ -55,17 +55,17 @@ jobs:
         run: |
           # The SDK packages skip a build their stamp says is current, so their
           # `dist` folders go too, or this would compare a build with itself.
-          rm -rf packages/web/.cloudflare packages/core/dist packages/react/dist packages/theme/dist packages/map/dist packages/sdk/dist
+          rm -rf packages/web/.cloudflare packages/core/dist packages/react/dist packages/theme/dist packages/map/dist packages/adapter-maplibre/dist packages/sdk/dist
           npm run build -w @mapcairn/web
 
       - name: Hash the second build
         run: |
           (cd packages/web/.cloudflare/output && find . -type f -print0 | sort -z | xargs -0 sha256sum) > "${RUNNER_TEMP}/second.sha256"
-          for package in core react theme map sdk; do
+          for package in core react theme map adapter-maplibre sdk; do
             find "packages/${package}/dist" -type f -print0 | sort -z | xargs -0 sha256sum >> "${RUNNER_TEMP}/second.sha256"
           done
           mkdir "${RUNNER_TEMP}/second-tarballs"
-          for package in core react theme map sdk; do
+          for package in core react theme map adapter-maplibre sdk; do
             npm pack --ignore-scripts --workspace "packages/${package}" --pack-destination "${RUNNER_TEMP}/second-tarballs"
           done
           (cd "${RUNNER_TEMP}/second-tarballs" && sha256sum -- *.tgz) >> "${RUNNER_TEMP}/second.sha256"

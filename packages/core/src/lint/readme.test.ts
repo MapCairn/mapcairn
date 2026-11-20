@@ -81,6 +81,24 @@ describe("README.md", () => {
     ).toEqual([]);
   });
 
+  it("shows the real-map adapter from the umbrella's subpath after the example, as one short block", () => {
+    const real = fencedBlocks(README, "ts").find((block) =>
+      block.includes("@mapcairn/sdk/adapter-maplibre"),
+    );
+    expect(real).toBeDefined();
+    expect(README.indexOf(real ?? "")).toBeGreaterThan(README.indexOf(snippet));
+    expect(real).toContain("createMapLibreMapAdapter");
+    expect(real).toContain("loadWorkerUrl");
+    expect(
+      namedImports(real ?? "").every(
+        ({ specifier }) =>
+          specifier === "@mapcairn/sdk" ||
+          specifier === "@mapcairn/sdk/adapter-maplibre",
+      ),
+    ).toBe(true);
+    expect(README).toContain("`maplibre-gl` is a required peer");
+  });
+
   it("imports the stylesheets as examples/embed does, or the one that stands for both", () => {
     const stylesheets = [
       ...snippet.matchAll(/^import\s+"([^"]+\.css)";/gm),

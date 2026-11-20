@@ -123,6 +123,8 @@ Each step is one pull request. `Part of #538` unless another issue is named.
 
 ### rc.3 release checklist (the maintainer's steps)
 
+This list is for the umbrella alone. `rc.3` also adds the adapter package, so the checklist to follow is the one in `docs/plans/0016-adapter-maplibre-package.md` ("rc.3 checklist"), which replaces this one for the two new packages: six packages, the adapter uploaded first, the trusted publishers linked after the uploads.
+
 An agent lists these and waits. Values match `docs/guides/releasing.md` and maintainer steps 3 and 4 of `0014-sdk-release.md`.
 
 1. Merge the `rc.3` Release pull request with the squash subject the guide gives. The GitHub Release appears with five attested tarballs.

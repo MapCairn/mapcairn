@@ -138,7 +138,7 @@ jobs:
             exit 0
           fi
           changed="$(git diff --name-only "origin/$BASE_REF...HEAD")"
-          if grep -Eq '^(packages/(core|map|react|theme|sdk)/|scripts/(release/|buildPackage\.mjs|buildSdk\.mjs|entryPoint\.mjs)|package(-lock)?\.json|tsconfig\.base\.json|\.npmrc|\.github/workflows/ci\.yml)' <<<"$changed"; then
+          if grep -Eq '^(packages/(adapter-maplibre|core|map|react|theme|sdk)/|scripts/(release/|buildPackage\.mjs|buildSdk\.mjs|entryPoint\.mjs)|package(-lock)?\.json|tsconfig\.base\.json|\.npmrc|\.github/workflows/ci\.yml)' <<<"$changed"; then
             echo "run=true" >> "$GITHUB_OUTPUT"
           else
             echo "run=false" >> "$GITHUB_OUTPUT"

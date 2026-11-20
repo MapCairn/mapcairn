@@ -14,6 +14,9 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
   CHROME_LANDMARKS,
   consumerManifest,
+  ENGINE_FREE_BUILDS,
+  engineGraphProblems,
+  engineModules,
   LANDMARKS,
   LOCKED_TOOLS,
   layerProblems,
@@ -164,6 +167,16 @@ describe("umbrellaSource", () => {
     );
   });
 
+  it("sends the adapter to the umbrella's subpath, never to its root, and drops its stylesheet import", () => {
+    expect(
+      umbrellaSource(
+        'import "@mapcairn/adapter-maplibre/styles.css";\nimport { createMapLibreMapAdapter } from "@mapcairn/adapter-maplibre";',
+      ),
+    ).toBe(
+      'import { createMapLibreMapAdapter } from "@mapcairn/sdk/adapter-maplibre";',
+    );
+  });
+
   it("augments the umbrella where the app augmented core", () => {
     expect(umbrellaSource('declare module "@mapcairn/core" {')).toBe(
       'declare module "@mapcairn/sdk" {',
@@ -194,6 +207,17 @@ describe("umbrellaLeftovers", () => {
     ]);
   });
 
+  it("names an import of the adapter's own package, which the umbrella app must reach through the subpath", () => {
+    expect(
+      umbrellaLeftovers('import { x } from "@mapcairn/adapter-maplibre";'),
+    ).toEqual(["@mapcairn/adapter-maplibre"]);
+    expect(
+      umbrellaLeftovers(
+        umbrellaSource('import { x } from "@mapcairn/adapter-maplibre";'),
+      ),
+    ).toEqual([]);
+  });
+
   it("does not name the umbrella itself", () => {
     expect(
       umbrellaLeftovers('import { x } from "@mapcairn/sdk/core/contracts";'),
@@ -205,6 +229,10 @@ describe("what the check reads", () => {
   it("pins every tool to a locked version", () => {
     expect(LOCKED_TOOLS).toContain("vite");
     expect(LOCKED_TOOLS).toContain("typescript");
+  });
+
+  it("pins the map engine too, because the adapter's required peer must be in every app's manifest for a strict pnpm install", () => {
+    expect(LOCKED_TOOLS).toContain("maplibre-gl");
   });
 
   it("type-checks under bundler, node16 and nodenext, and not node10", () => {
@@ -412,5 +440,99 @@ describe("npmCliPath", () => {
     expect(() => npmCliPath({}, path.join(scratch, "node"))).toThrow(
       /Could not find npm/,
     );
+  });
+});
+
+describe("engineModules", () => {
+  it("names the engine and the adapter package wherever they sit in a path or a bare specifier", () => {
+    expect(
+      engineModules([
+        "/app/node_modules/maplibre-gl/dist/maplibre-gl.js",
+        "/app/node_modules/@mapcairn/adapter-maplibre/dist/index.js",
+        "maplibre-gl",
+        "C:\\app\\node_modules\\maplibre-gl\\dist\\x.js",
+      ]),
+    ).toHaveLength(4);
+  });
+
+  it("leaves other modules alone, including a name that only starts like the engine's and the adapter's own stylesheet", () => {
+    expect(
+      engineModules([
+        "/app/node_modules/@mapcairn/adapter-maplibre/dist/styles.css",
+        "/app/node_modules/@mapcairn/sdk/dist/index.js",
+        "/app/node_modules/@mapcairn/map/dist/index.js",
+        "/app/node_modules/maplibre-gl-extras/index.js",
+      ]),
+    ).toEqual([]);
+  });
+});
+
+describe("engineGraphProblems", () => {
+  const sdkCode = "/app/node_modules/@mapcairn/map/dist/index.js";
+  const engine = [
+    "/app/node_modules/@mapcairn/adapter-maplibre/dist/index.js",
+    "/app/node_modules/maplibre-gl/dist/maplibre-gl.js",
+  ];
+  const build = (name: string, ids: string[], files = ["index.js"]) => ({
+    name,
+    bytes: 1000,
+    files,
+    ids,
+  });
+  const passing = [
+    ...ENGINE_FREE_BUILDS.map((name: string) => build(name, [sdkCode])),
+    build("client via the subpath", [sdkCode, ...engine]),
+    build("worker via the subpath", [sdkCode, ...engine]),
+  ];
+
+  it("passes when the root's builds hold no engine and the subpath's builds do", () => {
+    expect(engineGraphProblems(passing)).toEqual([]);
+  });
+
+  it("names a root build that reaches the engine, or the adapter", () => {
+    const leaking = passing.map((entry) =>
+      entry.name === "worker" ? { ...entry, ids: [sdkCode, ...engine] } : entry,
+    );
+    const problems = engineGraphProblems(leaking);
+    expect(problems).toHaveLength(1);
+    expect(problems[0]).toContain("worker");
+    expect(problems[0]).toContain("maplibre-gl");
+  });
+
+  it("names a root build that emitted a file named for the engine", () => {
+    const leaking = passing.map((entry) =>
+      entry.name === "client"
+        ? { ...entry, files: ["index.js", "maplibre-gl-abc.js"] }
+        : entry,
+    );
+    expect(engineGraphProblems(leaking).join("\n")).toContain(
+      "maplibre-gl-abc.js",
+    );
+  });
+
+  it("fails a root build that never reached the SDK's code, so an empty graph is not a pass", () => {
+    const empty = passing.map((entry) =>
+      entry.name === "server" ? { ...entry, ids: [] } : entry,
+    );
+    expect(engineGraphProblems(empty).join("\n")).toMatch(
+      /server.*never reached the SDK's code/,
+    );
+  });
+
+  it("fails when the subpath build does not hold the engine, because the detector would then see nothing", () => {
+    const blind = passing.map((entry) =>
+      entry.name === "client via the subpath"
+        ? { ...entry, ids: [sdkCode] }
+        : entry,
+    );
+    expect(engineGraphProblems(blind).join("\n")).toContain(
+      "client via the subpath",
+    );
+  });
+
+  it("fails when a build is missing from the report", () => {
+    expect(
+      engineGraphProblems(passing.filter((entry) => entry.name !== "client")),
+    ).toEqual(expect.arrayContaining([expect.stringContaining("client")]));
   });
 });

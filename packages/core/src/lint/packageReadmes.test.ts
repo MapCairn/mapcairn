@@ -78,7 +78,10 @@ function codeBlocks(markdown: string): string[] {
  * map engine, so a README that shows one of these cannot be held to what the
  * example imports.
  */
-const NOT_USED_BY_THE_EXAMPLE = ["@mapcairn/adapter-maplibre"];
+const NOT_USED_BY_THE_EXAMPLE = [
+  "@mapcairn/adapter-maplibre",
+  "@mapcairn/sdk/adapter-maplibre",
+];
 
 describe.each(BUILT_SDK_PACKAGES)("the README of @mapcairn/%s", (name) => {
   const readme = readmeOf(name);
@@ -284,6 +287,13 @@ describe("the README of @mapcairn/sdk", () => {
       'import "@mapcairn/sdk/styles.css";',
       expect.stringMatching(/^import \{ .* \} from "@mapcairn\/sdk";$/),
     ]);
+  });
+
+  it("shows the adapter's import from its subpath, and names the engine as a required peer", () => {
+    expect(codeBlocks(readme).join("\n")).toContain(
+      'import { createMapLibreMapAdapter } from "@mapcairn/sdk/adapter-maplibre";',
+    );
+    expect(readme).toContain("`maplibre-gl` (`^6.18.0`) is a required peer");
   });
 });
 

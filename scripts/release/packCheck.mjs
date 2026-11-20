@@ -29,7 +29,7 @@ export const PACKAGES = SDK_PACKAGES;
 /**
  * The most a tarball may weigh, in bytes of the packed `.tgz`. Set at about
  * one and a half times what each measured on 2026-11-20 (core 692 kB, react
- * 18 kB, theme 56 kB after the contrast check landed, map 470 kB, sdk 15 kB), so a bundled dependency or a stray data
+ * 18 kB, theme 56 kB after the contrast check landed, map 470 kB, adapter-maplibre 112 kB, sdk 15 kB), so a bundled dependency or a stray data
  * file fails and ordinary growth does not. Raising one is a deliberate edit
  * in a pull request.
  *
@@ -40,6 +40,7 @@ export const SIZE_CEILINGS = {
   react: 30_000,
   theme: 80_000,
   map: 700_000,
+  "adapter-maplibre": 170_000,
   sdk: 25_000,
 };
 
@@ -196,6 +197,13 @@ export function metadataProblems(manifest) {
 const STYLES_MAP = /\.styles\.js\.map$/;
 
 /**
+ * A module compiled from a `*.css.ts` file that only has side effects (the
+ * adapter's engine styles) holds nothing but this comment, so the build writes
+ * no source map for it: there is nothing to map.
+ */
+const EMPTY_STYLES_MODULE = /^\s*\/\* empty css\s*\*\/\s*$/;
+
+/**
  * Scripts the build writes with no source map: the entry points (which only
  * re-export) are found through `exports`, and rolldown's helper module sits
  * under `dist/_virtual`.
@@ -280,6 +288,12 @@ function buildProblems({ paths, targets, readFile, sourceExists }) {
   for (const file of paths.filter((entry) => entry.startsWith("dist/"))) {
     if (file.endsWith(".js") && !present.has(`${file}.map`)) {
       if (named.has(file) || file.startsWith(UNMAPPED_SCRIPT_FOLDER)) {
+        continue;
+      }
+      if (
+        file.endsWith(".styles.js") &&
+        EMPTY_STYLES_MODULE.test(readFile(file) ?? "")
+      ) {
         continue;
       }
       problems.push(

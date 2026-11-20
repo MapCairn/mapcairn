@@ -1,7 +1,6 @@
 {
   "name": "@mapcairn/adapter-maplibre",
   "version": "0.1.0-rc.2",
-  "private": true,
   "description": "The MapLibre GL JS map adapter for MapCairn, and the styles that fit the engine into the map region",
   "license": "AGPL-3.0-only",
   "repository": {
