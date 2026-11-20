@@ -399,6 +399,35 @@ function readIfPresent(file) {
 }
 
 /**
+ * Packs every SDK package as a dry run and checks each one.
+ *
+ * @param {string} [root] The repository root.
+ * @returns {Array<{ name: string, files: number, size: number, unpackedSize: number, problems: string[] }>} One entry for each package, in release order; `name` is the package name.
+ */
+export function packResults(root = REPO) {
+  return PACKAGES.map((folderName) => {
+    const folder = path.join(root, "packages", folderName);
+    const manifest = JSON.parse(
+      readFileSync(path.join(folder, "package.json"), "utf8"),
+    );
+    const listing = listPackage(folder);
+    return {
+      name: String(manifest.name),
+      files: listing.files.length,
+      size: listing.size,
+      unpackedSize: listing.unpackedSize,
+      problems: checkPackage({
+        manifest,
+        listing,
+        ceiling: SIZE_CEILINGS[folderName] ?? 0,
+        readFile: (file) => readIfPresent(path.join(folder, file)),
+        sourceExists: (source) => existsSync(path.join(folder, source)),
+      }),
+    };
+  });
+}
+
+/**
  * Checks every SDK package and prints one line for each.
  *
  * @param {string} [root] The repository root.
@@ -406,27 +435,15 @@ function readIfPresent(file) {
  */
 export function runPackCheck(root = REPO) {
   let passed = true;
-  for (const name of PACKAGES) {
-    const folder = path.join(root, "packages", name);
-    const manifest = JSON.parse(
-      readFileSync(path.join(folder, "package.json"), "utf8"),
-    );
-    const listing = listPackage(folder);
-    const problems = checkPackage({
-      manifest,
-      listing,
-      ceiling: SIZE_CEILINGS[name] ?? 0,
-      readFile: (file) => readIfPresent(path.join(folder, file)),
-      sourceExists: (source) => existsSync(path.join(folder, source)),
-    });
-    const summary = `${manifest.name}: ${listing.files.length} files, ${listing.size} bytes packed, ${listing.unpackedSize} unpacked`;
-    if (problems.length === 0) {
+  for (const result of packResults(root)) {
+    const summary = `${result.name}: ${result.files} files, ${result.size} bytes packed, ${result.unpackedSize} unpacked`;
+    if (result.problems.length === 0) {
       console.log(`ok   ${summary}`);
       continue;
     }
     passed = false;
     console.error(`FAIL ${summary}`);
-    for (const problem of problems) {
+    for (const problem of result.problems) {
       console.error(`       ${problem}`);
     }
   }

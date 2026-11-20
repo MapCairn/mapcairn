@@ -1,0 +1,246 @@
+name: Release
+
+# Releases the four SDK packages (plan 0014, docs/guides/releasing.md). One
+# workflow, three jobs, and one environment (`npm`). npm's trusted-publisher
+# record names this file and that environment, so neither is renamed without
+# updating the record.
+#
+# A release starts only from a maintainer's action: merging a Release pull
+# request (title `chore(release): v<version>`, label `release`), approving the
+# staged packages on npmjs.com, or starting this workflow by hand. No other
+# merge to main tags, releases or publishes anything.
+#
+# Inputs and pull request text reach scripts through `env`, never through an
+# expression in a shell line, and `scripts/release/verifyRelease.mjs` checks
+# the version input against a pattern before anything else uses it.
+on:
+  push:
+    branches: [main]
+    paths:
+      - CHANGELOG.md
+  workflow_dispatch:
+    inputs:
+      version:
+        description: The version to rehearse or publish, such as 0.1.0 or 0.1.0-rc.1 (no leading v)
+        required: true
+        type: string
+      mode:
+        description: >-
+          rehearse runs the checks and a dry run of the staging, and tags and
+          releases nothing. publish-existing stages the tarballs of a GitHub
+          Release that is already tagged (maintainer only).
+        required: true
+        type: choice
+        default: rehearse
+        options:
+          - rehearse
+          - publish-existing
+
+permissions: {}
+
+# One release of a version at a time, and never cancel one that has started: a
+# half-finished release is worse than a waiting one.
+concurrency:
+  group: release-${{ inputs.version || github.sha }}
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    name: verify
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read # check out the repository
+      pull-requests: read # read the merged Release pull request and its label
+      attestations: read # verify the attestations of an existing release's tarballs
+    outputs:
+      release: ${{ steps.decide.outputs.release }}
+      version: ${{ steps.decide.outputs.version }}
+      prerelease: ${{ steps.decide.outputs.prerelease }}
+      on-npm: ${{ steps.decide.outputs.on-npm }}
+      private: ${{ steps.decide.outputs.private }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # The notes check reads the history, and the tag check reads the tags.
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version-file: .node-version
+          # No cache in a release build.
+          package-manager-cache: false
+
+      - name: Decide whether there is something to release
+        id: decide
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          MODE: ${{ inputs.mode }}
+          VERSION_INPUT: ${{ inputs.version }}
+          GH_TOKEN: ${{ github.token }}
+        run: node scripts/release/verifyRelease.mjs decide
+
+      - name: Download the release's tarballs
+        if: github.event_name == 'workflow_dispatch' && inputs.mode == 'publish-existing'
+        env:
+          VERSION: ${{ steps.decide.outputs.version }}
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: gh release download "v$VERSION" --repo MapCairn/mapcairn --pattern '*.tgz' --dir release
+      - name: Verify the attestation of each tarball and the version it holds
+        if: github.event_name == 'workflow_dispatch' && inputs.mode == 'publish-existing'
+        env:
+          VERSION: ${{ steps.decide.outputs.version }}
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          for tarball in release/*.tgz; do
+            gh attestation verify "$tarball" --repo MapCairn/mapcairn --signer-workflow MapCairn/mapcairn/.github/workflows/release.yml
+          done
+          node scripts/release/verifyRelease.mjs tarballs "$VERSION" release
+
+      - name: Install the dependencies
+        if: steps.decide.outputs.release == 'true' && inputs.mode != 'publish-existing'
+        run: npm ci --ignore-scripts
+      - name: Check what each tarball would hold
+        if: steps.decide.outputs.release == 'true' && inputs.mode != 'publish-existing'
+        run: npm run pack:check
+      - name: Check the release notes
+        if: steps.decide.outputs.release == 'true' && inputs.mode != 'publish-existing'
+        run: npm run release:notes-check
+      - name: Install the tarballs in an app outside the repository and render the chrome
+        if: steps.decide.outputs.release == 'true' && inputs.mode != 'publish-existing'
+        run: npm run consumer:check
+      - name: Pack the four tarballs
+        if: steps.decide.outputs.release == 'true' && inputs.mode != 'publish-existing'
+        env:
+          VERSION: ${{ steps.decide.outputs.version }}
+        shell: bash
+        run: |
+          mkdir release
+          npm pack --ignore-scripts --pack-destination release --workspace packages/core --workspace packages/react --workspace packages/theme --workspace packages/map
+          node scripts/release/verifyRelease.mjs tarballs "$VERSION" release
+      - name: Write the release notes
+        if: github.event_name == 'push' && steps.decide.outputs.release == 'true'
+        env:
+          VERSION: ${{ steps.decide.outputs.version }}
+        shell: bash
+        run: node scripts/release/notes.mjs "$VERSION" > release/notes.md
+
+      - name: Keep the tarballs and the notes for the later jobs
+        if: steps.decide.outputs.release == 'true'
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: release-files
+          path: release/
+          if-no-files-found: error
+          retention-days: 14
+
+  github-release:
+    name: github-release
+    needs: verify
+    if: >-
+      github.ref == 'refs/heads/main'
+      && github.event_name == 'push'
+      && needs.verify.outputs.release == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write # create the tag and the GitHub Release
+      id-token: write # sign the attestations of the tarballs
+      attestations: write # store the attestations
+    steps:
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: release-files
+          path: release
+      - name: Attest the tarballs
+        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        with:
+          subject-path: release/*.tgz
+      - name: Create the tag and the GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          VERSION: ${{ needs.verify.outputs.version }}
+          PRERELEASE: ${{ needs.verify.outputs.prerelease }}
+          TARGET: ${{ github.sha }}
+        shell: bash
+        run: |
+          flags=()
+          if [ "$PRERELEASE" = "true" ]; then
+            flags+=(--prerelease)
+          fi
+          gh release create "v$VERSION" release/*.tgz --target "$TARGET" --title "v$VERSION" --notes-file release/notes.md "${flags[@]}"
+
+  npm:
+    name: npm
+    needs: [verify, github-release]
+    # A job whose needs include a skipped job is skipped too, unless the
+    # condition says otherwise: here a skipped github-release is fine, since a
+    # rehearsal and a publish-existing run never create a release.
+    if: >-
+      !cancelled() && github.ref == 'refs/heads/main'
+      && needs.verify.result == 'success' && needs.verify.outputs.release == 'true'
+      && contains(fromJSON('["success","skipped"]'), needs.github-release.result)
+      && (needs.verify.outputs.on-npm == 'true' || inputs.mode == 'rehearse')
+    environment: npm
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      id-token: write # trusted publishing: npm exchanges this run's OIDC token for a short-lived credential, so no secret is stored
+      contents: read # check out the repository
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version-file: .node-version
+          package-manager-cache: false
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: release-files
+          path: release
+
+      - name: Use an npm that can stage packages
+        shell: bash
+        # The version installed is the one the repository's packageManager field pins.
+        run: | # zizmor: ignore[adhoc-packages]
+          required=11.15.0
+          current="$(npm --version)"
+          if [ "$(printf '%s\n%s\n' "$required" "$current" | sort -V | head -n 1)" != "$required" ]; then
+            wanted="$(node -p "require('./package.json').packageManager.replace('npm@', '')")"
+            npm install --global "npm@$wanted"
+          fi
+          npm --version
+
+      - name: Say why nothing is staged while the packages are private
+        if: needs.verify.outputs.private == 'true'
+        run: echo "::notice::An SDK manifest still sets private, so npm would skip it. Nothing is staged; the rc.1 Release pull request removes private."
+      - name: Stage the packages
+        if: needs.verify.outputs.private != 'true'
+        env:
+          VERSION: ${{ needs.verify.outputs.version }}
+          PRERELEASE: ${{ needs.verify.outputs.prerelease }}
+          MODE: ${{ inputs.mode }}
+        shell: bash
+        run: |
+          tag=latest
+          if [ "$PRERELEASE" = "true" ]; then
+            tag=next
+          fi
+          flags=()
+          if [ "$MODE" = "rehearse" ]; then
+            flags+=(--dry-run)
+          fi
+          for name in core react theme map; do
+            found="$(npm view "@mapcairn/$name@$VERSION" version 2>/dev/null || true)"
+            if [ "$found" = "$VERSION" ]; then
+              echo "@mapcairn/$name@$VERSION is already on npm, so it is skipped."
+              continue
+            fi
+            npm stage publish "release/mapcairn-$name-$VERSION.tgz" --tag "$tag" "${flags[@]}"
+          done

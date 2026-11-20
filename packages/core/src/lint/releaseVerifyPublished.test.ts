@@ -1,0 +1,113 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright MapCairn contributors
+import { describe, expect, it } from "vitest";
+import {
+  publishedManifest,
+  RELEASE_AGE_EXCLUSIONS,
+  // @ts-expect-error The scripts are dependency-free JavaScript with JSDoc types.
+} from "../../../../scripts/release/consumerCheck.mjs";
+import {
+  auditProblems,
+  parsePublishedArguments,
+  // @ts-expect-error The scripts are dependency-free JavaScript with JSDoc types.
+} from "../../../../scripts/release/verifyPublished.mjs";
+
+const LOCKED = {
+  react: "19.2.0",
+  "react-dom": "19.2.0",
+  vite: "8.0.0",
+  typescript: "7.0.2",
+  "@types/react": "19.2.0",
+  "@types/react-dom": "19.2.0",
+};
+
+describe("publishedManifest", () => {
+  const manifest = publishedManifest({
+    version: "0.1.0-rc.2",
+    versions: LOCKED,
+  });
+
+  it("asks the registry for the exact published version of each SDK package", () => {
+    expect(manifest.dependencies).toMatchObject({
+      "@mapcairn/core": "0.1.0-rc.2",
+      "@mapcairn/map": "0.1.0-rc.2",
+      "@mapcairn/react": "0.1.0-rc.2",
+      "@mapcairn/theme": "0.1.0-rc.2",
+      react: "19.2.0",
+    });
+  });
+
+  it("points at no tarball and overrides nothing, so the registry copy is what is installed", () => {
+    expect(JSON.stringify(manifest)).not.toContain("file:");
+    expect(manifest.overrides).toBeUndefined();
+  });
+
+  it("keeps the locked third-party tools", () => {
+    expect(manifest.devDependencies).toMatchObject({
+      typescript: "7.0.2",
+      vite: "8.0.0",
+      "@types/react": "19.2.0",
+    });
+  });
+});
+
+describe("RELEASE_AGE_EXCLUSIONS", () => {
+  it("exempts the four SDK packages from the minimum release age and nothing else", () => {
+    expect(RELEASE_AGE_EXCLUSIONS).toEqual([
+      "--min-release-age-exclude=@mapcairn/core",
+      "--min-release-age-exclude=@mapcairn/react",
+      "--min-release-age-exclude=@mapcairn/theme",
+      "--min-release-age-exclude=@mapcairn/map",
+    ]);
+  });
+});
+
+describe("parsePublishedArguments", () => {
+  it("takes one version", () => {
+    expect(parsePublishedArguments(["0.1.0"])).toEqual({ version: "0.1.0" });
+    expect(parsePublishedArguments(["0.1.0-rc.2"])).toEqual({
+      version: "0.1.0-rc.2",
+    });
+  });
+
+  it.each([
+    [[]],
+    [["v0.1.0"]],
+    [["0.1.0", "extra"]],
+    [["--version=0.1.0"]],
+    [["0.1"]],
+  ])("refuses %j", (argv) => {
+    expect(() => parsePublishedArguments(argv)).toThrow(/Usage/);
+  });
+});
+
+describe("auditProblems", () => {
+  it("passes a clean audit that verified signatures", () => {
+    expect(
+      auditProblems({
+        status: 0,
+        stdout:
+          "audited 190 packages in 2s\n\n190 packages have verified registry signatures\n\n4 packages have verified attestations\n",
+        stderr: "",
+      }),
+    ).toEqual([]);
+  });
+
+  it("fails when the audit fails", () => {
+    expect(
+      auditProblems({
+        status: 1,
+        stdout: "1 package has an invalid registry signature",
+        stderr: "",
+      }),
+    ).toEqual([
+      "npm audit signatures failed:\n1 package has an invalid registry signature",
+    ]);
+  });
+
+  it("fails when no registry signature was verified, so an empty audit cannot pass", () => {
+    expect(
+      auditProblems({ status: 0, stdout: "audited 0 packages\n", stderr: "" }),
+    ).toEqual(["npm audit signatures verified no registry signatures"]);
+  });
+});

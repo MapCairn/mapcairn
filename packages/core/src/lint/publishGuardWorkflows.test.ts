@@ -256,6 +256,18 @@ describe("release.yml", () => {
     expect(npmJobProblems(readFileSync(file, "utf8"))).toEqual([]);
   });
 
+  it("stages the release's own tarballs in the npm job, with a dry run for a rehearsal and the next tag for a prerelease", () => {
+    const job = npmJobLines(readFileSync(file, "utf8")).join("\n");
+    expect(job).toContain(
+      'npm stage publish "release/mapcairn-$name-$VERSION.tgz"',
+    );
+    expect(job).toContain("--dry-run");
+    expect(job).toMatch(/PRERELEASE" = "true" \]; then\n\s+tag=next/);
+    expect(job).toMatch(
+      /MODE" = "rehearse" \]; then\n\s+flags\+=\(--dry-run\)/,
+    );
+  });
+
   it("accepts the plan's job, with a condition folded over several lines or on one", () => {
     expect(npmJobProblems(PLAN_NPM_JOB)).toEqual([]);
     const oneLine = PLAN_NPM_JOB.replace(
