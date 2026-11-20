@@ -1,0 +1,221 @@
+# Commands an agent never runs: publishing to npm and changing who may publish.
+# See docs/guides/working-with-agents.md and "Keeping agents from publishing"
+# in docs/plans/0014-sdk-release.md. Codex loads this file only when it trusts
+# this folder, and matches the start of a command, so a flag before the
+# command, a wrapper script or another spelling is not covered.
+
+prefix_rule(
+    pattern = ["npm", ["publish","stage","login","adduser","add-user","trust","dist-tag","dist-tags","unpublish","deprecate","access","owner","author","token","team","profile","org","ogr","undeprecate"]],
+    decision = "forbidden",
+    justification = "Agents never publish to npm or change who may publish. The maintainer runs these commands.",
+    match = [
+        "npm publish",
+    ],
+    not_match = [
+        "npm pack --dry-run",
+    ],
+)
+
+prefix_rule(
+    pattern = ["npx", "npm", ["publish","stage","login","adduser","add-user","trust","dist-tag","dist-tags","unpublish","deprecate","access","owner","author","token","team","profile","org","ogr","undeprecate"]],
+    decision = "forbidden",
+    justification = "Agents never publish to npm or change who may publish. The maintainer runs these commands.",
+    match = [
+        "npx npm publish",
+    ],
+    not_match = [
+        "npx npm pack --dry-run",
+    ],
+)
+
+prefix_rule(
+    pattern = ["npx", "-y", "npm", ["publish","stage","login","adduser","add-user","trust","dist-tag","dist-tags","unpublish","deprecate","access","owner","author","token","team","profile","org","ogr","undeprecate"]],
+    decision = "forbidden",
+    justification = "Agents never publish to npm or change who may publish. The maintainer runs these commands.",
+    match = [
+        "npx -y npm publish",
+    ],
+    not_match = [
+        "npx -y npm pack --dry-run",
+    ],
+)
+
+prefix_rule(
+    pattern = ["npx", "--yes", "npm", ["publish","stage","login","adduser","add-user","trust","dist-tag","dist-tags","unpublish","deprecate","access","owner","author","token","team","profile","org","ogr","undeprecate"]],
+    decision = "forbidden",
+    justification = "Agents never publish to npm or change who may publish. The maintainer runs these commands.",
+    match = [
+        "npx --yes npm publish",
+    ],
+    not_match = [
+        "npx --yes npm pack --dry-run",
+    ],
+)
+
+prefix_rule(
+    pattern = ["corepack", "npm", ["publish","stage","login","adduser","add-user","trust","dist-tag","dist-tags","unpublish","deprecate","access","owner","author","token","team","profile","org","ogr","undeprecate"]],
+    decision = "forbidden",
+    justification = "Agents never publish to npm or change who may publish. The maintainer runs these commands.",
+    match = [
+        "corepack npm publish",
+    ],
+    not_match = [
+        "corepack npm pack --dry-run",
+    ],
+)
+
+prefix_rule(
+    pattern = ["pnpm", "publish"],
+    decision = "forbidden",
+    justification = "Agents never publish to npm or change who may publish. The maintainer runs these commands.",
+    match = [
+        "pnpm publish",
+    ],
+    not_match = [
+        "pnpm install",
+    ],
+)
+
+prefix_rule(
+    pattern = ["yarn", "publish"],
+    decision = "forbidden",
+    justification = "Agents never publish to npm or change who may publish. The maintainer runs these commands.",
+    match = [
+        "yarn publish",
+    ],
+    not_match = [
+        "yarn install",
+    ],
+)
+
+prefix_rule(
+    pattern = ["yarn", "npm", "publish"],
+    decision = "forbidden",
+    justification = "Agents never publish to npm or change who may publish. The maintainer runs these commands.",
+    match = [
+        "yarn npm publish",
+    ],
+    not_match = [
+        "yarn install",
+    ],
+)
+
+prefix_rule(
+    pattern = ["bun", "publish"],
+    decision = "forbidden",
+    justification = "Agents never publish to npm or change who may publish. The maintainer runs these commands.",
+    match = [
+        "bun publish",
+    ],
+    not_match = [
+        "bun install",
+    ],
+)
+
+prefix_rule(
+    pattern = ["npx", ["npm@latest","npm@next","npm@11"], ["publish","stage","login","adduser","add-user","trust","dist-tag","dist-tags","unpublish","deprecate","access","owner","author","token","team","profile","org","ogr","undeprecate"]],
+    decision = "forbidden",
+    justification = "Agents never publish to npm or change who may publish. The maintainer runs these commands.",
+    match = [
+        "npx npm@latest publish",
+    ],
+    not_match = [
+        "npx npm@latest pack --dry-run",
+    ],
+)
+
+prefix_rule(
+    pattern = ["npx", ["-y","--yes"], ["npm@latest","npm@next","npm@11"], ["publish","stage","login","adduser","add-user","trust","dist-tag","dist-tags","unpublish","deprecate","access","owner","author","token","team","profile","org","ogr","undeprecate"]],
+    decision = "forbidden",
+    justification = "Agents never publish to npm or change who may publish. The maintainer runs these commands.",
+    match = [
+        "npx -y npm@latest publish",
+    ],
+    not_match = [
+        "npx -y npm@latest pack --dry-run",
+    ],
+)
+
+prefix_rule(
+    pattern = ["bunx", ["npm","npm@latest","npm@next","npm@11"], ["publish","stage","login","adduser","add-user","trust","dist-tag","dist-tags","unpublish","deprecate","access","owner","author","token","team","profile","org","ogr","undeprecate"]],
+    decision = "forbidden",
+    justification = "Agents never publish to npm or change who may publish. The maintainer runs these commands.",
+    match = [
+        "bunx npm publish",
+    ],
+    not_match = [
+        "bunx vitest run",
+    ],
+)
+
+prefix_rule(
+    pattern = ["corepack", "npm", ["publish","stage","login","adduser","add-user","trust","dist-tag","dist-tags","unpublish","deprecate","access","owner","author","token","team","profile","org","ogr","undeprecate"]],
+    decision = "forbidden",
+    justification = "Agents never publish to npm or change who may publish. The maintainer runs these commands.",
+    match = [
+        "corepack npm publish",
+    ],
+    not_match = [
+        "corepack enable",
+    ],
+)
+
+prefix_rule(
+    pattern = ["corepack", ["pnpm","yarn"], "publish"],
+    decision = "forbidden",
+    justification = "Agents never publish to npm or change who may publish. The maintainer runs these commands.",
+    match = [
+        "corepack pnpm publish",
+    ],
+    not_match = [
+        "corepack use pnpm@10",
+    ],
+)
+
+prefix_rule(
+    pattern = ["corepack", "yarn", "npm", "publish"],
+    decision = "forbidden",
+    justification = "Agents never publish to npm or change who may publish. The maintainer runs these commands.",
+    match = [
+        "corepack yarn npm publish",
+    ],
+    not_match = [
+        "corepack yarn install",
+    ],
+)
+
+prefix_rule(
+    pattern = ["pnpm", ["-r","--recursive"], "publish"],
+    decision = "forbidden",
+    justification = "Agents never publish to npm or change who may publish. The maintainer runs these commands.",
+    match = [
+        "pnpm -r publish",
+    ],
+    not_match = [
+        "pnpm -r build",
+    ],
+)
+
+prefix_rule(
+    pattern = ["pnpm", ["dlx","exec"], "npm", "publish"],
+    decision = "forbidden",
+    justification = "Agents never publish to npm or change who may publish. The maintainer runs these commands.",
+    match = [
+        "pnpm dlx npm publish",
+    ],
+    not_match = [
+        "pnpm exec vitest run",
+    ],
+)
+
+prefix_rule(
+    pattern = ["yarn", "dlx", "npm", "publish"],
+    decision = "forbidden",
+    justification = "Agents never publish to npm or change who may publish. The maintainer runs these commands.",
+    match = [
+        "yarn dlx npm publish",
+    ],
+    not_match = [
+        "yarn dlx vitest run",
+    ],
+)

@@ -19,6 +19,8 @@ pre-commit:
       run: npm run portability:check
     release-notes:
       run: npm run release:notes-check
+    publish-guard:
+      run: npm run publish:guard
 
 commit-msg:
   commands:
