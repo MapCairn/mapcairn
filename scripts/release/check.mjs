@@ -43,6 +43,9 @@ const ROOT = path.resolve(
 export const UNRELEASED_VERSION = "0.0.0";
 
 const GUIDE = "docs/guides/releasing.md";
+
+/** The predicate type of the SLSA provenance npm records for a package published from CI. */
+const SLSA_PROVENANCE = "https://slsa.dev/provenance/v1";
 const BYTES_PER_KB = 1000;
 
 /**
@@ -439,7 +442,8 @@ export function parseRegistryAnswer(result) {
     return {
       exists: true,
       latest: String(data.version),
-      provenance: data.dist?.attestations !== undefined,
+      provenance:
+        data.dist?.attestations?.provenance?.predicateType === SLSA_PROVENANCE,
     };
   } catch {
     return null;

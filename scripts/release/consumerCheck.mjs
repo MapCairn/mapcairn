@@ -173,6 +173,18 @@ export const RELEASE_AGE_EXCLUSIONS = SDK_NAMES.map(
 );
 
 /**
+ * The npm options for an install: the minimum release age is lifted for the
+ * four SDK packages only when a published version is installed, so every
+ * other install keeps the repository's rule.
+ *
+ * @param {{ published: string | null, extra?: string[] }} input `extra` are options that apply either way.
+ * @returns {string[]}
+ */
+export function installFlags({ published, extra = [] }) {
+  return [...extra, ...(published === null ? [] : RELEASE_AGE_EXCLUSIONS)];
+}
+
+/**
  * The consumer's `package.json` for the published packages: the exact
  * version of each SDK package from the registry, and the locked tools. There
  * is no tarball and no override, so the registry copy is what gets installed.
@@ -486,7 +498,6 @@ export function runConsumerCheck({ published = null, tarballs = null } = {}) {
     const versions = Object.fromEntries(
       LOCKED_TOOLS.map((name) => [name, lockedVersion(lock, name)]),
     );
-    const exclusions = published === null ? [] : RELEASE_AGE_EXCLUSIONS;
     /** @type {Record<string, unknown>} */
     let manifest;
     if (published === null) {
@@ -513,7 +524,7 @@ export function runConsumerCheck({ published = null, tarballs = null } = {}) {
 
     const app = path.join(root, "app");
     prepareApp(app, manifest);
-    install(app, exclusions);
+    install(app, installFlags({ published }));
     report.push(
       published === null
         ? "npm install: ok"
@@ -584,7 +595,7 @@ export function runConsumerCheck({ published = null, tarballs = null } = {}) {
 
     const legacy = path.join(root, "legacy");
     prepareApp(legacy, manifest);
-    install(legacy, ["--legacy-peer-deps", ...exclusions]);
+    install(legacy, installFlags({ published, extra: ["--legacy-peer-deps"] }));
     const legacyMissing = missingLandmarks(
       renderPlain(legacy).html,
       CHROME_LANDMARKS,

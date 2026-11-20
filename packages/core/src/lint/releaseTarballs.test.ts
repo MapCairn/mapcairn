@@ -18,7 +18,10 @@ import {
   // @ts-expect-error The scripts are dependency-free JavaScript with JSDoc types.
 } from "../../../../scripts/release/packCheck.mjs";
 import {
-  formatSums,
+  checkFolder,
+  digestProblems,
+  formatDigests,
+  parseDigests,
   sha256Of,
   // @ts-expect-error The scripts are dependency-free JavaScript with JSDoc types.
 } from "../../../../scripts/release/tarballs.mjs";
@@ -77,22 +80,138 @@ describe("findTarballs", () => {
   });
 });
 
-describe("formatSums", () => {
-  it("writes one line for each file in the format sha256sum checks, sorted by name", () => {
-    expect(
-      formatSums([
-        { name: "b.tgz", digest: "b".repeat(64) },
-        { name: "a.tgz", digest: "a".repeat(64) },
-      ]),
-    ).toBe(`${"a".repeat(64)}  a.tgz\n${"b".repeat(64)}  b.tgz\n`);
+describe("formatDigests and parseDigests", () => {
+  it("write and read one <digest>:<name> entry for each file, sorted by name, on one line", () => {
+    const text = formatDigests([
+      {
+        name: "b.tgz",
+        digest:
+          "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      },
+      {
+        name: "a.tgz",
+        digest:
+          "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      },
+    ]);
+    expect(text).toBe(
+      "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa:a.tgz,bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb:b.tgz",
+    );
+    expect(parseDigests(text)).toEqual([
+      {
+        name: "a.tgz",
+        digest:
+          "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      },
+      {
+        name: "b.tgz",
+        digest:
+          "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      },
+    ]);
   });
 
   it("refuses a name that could be read as an option or a path", () => {
-    for (const name of ["-x.tgz", "../a.tgz", "a/b.tgz", "a\nb.tgz"]) {
-      expect(() => formatSums([{ name, digest: "a".repeat(64) }])).toThrow(
-        /name/,
-      );
+    for (const name of [
+      "-x.tgz",
+      "../a.tgz",
+      "a/b.tgz",
+      "a\nb.tgz",
+      "a,b.tgz",
+    ]) {
+      expect(() =>
+        formatDigests([
+          {
+            name,
+            digest:
+              "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          },
+        ]),
+      ).toThrow(/name/);
     }
+  });
+
+  it("refuses text that is not a list of digests", () => {
+    for (const text of [
+      "",
+      "abc",
+      "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa:a.tgz,",
+      "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA:a.tgz",
+      "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa:../a.tgz",
+    ]) {
+      expect(() => parseDigests(text), text).toThrow();
+    }
+  });
+});
+
+describe("digestProblems", () => {
+  const expected = [
+    {
+      name: "a.tgz",
+      digest:
+        "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    },
+    {
+      name: "b.tgz",
+      digest:
+        "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    },
+  ];
+
+  it("passes when the files are exactly the expected ones with the expected digests", () => {
+    expect(digestProblems(expected, [...expected].reverse())).toEqual([]);
+  });
+
+  it("reports a changed file, a missing file and an extra file, so a swapped or added tarball cannot pass", () => {
+    expect(
+      digestProblems(expected, [
+        {
+          name: "a.tgz",
+          digest:
+            "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        },
+        {
+          name: "c.tgz",
+          digest:
+            "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        },
+      ]),
+    ).toEqual([
+      "a.tgz has a different digest from the one recorded when it was packed",
+      "b.tgz is missing",
+      "c.tgz was not packed by the release and must not be released",
+    ]);
+  });
+});
+
+describe("checkFolder", () => {
+  it("compares a folder with the recorded digests and the notes digest", () => {
+    const folder = temporaryFolder();
+    writeFileSync(path.join(folder, "a.tgz"), "one");
+    writeFileSync(path.join(folder, "notes.md"), "notes");
+    const digests = formatDigests([
+      { name: "a.tgz", digest: sha256Of(path.join(folder, "a.tgz")) },
+    ]);
+    const notes = sha256Of(path.join(folder, "notes.md"));
+    expect(checkFolder(folder, digests, notes)).toEqual([]);
+    writeFileSync(path.join(folder, "a.tgz"), "two");
+    writeFileSync(path.join(folder, "extra.tgz"), "x");
+    writeFileSync(path.join(folder, "notes.md"), "changed");
+    expect(checkFolder(folder, digests, notes)).toEqual([
+      "a.tgz has a different digest from the one recorded when it was packed",
+      "extra.tgz was not packed by the release and must not be released",
+      "notes.md has a different digest from the one recorded when it was written",
+    ]);
+  });
+
+  it("does not look for notes when no digest is given", () => {
+    const folder = temporaryFolder();
+    writeFileSync(path.join(folder, "a.tgz"), "one");
+    const digests = formatDigests([
+      { name: "a.tgz", digest: sha256Of(path.join(folder, "a.tgz")) },
+    ]);
+    expect(checkFolder(folder, digests, "")).toEqual([]);
   });
 });
 

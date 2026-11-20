@@ -2,6 +2,7 @@
 // Copyright MapCairn contributors
 import { describe, expect, it } from "vitest";
 import {
+  installFlags,
   publishedManifest,
   RELEASE_AGE_EXCLUSIONS,
   // @ts-expect-error The scripts are dependency-free JavaScript with JSDoc types.
@@ -60,6 +61,24 @@ describe("RELEASE_AGE_EXCLUSIONS", () => {
       "--min-release-age-exclude=@mapcairn/theme",
       "--min-release-age-exclude=@mapcairn/map",
     ]);
+  });
+});
+
+describe("installFlags", () => {
+  it("exempts the four packages from the release age only when installing a published version", () => {
+    expect(installFlags({ published: null })).toEqual([]);
+    expect(installFlags({ published: "0.1.0" })).toEqual(
+      RELEASE_AGE_EXCLUSIONS,
+    );
+  });
+
+  it("adds the extra flags after the exemptions, and keeps them when nothing is exempt", () => {
+    expect(
+      installFlags({ published: null, extra: ["--legacy-peer-deps"] }),
+    ).toEqual(["--legacy-peer-deps"]);
+    expect(
+      installFlags({ published: "0.1.0", extra: ["--legacy-peer-deps"] }),
+    ).toEqual(["--legacy-peer-deps", ...RELEASE_AGE_EXCLUSIONS]);
   });
 });
 

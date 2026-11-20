@@ -1,17 +1,30 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
 /**
- * Packs the four SDK packages once, and records the SHA-256 of each tarball.
- * The release workflow packs here, checks those very files (`packCheck.mjs
- * --tarballs`, `consumerCheck.mjs --tarballs`), and re-checks the digests
- * with `sha256sum --check` before it uploads, attests and stages them, so the
- * bytes that were checked are the bytes that are released.
+ * Packs the four SDK packages once, records the SHA-256 of each tarball (and
+ * of the release notes) as a job output, and checks a folder against those
+ * recorded digests later. The release workflow packs in `verify`, uploads at
+ * once, and passes the digests to the later jobs as a job output, which a
+ * step that runs third-party code cannot change. `github-release` and `npm`
+ * compare what they download with those digests before they attest or stage,
+ * so what was checked is what is released, and an extra tarball cannot ride
+ * along.
  *
- *   node scripts/release/tarballs.mjs pack <folder>   packs and writes SHA256SUMS
- *   node scripts/release/tarballs.mjs sums <folder>   writes SHA256SUMS for tarballs already there
+ *   node scripts/release/tarballs.mjs pack <folder>
+ *   node scripts/release/tarballs.mjs record <folder>
+ *   node scripts/release/tarballs.mjs check <folder> <digests> [<notes-digest>]
+ *
+ * `record` writes the job outputs `digests` and `notes-digest` (the latter
+ * empty when the folder has no `notes.md`).
  */
 import { createHash } from "node:crypto";
-import { mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
+import {
+  appendFileSync,
+  existsSync,
+  mkdirSync,
+  readdirSync,
+  readFileSync,
+} from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { isEntryPoint } from "../entryPoint.mjs";
@@ -23,11 +36,14 @@ const REPO = path.resolve(
   "../..",
 );
 
-/** The file the digests are written to, in the format `sha256sum --check` reads. */
-export const SUMS_FILE = "SHA256SUMS";
+/** The file name of the release notes next to the tarballs. */
+const NOTES_FILE = "notes.md";
 
-/** A file name a digest line can hold without being read as an option or a path. */
+/** A file name a digest entry can hold without being read as an option or a path. */
 const SAFE_NAME = /^[A-Za-z0-9][A-Za-z0-9._@+-]*$/;
+
+/** A SHA-256 in lower-case hex. */
+const DIGEST = /^[0-9a-f]{64}$/;
 
 /**
  * @param {string} file
@@ -38,14 +54,14 @@ export function sha256Of(file) {
 }
 
 /**
- * The text of a digest file: one `<digest>  <name>` line for each file,
- * sorted by name.
+ * The digests as one line, `<digest>:<name>` entries separated by commas and
+ * sorted by name, which fits a job output.
  *
  * @param {Array<{ name: string, digest: string }>} entries
  * @returns {string}
- * @throws {Error} For a name that is not a plain file name.
+ * @throws {Error} For a name that is not a plain file name or a digest that is not SHA-256 hex.
  */
-export function formatSums(entries) {
+export function formatDigests(entries) {
   return [...entries]
     .sort((a, b) => (a.name < b.name ? -1 : 1))
     .map(({ name, digest }) => {
@@ -54,24 +70,96 @@ export function formatSums(entries) {
           `The file name ${JSON.stringify(name)} is not allowed.`,
         );
       }
-      return `${digest}  ${name}\n`;
+      if (!DIGEST.test(digest)) {
+        throw new Error(`The digest of ${name} is not a SHA-256.`);
+      }
+      return `${digest}:${name}`;
     })
-    .join("");
+    .join(",");
 }
 
 /**
- * Writes `SHA256SUMS` for the four tarballs in a folder.
+ * Reads what `formatDigests` wrote.
+ *
+ * @param {string} text
+ * @returns {Array<{ name: string, digest: string }>}
+ * @throws {Error} For text that is not a list of digests.
+ */
+export function parseDigests(text) {
+  if (text === "") {
+    throw new Error("The list of digests is empty.");
+  }
+  return text.split(",").map((entry) => {
+    const [digest, name, ...rest] = entry.split(":");
+    if (
+      rest.length > 0 ||
+      !DIGEST.test(digest ?? "") ||
+      !SAFE_NAME.test(name ?? "")
+    ) {
+      throw new Error(`${JSON.stringify(entry)} is not a digest and a name.`);
+    }
+    return { name, digest };
+  });
+}
+
+/**
+ * What differs between the digests recorded at the start and the files found
+ * later: a changed file, a missing one, and one that was never packed.
+ *
+ * @param {Array<{ name: string, digest: string }>} expected
+ * @param {Array<{ name: string, digest: string }>} actual
+ * @returns {string[]}
+ */
+export function digestProblems(expected, actual) {
+  /** @type {string[]} */
+  const problems = [];
+  const found = new Map(actual.map((entry) => [entry.name, entry.digest]));
+  for (const { name, digest } of expected) {
+    if (!found.has(name)) {
+      problems.push(`${name} is missing`);
+    } else if (found.get(name) !== digest) {
+      problems.push(
+        `${name} has a different digest from the one recorded when it was packed`,
+      );
+    }
+  }
+  const known = new Set(expected.map((entry) => entry.name));
+  for (const { name } of actual) {
+    if (!known.has(name)) {
+      problems.push(
+        `${name} was not packed by the release and must not be released`,
+      );
+    }
+  }
+  return problems.sort();
+}
+
+/**
+ * Checks a folder against the recorded digests: every tarball in it must be
+ * one that was recorded, unchanged, and the notes must match when a digest
+ * for them is given.
  *
  * @param {string} folder
+ * @param {string} digests What `formatDigests` wrote.
+ * @param {string} notesDigest The notes digest, or an empty string for none.
+ * @returns {string[]} The problems, none when the folder is as recorded.
  */
-function writeSums(folder) {
-  const tarballs = findTarballs(readdirSync(folder));
-  const entries = PACKAGES.map((name) => ({
-    name: tarballs[name],
-    digest: sha256Of(path.join(folder, tarballs[name])),
-  }));
-  writeFileSync(path.join(folder, SUMS_FILE), formatSums(entries));
-  console.log(formatSums(entries).trimEnd());
+export function checkFolder(folder, digests, notesDigest) {
+  const actual = readdirSync(folder)
+    .filter((file) => file.endsWith(".tgz"))
+    .map((name) => ({ name, digest: sha256Of(path.join(folder, name)) }));
+  const problems = digestProblems(parseDigests(digests), actual);
+  if (notesDigest !== "") {
+    const notes = path.join(folder, NOTES_FILE);
+    if (!existsSync(notes)) {
+      problems.push(`${NOTES_FILE} is missing`);
+    } else if (sha256Of(notes) !== notesDigest) {
+      problems.push(
+        `${NOTES_FILE} has a different digest from the one recorded when it was written`,
+      );
+    }
+  }
+  return problems;
 }
 
 /**
@@ -90,19 +178,51 @@ function packAll(folder) {
       throw new Error(`npm pack failed for ${name}:\n${result.stderr}`);
     }
   }
-  writeSums(folder);
+}
+
+/**
+ * Records the digests of the four tarballs, and of the notes when there are
+ * any, as job outputs (or on the log when run by hand).
+ *
+ * @param {string} folder
+ */
+function record(folder) {
+  const tarballs = findTarballs(readdirSync(folder));
+  const digests = formatDigests(
+    PACKAGES.map((name) => ({
+      name: tarballs[name],
+      digest: sha256Of(path.join(folder, tarballs[name])),
+    })),
+  );
+  const notes = path.join(folder, NOTES_FILE);
+  const notesDigest = existsSync(notes) ? sha256Of(notes) : "";
+  const lines = `digests=${digests}\nnotes-digest=${notesDigest}\n`;
+  if (process.env.GITHUB_OUTPUT === undefined) {
+    console.log(lines.trimEnd());
+  } else {
+    appendFileSync(process.env.GITHUB_OUTPUT, lines);
+  }
 }
 
 if (isEntryPoint(import.meta.url)) {
-  const [command, folder] = process.argv.slice(2);
+  const [command, folder, digests, notesDigest = ""] = process.argv.slice(2);
   try {
     if (command === "pack" && folder !== undefined) {
       packAll(path.resolve(folder));
-    } else if (command === "sums" && folder !== undefined) {
-      writeSums(path.resolve(folder));
+    } else if (command === "record" && folder !== undefined) {
+      record(path.resolve(folder));
+    } else if (command === "check" && folder !== undefined && digests) {
+      const problems = checkFolder(path.resolve(folder), digests, notesDigest);
+      for (const problem of problems) {
+        console.error(problem);
+      }
+      if (problems.length > 0) {
+        throw new Error("The files are not the ones that were packed.");
+      }
+      console.log("The files are the ones that were packed.");
     } else {
       console.error(
-        "Usage: node scripts/release/tarballs.mjs pack|sums <folder>",
+        "Usage: node scripts/release/tarballs.mjs pack|record <folder> | check <folder> <digests> [<notes-digest>]",
       );
       process.exitCode = 2;
     }

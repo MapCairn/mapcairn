@@ -142,7 +142,6 @@ describe("decidePush", () => {
   });
 
   it.each([
-    ["no pull request", { pullRequest: null }],
     [
       "an unmerged pull request",
       {
@@ -398,6 +397,14 @@ describe("distTagFor", () => {
     expect(distTagFor("0.1.0-rc.2", ["v0.1.0-rc.1"])).toBe("next");
   });
 
+  it("puts a prerelease older than the newest prerelease under previous", () => {
+    expect(distTagFor("0.1.0-rc.1", ["v0.1.0-rc.2"])).toBe("previous");
+    expect(distTagFor("0.1.0-rc.2", ["v0.1.0-rc.2", "v0.1.0-rc.1"])).toBe(
+      "next",
+    );
+    expect(distTagFor("0.1.0-rc.3", ["v0.1.0-rc.2"])).toBe("next");
+  });
+
   it("puts the newest stable release under latest", () => {
     expect(distTagFor("0.2.0", ["v0.1.0", "v0.1.1-rc.1"])).toBe("latest");
     expect(distTagFor("0.1.0", [])).toBe("latest");
@@ -418,6 +425,16 @@ describe("a release older than an existing tag", () => {
   it("is refused when it equals the highest tag's version before the prerelease", () => {
     const decision = decidePush(releasePush({ tags: ["v0.1.0"] }));
     expect(decision.release).toBe(false);
+  });
+
+  it("fails, and does not skip, a release-shaped push whose pull request cannot be read", () => {
+    const sources = releasePush();
+    expect(() => decidePush({ ...sources, pullRequest: () => null })).toThrow(
+      ReleaseRefused,
+    );
+    expect(() => decidePush({ ...sources, pullRequest: () => null })).toThrow(
+      /pull request #500 could not be read/,
+    );
   });
 
   it("reports the dist-tag with the decision", () => {

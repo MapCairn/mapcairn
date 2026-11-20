@@ -269,14 +269,16 @@ describe("release.yml", () => {
     );
   });
 
-  it("skips a package already on npm only in a real run, and stops on any registry error", () => {
+  it("skips a package already on npm with a notice, in a rehearsal too, and stops on any registry error", () => {
     const job = npmJobLines(readFileSync(file, "utf8")).join("\n");
     expect(job).toContain(
       'state="$(node scripts/release/verifyRelease.mjs package-state "@mapcairn/$name" "$VERSION")"',
     );
+    expect(job).toContain('if [ "$state" = "published" ]; then');
     expect(job).toContain(
-      '[ "$state" = "published" ] && [ "$MODE" != "rehearse" ]',
+      "::notice::@mapcairn/$name@$VERSION is already on npm",
     );
+    expect(job).not.toContain('[ "$MODE" != "rehearse" ]');
     expect(job).not.toContain("|| true");
   });
 
@@ -292,8 +294,10 @@ describe("release.yml", () => {
 
   it("checks the digests before it stages, installs the pinned npm without scripts, and has its own group for the version", () => {
     const job = npmJobLines(readFileSync(file, "utf8")).join("\n");
-    expect(job.indexOf("sha256sum --check SHA256SUMS")).toBeGreaterThan(-1);
-    expect(job.indexOf("sha256sum --check SHA256SUMS")).toBeLessThan(
+    expect(
+      job.indexOf('tarballs.mjs check release "$DIGESTS"'),
+    ).toBeGreaterThan(-1);
+    expect(job.indexOf('tarballs.mjs check release "$DIGESTS"')).toBeLessThan(
       job.indexOf("npm stage publish"),
     );
     expect(job).toContain(

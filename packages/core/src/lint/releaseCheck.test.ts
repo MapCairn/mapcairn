@@ -242,7 +242,12 @@ describe("parseRegistryAnswer", () => {
       status: 0,
       stdout: JSON.stringify({
         version: "0.1.0-rc.2",
-        dist: { attestations: { url: "https://example.test/a" } },
+        dist: {
+          attestations: {
+            url: "https://example.test/a",
+            provenance: { predicateType: "https://slsa.dev/provenance/v1" },
+          },
+        },
       }),
       stderr: "",
     });
@@ -251,6 +256,25 @@ describe("parseRegistryAnswer", () => {
       latest: "0.1.0-rc.2",
       provenance: true,
     });
+  });
+
+  it("does not count an attestation that is not SLSA provenance", () => {
+    for (const attestations of [
+      { url: "https://example.test/a" },
+      { provenance: { predicateType: "https://example.test/other" } },
+      { provenance: {} },
+    ]) {
+      expect(
+        parseRegistryAnswer({
+          status: 0,
+          stdout: JSON.stringify({
+            version: "0.1.0",
+            dist: { attestations },
+          }),
+          stderr: "",
+        }),
+      ).toEqual({ exists: true, latest: "0.1.0", provenance: false });
+    }
   });
 
   it("reads a package without attestations", () => {
@@ -369,6 +393,22 @@ describe("parseEnvironment", () => {
         }),
         ok({}),
       ).state,
+    ).toBe("unprotected");
+  });
+
+  it("is a blocker, not unknown, when protected branches may deploy and the policies cannot be read", () => {
+    const protectedOnly = ok({
+      deployment_branch_policy: {
+        custom_branch_policies: false,
+        protected_branches: true,
+      },
+    });
+    expect(
+      parseEnvironment(protectedOnly, {
+        ok: false,
+        stdout: "",
+        stderr: "HTTP 403",
+      }).state,
     ).toBe("unprotected");
   });
 

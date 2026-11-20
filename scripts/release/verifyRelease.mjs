@@ -78,9 +78,11 @@ function skip(reason) {
 }
 
 /**
- * The dist-tag a version is staged under: `next` for a prerelease, `latest`
- * for a release that is the newest, and `previous` for a release that is older
- * than one already tagged, so an old release never takes `latest` back.
+ * The dist-tag a version is staged under: `next` for the newest prerelease,
+ * `latest` for a release that is the newest, and `previous` for a version
+ * that is older than one already tagged (a prerelease older than any tag, a
+ * release older than a release), so an old version never takes `next` or
+ * `latest` back.
  *
  * @param {string} version
  * @param {string[]} tagNames The existing `v*` tags.
@@ -88,15 +90,18 @@ function skip(reason) {
  */
 export function distTagFor(version, tagNames) {
   const parsed = parseVersion(version);
-  if (parsed === null || isPrerelease(parsed)) {
+  if (parsed === null) {
     return "next";
   }
-  const newerStable = releaseTags(tagNames).some(
-    (entry) =>
-      !isPrerelease(entry.version) &&
-      compareVersions(entry.version, parsed) > 0,
+  const newer = releaseTags(tagNames).filter(
+    (entry) => compareVersions(entry.version, parsed) > 0,
   );
-  return newerStable ? "previous" : "latest";
+  if (isPrerelease(parsed)) {
+    return newer.length > 0 ? "previous" : "next";
+  }
+  return newer.some((entry) => !isPrerelease(entry.version))
+    ? "previous"
+    : "latest";
 }
 
 /**
@@ -128,6 +133,7 @@ function proceed(version, reason, tagNames) {
  * @param {() => string[]} sources.tags The names of the existing `v*` tags.
  * @param {(number: number) => { merged: boolean, base: string, mergeCommit: string | null, labels: string[] } | null} sources.pullRequest
  * @returns {Decision}
+ * @throws {ReleaseRefused} When a push that looks like a release cannot be checked.
  */
 export function decidePush(sources) {
   const subject = RELEASE_SUBJECT.exec(sources.headSubject());
@@ -172,7 +178,9 @@ export function decidePush(sources) {
 
   const pullRequest = sources.pullRequest(number);
   if (pullRequest === null) {
-    return skip(`pull request #${number} could not be read`);
+    throw new ReleaseRefused(
+      `This push looks like a release, but pull request #${number} could not be read, so it is not skipped quietly. Re-run the failed job once GitHub answers.`,
+    );
   }
   if (!pullRequest.merged || pullRequest.base !== "main") {
     return skip(`pull request #${number} was not merged into main`);

@@ -53,8 +53,13 @@ function permissionsOf(name: string): string[] {
 }
 
 describe("release.yml", () => {
-  it("has the three jobs the trusted publisher record and the plan name", () => {
-    expect([...RANGES.keys()]).toEqual(["verify", "github-release", "npm"]);
+  it("has the jobs the trusted publisher record and the plan name, and a check job between verify and the release", () => {
+    expect([...RANGES.keys()]).toEqual([
+      "verify",
+      "check",
+      "github-release",
+      "npm",
+    ]);
   });
 
   it("runs on a push to main that changes the changelog, and on a dispatch that defaults to a rehearsal", () => {
@@ -94,6 +99,7 @@ describe("release.yml", () => {
       "attestations: write",
     ]);
     expect(permissionsOf("npm")).toEqual(["id-token: write", "contents: read"]);
+    expect(job("check").join("\n")).toMatch(/^ {4}permissions: \{\}$/m);
     const writes = TEXT.split("\n").filter((line) =>
       /^\s+[\w-]+: write\b/.test(line),
     );
@@ -182,31 +188,63 @@ describe("release.yml", () => {
     );
   });
 
-  it("packs the tarballs once and checks those very files, with the digests checked again before upload, attestation and staging", () => {
+  it("packs once and uploads at once, passes the digests as an output, and runs third-party code only in a job with no permission", () => {
     const verify = job("verify").join("\n");
     const order = [
       "scripts/release/tarballs.mjs pack release",
-      "packCheck.mjs --tarballs release",
-      "consumerCheck.mjs --tarballs release",
-      "sha256sum --check SHA256SUMS",
+      "scripts/release/tarballs.mjs record release",
       "actions/upload-artifact",
     ].map((text) => verify.indexOf(text));
     expect(order.every((index) => index > -1)).toBe(true);
     expect([...order].sort((a, b) => a - b)).toEqual(order);
-    expect(verify).not.toContain("npm pack");
-    expect(verify).not.toContain("npm run pack:check");
-    expect(verify).not.toContain("npm run consumer:check");
-    const release = job("github-release").join("\n");
-    expect(release.indexOf("sha256sum --check SHA256SUMS")).toBeGreaterThan(-1);
-    expect(release.indexOf("sha256sum --check SHA256SUMS")).toBeLessThan(
-      release.indexOf("attest-build-provenance"),
+    expect(verify).toContain("digests: ${{ steps.record.outputs.digests }}");
+    expect(verify).toContain(
+      "notes-digest: ${{ steps.record.outputs.notes-digest }}",
     );
+    for (const text of [
+      "packCheck",
+      "consumerCheck",
+      "npm pack",
+      "pack:check",
+    ]) {
+      expect(verify, text).not.toContain(text);
+    }
+    const check = job("check").join("\n");
+    expect(check).toContain("packCheck.mjs --tarballs release");
+    expect(check).toContain("consumerCheck.mjs --tarballs release");
+    expect(check).toContain("permissions: {}");
+    expect(check).not.toMatch(/GH_TOKEN|github\.token|secrets\./);
+    expect(check).not.toContain("upload-artifact");
   });
 
-  it("checks the version and name of the tarballs it downloads for publish-existing, and records their digests", () => {
+  it("compares what github-release and npm download with the recorded digests, and with exactly the four tarballs, before attesting or staging", () => {
+    for (const [name, after] of [
+      ["github-release", "attest-build-provenance"],
+      ["npm", "package-state"],
+    ] as const) {
+      const lines = job(name).join("\n");
+      const check = lines.indexOf('tarballs.mjs check release "$DIGESTS"');
+      expect(check, name).toBeGreaterThan(-1);
+      expect(
+        lines.indexOf('verifyRelease.mjs tarballs "$VERSION" release'),
+        name,
+      ).toBeGreaterThan(-1);
+      expect(check, name).toBeLessThan(lines.indexOf(after));
+      expect(lines).toContain("DIGESTS: ${{ needs.verify.outputs.digests }}");
+    }
+    expect(job("github-release").join("\n")).toContain(
+      'tarballs.mjs check release "$DIGESTS" "$NOTES_DIGEST"',
+    );
+    expect(job("github-release").join("\n")).toContain(
+      "needs.check.result == 'success'",
+    );
+    expect(job("npm").join("\n")).toContain("needs.check.result == 'success'");
+  });
+
+  it("checks the version and name of the tarballs it downloads for publish-existing", () => {
     const verify = job("verify").join("\n");
     expect(verify).toMatch(
-      /Verify the attestation[\s\S]*?if: github\.event_name == 'workflow_dispatch' && inputs\.mode == 'publish-existing'[\s\S]*?verifyRelease\.mjs tarballs "\$VERSION" release\n\s+node scripts\/release\/tarballs\.mjs sums release/,
+      /Verify the attestation[\s\S]*?if: github\.event_name == 'workflow_dispatch' && inputs\.mode == 'publish-existing'[\s\S]*?verifyRelease\.mjs tarballs "\$VERSION" release/,
     );
   });
 

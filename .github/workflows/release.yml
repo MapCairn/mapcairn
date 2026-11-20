@@ -1,7 +1,7 @@
 name: Release
 
 # Releases the four SDK packages (plan 0014, docs/guides/releasing.md). One
-# workflow, three jobs, and one environment (`npm`). npm's trusted-publisher
+# workflow, four jobs, and one environment (`npm`). npm's trusted-publisher
 # record names this file and that environment, so neither is renamed without
 # updating the record.
 #
@@ -13,6 +13,13 @@ name: Release
 # Inputs and pull request text reach scripts through `env`, never through an
 # expression in a shell line, and `scripts/release/verifyRelease.mjs` checks
 # the version input against a pattern before anything else uses it.
+#
+# The tarballs are packed once, in `verify`, and uploaded at once. Their
+# SHA-256 digests leave `verify` as a job output. The `check` job, which runs
+# third-party code (the throwaway consumer installs from the registry), holds
+# no permission and only reads a copy of the artifact; `github-release` and
+# `npm` compare what they download with the recorded digests before they
+# attest or stage. So what was checked is what is released.
 on:
   push:
     branches: [main]
@@ -42,7 +49,8 @@ permissions: {}
 # run is keyed by its commit. The npm job has its own group per version (below),
 # so a push run and a dispatched run never stage one version at once. Nothing
 # that has started is cancelled: a half-finished release is worse than a
-# waiting one.
+# waiting one. GitHub does cancel a job that is still pending in a group when a
+# newer one queues behind it.
 concurrency:
   group: release-${{ inputs.version || github.sha }}
   cancel-in-progress: false
@@ -64,6 +72,8 @@ jobs:
       dist-tag: ${{ steps.decide.outputs.dist-tag }}
       on-npm: ${{ steps.decide.outputs.on-npm }}
       private: ${{ steps.decide.outputs.private }}
+      digests: ${{ steps.record.outputs.digests }}
+      notes-digest: ${{ steps.record.outputs.notes-digest }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -105,45 +115,29 @@ jobs:
             gh attestation verify "$tarball" --repo MapCairn/mapcairn --signer-workflow MapCairn/mapcairn/.github/workflows/release.yml --source-ref refs/heads/main --source-digest "$commit" --deny-self-hosted-runners
           done
           node scripts/release/verifyRelease.mjs tarballs "$VERSION" release
-          node scripts/release/tarballs.mjs sums release
 
-      # The tarballs are packed once, here, and every check below reads those
-      # very files. Their digests are recorded now and checked again before
-      # the upload, so what was checked is what is released.
       - name: Install the dependencies
         if: steps.decide.outputs.release == 'true' && inputs.mode != 'publish-existing'
         run: npm ci --ignore-scripts
       - name: Build the packages
         if: steps.decide.outputs.release == 'true' && inputs.mode != 'publish-existing'
         run: npm run build:sdk
-      - name: Pack the four tarballs once and record their digests
+      - name: Pack the four tarballs once
         if: steps.decide.outputs.release == 'true' && inputs.mode != 'publish-existing'
         run: node scripts/release/tarballs.mjs pack release
-      - name: Check what each tarball holds
-        if: steps.decide.outputs.release == 'true' && inputs.mode != 'publish-existing'
-        run: node scripts/release/packCheck.mjs --tarballs release
       - name: Check the release notes
         if: steps.decide.outputs.release == 'true' && inputs.mode != 'publish-existing'
         run: npm run release:notes-check
-      - name: Install the tarballs in an app outside the repository and render the chrome
-        if: steps.decide.outputs.release == 'true' && inputs.mode != 'publish-existing'
-        run: node scripts/release/consumerCheck.mjs --tarballs release
-      - name: Check the tarballs are named and versioned as the release
-        if: steps.decide.outputs.release == 'true' && inputs.mode != 'publish-existing'
-        env:
-          VERSION: ${{ steps.decide.outputs.version }}
-        run: node scripts/release/verifyRelease.mjs tarballs "$VERSION" release
       - name: Write the release notes
         if: github.event_name == 'push' && steps.decide.outputs.release == 'true'
         env:
           VERSION: ${{ steps.decide.outputs.version }}
         shell: bash
         run: node scripts/release/notes.mjs "$VERSION" > release/notes.md
-      - name: Check the digests of the tarballs again
+      - name: Record the digests of the tarballs and the notes
+        id: record
         if: steps.decide.outputs.release == 'true'
-        working-directory: release
-        run: sha256sum --check SHA256SUMS
-
+        run: node scripts/release/tarballs.mjs record release
       - name: Keep the tarballs and the notes for the later jobs
         if: steps.decide.outputs.release == 'true'
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
@@ -153,13 +147,53 @@ jobs:
           if-no-files-found: error
           retention-days: 14
 
+  check:
+    name: check
+    needs: verify
+    if: >-
+      github.ref == 'refs/heads/main'
+      && needs.verify.outputs.release == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    # No permission at all: this job runs third-party code, so it holds no
+    # token, and it only reads a copy of the artifact.
+    permissions: {}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version-file: .node-version
+          package-manager-cache: false
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: release-files
+          path: release
+      - name: Check the files are the ones that were packed
+        env:
+          DIGESTS: ${{ needs.verify.outputs.digests }}
+          NOTES_DIGEST: ${{ needs.verify.outputs.notes-digest }}
+          VERSION: ${{ needs.verify.outputs.version }}
+        run: |
+          node scripts/release/tarballs.mjs check release "$DIGESTS" "$NOTES_DIGEST"
+          node scripts/release/verifyRelease.mjs tarballs "$VERSION" release
+      - name: Check what each tarball holds
+        if: inputs.mode != 'publish-existing'
+        run: node scripts/release/packCheck.mjs --tarballs release
+      - name: Install the tarballs in an app outside the repository and render the chrome
+        if: inputs.mode != 'publish-existing'
+        run: node scripts/release/consumerCheck.mjs --tarballs release
+
   github-release:
     name: github-release
-    needs: verify
+    needs: [verify, check]
     if: >-
       github.ref == 'refs/heads/main'
       && github.event_name == 'push'
       && needs.verify.outputs.release == 'true'
+      && needs.check.result == 'success'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:
@@ -167,13 +201,26 @@ jobs:
       id-token: write # sign the attestations of the tarballs
       attestations: write # store the attestations
     steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version-file: .node-version
+          package-manager-cache: false
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: release-files
           path: release
-      - name: Check the digests of the tarballs
-        working-directory: release
-        run: sha256sum --check SHA256SUMS
+      - name: Check the files are the ones that were packed, and are exactly the four tarballs
+        env:
+          DIGESTS: ${{ needs.verify.outputs.digests }}
+          NOTES_DIGEST: ${{ needs.verify.outputs.notes-digest }}
+          VERSION: ${{ needs.verify.outputs.version }}
+        run: |
+          node scripts/release/tarballs.mjs check release "$DIGESTS" "$NOTES_DIGEST"
+          node scripts/release/verifyRelease.mjs tarballs "$VERSION" release
       - name: Attest the tarballs
         uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
         with:
@@ -187,8 +234,9 @@ jobs:
           TARGET: ${{ github.sha }}
         shell: bash
         # The tag is created at the commit that was pushed, through the API,
-        # which refuses a tag that exists. A re-run after a failed release
-        # step continues only when the tag is already at this commit.
+        # which refuses a tag that exists. A re-run of the failed jobs after a
+        # failed release step continues only when the tag is already at this
+        # commit.
         run: |
           if ! gh api --method POST "repos/$GH_REPO/git/refs" -f ref="refs/tags/v$VERSION" -f sha="$TARGET"; then
             existing="$(gh api "repos/$GH_REPO/git/ref/tags/v$VERSION" --jq .object.sha)"
@@ -205,13 +253,14 @@ jobs:
 
   npm:
     name: npm
-    needs: [verify, github-release]
+    needs: [verify, check, github-release]
     # A job whose needs include a skipped job is skipped too, unless the
     # condition says otherwise: here a skipped github-release is fine, since a
     # rehearsal and a publish-existing run never create a release.
     if: >-
       !cancelled() && github.ref == 'refs/heads/main'
       && needs.verify.result == 'success' && needs.verify.outputs.release == 'true'
+      && needs.check.result == 'success'
       && contains(fromJSON('["success","skipped"]'), needs.github-release.result)
       && (needs.verify.outputs.on-npm == 'true' || inputs.mode == 'rehearse')
     environment: npm
@@ -236,9 +285,13 @@ jobs:
         with:
           name: release-files
           path: release
-      - name: Check the digests of the tarballs
-        working-directory: release
-        run: sha256sum --check SHA256SUMS
+      - name: Check the files are the ones that were packed, and are exactly the four tarballs
+        env:
+          DIGESTS: ${{ needs.verify.outputs.digests }}
+          VERSION: ${{ needs.verify.outputs.version }}
+        run: |
+          node scripts/release/tarballs.mjs check release "$DIGESTS"
+          node scripts/release/verifyRelease.mjs tarballs "$VERSION" release
 
       - name: Use an npm that can stage packages
         shell: bash
@@ -262,9 +315,12 @@ jobs:
           DIST_TAG: ${{ needs.verify.outputs.dist-tag }}
           MODE: ${{ inputs.mode }}
         shell: bash
-        # A rehearsal always runs the staging as a dry run, so it never skips a
-        # package. A real run skips a package whose version is on npm, stages
-        # one that is not found, and stops on any other answer.
+        # A package whose version is on npm is skipped with a notice, in a
+        # rehearsal too; one that is not found is staged (a dry run in a
+        # rehearsal); any other registry answer stops the job. A package that
+        # is staged but not yet approved is not found by `npm view`, and npm
+        # refuses to stage it again, so staged packages are rejected before the
+        # failed jobs are re-run (docs/guides/releasing.md).
         run: |
           flags=()
           if [ "$MODE" = "rehearse" ]; then
@@ -272,8 +328,8 @@ jobs:
           fi
           for name in core react theme map; do
             state="$(node scripts/release/verifyRelease.mjs package-state "@mapcairn/$name" "$VERSION")"
-            if [ "$state" = "published" ] && [ "$MODE" != "rehearse" ]; then
-              echo "@mapcairn/$name@$VERSION is already on npm, so it is skipped."
+            if [ "$state" = "published" ]; then
+              echo "::notice::@mapcairn/$name@$VERSION is already on npm, so it is skipped."
               continue
             fi
             npm stage publish "release/mapcairn-$name-$VERSION.tgz" --tag "$DIST_TAG" "${flags[@]}"
