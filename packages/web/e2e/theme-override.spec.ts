@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
 import AxeBuilder from "@axe-core/playwright";
+import { compositeOver, contrastRatio } from "@mapcairn/theme";
 import type { Locator, Page } from "@playwright/test";
 import { expect, test } from "./fixtures";
 import { DesignPage } from "./pages/DesignPage";
@@ -40,7 +41,15 @@ const BROWN = {
   light: { accent: "#7a3b00", tint: "#fbe6d2" },
   dark: { accent: "#f5b97f", tint: "#3a2412" },
 };
-const THEMES = [GREEN, BROWN];
+/** Changes the surface and text, the roles a tooltip bubble reads. */
+const SAGE = {
+  name: "sage",
+  testId: "demo-Tooltip",
+  scope: ".host-sage",
+  light: { surface: "#e3f1eb", text: "#0a2a1e" },
+  dark: { surface: "#0a1c14", text: "#e4f4ec" },
+};
+const THEMES = [GREEN, BROWN, SAGE];
 
 // Transitions are off so a computed colour is read at its end value.
 test.use({ reducedMotion: "reduce" });
@@ -111,6 +120,40 @@ const background = (locator: Locator): Promise<string> =>
 const edge = (locator: Locator): Promise<string> =>
   locator.evaluate((element) => getComputedStyle(element).borderTopColor);
 
+const faceNorth = (page: Page): Locator =>
+  page.getByTestId(SAGE.testId).getByRole("button", { name: "Face north" });
+
+/**
+ * The tooltip bubble. Radix renders it in a portal under `body`, outside the
+ * demo that carries the scope, and keeps a visually hidden copy for
+ * assistive technology, which this skips.
+ */
+const bubble = (page: Page): Locator =>
+  page.locator("[data-radix-popper-content-wrapper] > [data-side]");
+
+/** Opens the tooltip with the keyboard, or skips where the device cannot hover. */
+async function openTooltip(page: Page): Promise<void> {
+  const hovers = await page.evaluate(
+    () => window.matchMedia("(hover: hover) and (pointer: fine)").matches,
+  );
+  test.skip(!hovers, "A touch screen has no tooltips");
+  await showTooltip(page);
+}
+
+/**
+ * Focuses the control with the tooltip. The control is scrolled into view
+ * first because a scroll closes an open tooltip, and focusing it would
+ * otherwise scroll after the tooltip opens.
+ */
+async function showTooltip(page: Page): Promise<void> {
+  await faceNorth(page).scrollIntoViewIfNeeded();
+  await faceNorth(page).focus();
+  await expect(bubble(page)).toBeVisible();
+}
+
+const textColour = (locator: Locator): Promise<string> =>
+  locator.evaluate((element) => getComputedStyle(element).color);
+
 test.describe("a generated host theme", () => {
   test("applies to its own scope in each theme, from a same-origin file under the strict policy", async ({
     page,
@@ -134,6 +177,43 @@ test.describe("a generated host theme", () => {
     expect(await background(selectedChip(page))).toBe(rgb(BROWN.dark.tint));
 
     expect(await cspViolations(page)).toEqual([]);
+  });
+
+  test("reaches a tooltip, which renders outside the scope", async ({
+    page,
+  }) => {
+    await page.emulateMedia({ colorScheme: "light" });
+    const design = await openGuide(page);
+    await applyThemes(page);
+    await openTooltip(page);
+
+    expect(await textColour(bubble(page))).toBe(rgb(SAGE.light.text));
+    expect(await background(bubble(page))).toContain(
+      rgb(SAGE.light.surface).slice(4, -1),
+    );
+    await expect(page.locator(`.host-sage [data-side]`)).toHaveCount(0);
+
+    await faceNorth(page).blur();
+    await design.themeControl.getByRole("radio", { name: "Dark" }).click();
+    await showTooltip(page);
+    expect(await textColour(bubble(page))).toBe(rgb(SAGE.dark.text));
+    expect(await background(bubble(page))).toContain(
+      rgb(SAGE.dark.surface).slice(4, -1),
+    );
+  });
+
+  test("leaves a tooltip with no scope in the SDK's colours", async ({
+    page,
+  }) => {
+    await page.emulateMedia({ colorScheme: "light" });
+    await openGuide(page);
+    await applyThemes(page);
+    await page.getByTestId(SAGE.testId).evaluate((element) => {
+      element.classList.remove("host-sage");
+    });
+    await openTooltip(page);
+
+    expect(await textColour(bubble(page))).not.toBe(rgb(SAGE.light.text));
   });
 
   test("is served from the app's own origin, for the policy that blocks inline styles", async ({
@@ -249,6 +329,26 @@ test.describe("a generated host theme accessibility @a11y", () => {
         ),
       ).toEqual([]);
       expect(results.passes.length).toBeGreaterThan(0);
+    });
+  }
+
+  for (const colorScheme of ["light", "dark"] as const) {
+    // Axe does not measure text on a translucent surface in a portal, so the
+    // ratio is worked out here, over the two backdrops that bound it.
+    test(`keeps a tooltip in a scoped theme at 4.5:1 over any backdrop in the ${colorScheme} theme @a11y`, async ({
+      page,
+    }) => {
+      await page.emulateMedia({ colorScheme });
+      await openGuide(page);
+      await applyThemes(page);
+      await openTooltip(page);
+
+      const text = await textColour(bubble(page));
+      const surface = await background(bubble(page));
+      for (const backdrop of ["#ffffff", "#000000"]) {
+        const flattened = compositeOver(surface, backdrop);
+        expect(contrastRatio(text, flattened)).toBeGreaterThanOrEqual(4.5);
+      }
     });
   }
 });

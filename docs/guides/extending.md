@@ -64,7 +64,7 @@ What to know:
 - The rules read `data-theme` on `<html>` (`light` or `dark`), or the system's colour scheme when it is not set. A `ThemeSource` of your own must set that attribute, as the one in `examples/embed` does.
 - The theme is skipped in high-contrast (`prefers-contrast: more`) and forced-colours modes, which keep the SDK's own values. The rules use negated media conditions, such as `(not (prefers-contrast: more))`. A browser that does not understand one treats it as false and so skips the theme, which falls back to the SDK's own colours; the project's browser policy is under "Code style" in [`CONTRIBUTING.md`](../../CONTRIBUTING.md).
 - Where the surface is translucent, the stylesheet also sets an opaque surface for browsers without `backdrop-filter` and for reduced transparency, and sets the inner focus ring to it unless you chose one. The check covers those values.
-- A tooltip renders in a portal under `body`, so a `#id` or `.class` scope does not reach it and it keeps the SDK's colours. Use `:root` to theme the whole page, or accept the SDK's tooltip.
+- A tooltip renders in a portal under `body`, outside your wrapper. It takes the colours of the control it belongs to when it opens, so your theme reaches it under any scope, with nothing to add. The colours are read once, as the tooltip opens.
 - Each colour must be hex, `rgb()`/`rgba()` or `oklch()`, and is written back as hex. `checkThemeContrast` reports the same findings without producing CSS, for a test of your own.
 
 ## Add a basemap
