@@ -8,20 +8,34 @@
  *
  *   node scripts/release/publishGuard.mjs
  *
- * It reads the places that execute: the `scripts` of every `package.json`,
- * files under `scripts/` and `packages/<name>/scripts/`, `lefthook.yml`,
- * workflows and composite actions, and Dockerfiles, Makefiles and similar.
- * Prose (instruction files, skills, guides, plans) is not read, because it has
- * to name the commands to forbid them. Comments in JavaScript are not read.
+ * It reads the places that execute: the command-bearing keys of every
+ * `package.json` (`scripts`, `lint-staged`, `simple-git-hooks`, and any key
+ * that is not a name or prose), files under `scripts/` and
+ * `packages/<name>/scripts/`, hook configuration (`lefthook.yml`,
+ * `.lefthook.yml`, `.husky/`, the `command` strings in `.claude/settings.json`
+ * hooks, `.vscode/tasks.json`, `wrangler.jsonc` and `devcontainer.json`),
+ * workflows and composite actions, Dockerfiles, compose files, CI
+ * configuration, and Makefiles and Justfiles. Prose (instruction files,
+ * skills, guides, plans) is not read, because it has to name the commands to
+ * forbid them. Comments in JavaScript are not read.
  *
  * It finds the command as text in a shell line (`npm publish`, `npx -y npm
  * publish`, `corepack npm publish`, `node "$npm_execpath" publish`, a
- * shortened name npm accepts such as `npm pub`), as a string or template
- * literal, and as an argument array (`npm(["publish"])`, `run("npm",
- * ["stage", "publish"])`). It cannot find a command assembled at run time
- * (`"pub" + "lish"`), a name read from a variable, or a program that is not
- * npm; the independent review of every change to an executable file covers
- * those (see "Keeping agents from publishing" in plan 0014).
+ * shortened name npm accepts such as `npm pub`, a quoted or escaped spelling
+ * such as `n''pm $'publish'`), in a YAML flow collection or an exec-form
+ * list (`{run: npm publish}`, `RUN ["npm", "publish"]`), as a string or
+ * template literal, and as an argument array (`npm(["publish"])`,
+ * `run("npm", ["stage", "publish"])`).
+ *
+ * It is a best-effort scan of text, not a security boundary. It cannot find a
+ * command assembled at run time (`"pub" + "lish"`), built by command
+ * substitution, run through a variable that names the program, or run by a
+ * program that is not npm or another package manager. It can also flag
+ * innocent text (`git commit -m "npm token"`). The guarantee that an agent
+ * cannot publish rests on the npm credentials, two-factor approval and the
+ * `npm` environment protection; this check, the deny lists and the independent
+ * review of every change to an executable file are layers on top (see "Keeping
+ * agents from publishing" in plan 0014).
  */
 import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
@@ -135,6 +149,41 @@ const VALUE_OPTIONS = new Set([
   "--scope",
   "--loglevel",
   "--node-options",
+  "--cwd",
+  "--dir",
+  "--filter",
+  "-F",
+]);
+
+/** Options that take no value. Any other option leaves the command position unsure. */
+const FLAG_OPTIONS = new Set([
+  "--",
+  "-y",
+  "--yes",
+  "-g",
+  "--global",
+  "-D",
+  "-f",
+  "--force",
+  "-r",
+  "--recursive",
+  "-A",
+  "--all",
+  "-q",
+  "--quiet",
+  "--silent",
+  "--json",
+  "--dry-run",
+  "--no-install",
+  "--ignore-scripts",
+  "--no-git-checks",
+  "--if-present",
+  "-ws",
+  "--workspaces",
+  "-iwr",
+  "--include-workspace-root",
+  "--provenance",
+  "--offline",
 ]);
 
 /** Commands whose later words are arguments, not another command. */
@@ -283,9 +332,12 @@ function isLauncher(word) {
  */
 export function forbiddenCommandAfterProgram(words) {
   let position = 0;
+  let unsure = false;
   while (position < words.length && words[position].startsWith("-")) {
-    const takesValue =
-      VALUE_OPTIONS.has(words[position]) && !words[position].includes("=");
+    const option = words[position];
+    const hasValue = option.includes("=");
+    const takesValue = VALUE_OPTIONS.has(option) && !hasValue;
+    unsure ||= !takesValue && !hasValue && !FLAG_OPTIONS.has(option);
     position += takesValue ? 2 : 1;
   }
   const command = words[position];
@@ -296,10 +348,10 @@ export function forbiddenCommandAfterProgram(words) {
   if (direct !== undefined) {
     return direct;
   }
-  if (ARGUMENT_TAKING.has(command)) {
+  if (ARGUMENT_TAKING.has(command) && !unsure) {
     return undefined;
   }
-  for (const later of words.slice(position + 1)) {
+  for (const later of words.slice(position)) {
     const found = exactForbiddenCommandOf(later);
     if (found !== undefined) {
       return found;
@@ -319,13 +371,14 @@ export function forbiddenInShellText(text) {
   const found = [];
   const joined = text.replace(/\\\r?\n/g, " ");
   for (const segment of joined.split(/\r?\n|&&|\|\||[;|&()`]/)) {
-    const words = segment.trim().split(/\s+/).filter(Boolean);
+    const words = segment.split(WORD_SEPARATORS).filter(Boolean);
+    const cleaned = words.map(unquote);
     words.forEach((word, index) => {
-      if (!isLauncher(word)) {
+      if (!isLauncher(word) && !isLauncher(cleaned[index])) {
         return;
       }
       const command = forbiddenCommandAfterProgram(
-        words.slice(index + 1).map(stripQuotes),
+        cleaned.slice(index + 1).filter(Boolean),
       );
       if (command !== undefined) {
         found.push(command);
@@ -339,11 +392,23 @@ export function forbiddenInShellText(text) {
 }
 
 /**
+ * What separates the words of a command: white space, and the brackets,
+ * braces and commas of a YAML flow collection, a JSON or exec-form list and a
+ * shell brace expansion, so `{run: npm publish}` and `["npm","publish"]` read
+ * as the words they hold.
+ */
+const WORD_SEPARATORS = /[\s{}[\],]+/;
+
+/**
+ * A shell word as the shell passes it on: quotes, `$` before a quote and
+ * backslashes removed, so `$'npm'`, `pub''lish` and `p\ublish` read as `npm`
+ * and `publish`.
+ *
  * @param {string} word
  * @returns {string}
  */
-function stripQuotes(word) {
-  return word.replace(/^["'`]+|["'`]+$/g, "");
+function unquote(word) {
+  return word.replace(/[$](?=["'])/g, "").replace(/[\\"'`]/g, "");
 }
 
 /**
@@ -628,36 +693,116 @@ export function jobRanges(text) {
 
 /**
  * A line without its comment: from a `#` that starts a word and is outside
- * quotes, so `echo " #" && npm publish` keeps its command. An unclosed quote
- * keeps the rest of the line, which can only add findings.
+ * quotes, so `echo " #" && npm publish` keeps its command. A backslash
+ * escapes the next character (an escaped space does not start a word), and
+ * `$'...'` honours `\'` inside. It fails closed: an unclosed quote, or a
+ * command substitution or expansion before the `#` (where this scan cannot
+ * follow the quotes), keeps the rest of the line, which can only add findings.
  *
  * @param {string} line
  * @returns {string}
  */
 export function stripShellComment(line) {
   let quote = "";
+  let escaped = -1;
   for (let i = 0; i < line.length; i += 1) {
     const char = line[i];
     if (quote !== "") {
-      if (char === "\\" && quote === '"') {
-        i += 1;
-      } else if (char === quote) {
-        quote = "";
-      }
+      ({ index: i, quote } = stepInQuote(line, i, quote));
+    } else if (char === "\\") {
+      i += 1;
+      escaped = i;
+    } else if (char === "$" && line[i + 1] === "'") {
+      quote = "$'";
+      i += 1;
     } else if (char === '"' || char === "'") {
       quote = char;
-    } else if (char === "#" && (i === 0 || /\s/.test(line[i - 1]))) {
-      return line.slice(0, i);
+    } else if (isCommentStart(line, i, escaped)) {
+      const before = line.slice(0, i);
+      return UNTRACKED_QUOTING.test(before) ? line : before;
     }
   }
   return line;
 }
 
 /**
+ * One step inside a quote: a single-quoted string has no escapes, the others
+ * skip the character after a backslash, and each ends at its own closing quote.
+ *
+ * @param {string} line
+ * @param {number} index
+ * @param {string} quote `'`, `"` or `$'`.
+ * @returns {{ index: number, quote: string }} Where to go on, and the quote still open.
+ */
+function stepInQuote(line, index, quote) {
+  if (quote !== "'" && line[index] === "\\") {
+    return { index: index + 1, quote };
+  }
+  const closer = quote === '"' ? '"' : "'";
+  return { index, quote: line[index] === closer ? "" : quote };
+}
+
+/** Text after which this scan cannot tell which quotes are open. */
+const UNTRACKED_QUOTING = /`|\$[({]/;
+
+/**
+ * @param {string} line
+ * @param {number} index
+ * @param {number} escaped The index of the last character a backslash escaped.
+ * @returns {boolean} Whether the `#` at `index` starts a comment.
+ */
+function isCommentStart(line, index, escaped) {
+  if (line[index] !== "#") {
+    return false;
+  }
+  return index === 0 || (/\s/.test(line[index - 1]) && escaped !== index - 1);
+}
+
+/** A folded block header after a key, with any chomping or indentation indicator (`>`, `>-`, `>2-`, `>-2`). */
+const FOLDED_HEADER = /:\s*>[-+0-9]*\s*$/;
+
+/** A key that holds a command, with what comes before it on the line. */
+const COMMAND_KEY =
+  /^(\s*(?:-\s+)*)["']?(?:run|command|entrypoint|cmd|script)["']?\s*:\s*/;
+
+/**
+ * Whether the lines after `lines[index]` continue its value, and if so the
+ * indent they must exceed: a folded block, or a plain, double-quoted or
+ * single-quoted scalar after a command key, which YAML folds into one line.
+ * A literal block (`|`), a nested list and an empty value are not folded.
+ *
+ * @param {string[]} lines
+ * @param {number} index
+ * @returns {number | undefined}
+ */
+function foldingIndent(lines, index) {
+  const line = stripShellComment(lines[index]);
+  if (FOLDED_HEADER.test(line)) {
+    return lines[index].search(/\S|$/);
+  }
+  const key = COMMAND_KEY.exec(line);
+  if (key === null) {
+    return undefined;
+  }
+  const value = line.slice(key[0].length).trim();
+  if (value.startsWith("|")) {
+    return undefined;
+  }
+  if (value === "") {
+    const next = lines.slice(index + 1).find((entry) => entry.trim() !== "");
+    return next !== undefined && !/^\s*-(?:\s|$)/.test(next)
+      ? key[1].length
+      : undefined;
+  }
+  return key[1].length;
+}
+
+/**
  * The lines of a shell or YAML file as the shell or YAML reader joins them:
  * a line that ends in a backslash continues on the next, and the lines of a
- * folded block (`run: >`) become one line. Each result keeps the number of
- * its first line, and comments are removed.
+ * folded block (`run: >`) or of a multi-line scalar after a command key
+ * (`run:`, `command:`) become one line. Each result keeps the number of its
+ * first line, and comments are removed.
  *
  * @param {string} text
  * @returns {{ line: number, text: string }[]}
@@ -668,13 +813,13 @@ export function logicalLines(text) {
   let i = 0;
   while (i < lines.length) {
     const first = i + 1;
-    const indent = lines[i].search(/\S|$/);
+    const foldsOver = foldingIndent(lines, i);
     let joined = stripShellComment(lines[i]);
     i += 1;
-    if (/:\s*>[-+]?\s*$/.test(joined)) {
+    if (foldsOver !== undefined) {
       while (
         i < lines.length &&
-        (lines[i].trim() === "" || lines[i].search(/\S|$/) > indent)
+        (lines[i].trim() === "" || lines[i].search(/\S|$/) > foldsOver)
       ) {
         joined += ` ${stripShellComment(lines[i]).trim()}`;
         i += 1;
@@ -703,9 +848,36 @@ export function yamlAnchorLines(text) {
     .map((entry) => entry.line);
 }
 
-/** A workflow step that uses an action that publishes to npm. */
+/** The `uses` key of a workflow step, quoted or not, and what follows it on the line. */
+const USES_KEY = /(?:^|[\s{,])["']?uses["']?\s*:\s*(.*)$/;
+/** The names of actions that publish to npm. */
 const PUBLISH_ACTION =
-  /\buses:\s*["']?[^\s"']*(?:npm-publish|publish-npm|npm_publish|changesets\/action|semantic-release)/i;
+  /npm-publish|publish-npm|npm_publish|changesets\/action|semantic-release/i;
+
+/**
+ * The lines of a workflow that use an action that publishes to npm. The
+ * action may be on the line after its `uses` key.
+ *
+ * @param {{ line: number, text: string }[]} lines
+ * @returns {number[]}
+ */
+function publishActionLines(lines) {
+  const found = [];
+  lines.forEach((entry, index) => {
+    const uses = USES_KEY.exec(entry.text);
+    if (uses === null) {
+      return;
+    }
+    const next = lines
+      .slice(index + 1)
+      .find((later) => later.text.trim() !== "");
+    const action = uses[1].trim() === "" ? (next?.text ?? "") : uses[1];
+    if (PUBLISH_ACTION.test(action)) {
+      found.push(entry.line);
+    }
+  });
+  return found;
+}
 
 /**
  * @typedef {object} Finding
@@ -724,26 +896,160 @@ function lineOf(text, index) {
 }
 
 /**
- * Reads the `scripts` of a manifest as lines of shell, with their line.
+ * Package manifest keys that hold names and prose, which can say
+ * `npm publish` without running it. Every other key is read, so a hook runner's
+ * own section (`lint-staged`, `simple-git-hooks`) is too.
+ */
+const MANIFEST_PROSE_KEYS = new Set([
+  "name",
+  "version",
+  "description",
+  "keywords",
+  "author",
+  "contributors",
+  "maintainers",
+  "license",
+  "licenses",
+  "homepage",
+  "bugs",
+  "repository",
+  "funding",
+  "files",
+  "main",
+  "module",
+  "types",
+  "typings",
+  "exports",
+  "imports",
+  "browser",
+  "bin",
+  "man",
+  "directories",
+  "engines",
+  "os",
+  "cpu",
+  "packageManager",
+  "dependencies",
+  "devDependencies",
+  "peerDependencies",
+  "peerDependenciesMeta",
+  "optionalDependencies",
+  "bundleDependencies",
+  "overrides",
+  "resolutions",
+  "workspaces",
+  "publishConfig",
+  "sideEffects",
+  "type",
+  "private",
+]);
+
+/** Keys of a JSON configuration object that hold a command to run. */
+const COMMAND_KEYS = /^(?:command|cmd|run|script|entrypoint|\w+Command)$/;
+
+/**
+ * @param {unknown} value
+ * @returns {string[]} Every string in a JSON value.
+ */
+function stringsIn(value) {
+  if (typeof value === "string") {
+    return [value];
+  }
+  if (value === null || typeof value !== "object") {
+    return [];
+  }
+  return Object.values(value).flatMap(stringsIn);
+}
+
+/**
+ * The commands in a JSON configuration value: the string, or list of strings,
+ * under a key that holds a command, with the `args` list beside it joined on
+ * (`{ "command": "npm", "args": ["publish"] }`).
  *
+ * @param {unknown} value
+ * @returns {string[]}
+ */
+function commandsIn(value) {
+  if (value === null || typeof value !== "object") {
+    return [];
+  }
+  if (Array.isArray(value)) {
+    return value.flatMap(commandsIn);
+  }
+  const found = [];
+  for (const [key, entry] of Object.entries(value)) {
+    if (COMMAND_KEYS.test(key)) {
+      const args = Array.isArray(value.args) ? value.args : [];
+      const parts = typeof entry === "string" ? [entry, ...args] : [entry];
+      found.push(stringsIn(parts).join(" "));
+    } else {
+      found.push(...commandsIn(entry));
+    }
+  }
+  return found;
+}
+
+/**
+ * JSON with comments and trailing commas, as `wrangler.jsonc` and editor
+ * settings are written: both are removed outside strings before parsing.
+ *
+ * @param {string} text
+ * @returns {unknown} The value, or `undefined` when it does not parse.
+ */
+function parseJsonc(text) {
+  const plain = text
+    .replace(
+      /("(?:[^"\\]|\\.)*")|\/\/[^\n]*|\/\*[\s\S]*?\*\//g,
+      (_match, quoted) => quoted ?? "",
+    )
+    .replace(/,(\s*[}\]])/g, "$1");
+  try {
+    return JSON.parse(plain);
+  } catch {
+    return undefined;
+  }
+}
+
+/**
+ * @param {string[]} lines
+ * @param {string} command
+ * @returns {number} The index of the first line holding the command's JSON text, or its program, or -1.
+ */
+function firstLineWith(lines, command) {
+  const encode = (text) => JSON.stringify(text).slice(1, -1);
+  const [program] = command.split(" ");
+  const wholeAt = lines.findIndex((line) => line.includes(encode(command)));
+  if (wholeAt !== -1) {
+    return wholeAt;
+  }
+  return lines.findIndex((line) => line.includes(encode(program)));
+}
+
+/**
+ * The strings of a JSON file that run as commands, with their line: the
+ * non-prose keys of a manifest (its `scripts` and any hook runner's section),
+ * and the command keys of a configuration file. A file that does not parse is
+ * read line by line, so a mistake cannot hide a command.
+ *
+ * @param {string} file
  * @param {string} text
  * @returns {{ line: number, text: string }[]}
  */
-function manifestScripts(text) {
+function jsonCommands(file, text) {
   const lines = text.split("\n");
-  let manifest;
-  try {
-    manifest = JSON.parse(text);
-  } catch {
+  const parsed = parseJsonc(text);
+  if (parsed === undefined || parsed === null || typeof parsed !== "object") {
     return lines.map((line, index) => ({ line: index + 1, text: line }));
   }
-  const scripts = Object.values(manifest.scripts ?? {}).filter(
-    (value) => typeof value === "string",
-  );
-  return scripts.map((script) => {
-    const encoded = JSON.stringify(script).slice(1, -1);
-    const index = lines.findIndex((line) => line.includes(encoded));
-    return { line: index === -1 ? 1 : index + 1, text: script };
+  const isManifest = path.posix.basename(file) === "package.json";
+  const strings = isManifest
+    ? Object.entries(parsed)
+        .filter(([key]) => !MANIFEST_PROSE_KEYS.has(key))
+        .flatMap(([, value]) => stringsIn(value))
+    : commandsIn(parsed);
+  return strings.map((command) => {
+    const index = firstLineWith(lines, command);
+    return { line: index === -1 ? 1 : index + 1, text: command };
   });
 }
 
@@ -752,9 +1058,12 @@ function manifestScripts(text) {
  * wherever they are: a configuration file or a test can start a process too.
  */
 const SCRIPT_FILE = /\.(?:mjs|cjs|js|jsx|ts|tsx|mts|cts|py)$/;
-/** Files read as shell lines. */
+/** Files read as shell lines, or as YAML or TOML that holds them. */
 const SHELL_FILE =
-  /(?:\.(?:sh|bash|zsh|ps1|cmd|bat|mk)$|(?:^|\/)(?:Dockerfile[^/]*|Makefile[^/]*|justfile|Taskfile\.ya?ml|lefthook(?:-local)?\.ya?ml)$)/;
+  /(?:\.(?:sh|bash|zsh|ps1|cmd|bat|mk)$|(?:^|\/)(?:Dockerfile[^/]*|(?:GNU)?makefile[^/]*|\.?justfile|Taskfile\.ya?ml|\.?lefthook(?:-local)?\.(?:ya?ml|toml)|(?:docker-)?compose[^/]*\.ya?ml|\.gitlab-ci\.ya?ml|\.travis\.ya?ml|azure-pipelines[^/]*\.ya?ml|cloudbuild\.ya?ml|\.pre-commit-config\.ya?ml|Procfile)$|^\.circleci\/.*\.ya?ml$)/i;
+/** JSON (or JSON with comments) that holds commands under some keys. */
+const JSON_CONFIG_FILE =
+  /^(?:\.claude\/settings(?:\.local)?\.json|\.qwen\/settings\.json|\.gemini\/settings\.json|\.cursor\/hooks\.json|\.codex\/hooks\.json|\.github\/hooks\/.*\.json|\.vscode\/(?:tasks|launch)\.json|\.devcontainer(?:\/.*)?\/devcontainer\.json|\.devcontainer\.json|(?:.*\/)?wrangler\.jsonc?|(?:.*\/)?\.?lefthook(?:-local)?\.json)$/;
 /** Workflows and composite actions. */
 const WORKFLOW_FILE = /^\.github\/(?:workflows|actions)\/.*\.ya?ml$/;
 /** Folders of git and agent hooks, read as shell unless they hold JavaScript. */
@@ -774,6 +1083,7 @@ export function isExecutable(file) {
   }
   return (
     path.posix.basename(file) === "package.json" ||
+    JSON_CONFIG_FILE.test(file) ||
     WORKFLOW_FILE.test(file) ||
     SHELL_FILE.test(file) ||
     SCRIPT_FILE.test(file) ||
@@ -788,11 +1098,14 @@ export function isExecutable(file) {
  * @returns {{ command: string, line: number }[]}
  */
 function findingsInFile(file, text) {
-  if (path.posix.basename(file) === "package.json") {
-    return manifestScripts(text).flatMap((script) =>
-      forbiddenInShellText(script.text).map((command) => ({
+  if (
+    path.posix.basename(file) === "package.json" ||
+    JSON_CONFIG_FILE.test(file)
+  ) {
+    return jsonCommands(file, text).flatMap((entry) =>
+      forbiddenInShellText(entry.text).map((command) => ({
         command,
-        line: script.line,
+        line: entry.line,
       })),
     );
   }
@@ -812,16 +1125,14 @@ function findingsInFile(file, text) {
   if (!WORKFLOW_FILE.test(file)) {
     return commands;
   }
-  const actions = lines
-    .filter((entry) => PUBLISH_ACTION.test(entry.text))
-    .map((entry) => ({ command: "publish action", line: entry.line }));
-  const anchors =
-    file === RELEASE_WORKFLOW
-      ? yamlAnchorLines(text).map((line) => ({
-          command: "yaml anchor or alias",
-          line,
-        }))
-      : [];
+  const actions = publishActionLines(lines).map((line) => ({
+    command: "publish action",
+    line,
+  }));
+  const anchors = yamlAnchorLines(text).map((line) => ({
+    command: "yaml anchor or alias",
+    line,
+  }));
   return [...commands, ...actions, ...anchors];
 }
 

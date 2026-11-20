@@ -579,7 +579,7 @@ describe("what is read beyond scripts", () => {
     expect(scan(".github/workflows/ci.yml", harmless)).toEqual([]);
   });
 
-  it("fails on a YAML anchor or alias in release.yml, and only there", () => {
+  it("fails on a YAML anchor or alias in a workflow", () => {
     const anchored = [
       "jobs:",
       "  verify: &steps",
@@ -601,7 +601,7 @@ describe("what is read beyond scripts", () => {
         command: "yaml anchor or alias",
       },
     ]);
-    expect(scan(".github/workflows/ci.yml", anchored)).toEqual([]);
+    expect(scan(".github/workflows/ci.yml", anchored)).toHaveLength(2);
   });
 
   it("does not take a glob or a shell operator in release.yml for an alias", () => {
@@ -614,6 +614,250 @@ describe("what is read beyond scripts", () => {
       "",
     ].join("\n");
     expect(scan(".github/workflows/release.yml", workflow)).toEqual([]);
+  });
+});
+
+describe("spellings that get past a plain word match", () => {
+  it.each([
+    ["a flow mapping step", "- {run: npm publish}"],
+    ["a flow sequence of steps", 'steps: [{run: "npm publish"}]'],
+    ["a lefthook flow command", 'p: {run: "npm publish"}'],
+    ["a Dockerfile exec form", 'RUN ["npm","publish"]'],
+    ["a Dockerfile CMD exec form", 'CMD ["npm", "publish"]'],
+    ["a compose command list", 'command: ["npm", "publish"]'],
+    ["a compose command list of plain words", "command: [npm, publish]"],
+    ["an ANSI-C quoted program", "$'npm' publish"],
+    ["an ANSI-C quoted command", "npm $'publish'"],
+    ["an empty quote inside the command", "npm pub''lish"],
+    ["a quote inside the command", 'npm "pub"lish'],
+    ["a backslash inside the command", "npm p\\ublish"],
+    ["a backslash inside the program", "n\\pm publish"],
+    ["an empty quote inside the program", "n''pm publish"],
+    ["a brace expansion", "npm {publish,pack}"],
+    ["an option with a value this check lists", "yarn --cwd pkg publish"],
+    [
+      "an option that is not listed, before a command that is",
+      "npm --other pkg publish",
+    ],
+    ["pnpm recursive", "pnpm -r publish"],
+    ["pnpm filtered", "pnpm --filter core publish"],
+    ["yarn workspaces foreach", "yarn workspaces foreach -A npm publish"],
+    ["bunx", "bunx npm publish"],
+    ["corepack with pnpm", "corepack pnpm publish"],
+  ])("finds %s", (_name, line) => {
+    expect(inShell(`${line}`).length, line).toBeGreaterThan(0);
+  });
+
+  it.each([
+    "npm run publish:docs",
+    "npm --prefix web run publish:docs",
+    'echo "{run: ls}"',
+    "echo [a, b]",
+    "yarn --cwd pkg build",
+    "pnpm -r build",
+    "bunx vitest run",
+    "npm install --save-dev left-pad",
+  ])("still leaves %s alone", (line) => {
+    expect(inShell(line)).toEqual([]);
+  });
+
+  it("strips a real comment after the new quote handling", () => {
+    expect(stripShellComment("echo \\ # npm publish")).toBe(
+      "echo \\ # npm publish",
+    );
+    expect(stripShellComment("echo $'a\\'b' # npm publish")).toBe(
+      "echo $'a\\'b' ",
+    );
+    expect(stripShellComment("echo $(date) # npm publish")).toBe(
+      "echo $(date) # npm publish",
+    );
+    expect(stripShellComment("echo a\\#b # c")).toBe("echo a\\#b ");
+  });
+});
+
+describe("YAML scalars and files beyond the first version", () => {
+  const scan = (file: string, text: string) =>
+    scanSources([{ path: file, text }]) as {
+      file: string;
+      line: number;
+      command: string;
+    }[];
+  const workflow = (step: string) => `jobs:\n  a:\n    steps:\n${step}\n`;
+
+  it.each([
+    ["a multi-line plain scalar", "      - run: npm\n          publish"],
+    [
+      "a multi-line double-quoted scalar",
+      '      - run: "npm\n          publish"',
+    ],
+    [
+      "a multi-line single-quoted scalar",
+      "      - run: 'npm\n          publish'",
+    ],
+    [
+      "a folded scalar with an indentation indicator",
+      "      - run: >2-\n          npm\n          publish",
+    ],
+    [
+      "a folded scalar with the indicator after the chomp",
+      "      - run: >-2\n          npm\n          publish",
+    ],
+    [
+      "a plain scalar that starts on the next line",
+      "      - run:\n          npm\n          publish",
+    ],
+  ])("joins %s", (_name, step) => {
+    expect(scan(".github/workflows/ci.yml", workflow(step))).toHaveLength(1);
+  });
+
+  it("does not join a literal block, a sibling key or a list", () => {
+    expect(
+      scan(
+        ".github/workflows/ci.yml",
+        workflow(
+          "      - run: |2\n          echo npm\n          publish-notes",
+        ),
+      ),
+    ).toEqual([]);
+    expect(
+      scan(
+        ".github/workflows/ci.yml",
+        workflow("      - run: echo npm\n        name: publish"),
+      ),
+    ).toEqual([]);
+  });
+
+  it("finds a command in a lefthook flow command and in the dotted file name", () => {
+    expect(
+      scan(
+        "lefthook.yml",
+        'pre-push:\n  commands:\n    p: {run: "npm publish"}\n',
+      ),
+    ).toHaveLength(1);
+    expect(
+      scan(
+        ".lefthook.yml",
+        "pre-push:\n  commands:\n    p:\n      run: npm publish\n",
+      ),
+    ).toHaveLength(1);
+    expect(
+      scan(".config/lefthook-local.yaml", "x:\n  run: npm publish\n"),
+    ).toHaveLength(1);
+  });
+
+  it("reads a Justfile, a lower-case makefile and the compose and CI files", () => {
+    expect(scan("Justfile", "ship:\n  npm publish\n")).toHaveLength(1);
+    expect(scan(".justfile", "ship:\n  npm publish\n")).toHaveLength(1);
+    expect(scan("makefile", "ship:\n\tnpm publish\n")).toHaveLength(1);
+    expect(
+      scan(
+        "docker-compose.yml",
+        "services:\n  a:\n    command: [npm, publish]\n",
+      ),
+    ).toHaveLength(1);
+    expect(
+      scan("compose.prod.yaml", "services:\n  a:\n    command: npm publish\n"),
+    ).toHaveLength(1);
+    expect(
+      scan(".gitlab-ci.yml", "release:\n  script:\n    - npm publish\n"),
+    ).toHaveLength(1);
+    expect(scan("Dockerfile", 'CMD ["npm", "publish"]\n')).toHaveLength(1);
+  });
+
+  it("reads the command strings of editor, agent and Cloudflare configuration", () => {
+    const hook = JSON.stringify({
+      hooks: {
+        PostToolUse: [{ hooks: [{ type: "command", command: "npm publish" }] }],
+      },
+    });
+    expect(scan(".claude/settings.json", hook)).toHaveLength(1);
+    const tasks = JSON.stringify({
+      version: "2.0.0",
+      tasks: [{ label: "x", command: "npm", args: ["publish"] }],
+    });
+    expect(scan(".vscode/tasks.json", tasks)).toHaveLength(1);
+    const wrangler =
+      '{\n  // build\n  "build": { "command": "npm publish", },\n}\n';
+    expect(scan("wrangler.jsonc", wrangler)).toEqual([
+      { file: "wrangler.jsonc", line: 3, command: "publish" },
+    ]);
+    expect(scan("wrangler.jsonc", '{ "name": "npm publish" }')).toEqual([]);
+    expect(
+      scan(
+        ".devcontainer/devcontainer.json",
+        '{"postCreateCommand": "npm publish"}',
+      ),
+    ).toHaveLength(1);
+  });
+
+  it.each([
+    ["after an escaped space", "echo \\ #; npm publish"],
+    [
+      "after an ANSI-C string with an escaped quote",
+      "echo $'\\' #' ; npm publish",
+    ],
+  ])("keeps a command that follows a hash %s", (_name, line) => {
+    expect(scan("scripts/ship.sh", `${line}\n`)).toHaveLength(1);
+    expect(
+      scan(".github/workflows/ci.yml", workflow(`      - run: ${line}`)),
+    ).toHaveLength(1);
+  });
+
+  it("does not take a deny list for a command", () => {
+    const denyList = JSON.stringify({
+      permissions: { deny: ["Bash(npm publish *)", "Bash(npm login)"] },
+    });
+    expect(scan(".claude/settings.json", denyList)).toEqual([]);
+    expect(scan(".qwen/settings.json", denyList)).toEqual([]);
+  });
+
+  it("reads the manifest keys that run commands, and not its prose", () => {
+    const lintStaged = JSON.stringify({
+      "lint-staged": { "*.ts": ["biome check", "npm publish"] },
+    });
+    expect(scan("package.json", lintStaged)).toHaveLength(1);
+    const hooks = JSON.stringify({
+      "simple-git-hooks": { "pre-push": "npm publish" },
+    });
+    expect(scan("packages/core/package.json", hooks)).toHaveLength(1);
+    const prose = JSON.stringify({
+      name: "npm publish",
+      description: "npm publish",
+      keywords: ["npm publish"],
+      repository: "npm publish",
+      scripts: { build: "tsc" },
+    });
+    expect(scan("package.json", prose)).toEqual([]);
+  });
+
+  it.each([
+    ["a following line", "      - uses:\n          JS-DevTools/npm-publish@v1"],
+    ["a quoted key", '      - "uses": JS-DevTools/npm-publish@v1'],
+    ["a single-quoted key and value", "      - 'uses': 'changesets/action@v1'"],
+    ["a flow mapping", "      - {uses: JS-DevTools/npm-publish@v1}"],
+  ])("fails a publish action given on %s", (_name, step) => {
+    expect(scan(".github/workflows/ci.yml", workflow(step))).toEqual([
+      { file: ".github/workflows/ci.yml", line: 4, command: "publish action" },
+    ]);
+  });
+
+  it("fails a YAML anchor or alias in every workflow, not only release.yml", () => {
+    for (const file of [
+      ".github/workflows/ci.yml",
+      ".github/workflows/release.yml",
+      ".github/actions/x/action.yml",
+    ]) {
+      const alias = workflow("      - run: *pub");
+      expect(
+        scan(file, alias).map((f) => f.command),
+        file,
+      ).toEqual(["yaml anchor or alias"]);
+      const anchor = workflow("      - x: &a npm publish");
+      expect(
+        scan(file, anchor).map((f) => f.command),
+        file,
+      ).toContain("yaml anchor or alias");
+    }
   });
 });
 

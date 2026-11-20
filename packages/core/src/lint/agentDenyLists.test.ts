@@ -55,8 +55,46 @@ function npmCommands(name: string, withNpx: boolean): string[] {
   return withNpx ? [...direct, ...throughNpx] : direct;
 }
 
+/** A forbidden command through npx with a pinned or tagged npm. */
+function pinnedNpx(name: string): string[] {
+  return [
+    `npx npm@11 ${name}`,
+    `npx npm@latest ${name} --tag next`,
+    `npx -y npm@11.19.1 ${name}`,
+    `npx --yes npm@latest ${name} @mapcairn/core`,
+  ];
+}
+
+/** Publishes started through another launcher, a workspace runner or a pinned npx. */
+const LAUNCHED_PUBLISH = [
+  ...pinnedNpx("publish"),
+  "pnpm -r publish",
+  "pnpm --recursive publish --no-git-checks",
+  "pnpm --filter core publish",
+  "pnpm exec npm publish",
+  "pnpm dlx npm publish",
+  "yarn workspaces foreach -A npm publish",
+  "yarn --cwd pkg publish",
+  "yarn dlx npm publish --tag next",
+  "bunx npm publish",
+  "bunx npm@latest publish --tag next",
+  "corepack npm publish",
+  "corepack pnpm publish",
+  "corepack yarn npm publish",
+];
+
 /** Commands the lists must leave alone, so the release skill and the checks keep working. */
 const ALLOWED_COMMANDS = [
+  "npx npm@11 whoami",
+  "npx npm@11 pack --dry-run",
+  "npx --yes npm@latest view @mapcairn/core version",
+  "bunx vitest run",
+  "pnpm -r build",
+  "pnpm run build",
+  "yarn --cwd pkg build",
+  "yarn install",
+  "corepack enable",
+  "corepack use pnpm@10",
   "npm pack --dry-run --json",
   "npm install",
   "npm ci --ignore-scripts",
@@ -199,6 +237,24 @@ describe("Claude Code, .claude/settings.json", () => {
     }
   });
 
+  it("denies a publish started through a pinned npx, another launcher or a workspace runner", () => {
+    for (const shell of ["Bash", "PowerShell"]) {
+      const patterns = innerPatterns(rules, shell);
+      for (const command of LAUNCHED_PUBLISH) {
+        expect(
+          listDenies(patterns, command, true),
+          `${shell}: ${command}`,
+        ).toBe(true);
+      }
+    }
+    const bash = innerPatterns(rules, "Bash");
+    for (const name of NAMES) {
+      for (const command of [...pinnedNpx(name), `corepack npm ${name}`]) {
+        expect(listDenies(bash, command, true), command).toBe(true);
+      }
+    }
+  });
+
   it("leaves the release skill's commands and the checks alone", () => {
     for (const shell of ["Bash", "PowerShell"]) {
       for (const command of ALLOWED_COMMANDS) {
@@ -237,6 +293,17 @@ describe("Qwen Code, .qwen/settings.json", () => {
     }
   });
 
+  it("denies a publish started through a pinned npx, another launcher or a workspace runner", () => {
+    for (const command of LAUNCHED_PUBLISH) {
+      expect(listDenies(patterns, command, false), command).toBe(true);
+    }
+    for (const name of NAMES) {
+      for (const command of [...pinnedNpx(name), `corepack npm ${name}`]) {
+        expect(listDenies(patterns, command, false), command).toBe(true);
+      }
+    }
+  });
+
   it("leaves the release skill's commands and the checks alone, and holds only a deny list", () => {
     for (const command of ALLOWED_COMMANDS) {
       expect(listDenies(patterns, command, false), command).toBe(false);
@@ -269,6 +336,17 @@ describe("opencode, opencode.json", () => {
     }
   });
 
+  it("denies a publish started through a pinned npx, another launcher or a workspace runner", () => {
+    for (const command of LAUNCHED_PUBLISH) {
+      expect(listDenies(patterns, command, false), command).toBe(true);
+    }
+    for (const name of NAMES) {
+      for (const command of [...pinnedNpx(name), `corepack npm ${name}`]) {
+        expect(listDenies(patterns, command, false), command).toBe(true);
+      }
+    }
+  });
+
   it("leaves the release skill's commands and the checks alone", () => {
     for (const command of ALLOWED_COMMANDS) {
       expect(listDenies(patterns, command, false), command).toBe(false);
@@ -293,6 +371,17 @@ describe("Cursor command line, .cursor/cli.json", () => {
       expect(cursorDenies(rules, words.join(" "))).toBe(true);
     }
     expect(cursorDenies(rules, APPROVAL_COMMAND)).toBe(true);
+  });
+
+  it("denies a publish started through a pinned npx, another launcher or a workspace runner", () => {
+    for (const command of LAUNCHED_PUBLISH) {
+      expect(cursorDenies(rules, command), command).toBe(true);
+    }
+    for (const name of NAMES) {
+      for (const command of [...pinnedNpx(name), `corepack npm ${name}`]) {
+        expect(cursorDenies(rules, command), command).toBe(true);
+      }
+    }
   });
 
   it("leaves the release skill's commands and the checks alone", () => {
@@ -322,6 +411,28 @@ describe("Codex, .codex/rules/publish-guard.rules", () => {
     }
     for (const words of OTHERS) {
       expect(codexDenies(text, `${words.join(" ")} --tag next`)).toBe(true);
+    }
+  });
+
+  it("forbids a publish through a pinned npx, a workspace runner, bunx and corepack", () => {
+    const exact = [
+      "npx npm@latest publish",
+      "npx npm@11 login --registry x",
+      "npx -y npm@latest publish",
+      "npx --yes npm@next dist-tag add x latest",
+      "pnpm -r publish",
+      "pnpm --recursive publish",
+      "pnpm dlx npm publish",
+      "pnpm exec npm publish",
+      "yarn dlx npm publish",
+      "bunx npm publish",
+      "bunx npm@latest publish",
+      "corepack npm publish",
+      "corepack pnpm publish",
+      "corepack yarn npm publish",
+    ];
+    for (const command of exact) {
+      expect(codexDenies(text, command), command).toBe(true);
     }
   });
 
