@@ -147,7 +147,6 @@ describe("checkChangelog", () => {
         "thanks `@some-handle`",
         "thanks some-handle",
         "see @mapcairn/map and @mapcairn/core/contracts",
-        "mail a@b.example",
         "`` @a `` and `b`",
       ]) {
         expect(messages(edited("The scale bar", good))).toEqual([]);
@@ -390,7 +389,7 @@ describe("checkChangelog", () => {
     });
 
     it("passes bullet entries and emphasised labels", () => {
-      const bulleted = `${PREAMBLE}## 0.1.0 (2026-12-01)\n\n### What to change when you upgrade\n\n- Rename \`a\` to \`b\`.\n\n  **Before**\n\n  \`\`\`ts\n  a();\n  \`\`\`\n\n  _After_\n\n  \`\`\`ts\n  b();\n  \`\`\`\n`;
+      const bulleted = `${PREAMBLE}## 0.1.0 (2026-12-01)\n\n### What to change when you upgrade\n\n- Rename \`a\` to \`b\`.\n\n_Before_\n\n\`\`\`ts\na();\n\`\`\`\n\n_After_\n\n\`\`\`ts\nb();\n\`\`\`\n`;
       expect(messages(bulleted)).toEqual([]);
     });
 
@@ -768,6 +767,180 @@ describe("published text", () => {
       "```text\nhttps://example.test\n[a](//example.test)\n```",
     ])("passes %s", (good) => {
       expect(messages(withLine(good))).toEqual([]);
+    });
+  });
+
+  describe("code blocks that hide text", () => {
+    it.each([
+      "- ```\n  code\n  ```\n  <img src=x onerror=1>\n  ```",
+      "- ```\n  code\n  ```\n  [a](//evil.test)\n  ```",
+      "* ```\n  x",
+      "+ ~~~\n  x",
+      "1. ```\n   x",
+      "2) ```\n   x",
+      "> ```\n> x",
+      "> - ```\n>   x",
+    ])("fails a fence that starts after a list or quote marker: %j", (bad) => {
+      expect(messages(withLine(bad)).join(" ")).toContain("left margin");
+    });
+
+    it("fails a fence indented one to three spaces, and reads four as code", () => {
+      for (const indent of [" ", "  ", "   "]) {
+        expect(
+          messages(withLine(`${indent}\`\`\`\nx\n${indent}\`\`\``)).join(" "),
+        ).toContain("left margin");
+      }
+      expect(
+        messages(withLine("    ```\n<img src=x>\n    ```")).join(" "),
+      ).toContain("HTML");
+    });
+
+    it("closes a fence only with a run at least as long", () => {
+      expect(messages(withLine("````\n```\n<img src=x>\n````"))).toEqual([]);
+      expect(messages(withLine("```\n<img src=x>\n````"))).toEqual([]);
+      expect(messages(`${GOOD}\n\`\`\`\`\n<img src=x>\n\`\`\`\n`)).toContain(
+        "This code block is never closed, so everything after it would read as code. Close it with a matching fence.",
+      );
+    });
+
+    it("passes a marker inside a fence at the left margin", () => {
+      expect(messages(withLine("```text\n- ```\n> ```\n```"))).toEqual([]);
+    });
+  });
+
+  describe("line endings and control characters", () => {
+    it.each([
+      "a `\r\r<img src=x onerror=1> \r\r` b",
+      "a\r## 0.3.0 (2026-12-02)",
+      "a\r[x]: //evil.test",
+      "a\u000b<img src=x>",
+      "a\u000c<img src=x>",
+      "a\u0000b",
+      "a\u0001b",
+      "a\u007fb",
+    ])("fails %j, on its line", (bad) => {
+      const text = withLine(bad);
+      const found = checkChangelog(text).find((finding: { message: string }) =>
+        finding.message.includes("control character"),
+      );
+      expect(found.line).toBe(
+        text.slice(0, text.indexOf(bad)).split("\n").length,
+      );
+    });
+
+    it("passes a changelog with Windows line endings and a tab", () => {
+      expect(messages(GOOD.replace(/\n/g, "\r\n"))).toEqual([]);
+      expect(messages(withLine("a\tb"))).toEqual([]);
+    });
+  });
+
+  describe("reference definitions anywhere", () => {
+    it.each([
+      "> [x]: //evil.test",
+      "- [x]: //evil.test",
+      "  - [x]: javascript:alert(1)",
+      "> [x]: javascript:alert(1)",
+      "1. [x]: data:text/html,hi",
+      "[x]:\t//evil.test",
+      "[x]: https://example.test",
+      "text [x]: https://example.test",
+      "[x]:",
+      "[x]:\n//evil.test",
+    ])("fails %j", (bad) => {
+      expect(messages(withLine(bad)).join(" ")).toMatch(/link/i);
+    });
+
+    it("passes a definition that stays in the repository", () => {
+      for (const good of [
+        "> [x]: docs/a.md",
+        "[x]:\tdocs/a.md",
+        "- [x]: #what-is-new",
+        "1. [x]: https://github.com/MapCairn/mapcairn/pull/1",
+      ]) {
+        expect(messages(withLine(good))).toEqual([]);
+      }
+    });
+  });
+
+  describe("repository addresses", () => {
+    it.each([
+      "https://github.com/MapCairn/mapcairn/../../evil/repo",
+      "https://github.com/MapCairn/mapcairn/%2e%2e/%2e%2e/evil/repo",
+      "https://github.com/MapCairn/mapcairn/%2E%2E%2fevil",
+      "https://github.com/MapCairn/mapcairn/..;/evil",
+      "https://github.com/MapCairn/mapcairn/./../x",
+      "https://github.com/MapCairn/mapcairn%2f..%2fevil",
+      "https://github.com/MapCairn/mapcairn@example.test",
+      "https://github.com/MapCairn/mapcairn:80",
+      "https://github.com:8080/MapCairn/mapcairn",
+      "https://user@github.com/MapCairn/mapcairn",
+      "https://!@github.com/MapCairn/mapcairn",
+      "https://:!@github.com/MapCairn/mapcairn",
+      "https://github.com/MapCairn",
+      "https://github.com/MapCairn/mapcairn\u0001",
+    ])("fails the address %s as a link and as text", (address) => {
+      expect(messages(withLine(`[a](${address})`)).join(" ")).toMatch(/link/i);
+      expect(messages(withLine(`See ${address}`)).join(" ")).toMatch(/link/i);
+    });
+
+    it("passes a page of the repository, whatever the case or query", () => {
+      for (const address of [
+        "https://github.com/mapcairn/MAPCAIRN",
+        "https://github.com/MapCairn/mapcairn?tab=readme#top",
+        "https://github.com/MapCairn/mapcairn/compare/a...b",
+        "https://github.com/MapCairn/mapcairn/releases/tag/v0.1.0-rc.1",
+      ]) {
+        expect(messages(withLine(`[a](${address})`))).toEqual([]);
+      }
+    });
+  });
+
+  describe("odd link targets", () => {
+    it.each([
+      "[a](\u0001//evil.test)",
+      "[a](\u007f//evil.test)",
+      "[a](a&#58;//evil.test)",
+      "[a](a&colon;//evil.test)",
+    ])("fails %j", (bad) => {
+      expect(messages(withLine(bad)).join(" ")).toMatch(/link/i);
+    });
+
+    it("fails an ftp address in text", () => {
+      expect(
+        messages(withLine("Fetch ftp://example.test/file")).join(" "),
+      ).toMatch(/link/i);
+    });
+  });
+
+  describe("email addresses", () => {
+    it.each([
+      "mail someone@example.test",
+      "mail Some.One+tag@sub.example.test.",
+      "(someone@example.test)",
+    ])("fails %j, because a renderer makes it a mailto link", (bad) => {
+      expect(messages(withLine(bad)).join(" ")).toContain("email");
+    });
+
+    it("passes an address in a code span and a scoped package name", () => {
+      expect(messages(withLine("mail `someone@example.test`"))).toEqual([]);
+      expect(messages(withLine("see (@mapcairn/theme/tokens.css)"))).toEqual(
+        [],
+      );
+    });
+  });
+
+  describe("a long line", () => {
+    it("finishes quickly on a line of spaces", () => {
+      const started = Date.now();
+      for (const shape of [
+        `${" ".repeat(100_000)}x`,
+        `- ${" ".repeat(100_000)}x`,
+        `${" ".repeat(100_000)}`,
+        `x${" ".repeat(100_000)}y`,
+      ]) {
+        checkChangelog(withLine(shape));
+      }
+      expect(Date.now() - started).toBeLessThan(2000);
     });
   });
 

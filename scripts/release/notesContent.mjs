@@ -9,20 +9,24 @@
  * markup is refused rather than interpreted.
  */
 
-/** A link target that is a heading anchor in the same document. */
-const ANCHOR = /^#[\w.%-]*$/;
 /**
- * A relative path: no scheme (so no colon), no `//` or backslash that a
- * browser reads as another host, and no character that decodes into one.
+ * A relative path or an anchor (`#heading`): no scheme (so no colon), no
+ * `//` or backslash that a browser reads as another host, no control or white
+ * space character, and no character that decodes into one of these.
  */
-const RELATIVE_PATH = /^(?![\\/]{2})[^\s:&\\<>"'`]+$/;
-/** A page in this repository on GitHub. */
-const REPOSITORY_URL =
-  /^https:\/\/github\.com\/MapCairn\/mapcairn(?:[/?#][^\s&\\<>"'`]*)?$/i;
+const RELATIVE_PATH = /^(?![\\/]{2})[^\p{Cc}\s:&\\<>"'`]+$/u;
+/** The path of this repository on GitHub, compared in lower case. */
+const REPOSITORY_PATH = "/mapcairn/mapcairn";
+/** A path segment that is a dot segment, or looks like one to a server. */
+const DOT_SEGMENT = /^(?:\.|%2e){1,2}(?:;.*)?$/i;
+/** An encoded slash or backslash, which a server may read as a separator. */
+const ENCODED_SEPARATOR = /%2f|%5c/i;
 /** The target of an inline link: the text after `](` up to a space or `)`. */
 const INLINE_TARGET = /\]\(\s*([^\s)]*)/g;
-/** A link reference definition: `[label]: target`. */
-const DEFINITION = /^ {0,3}\[[^\]]*\]:\s*(\S*)/;
+/** What follows `]:`, the start of a link reference definition wherever it stands. */
+const DEFINITION_TARGET = /\]:[ \t]*(\S*)/g;
+/** An email address, which a renderer turns into a `mailto:` link. */
+const EMAIL = /[\w.+-]+@[\w-]+(?:\.[\w-]+)+/;
 /** Punctuation that ends a sentence after an address, not part of it. */
 const TRAILING_PUNCTUATION = /[)\].,;:!?'"*_~]+$/;
 /** An address a renderer turns into a link without brackets. */
@@ -47,6 +51,42 @@ function opensMarkup(text) {
 }
 
 /**
+ * Whether an address is a page of this repository on GitHub. It is parsed as a
+ * browser parses it, so dot segments are resolved, and then compared by path:
+ * an address that reaches the repository only through a dot segment, an
+ * encoded separator, a login or a port is refused.
+ *
+ * @param {string} address
+ * @returns {boolean}
+ */
+function isRepositoryUrl(address) {
+  if (/[\p{Cc}\s\\]/u.test(address)) {
+    return false;
+  }
+  let url;
+  try {
+    url = new URL(address);
+  } catch {
+    return false;
+  }
+  const path = url.pathname.toLowerCase();
+  const rawSegments = address
+    .replace(/^[a-z]+:\/\/[^/?#]*/i, "")
+    .split(/[?#]/)[0]
+    .split("/");
+  return (
+    url.protocol === "https:" &&
+    url.hostname === "github.com" &&
+    url.username === "" &&
+    url.password === "" &&
+    url.port === "" &&
+    !ENCODED_SEPARATOR.test(address) &&
+    !rawSegments.some((segment) => DOT_SEGMENT.test(segment)) &&
+    (path === REPOSITORY_PATH || path.startsWith(`${REPOSITORY_PATH}/`))
+  );
+}
+
+/**
  * Whether a link target stays inside the notes' own world: an anchor, a
  * relative path or a page of this repository.
  *
@@ -54,26 +94,22 @@ function opensMarkup(text) {
  * @returns {boolean}
  */
 function isAllowedTarget(target) {
-  return (
-    ANCHOR.test(target) ||
-    RELATIVE_PATH.test(target) ||
-    REPOSITORY_URL.test(target)
-  );
+  return RELATIVE_PATH.test(target) || isRepositoryUrl(target);
 }
 
 /**
  * Every link target written in brackets on a line: inline links and reference
- * definitions.
+ * definitions, which are found by the `]:` that ends their label, wherever the
+ * line stands (after a quote or list marker too).
  *
  * @param {string} prose
  * @returns {string[]}
  */
 function linkTargets(prose) {
   const targets = [...prose.matchAll(INLINE_TARGET)].map((match) => match[1]);
-  const definition = DEFINITION.exec(prose);
-  if (definition !== null) {
-    targets.push(definition[1]);
-  }
+  targets.push(
+    ...[...prose.matchAll(DEFINITION_TARGET)].map((match) => match[1]),
+  );
   return targets;
 }
 
@@ -112,10 +148,15 @@ export function contentProblems(prose) {
   }
   if (
     !linkTargets(prose).every(isAllowedTarget) ||
-    !bareAddresses(prose).every((address) => REPOSITORY_URL.test(address))
+    !bareAddresses(prose).every(isRepositoryUrl)
   ) {
     problems.push(
       "A link may go only to a relative path, an anchor or this repository on GitHub. Write another address in a code span, or leave it out.",
+    );
+  }
+  if (EMAIL.test(prose)) {
+    problems.push(
+      "An email address becomes a `mailto:` link in the notes. Write it in a code span, or leave it out.",
     );
   }
   return problems;

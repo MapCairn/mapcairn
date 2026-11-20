@@ -22,7 +22,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { isEntryPoint } from "../entryPoint.mjs";
 import { FORBIDDEN, findForbidden } from "../names-check.mjs";
-import { parseChangelog, scanLines } from "./changelog.mjs";
+import { parseChangelog, scanLines, splitLines } from "./changelog.mjs";
 import { contentProblems } from "./notesContent.mjs";
 import { parseVersion, previousTag, releaseTags } from "./semver.mjs";
 import { git } from "./tools.mjs";
@@ -46,7 +46,7 @@ export const SECTION_HEADINGS = [
 const UPGRADE_HEADING = "What to change when you upgrade";
 
 const COMMIT_PREFIX =
-  /^\s*(?:[-*]|\d+\.)?\s*(feat|fix|perf|refactor|docs|chore|build|ci|test|style|revert)(\([^)]*\))?!?:/;
+  /^[ \t]*(?:(?:[-*]|\d+\.)[ \t]*)?(feat|fix|perf|refactor|docs|chore|build|ci|test|style|revert)(\([^)]*\))?!?:/;
 /**
  * An `@` handle in prose. A backtick before it does not exempt it: a code span
  * that is never closed would otherwise let a live mention through.
@@ -74,6 +74,10 @@ const EMOJI = /\p{Emoji_Presentation}|\u{FE0F}|\u{20E3}/u;
  */
 const ATTRIBUTION =
   /(?:generated|written|created|authored|assisted|drafted) (?:with|by) (?:an? )?[[*_]*(?:ai|claude|chatgpt|copilot|codex|gemini|llm)\b|^[\s>*_-]*(?:generated|written|created) (?:with|by) (?:an? )?[[*_]*(?:tool|assistant|model|bot)\b|co-authored-by\s*:/i;
+/** A code fence that follows a list or quote marker, which this check does not read. */
+const MARKED_FENCE = /^[ \t]*(?:(?:[-*+]|\d+[.)]|>)[ \t]*)+(?:`{3,}|~{3,})/;
+/** A control character other than a tab: a lone carriage return, a form feed and so on. */
+const CONTROL_CHARACTER = /[^\P{Cc}\t]/u;
 const PACKAGE_HEADING = /^`?(?:@mapcairn\/)?(?:core|map|react|theme)`?$/;
 const BULLET = /^(?:[-*]|\d+\.)\s+/;
 const ENTRY_START = /^(?:[-*]\s|\d+\.\s|\*\*)/;
@@ -247,6 +251,14 @@ function textFindings(text) {
   for (const line of scanLines(text)) {
     const prose = line.prose;
     const problems = [];
+    if (
+      (!line.fenced && MARKED_FENCE.test(line.text)) ||
+      (line.fenceIndent ?? 0) > 0
+    ) {
+      problems.push(
+        "Start a code block with its fence at the left margin, not after a list or quote marker or an indent: this check does not read it, so it could hide text.",
+      );
+    }
     if (line.unclosed) {
       problems.push(
         "This code block is never closed, so everything after it would read as code. Close it with a matching fence.",
@@ -281,6 +293,27 @@ function textFindings(text) {
     );
   }
   return findings;
+}
+
+/**
+ * A control character, which includes a carriage return that is not part of a
+ * line ending: a renderer ends a line there and this check would not.
+ *
+ * @param {string} text
+ * @returns {Finding[]}
+ */
+function controlCharacterFindings(text) {
+  return splitLines(text).flatMap((line, index) =>
+    CONTROL_CHARACTER.test(line)
+      ? [
+          {
+            line: index + 1,
+            message:
+              "A control character, such as a carriage return that is not part of a line ending, is not allowed in the notes.",
+          },
+        ]
+      : [],
+  );
 }
 
 /**
@@ -444,6 +477,7 @@ export function checkChangelog(
 ) {
   const findings = [
     ...headingFindings(text),
+    ...controlCharacterFindings(text),
     ...textFindings(text),
     ...upgradeFindings(text),
     ...findForbidden(text, forbidden).map((line) => ({

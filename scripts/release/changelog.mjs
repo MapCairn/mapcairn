@@ -5,7 +5,7 @@
 const VERSION_HEADING =
   /^## (\d+\.\d+\.\d+(?:-[a-z]+\.\d+)?) \((\d{4}-\d{2}-\d{2})\)\s*$/;
 /** A line that opens or closes a fenced code block. */
-const FENCE = /^ {0,3}(`{3,}|~{3,})(.*)$/;
+const FENCE = /^( {0,3})(`{3,}|~{3,})(.*)$/;
 /** An ATX heading, with up to three spaces of indent as CommonMark allows. */
 const ATX_HEADING = /^( {0,3})(#{1,6})(?:[ \t]+(.*?))?[ \t]*$/;
 /** The `===` or `---` line under a setext heading. */
@@ -29,6 +29,7 @@ const NOT_PARAGRAPH =
  * @property {boolean} fenced Whether the line is a fence or inside a fenced code block.
  * @property {Heading | null} heading The heading the line is, if it is one outside a code block. A setext heading is the text line, not its underline.
  * @property {string} prose The line with its inline code spans taken out, for rules about what the text says. Where a backtick cannot be paired within its line, every span in the paragraph is left in, so a tag after a lone backtick is still seen. Empty inside a code block.
+ * @property {number | null} fenceIndent The spaces before the fence, on the line that opens a fenced code block, otherwise null.
  * @property {boolean} unclosed Whether the line opens a fenced code block that is never closed.
  */
 
@@ -170,6 +171,19 @@ function setHeadings(lines) {
 }
 
 /**
+ * Splits a text into lines at `\n` or `\r\n`, the only line endings the notes
+ * check accepts: a lone `\r` ends a line for a renderer, so the check refuses it
+ * (see `controlCharacterFindings` in `notesCheck.mjs`) and every reader of the
+ * changelog splits the same way.
+ *
+ * @param {string} text
+ * @returns {string[]}
+ */
+export function splitLines(text) {
+  return text.split(/\r?\n/);
+}
+
+/**
  * Splits a text into lines and marks the ones inside a fenced code block, so
  * a heading-like or handle-like line in a code sample is not read as prose.
  * A backtick fence whose info string holds a backtick is not a fence.
@@ -182,7 +196,7 @@ export function scanLines(text) {
   const lines = [];
   /** @type {{ character: string, length: number, line: Line } | null} */
   let open = null;
-  text.split(/\r?\n/).forEach((raw, index) => {
+  splitLines(text).forEach((raw, index) => {
     const fence = FENCE.exec(raw);
     /** @type {Line} */
     const line = {
@@ -191,12 +205,14 @@ export function scanLines(text) {
       fenced: true,
       heading: null,
       prose: "",
+      fenceIndent: null,
       unclosed: false,
     };
     lines.push(line);
     if (open === null) {
-      if (fence !== null && !(fence[1][0] === "`" && fence[2].includes("`"))) {
-        open = { character: fence[1][0], length: fence[1].length, line };
+      if (fence !== null && !(fence[2][0] === "`" && fence[3].includes("`"))) {
+        open = { character: fence[2][0], length: fence[2].length, line };
+        line.fenceIndent = fence[1].length;
         line.unclosed = true;
       } else {
         line.fenced = false;
@@ -206,9 +222,9 @@ export function scanLines(text) {
     }
     if (
       fence !== null &&
-      fence[1][0] === open.character &&
-      fence[1].length >= open.length &&
-      raw.trim() === fence[1]
+      fence[2][0] === open.character &&
+      fence[2].length >= open.length &&
+      raw.trim() === fence[2]
     ) {
       open.line.unclosed = false;
       open = null;
@@ -305,7 +321,7 @@ export function insertSection(changelog, version, date, notes) {
   if (first === undefined) {
     return `${changelog.replace(/\s*$/, "")}\n\n${section}`;
   }
-  const lines = changelog.split(/\r?\n/);
+  const lines = splitLines(changelog);
   const before = lines.slice(0, first.headingLine - 1).join("\n");
   const after = lines.slice(first.headingLine - 1).join("\n");
   return `${before.replace(/\s*$/, "")}\n\n${section}\n${after}`;
