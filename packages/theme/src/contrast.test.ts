@@ -6,12 +6,11 @@ import {
   contrastRatio,
   isInSrgbGamut,
   parseColour,
-  type Rgba,
   relativeLuminance,
   toHex,
 } from "./contrast";
+import { AA_NON_TEXT, contrastPairs, measurePair } from "./contrastPairs";
 import {
-  type ColourRoles,
   colourRoleNames,
   representativeBackdrops,
   type ThemeName,
@@ -62,6 +61,87 @@ describe("parseColour", () => {
     expect(parseColour("transparent")).toEqual({ r: 0, g: 0, b: 0, a: 0 });
   });
 
+  it("reads rgb() percentages as fractions of 255, not as channel values", () => {
+    expect(parseColour("rgb(100% 100% 100%)")).toEqual({
+      r: 255,
+      g: 255,
+      b: 255,
+      a: 1,
+    });
+    expect(parseColour("rgb(50%, 0%, 0%)").r).toBeCloseTo(127.5, 6);
+  });
+
+  it("clamps out-of-range channels and alpha as CSS does", () => {
+    expect(parseColour("rgb(300, 300, 300)")).toMatchObject({ r: 255 });
+    expect(parseColour("rgb(-5, 0, 0)")).toMatchObject({ r: 0 });
+    expect(parseColour("rgba(0, 0, 0, 2)").a).toBe(1);
+    expect(parseColour("rgba(0, 0, 0, 150%)").a).toBe(1);
+    expect(parseColour("rgba(0, 0, 0, -1)").a).toBe(0);
+  });
+
+  it("reads an oklch() hue in degrees and a chroma percentage", () => {
+    expect(parseColour("oklch(0.5 0.1 90deg)")).toEqual(
+      parseColour("oklch(0.5 0.1 90)"),
+    );
+    expect(parseColour("oklch(0.5 25% 90)")).toEqual(
+      parseColour("oklch(0.5 0.1 90)"),
+    );
+  });
+
+  it.each([
+    "rgb(a b c)",
+    "rgba(0, 0, 0, x)",
+    "rgb(1 2)",
+    "rgb(1, 2, 3, 0.5, 0.5)",
+    `rgb(1,1,1${",1".repeat(50_000)})`,
+    "rgb(none 0 0)",
+    "rgb(1e999, 0, 0)",
+    "rgb(1px, 2, 3)",
+    "oklch(0.3 none 0)",
+    "oklch(0.3 0.1 0.5turn)",
+    "oklch(0.3 0.1 90rad)",
+    "oklch(0.3 0.1 100grad)",
+    "oklch(0.3 0.1)",
+    "rgb(1 / 2 3)",
+    "rgb(/1 2 3)",
+    "rgb(1,,2,3)",
+    "rgb(1,2,3,)",
+    "rgb(,1,2,3)",
+    "rgb(1 2,3)",
+    "rgb(1 2 3 4)",
+    "rgb(1 2 3 /)",
+    "rgb(1 2 3 / 0.5 0.5)",
+    "rgb(1, 2, 3 / 0.5)",
+    "rgb(10%,20,30)",
+    "rgb(10% 20% 30%, 0.5)",
+    "oklch(0.5,0.1,10)",
+    "oklch(0.5 0.1 10 / )",
+    "oklch(0.5 0.1 10 / 0.5 0.5)",
+    "tomato",
+    "hsl(0 0% 0%)",
+    "oklab(0.5 0.1 0.1)",
+    "color(srgb 1 1 1)",
+    "oklch(0.3 0.1 90 / x)",
+    "oklch(NaN 0 0)",
+  ])("rejects %s", (colour) => {
+    expect(() => parseColour(colour)).toThrow(/Cannot parse colour/);
+  });
+
+  it.each([
+    ["rgb(1 2 3 / 50%)", { r: 1, g: 2, b: 3, a: 0.5 }],
+    ["rgb(1 2 3/0.5)", { r: 1, g: 2, b: 3, a: 0.5 }],
+    ["rgba(1 2 3 / 0.5)", { r: 1, g: 2, b: 3, a: 0.5 }],
+    ["rgb(1, 2, 3, 0.5)", { r: 1, g: 2, b: 3, a: 0.5 }],
+    ["rgb( 1 ,2 , 3 )", { r: 1, g: 2, b: 3, a: 1 }],
+    ["rgb(10% 20 30)", { r: 25.5, g: 20, b: 30, a: 1 }],
+  ])("accepts %s", (colour, expected) => {
+    expect(parseColour(colour)).toEqual(expected);
+  });
+
+  it("accepts an oklch() alpha written without spaces around the slash", () => {
+    expect(parseColour("oklch(1 0 0/0.5)").a).toBe(0.5);
+  });
+
   it("rejects colours it cannot parse", () => {
     expect(() => parseColour("tomato")).toThrow(/Cannot parse colour/);
     expect(() => parseColour("#12")).toThrow(/Cannot parse colour/);
@@ -84,6 +164,14 @@ describe("relativeLuminance and contrastRatio", () => {
     expect(contrastRatio("#fff", "#000")).toBeCloseTo(21, 6);
     expect(contrastRatio("#777777", "#ffffff")).toBeCloseTo(4.48, 2);
     expect(contrastRatio("#767676", "#ffffff")).toBeGreaterThanOrEqual(4.5);
+  });
+
+  it("switches from the linear segment to the power curve at 0.04045", () => {
+    const luminance = (channel: number): number =>
+      relativeLuminance({ r: channel, g: channel, b: channel, a: 1 });
+    // 10/255 is below the threshold and 11/255 above it.
+    expect(luminance(10)).toBeCloseTo(10 / 255 / 12.92, 10);
+    expect(luminance(11)).toBeCloseTo(((11 / 255 + 0.055) / 1.055) ** 2.4, 10);
   });
 
   it("uses the linear segment for very dark channels", () => {
@@ -116,6 +204,15 @@ describe("compositeOver", () => {
     expect(out.a).toBeCloseTo(0.75, 6);
   });
 
+  it("returns transparent when both colours are fully transparent", () => {
+    expect(compositeOver("transparent", "transparent")).toEqual({
+      r: 0,
+      g: 0,
+      b: 0,
+      a: 0,
+    });
+  });
+
   it("accepts parsed colours as well as strings", () => {
     const out = compositeOver(parseColour("#000000"), parseColour("#ffffff"));
     expect(toHex(out)).toBe("#000000");
@@ -140,35 +237,9 @@ describe("toHex", () => {
  * fill compared with the map it sits on is meaningless; the outline beside it
  * carries the 3:1.
  */
-const AA_TEXT = 4.5;
-const AA_NON_TEXT = 3;
 const { white, black, lightMap, defaultBasemap } = representativeBackdrops;
-/**
- * White and black bracket every map. The default basemap (Bright), in both
- * themes, is checked by name as well, because a dark theme no longer implies
- * a dark map beneath the chrome.
- */
-const surfaceBackdrops = { white, black, defaultBasemap };
 const themeNames: ThemeName[] = ["light", "dark"];
 const colourSets = ["colour", "opaque", "contrastMore"] as const;
-
-/** Flattens a surface role over a backdrop so it can be compared. */
-function surfaceOver(
-  roles: ColourRoles,
-  role: "surface" | "surfaceRaised",
-  backdrop: string,
-): Rgba {
-  return compositeOver(roles[role], backdrop);
-}
-
-/** Contrast of an opaque role over an already composited surface. */
-function over(
-  roles: ColourRoles,
-  role: keyof ColourRoles,
-  under: Rgba,
-): number {
-  return contrastRatio(compositeOver(roles[role], under), under);
-}
 
 describe.each(themeNames)("%s theme tokens", (theme) => {
   const values = themeValues[theme];
@@ -200,80 +271,18 @@ describe.each(themeNames)("%s theme tokens", (theme) => {
   describe.each(colourSets)("%s set", (set) => {
     const roles = values[set];
 
-    describe.each(Object.entries(surfaceBackdrops))(
-      "surface over %s",
-      (_name, backdrop) => {
-        for (const surfaceRole of ["surface", "surfaceRaised"] as const) {
-          const under = surfaceOver(roles, surfaceRole, backdrop);
-
-          it(`${surfaceRole}: text and muted text reach ${AA_TEXT}:1`, () => {
-            expect(over(roles, "text", under)).toBeGreaterThanOrEqual(AA_TEXT);
-            expect(over(roles, "textMuted", under)).toBeGreaterThanOrEqual(
-              AA_TEXT,
-            );
-          });
-
-          it(`${surfaceRole}: accent text and danger text reach ${AA_TEXT}:1`, () => {
-            expect(over(roles, "accent", under)).toBeGreaterThanOrEqual(
-              AA_TEXT,
-            );
-            expect(over(roles, "danger", under)).toBeGreaterThanOrEqual(
-              AA_TEXT,
-            );
-          });
-
-          it(`${surfaceRole}: icons, control edges, selection and focus reach ${AA_NON_TEXT}:1`, () => {
-            expect(over(roles, "text", under)).toBeGreaterThanOrEqual(
-              AA_NON_TEXT,
-            );
-            expect(
-              over(roles, "controlBoundary", under),
-            ).toBeGreaterThanOrEqual(AA_NON_TEXT);
-            expect(over(roles, "accent", under)).toBeGreaterThanOrEqual(
-              AA_NON_TEXT,
-            );
-            expect(over(roles, "focusRing", under)).toBeGreaterThanOrEqual(
-              AA_NON_TEXT,
-            );
-          });
-        }
+    describe.each(contrastPairs)(
+      "$foreground on $background ($required:1)",
+      (pair) => {
+        const backdrops =
+          pair.backdrops.length === 0 ? [undefined] : pair.backdrops;
+        it.each(backdrops)("over %s", (backdrop) => {
+          expect(measurePair(roles, pair, backdrop)).toBeGreaterThanOrEqual(
+            pair.required,
+          );
+        });
       },
     );
-
-    it(`accent fill carries ${AA_TEXT}:1 text`, () => {
-      expect(
-        contrastRatio(roles.accentContrast, roles.accent),
-      ).toBeGreaterThanOrEqual(AA_TEXT);
-    });
-
-    it(`tinted panels keep ${AA_TEXT}:1 text`, () => {
-      const accentTint = parseColour(roles.accentTint);
-      const dangerTint = parseColour(roles.dangerTint);
-      expect(contrastRatio(roles.text, accentTint)).toBeGreaterThanOrEqual(
-        AA_TEXT,
-      );
-      expect(contrastRatio(roles.accent, accentTint)).toBeGreaterThanOrEqual(
-        AA_TEXT,
-      );
-      expect(contrastRatio(roles.text, dangerTint)).toBeGreaterThanOrEqual(
-        AA_TEXT,
-      );
-      expect(contrastRatio(roles.danger, dangerTint)).toBeGreaterThanOrEqual(
-        AA_TEXT,
-      );
-    });
-
-    it("lets the focus ring show on the bare map and against its inner ring", () => {
-      for (const backdrop of [white, black]) {
-        expect(
-          contrastRatio(roles.focusRing, backdrop),
-          `ring on ${backdrop}`,
-        ).toBeGreaterThanOrEqual(AA_NON_TEXT);
-      }
-      expect(
-        contrastRatio(roles.focusRingInner, roles.focusRing),
-      ).toBeGreaterThanOrEqual(AA_NON_TEXT);
-    });
 
     it("keeps map overlays visible on light and dark basemaps", () => {
       for (const role of ["mapPin", "mapMeasureLine", "mapAccuracy"] as const) {
@@ -291,12 +300,6 @@ describe.each(themeNames)("%s theme tokens", (theme) => {
       }
     });
 
-    it(`keeps text and icons drawn straight on the map at ${AA_TEXT}:1 against their halo`, () => {
-      expect(contrastRatio(roles.text, roles.mapHalo)).toBeGreaterThanOrEqual(
-        AA_TEXT,
-      );
-    });
-
     it("separates pins and lines from their halo", () => {
       expect(contrastRatio(roles.mapPin, roles.mapHalo)).toBeGreaterThanOrEqual(
         AA_NON_TEXT,
@@ -310,18 +313,6 @@ describe.each(themeNames)("%s theme tokens", (theme) => {
   it("paints the map before it loads in the default basemap's land colour, whatever the theme", () => {
     for (const set of colourSets) {
       expect(values[set].mapBackground, set).toBe(defaultBasemap);
-    }
-  });
-
-  it(`keeps text, muted text and links at ${AA_TEXT}:1 on full pages`, () => {
-    for (const set of colourSets) {
-      const roles = values[set];
-      for (const role of ["text", "textMuted", "accent"] as const) {
-        expect(
-          contrastRatio(roles[role], roles.pageBackground),
-          `${set}.${role}`,
-        ).toBeGreaterThanOrEqual(AA_TEXT);
-      }
     }
   });
 
