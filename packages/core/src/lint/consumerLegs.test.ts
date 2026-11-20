@@ -15,8 +15,13 @@ import {
   BUN_MINIMUM_RELEASE_AGE,
   bunSettings,
   bunSkipped,
+  bunVersionProblem,
   corepackCliPath,
+  miniflareAvailable,
+  publishedSkipped,
   WORKER_CONDITIONS,
+  workerdSkipped,
+  YARN_PACKAGE_MANAGER,
   YARN_VERSION,
   yarnManifest,
   yarnSettings,
@@ -52,7 +57,9 @@ describe("workerd conditions", () => {
     const host = readFileSync(
       path.join(REPO, "packages/web/cloudflare.config.ts"),
       "utf8",
-    );
+    )
+      .replace(/\/\*[\s\S]*?\*\//g, "")
+      .replace(/\/\/.*$/gm, "");
     expect(host).toContain(`compatibilityDate = "${COMPATIBILITY_DATE}"`);
   });
 });
@@ -60,6 +67,14 @@ describe("workerd conditions", () => {
 describe("yarn", () => {
   it("is pinned to one exact version, so corepack fetches no moving target", () => {
     expect(YARN_VERSION).toMatch(/^4\.\d+\.\d+$/);
+  });
+
+  it("pins the download by its sha512 digest, as `corepack use` writes it", () => {
+    expect(YARN_PACKAGE_MANAGER).toMatch(
+      new RegExp(
+        `^yarn@${YARN_VERSION.replaceAll(".", "\\.")}\\+sha512\\.[0-9a-f]{128}$`,
+      ),
+    );
   });
 
   it("uses the node-modules linker, runs no scripts, sends no telemetry and holds a seven day age", () => {
@@ -78,7 +93,12 @@ describe("yarn", () => {
       name: "app",
       overrides: { "@mapcairn/core": "file:x" },
       resolutions: { "@mapcairn/core": "file:x" },
+      packageManager: YARN_PACKAGE_MANAGER,
     });
+  });
+
+  it("refuses a manifest with no tarball overrides, since the age gate would hit the SDK packages", () => {
+    expect(() => yarnManifest({ name: "app" })).toThrow(/overrides/);
   });
 
   it("says a skipped install as a warning annotation on GitHub Actions", () => {
@@ -86,6 +106,10 @@ describe("yarn", () => {
       /^::warning::.*corepack/,
     );
     expect(yarnSkipped({})).not.toMatch(/^::/);
+  });
+
+  it("says the skip covers a corepack that is missing or cannot download Yarn", () => {
+    expect(yarnSkipped({})).toMatch(/missing or cannot download/);
   });
 });
 
@@ -98,6 +122,45 @@ describe("bun", () => {
   it("says a skipped install as a warning annotation on GitHub Actions", () => {
     expect(bunSkipped({ GITHUB_ACTIONS: "true" })).toMatch(/^::warning::.*Bun/);
     expect(bunSkipped({})).not.toMatch(/^::/);
+  });
+});
+
+describe("bun version", () => {
+  it("accepts 1.3 and later, which read minimumReleaseAge", () => {
+    expect(bunVersionProblem("1.3.0")).toBeUndefined();
+    expect(bunVersionProblem("1.4.5")).toBeUndefined();
+    expect(bunVersionProblem("2.0.0")).toBeUndefined();
+  });
+
+  it("rejects an older Bun, which would ignore the release age", () => {
+    expect(bunVersionProblem("1.2.9")).toMatch(/1\.3/);
+    expect(bunVersionProblem("not a version")).toMatch(/1\.3/);
+  });
+});
+
+describe("published mode", () => {
+  it("says the leg is skipped for the published packages, as a warning on GitHub Actions", () => {
+    expect(publishedSkipped("Yarn", { GITHUB_ACTIONS: "true" })).toMatch(
+      /^::warning::.*Yarn.*published/,
+    );
+    expect(publishedSkipped("Bun", {})).not.toMatch(/^::/);
+  });
+});
+
+describe("workerd availability", () => {
+  it("finds the Miniflare this repository installs", () => {
+    expect(miniflareAvailable(REPO)).toBe(true);
+  });
+
+  it("is false where no Miniflare resolves, as in a job that ran no install", () => {
+    expect(miniflareAvailable(tmpdir())).toBe(false);
+  });
+
+  it("skips with a warning on GitHub Actions and names what is missing", () => {
+    expect(workerdSkipped({ GITHUB_ACTIONS: "true" })).toMatch(
+      /^::warning::.*workerd.*miniflare/i,
+    );
+    expect(workerdSkipped({})).not.toMatch(/^::/);
   });
 });
 

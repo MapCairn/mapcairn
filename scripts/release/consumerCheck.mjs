@@ -36,8 +36,12 @@ import { isEntryPoint } from "../entryPoint.mjs";
 import {
   bunSettings,
   bunSkipped,
+  bunVersionProblem,
   corepackCliPath,
-  YARN_VERSION,
+  INSTALL_TIMEOUT,
+  miniflareAvailable,
+  WORKERD_TIMEOUT,
+  workerdSkipped,
   yarnManifest,
   yarnSettings,
   yarnSkipped,
@@ -250,11 +254,13 @@ export function stylesheetProblems(css) {
  * @param {string} label What is being done, for the message.
  * @param {string[]} args The arguments for `node`.
  * @param {string} cwd Where to run it.
+ * @param {number} [timeout] Milliseconds before it is cut off; none by default.
  * @returns {string} Its standard output.
  */
-function runNode(label, args, cwd) {
+function runNode(label, args, cwd, timeout) {
   const result = spawnSync(process.execPath, args, {
     cwd,
+    timeout,
     encoding: "utf8",
     env: isolatedEnvironment(),
     maxBuffer: MAX_OUTPUT,
@@ -402,13 +408,19 @@ function pnpmAvailable(app) {
  * Builds the app as a Worker with plain Vite, runs it on workerd (the
  * Workers runtime the host is published on, through the Miniflare the
  * repository already installs) and checks the page it answers with. Node never
- * renders it, so the packages' `workerd` and `browser` conditions are what
- * resolve, and `renderToReadableStream` is what renders.
+ * renders it. The Worker conditions pick the third-party builds a Worker
+ * takes (React's stream renderer); the SDK packages' own exports have no such
+ * condition, so what this shows is that their `default` build runs on Workers.
+ * If workerd cannot be run here (no Miniflare, as in a job that installs
+ * nothing), the leg is skipped with a warning.
  *
  * @param {string} app The installed app.
  * @returns {string} The line for the report.
  */
 function checkWorkerd(app) {
+  if (!miniflareAvailable(REPO)) {
+    return workerdSkipped();
+  }
   const vite = path.join(app, "node_modules", "vite", "bin", "vite.js");
   runNode(
     "vite build (Worker)",
@@ -431,6 +443,7 @@ function checkWorkerd(app) {
       path.join(app, "dist", "worker", "entryWorker.js"),
     ],
     app,
+    WORKERD_TIMEOUT,
   );
   const page = JSON.parse(answer);
   if (page.runtime !== "Cloudflare-Workers") {
@@ -465,20 +478,17 @@ function checkYarn(app, manifest) {
     `${JSON.stringify(yarnManifest(manifest), null, 2)}\n`,
   );
   writeFileSync(path.join(app, ".yarnrc.yml"), yarnSettings());
-  const result = spawnSync(
-    process.execPath,
-    [corepack, `yarn@${YARN_VERSION}`, "install"],
-    {
-      cwd: app,
-      encoding: "utf8",
-      env: {
-        ...isolatedEnvironment(),
-        COREPACK_ENABLE_DOWNLOAD_PROMPT: "0",
-        COREPACK_ENABLE_AUTO_PIN: "0",
-      },
-      maxBuffer: MAX_OUTPUT,
+  const result = spawnSync(process.execPath, [corepack, "yarn", "install"], {
+    cwd: app,
+    timeout: INSTALL_TIMEOUT,
+    encoding: "utf8",
+    env: {
+      ...isolatedEnvironment(),
+      COREPACK_ENABLE_DOWNLOAD_PROMPT: "0",
+      COREPACK_ENABLE_AUTO_PIN: "0",
     },
-  );
+    maxBuffer: MAX_OUTPUT,
+  });
   if (result.status !== 0) {
     throw new Error(`yarn install failed:\n${result.stdout}\n${result.stderr}`);
   }
@@ -498,20 +508,34 @@ function checkYarn(app, manifest) {
   if (problems.length > 0) {
     throw new Error(problems.join("\n"));
   }
-  return `Yarn ${YARN_VERSION} (node-modules linker) install, plain Node render and Vite build: ok`;
+  return `Yarn (pinned with its digest, node-modules linker) install, plain Node render and Vite build: ok`;
 }
 
 /**
- * Installs with Bun, when Bun is already on the path, and renders in plain
- * Node's place: `bun` runs the same script. Bun is never installed for this.
+ * Installs with Bun, when Bun is already on the path, and renders with it:
+ * `bun` runs the same script that Node runs. Bun is never installed for this,
+ * and a missing Bun is the only thing that skips the leg. This leg has not
+ * been run yet.
  *
  * @param {string} app The folder to install into.
  * @returns {string} The line for the report.
  */
 function checkBun(app) {
-  const version = spawnSync("bun", ["--version"], { encoding: "utf8" });
-  if (version.error !== undefined || version.status !== 0) {
+  const version = spawnSync("bun", ["--version"], {
+    encoding: "utf8",
+    timeout: INSTALL_TIMEOUT,
+  });
+  if (version.error?.code === "ENOENT") {
     return bunSkipped();
+  }
+  if (version.error !== undefined || version.status !== 0) {
+    throw new Error(
+      `bun --version failed:\n${version.error ?? ""}\n${version.stdout}\n${version.stderr}`,
+    );
+  }
+  const tooOld = bunVersionProblem(version.stdout);
+  if (tooOld !== undefined) {
+    throw new Error(tooOld);
   }
   writeFileSync(path.join(app, "bunfig.toml"), bunSettings());
   const run = (args) =>
@@ -520,6 +544,7 @@ function checkBun(app) {
       encoding: "utf8",
       env: isolatedEnvironment(),
       maxBuffer: MAX_OUTPUT,
+      timeout: INSTALL_TIMEOUT,
     });
   const installed = run(["install", "--ignore-scripts"]);
   if (installed.status !== 0) {
