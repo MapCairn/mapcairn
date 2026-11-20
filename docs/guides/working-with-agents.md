@@ -62,10 +62,11 @@ Tell the agent the issue and the skill, in your own words. For example:
 - "Open the pull request and follow the `land-pr` skill. Do not merge."
 - "Review pull request 130 with the `fresh-eyes-reviewer` role."
 - "Look at the running app and follow the `visual-check` skill."
+- "Review pull request 130 for security with the `security-reviewer` role."
 - "Write the Playwright tests for issue 123 and follow the `playwright-tests` skill."
 - "Shape issue 123 and follow the `shape-work` skill. Do not post on GitHub."
 
-Where the tool has agent support, name the agent (`implementer`, `fresh-eyes-reviewer`, `ui-verifier`, `architecture-reviewer` or `ux-reviewer`) instead. Where it does not read the skill folder on its own, point it at `.agents/skills/<name>/SKILL.md`. The rules, including the limits on sub-agents and the model tiers by role, are in `AGENTS.md`. In Claude Code the tier names are in `CLAUDE.md`; the generated agent files set no model.
+Where the tool has agent support, name the agent (`implementer`, `fresh-eyes-reviewer`, `ui-verifier`, `architecture-reviewer`, `ux-reviewer` or `security-reviewer`) instead. Where it does not read the skill folder on its own, point it at `.agents/skills/<name>/SKILL.md`. The rules, including the limits on sub-agents and the model tiers by role, are in `AGENTS.md`. In Claude Code the tier names are in `CLAUDE.md`; the generated agent files set no model.
 
 When you start an agent, copy the brief block from `pick-up-issue` ("Briefing an agent") so it carries the checks, the clean-up and the report. For a free or smaller model, which follows a brief literally and fills a gap with plausible text, also fill in the block's `Wording:`, `Claims:` and `Before you open:` lines. An agent that another agent started does not start sub-agents: it does the simplify step and the review checklist inline, and its caller runs the independent review. Full local `e2e` and `a11y` runs are for layout, engine and test-seam changes; for the rest the agent runs the specs that cover its change and CI runs the full suites.
 
@@ -80,6 +81,8 @@ When the project's `main` moves under an open pull request, merge it into the br
 Three skills come before an issue is picked up. `shape-work` turns an idea or a vague issue into a problem, the people it serves, checkable acceptance criteria and ranked issue bodies. `design-solution` weighs the options against `ARCHITECTURE.md` and records the choice in the issue or the plan, in a short decision record; when the plan is deleted, a decision that still governs the code moves into `ARCHITECTURE.md`, `DESIGN.md` or a guide. `design-ux` writes the flows, the states and the copy for anything a person sees or does. Their output goes to `create-issue`, `plan-change` and `split-plan`, and after the code `review-ui` and `visual-check` check it. None of them posts on GitHub unless the person asks.
 
 Two read-only agents review a design without having written it. `architecture-reviewer` runs the review in `design-solution` section 5 on a plan, design notes or a pull request, which is the non-author check `plan-change` asks for before a plan merges. In Claude Code it runs `opus`, the most capable tier, because `AGENTS.md` gives that tier to a design that decides a public API. `ux-reviewer` runs `design-ux` against an issue, plan or pull request and reports the missing states, routes and copy; it runs `sonnet`.
+
+`security-reviewer` runs the `review-security` skill on a pull request, a plan or a list of files: it threat-models the change and checks the Content-Security-Policy and its hashes, third-party origins, client error reporting and privacy, link and file parsing, markup injection, dependencies, GitHub Actions and release workflows, and prompt injection in what an agent reads. It reports each finding with its file, severity, an exploit scenario in words and a fix, writes no exploit code and never touches a secret. In Claude Code it runs `sonnet`; the skill says when to run it again on the most capable tier (a public API, a security boundary, the Content-Security-Policy, a workflow, or the release and publish path). It is read-only by instruction, like the other reviewers, and it never edits `SECURITY.md` or `PRIVACY.md`, which stay the maintainer's.
 
 ## The priority list
 
