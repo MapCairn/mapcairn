@@ -22,7 +22,7 @@ export default defineConfig({
         "packages/web/src/entry.server.tsx",
       ],
       thresholds: {
-        "packages/{core,map,react,theme}/**": {
+        "packages/{core,map,react,theme,sdk}/**": {
           statements: 95,
           branches: 95,
           functions: 95,

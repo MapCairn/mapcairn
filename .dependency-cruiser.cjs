@@ -37,14 +37,31 @@ const RADIX_WRAPPERS =
 /** The engine adapter, the only place an engine library may be imported. */
 const ENGINE_ADAPTERS = "^packages/web/src/adapters/maplibre/";
 
+/** The code entry points of the four packages: the modules their `exports` point at under the source condition. */
+const FOUR_PACKAGE_MODULES =
+  "(core|map|react|theme)/src/index\\.ts|core/src/contracts/index\\.ts";
+
+/** The two stylesheets of the four packages, as compiled (`@mapcairn/theme/tokens.css`, `@mapcairn/map/styles.css`). */
+const FOUR_PACKAGE_STYLESHEETS =
+  "theme/dist/tokens\\.css|map/dist/styles\\.css";
+
 /**
- * The files the SDK's `package.json` entry points resolve to: the modules, and
- * the two compiled stylesheets an app imports (`@mapcairn/theme/tokens.css`,
- * `@mapcairn/map/styles.css`). Workspace imports resolve through the symlink
- * to these real paths.
+ * The files the four SDK packages' `package.json` entry points resolve to: the
+ * modules, and the two compiled stylesheets an app imports. Workspace imports
+ * resolve through the symlink to these real paths. The umbrella package may
+ * import only these.
  */
-const SDK_ENTRY_POINTS =
-  "^packages/(((core|map|react|theme)/src/index|core/src/contracts/index)\\.ts|theme/dist/tokens\\.css|map/dist/styles\\.css)$";
+const FOUR_PACKAGE_ENTRY_POINTS = `^packages/(${FOUR_PACKAGE_MODULES}|${FOUR_PACKAGE_STYLESHEETS})$`;
+
+/**
+ * The umbrella package's own entry points (`@mapcairn/sdk`): one module for
+ * the root and one for each subpath, and its compiled stylesheet.
+ */
+const UMBRELLA_ENTRY_POINTS =
+  "sdk/src/(index|core|coreContracts|map|react|theme)\\.ts|sdk/dist/styles\\.css";
+
+/** Everything an example app may import from `packages/`. */
+const SDK_ENTRY_POINTS = `^packages/(${FOUR_PACKAGE_MODULES}|${FOUR_PACKAGE_STYLESHEETS}|${UMBRELLA_ENTRY_POINTS})$`;
 
 module.exports = {
   forbidden: [
@@ -53,29 +70,47 @@ module.exports = {
       severity: "error",
       comment: "Core must not depend on rendering, hooks or the host.",
       from: { path: "^packages/core/src" },
-      to: { path: "^packages/(map|react|theme|web)/src" },
+      to: { path: "^packages/(map|react|theme|web|sdk)/src" },
     },
     {
       name: "react-is-dependency-free",
       severity: "error",
       comment: "Generic React hooks must not depend on map or host concerns.",
       from: { path: "^packages/react/src" },
-      to: { path: "^packages/(core|map|theme|web)/src" },
+      to: { path: "^packages/(core|map|theme|web|sdk)/src" },
     },
     {
       name: "theme-is-dependency-free",
       severity: "error",
       comment: "The token contract must remain independent of its consumers.",
       from: { path: "^packages/theme/src" },
-      to: { path: "^packages/(core|map|react|web)/src" },
+      to: { path: "^packages/(core|map|react|web|sdk)/src" },
     },
     {
       name: "map-has-no-web-dependency",
       severity: "error",
       comment:
-        "Map components receive configuration rather than import the host.",
+        "Map components receive configuration rather than import the host or the umbrella package.",
       from: { path: "^packages/map/src" },
-      to: { path: "^packages/web/src" },
+      to: { path: "^packages/(web|sdk)/src" },
+    },
+    {
+      name: "nothing-imports-the-umbrella",
+      severity: "error",
+      comment:
+        "The umbrella package (@mapcairn/sdk) is for apps outside the repository. No package, including the host, imports it: they use the four packages it re-exports.",
+      from: { path: "^packages/", pathNot: "^packages/sdk/" },
+      to: { path: "^packages/sdk/" },
+    },
+    {
+      name: "umbrella-reexports-entry-points-only",
+      severity: "error",
+      comment:
+        "The umbrella package holds only re-exports of the four packages' entry points: no npm package, no file inside a package, no code of its own.",
+      from: { path: "^packages/sdk/src" },
+      to: {
+        pathNot: [FOUR_PACKAGE_ENTRY_POINTS, "^packages/sdk/src/"],
+      },
     },
     {
       name: "core-uses-only-pure-packages",
