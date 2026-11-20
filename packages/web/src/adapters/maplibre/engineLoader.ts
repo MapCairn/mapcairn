@@ -16,7 +16,7 @@ let engineLoader: Promise<MapLibreModule> | undefined;
  *   is the host's business, so the adapter only asks for its URL. A rejected
  *   load, or a rejected `loadWorkerUrl`, is not cached, so a chunk that
  *   failed to download (for example offline) is fetched again on the next
- *   mount. Only the first caller's `loadWorkerUrl` is used: the engine and its
+ *   mount, and so is a loader that throws instead of returning a promise. Only the first caller's `loadWorkerUrl` is used: the engine and its
  *   worker URL are shared by every adapter in the page.
  * @param loadWorkerUrl - Resolves to the URL of the engine's worker.
  */
@@ -25,7 +25,7 @@ export function loadEngine(
 ): Promise<MapLibreModule> {
   engineLoader ??= Promise.all([
     import("maplibre-gl"),
-    loadWorkerUrl(),
+    Promise.resolve().then(loadWorkerUrl),
     import("maplibre-gl/dist/maplibre-gl.css"),
   ])
     .then(([maplibre, workerUrl]) => {

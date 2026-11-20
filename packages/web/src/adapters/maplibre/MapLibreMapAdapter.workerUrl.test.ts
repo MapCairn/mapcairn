@@ -75,6 +75,28 @@ describe("the engine's worker URL", () => {
   );
 
   it(
+    "rejects when the loader throws instead of returning a promise, and asks it again next time",
+    async () => {
+      const { loadEngine } = await import("./engineLoader");
+      const loadWorkerUrl = vi
+        .fn<() => Promise<string>>()
+        .mockImplementationOnce(() => {
+          throw new Error("loader threw");
+        })
+        .mockResolvedValueOnce("/worker.js");
+
+      await expect(loadEngine(loadWorkerUrl)).rejects.toThrow("loader threw");
+      expect(setWorkerUrl).not.toHaveBeenCalled();
+
+      await loadEngine(loadWorkerUrl);
+
+      expect(loadWorkerUrl).toHaveBeenCalledTimes(2);
+      expect(setWorkerUrl).toHaveBeenCalledExactlyOnceWith("/worker.js");
+    },
+    LOADER_IMPORT_TIMEOUT_MS,
+  );
+
+  it(
     "rejects when the loader rejects, sets no URL, and asks the loader again next time",
     async () => {
       const { loadEngine } = await import("./engineLoader");

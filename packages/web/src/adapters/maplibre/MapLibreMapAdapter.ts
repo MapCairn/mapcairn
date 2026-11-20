@@ -70,11 +70,11 @@ export interface MapLibreMapAdapterOptions {
 
 /** Options only a test sets. */
 export interface MapLibreMapAdapterTestOptions {
-  /** Overrides {@link WORKER_FAILURE_GRACE_MS}, for example 0 in a test. */
+  /** Overrides `WORKER_FAILURE_GRACE_MS`, for example 0 in a test. */
   readonly workerFailureGraceMs?: number;
-  /** Overrides {@link IMAGE_TILES_WAIT_MS}, for example a few milliseconds in a test. */
+  /** Overrides `IMAGE_TILES_WAIT_MS`, for example a few milliseconds in a test. */
   readonly imageTilesWaitMs?: number;
-  /** Overrides {@link TILE_LAYER_SLOW_MS}, for example a few milliseconds in a test. */
+  /** Overrides `TILE_LAYER_SLOW_MS`, for example a few milliseconds in a test. */
   readonly tileLayerSlowMs?: number;
 }
 
