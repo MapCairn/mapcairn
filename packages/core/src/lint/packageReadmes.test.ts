@@ -94,8 +94,21 @@ describe.each(SDK_PACKAGES)("the README of @mapcairn/%s", (name) => {
     expect(lines[0]).toMatch(/not published to npm/i);
   });
 
+  it("says in the Status line that it is unpublished only while the manifest is private", () => {
+    const status = readme
+      .split("\n")
+      .find((line) => line.startsWith("**Status:**"));
+    const manifest = JSON.parse(
+      readFileSync(path.join(REPO, "packages", name, "package.json"), "utf8"),
+    ) as { readonly private?: boolean };
+    expect(
+      /not published to npm/i.test(status ?? ""),
+      'change the Status line and "private" together',
+    ).toBe(manifest.private === true);
+  });
+
   it("says it is ESM only and which TypeScript resolution it needs", () => {
-    expect(readme).toMatch(/ESM only/);
+    expect(readme).toContain("The package is ESM only: it has no `main` field");
     expect(readme).toContain("node16");
     expect(readme).toContain("nodenext");
     expect(readme).toContain("bundler");
@@ -187,6 +200,15 @@ describe.each(SDK_PACKAGES)("the README of @mapcairn/%s", (name) => {
       prose.match(/\/(?:issues|pull)\/\d+|(?<![\w/&])#\d+(?![\w-])/g),
     ).toBeNull();
   });
+});
+
+describe("the files a README may link to before they exist", () => {
+  it.each(NOT_YET_IN_THE_REPOSITORY)(
+    "%s is still missing, or its entry is removed from the list",
+    (file) => {
+      expect(existsSync(path.join(REPO, file))).toBe(false);
+    },
+  );
 });
 
 describe("the stylesheet imports in the README of @mapcairn/map and @mapcairn/theme", () => {
