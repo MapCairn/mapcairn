@@ -81,6 +81,10 @@ export function clampZoom(zoom: number, min: number, max: number): number {
 }
 ```
 
+## Public API
+
+The SDK's public API is its exports, the shared-link format, the layer-definition validator, message keys and the formats a host stores; [`docs/guides/public-api.md`](docs/guides/public-api.md) lists them all and says how a change is classed. Each entry point has a generated report under `packages/<name>/api/`. After a change to an exported name, run `npm run api:update`, read the diff and commit it with the change; `npm run api:check` and CI fail when it is out of date. Name any breaking change in the pull request description, and keep a new export documented with TSDoc: the check prints the exports that are not.
+
 ## Dependencies
 
 After changing a manifest, run a real `npm install` and include the root lockfile. Do not use `--package-lock-only` as the normal update procedure. Write ranges as carets and pin a prerelease exactly; `AGENTS.md` has the rule.

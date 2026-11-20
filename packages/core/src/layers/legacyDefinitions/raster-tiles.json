@@ -1,0 +1,39 @@
+{
+  "id": "sample-imagery",
+  "name": "Sample imagery",
+  "description": "Daily sample imagery.",
+  "group": "Imagery",
+  "dataCost": "about 1 MB per screen",
+  "attribution": [
+    {
+      "text": "Sample imagery provider"
+    }
+  ],
+  "controls": [
+    {
+      "kind": "date",
+      "id": "date",
+      "label": "Date",
+      "min": "2024-02-29",
+      "max": {
+        "daysAgo": 1
+      },
+      "default": {
+        "daysAgo": 1
+      }
+    },
+    {
+      "kind": "opacity",
+      "id": "opacity",
+      "label": "Opacity",
+      "default": 0.8
+    }
+  ],
+  "source": {
+    "kind": "tiles",
+    "tiles": "https://tiles.test/{date}/{z}/{y}/{x}.jpg",
+    "tileSize": 256,
+    "maxzoom": 9,
+    "bounds": [-180, -60, 180, 85]
+  }
+}

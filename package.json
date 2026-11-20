@@ -36,6 +36,8 @@
     "catalogue:check": "npm run catalogue:check -w @mapcairn/web --",
     "format": "biome format --write .",
     "prepare": "lefthook install --force",
+    "api:check": "npm run build:sdk && node scripts/apiReports.mjs check",
+    "api:update": "npm run build:sdk && node scripts/apiReports.mjs update",
     "typecheck": "npm run build:sdk && npm run typecheck --workspaces --if-present",
     "test": "npm run build:sdk && vitest run",
     "test:coverage": "npm run build:sdk && vitest run --coverage",

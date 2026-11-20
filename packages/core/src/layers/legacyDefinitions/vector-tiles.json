@@ -1,0 +1,93 @@
+{
+  "id": "sample-districts",
+  "name": "Sample districts",
+  "description": "Areas, roads and events from sample vector tiles.",
+  "group": "Samples",
+  "dataCost": "about 100 KB per screen",
+  "attribution": [
+    {
+      "text": "Sample tiles provider"
+    }
+  ],
+  "controls": [],
+  "source": {
+    "kind": "vector-tiles",
+    "tiles": "https://vector.test/{z}/{x}/{y}.pbf",
+    "minzoom": 0,
+    "maxzoom": 14
+  },
+  "minzoom": 2,
+  "maxzoom": 18,
+  "sourceLayers": [
+    {
+      "sourceLayer": "areas",
+      "style": {
+        "kind": "shapes",
+        "geometry": "area",
+        "colour": {
+          "kind": "category",
+          "field": "kind",
+          "categories": [
+            {
+              "value": "park",
+              "label": "Park",
+              "colour": "bluish-green",
+              "pattern": "dots"
+            },
+            {
+              "value": "water",
+              "label": "Water",
+              "colour": "sky-blue",
+              "pattern": "stripes"
+            }
+          ],
+          "other": {
+            "label": "Other area",
+            "colour": "orange"
+          }
+        },
+        "label": {
+          "template": "{name}",
+          "minzoom": 6
+        }
+      }
+    },
+    {
+      "sourceLayer": "roads",
+      "minzoom": 8,
+      "style": {
+        "kind": "shapes",
+        "geometry": "line",
+        "colour": {
+          "kind": "steps",
+          "field": "rank",
+          "steps": [
+            {
+              "min": 0,
+              "label": "Minor road",
+              "colour": "ordinal-2",
+              "width": 1.5
+            },
+            {
+              "min": 5,
+              "label": "Major road",
+              "colour": "ordinal-4",
+              "width": 4,
+              "dash": "dashed"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "sourceLayer": "events",
+      "heatmap": {
+        "weightField": "size",
+        "radius": 16,
+        "intensity": 1,
+        "ramp": ["ordinal-1", "ordinal-3", "ordinal-5"],
+        "words": ["Few events", "Some events", "Many events"]
+      }
+    }
+  ]
+}

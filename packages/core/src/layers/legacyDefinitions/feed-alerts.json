@@ -1,0 +1,81 @@
+{
+  "id": "sample-alerts",
+  "name": "Sample alerts",
+  "description": "Alerts from a sample feed.",
+  "group": "Samples",
+  "dataCost": "about 130 KB",
+  "attribution": [
+    {
+      "text": "Sample alerts provider"
+    }
+  ],
+  "disclaimer": "Automatic estimates. Check official sources before acting.",
+  "controls": [],
+  "source": {
+    "kind": "feed",
+    "url": "https://alerts.test/events",
+    "decoder": "geojson",
+    "fields": {
+      "id": "properties.eventid",
+      "title": "properties.name",
+      "level": "properties.alertlevel",
+      "severity": "properties.severitydata.severitytext",
+      "from": "properties.fromdate",
+      "area": "properties.url.geometry"
+    }
+  },
+  "style": {
+    "colour": {
+      "kind": "category",
+      "field": "level",
+      "categories": [
+        {
+          "value": "Green",
+          "label": "Green alert",
+          "colour": "bluish-green",
+          "shape": "circle"
+        },
+        {
+          "value": "Orange",
+          "label": "Orange alert",
+          "colour": "orange",
+          "shape": "square"
+        },
+        {
+          "value": "Red",
+          "label": "Red alert",
+          "colour": "vermillion",
+          "shape": "triangle"
+        }
+      ],
+      "other": {
+        "label": "Other",
+        "colour": "sky-blue"
+      }
+    }
+  },
+  "card": {
+    "title": "{title}",
+    "lines": ["{level} alert", "{severity}", "From {from|date}"]
+  },
+  "list": {
+    "secondary": "{level} alert, {from|relative}",
+    "sorts": [
+      {
+        "id": "newest",
+        "label": "Newest",
+        "field": "from",
+        "direction": "desc"
+      }
+    ]
+  },
+  "detail": {
+    "urlField": "area",
+    "origins": ["https://alerts.test"],
+    "decoder": "geojson",
+    "colour": "vermillion",
+    "label": "Show affected area",
+    "dataCost": "about 300 KB"
+  },
+  "emptyText": "No sample alerts right now."
+}

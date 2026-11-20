@@ -1,0 +1,64 @@
+{
+  "id": "sample-areas",
+  "name": "Sample areas",
+  "description": "Polygons from a sample feed, shaded by density.",
+  "group": "Samples",
+  "dataCost": "about 20 KB",
+  "attribution": [
+    {
+      "text": "Sample areas provider"
+    }
+  ],
+  "controls": [],
+  "source": {
+    "kind": "feed",
+    "url": "https://areas.test/regions.json",
+    "decoder": "geojson",
+    "fields": {
+      "id": "id",
+      "title": "properties.name",
+      "density": "properties.density",
+      "kind": "properties.kind"
+    }
+  },
+  "style": {
+    "kind": "shapes",
+    "geometry": "area",
+    "fillOpacity": 0.6,
+    "colour": {
+      "kind": "intervals",
+      "field": "density",
+      "min": 0,
+      "max": 300,
+      "ramp": ["ordinal-1", "ordinal-3", "ordinal-5"],
+      "unit": " per km²",
+      "patterns": ["solid", "dots", "crosshatch"]
+    },
+    "label": {
+      "template": "{title}",
+      "minzoom": 3
+    }
+  },
+  "card": {
+    "title": "{title}",
+    "lines": ["Density {density|number} per km²"]
+  },
+  "list": {
+    "secondary": "Density {density|number}",
+    "sorts": [
+      {
+        "id": "densest",
+        "label": "Densest",
+        "field": "density",
+        "direction": "desc"
+      },
+      {
+        "id": "name",
+        "label": "Name",
+        "field": "title",
+        "direction": "asc"
+      }
+    ]
+  },
+  "emptyText": "No sample areas right now."
+}

@@ -254,7 +254,9 @@ describe("SDK package manifests", () => {
         "src",
         "!src/**/*.test.*",
         "!src/**/*.snap.html",
-        ...(name === "core" ? ["!src/propertyTesting/**"] : []),
+        ...(name === "core"
+          ? ["!src/propertyTesting/**", "!src/layers/legacyDefinitions/**"]
+          : []),
       ]);
       expect(manifest.sideEffects).toEqual(SIDE_EFFECTS[name]);
       expect(manifest.publishConfig).toEqual({ access: "public" });

@@ -446,6 +446,7 @@
     "includes": [
       "**",
       "!**/dist",
+      "!packages/*/api",
       "!**/node_modules",
       "!**/.claude",
       "!.agents",
