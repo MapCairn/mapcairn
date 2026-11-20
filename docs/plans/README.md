@@ -14,3 +14,4 @@ Open plans:
 - [0011: Any language, left to right and right to left](0011-any-language-ltr-and-rtl.md), tracking issue [#316](https://github.com/MapCairn/mapcairn/issues/316).
 - [0013: Host-defined definition text](0013-host-definition-text.md), tracking issue [#368](https://github.com/MapCairn/mapcairn/issues/368).
 - [0014: Release the SDK packages on GitHub and npm](0014-sdk-release.md), tracking issue [#1](https://github.com/MapCairn/mapcairn/issues/1).
+- [0015: One umbrella package for the SDK](0015-sdk-umbrella-package.md), tracking issue [#538](https://github.com/MapCairn/mapcairn/issues/538).
