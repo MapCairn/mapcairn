@@ -543,7 +543,7 @@ function scanText(file, code, report) {
       /\.(?:maplibregl|maplibre)-[A-Za-z]/g,
       "engine-selector",
       (m) =>
-        `Engine selector "${m[0]}…" belongs in packages/web/src/adapters/mapEngine.css.ts.`,
+        `Engine selector "${m[0]}…" belongs in packages/adapter-maplibre/src/styles.css.ts.`,
     );
   }
   if (file.endsWith(".css")) {

@@ -4,7 +4,10 @@ import { describe, expect, it } from "vitest";
 // @ts-expect-error The scanner is dependency-free JavaScript with JSDoc types.
 import { scanSource } from "../../../../scripts/harmony/rules.mjs";
 // @ts-expect-error The scanner is dependency-free JavaScript with JSDoc types.
-import { applyAllowList } from "../../../../scripts/harmony/scan.mjs";
+import {
+  applyAllowList,
+  isExemptSurface,
+} from "../../../../scripts/harmony/scan.mjs";
 
 /** One failing and one passing snippet for a rule. */
 interface Case {
@@ -628,6 +631,34 @@ describe("harmony rule scoping", () => {
     expect(
       scanSource("packages/web/src/adapters/clipboard/x.ts", build),
     ).toEqual([]);
+  });
+  it("allows the MapLibre adapter package to build services, as the host's adapters may", () => {
+    const build = `export const clip = new BrowserClipboard();`;
+    expect(scanSource("packages/adapter-maplibre/src/x.ts", build)).toEqual([]);
+    expect(scanSource("packages/map/src/host/x.ts", build)).not.toEqual([]);
+  });
+
+  it("skips the adapter package's style file, where engine selectors and raw z-index values belong, and no other", () => {
+    expect(isExemptSurface("packages/adapter-maplibre/src/styles.css.ts")).toBe(
+      true,
+    );
+    expect(isExemptSurface("packages/adapter-maplibre/src/camera.ts")).toBe(
+      false,
+    );
+    expect(isExemptSurface("packages/web/src/adapters/mapEngine.css.ts")).toBe(
+      false,
+    );
+  });
+
+  it("points an engine selector found elsewhere at the adapter package's style file", () => {
+    const found = scanSource(
+      "packages/map/src/ui/Chip/Chip.css.ts",
+      `import { globalStyle } from "@vanilla-extract/css";\nglobalStyle(".maplibregl-map", { margin: 0 });`,
+    ).filter((v: { rule: string }) => v.rule === "engine-selector");
+    expect(found).toHaveLength(1);
+    expect(found[0].message).toContain(
+      "packages/adapter-maplibre/src/styles.css.ts",
+    );
   });
 
   it("does not flag a createServices declaration or a call inside a function", () => {

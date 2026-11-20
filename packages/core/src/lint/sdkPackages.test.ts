@@ -5,8 +5,10 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import {
+  BUILT_SDK_PACKAGES,
   SDK_PACKAGES,
   UMBRELLA_PACKAGE,
+  UNRELEASED_SDK_PACKAGES,
   // @ts-expect-error The scripts are dependency-free JavaScript with JSDoc types.
 } from "../../../../scripts/sdkPackages.mjs";
 
@@ -15,6 +17,8 @@ const REPO = path.resolve(
   "../../../..",
 );
 const LIST: readonly string[] = SDK_PACKAGES;
+const UNRELEASED: readonly string[] = UNRELEASED_SDK_PACKAGES;
+const BUILT: readonly string[] = BUILT_SDK_PACKAGES;
 
 interface Manifest {
   readonly name: string;
@@ -76,6 +80,48 @@ describe("the list of SDK packages", () => {
         .filter((dependency) => LIST.includes(dependency));
       for (const need of needs) {
         expect(LIST.indexOf(need), `${name} needs ${need}`).toBeLessThan(index);
+      }
+    }
+  });
+});
+
+describe("the list of unreleased SDK packages", () => {
+  /** Every private package folder under packages/ except the reference host. */
+  function privateLibraries(): string[] {
+    return readdirSync(path.join(REPO, "packages"), { withFileTypes: true })
+      .filter((entry) => entry.isDirectory())
+      .map((entry) => entry.name)
+      .filter((folder) => manifestOf(folder).private === true)
+      .filter((folder) => folder !== "web");
+  }
+
+  it("holds every private library under packages/, so a new one must be registered", () => {
+    expect([...UNRELEASED].sort()).toEqual(privateLibraries().sort());
+  });
+
+  it("names private workspaces under the @mapcairn scope that are not in the release set", () => {
+    for (const name of UNRELEASED) {
+      expect(manifestOf(name).name).toBe(`@mapcairn/${name}`);
+      expect(manifestOf(name).private).toBe(true);
+      expect(LIST).not.toContain(name);
+    }
+  });
+
+  it("builds the release set first, then each unreleased package after the SDK packages it needs", () => {
+    expect(BUILT).toEqual([...LIST, ...UNRELEASED]);
+    for (const [index, name] of BUILT.entries()) {
+      const manifest = manifestOf(name);
+      const needs = Object.keys({
+        ...manifest.dependencies,
+        ...manifest.peerDependencies,
+      })
+        .filter((dependency) => dependency.startsWith("@mapcairn/"))
+        .map((dependency) => dependency.slice("@mapcairn/".length))
+        .filter((dependency) => BUILT.includes(dependency));
+      for (const need of needs) {
+        expect(BUILT.indexOf(need), `${name} needs ${need}`).toBeLessThan(
+          index,
+        );
       }
     }
   });

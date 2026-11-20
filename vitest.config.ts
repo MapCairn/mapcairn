@@ -18,11 +18,14 @@ export default defineConfig({
         // Snapshots of rendered markup are test data, not code to cover.
         "**/*.snap.html",
         "**/vite-env.d.ts",
+        // The scripted stand-in for the engine that the adapter's tests drive,
+        // test code shipped as a module.
+        "packages/adapter-maplibre/src/maplibreTestEngine.ts",
         "packages/web/src/entry.client.tsx",
         "packages/web/src/entry.server.tsx",
       ],
       thresholds: {
-        "packages/{core,map,react,theme,sdk}/**": {
+        "packages/{core,map,react,theme,sdk,adapter-maplibre}/**": {
           statements: 95,
           branches: 95,
           functions: 95,

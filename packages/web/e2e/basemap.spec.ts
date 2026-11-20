@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
 import { BASEMAPS, getBasemap } from "@mapcairn/core";
+import { tokenValues } from "@mapcairn/theme";
 import type { Page } from "@playwright/test";
 import { expect, test } from "./fixtures";
 import type { MapPage } from "./pages/MapPage";
@@ -78,6 +79,29 @@ test.describe("basemaps", () => {
       "true",
     );
   });
+
+  // The engine styles ship in the MapLibre adapter package and reach the page
+  // through the host's own build. This fails if they stop reaching it: the
+  // engine's container would then be transparent and its controls would show.
+  for (const colorScheme of ["light", "dark"] as const) {
+    test(`the engine's container takes the map background from the tokens, and none of its controls show, in a ${colorScheme} theme`, async ({
+      page,
+      mapPage,
+    }) => {
+      await page.emulateMedia({ colorScheme });
+      await mapPage.goto();
+
+      await expect(page.locator(".maplibregl-map")).toHaveCSS(
+        "background-color",
+        hexToRgb(tokenValues.themeValues[colorScheme].colour.mapBackground),
+      );
+      await expect(page.locator(".maplibregl-control-container")).toHaveCSS(
+        "display",
+        "none",
+      );
+      await expect(page.locator(".maplibregl-ctrl:visible")).toHaveCount(0);
+    });
+  }
 
   for (const colorScheme of ["light", "dark"] as const) {
     test(`the picker is a radio group that starts on the default basemap in a ${colorScheme} theme`, async ({

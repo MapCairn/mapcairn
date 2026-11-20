@@ -34,7 +34,7 @@ export const EXEMPT_SURFACES = [
     reason: "Contrast maths and its tests work on raw colour values.",
   },
   {
-    pattern: /^packages\/web\/src\/adapters\/mapEngine\.css\.ts$/,
+    pattern: /^packages\/adapter-maplibre\/src\/styles\.css\.ts$/,
     reason:
       "The engine style file restyles MapLibre, which needs engine selectors and raw z-index values.",
   },
@@ -93,6 +93,7 @@ export const ICON_SIZING_DIR = "packages/map/src/ui/Icon/";
 
 /** Directories that may construct adapters and call `createServices`. */
 export const ADAPTER_WIRING_DIRS = [
+  "packages/adapter-maplibre/src/",
   "packages/web/src/adapters/",
   "packages/web/src/composition/",
 ];

@@ -296,6 +296,58 @@ describe("@mapcairn/map dist", () => {
   });
 });
 
+describe("@mapcairn/adapter-maplibre dist", () => {
+  const styles = read("adapter-maplibre", "styles.css");
+
+  it("ships the engine styles as a stylesheet, scoped to the map region, with an empty declaration for it", () => {
+    expect(read("adapter-maplibre", "styles.css.d.ts").trim()).toBe(
+      "export {};",
+    );
+    expect(styles).toContain("[data-map-host]");
+    expect(styles).toContain(".maplibregl-");
+  });
+
+  it("imports no stylesheet of its own from its JavaScript, so the entry loads in plain Node", () => {
+    for (const file of distFiles("adapter-maplibre").filter((f) =>
+      f.endsWith(".js"),
+    )) {
+      expect(read("adapter-maplibre", file), file).not.toMatch(
+        /import\s*["']\.[^"']*\.css["']/,
+      );
+    }
+  });
+
+  it("reads only custom properties that the published tokens.css declares", () => {
+    const declared = definedProperties(read("theme", "tokens.css"));
+    const unresolved = [...usedProperties(styles)].filter(
+      (name) => !declared.has(name),
+    );
+    expect(unresolved).toEqual([]);
+    expect(usedProperties(styles).size).toBeGreaterThan(0);
+  });
+
+  it("exports the factory, its options and the slow-tile constant, and nothing that names the engine", () => {
+    const declaration = read("adapter-maplibre", "index.d.ts");
+    expect(declaration).toMatch(/createMapLibreMapAdapter/);
+    expect(declaration).toMatch(/MapLibreMapAdapterOptions/);
+    expect(declaration).toMatch(/TILE_LAYER_SLOW_MS/);
+    for (const file of distFiles("adapter-maplibre").filter((f) =>
+      f.endsWith(".d.ts"),
+    )) {
+      expect(
+        specifiersOf(read("adapter-maplibre", file)).map(packageOf),
+        file,
+      ).not.toContain("maplibre-gl");
+    }
+  });
+
+  it("does not export the class, the loader or the test options", () => {
+    const declaration = read("adapter-maplibre", "index.d.ts");
+    expect(declaration).not.toMatch(/\bMapLibreMapAdapter\b/);
+    expect(declaration).not.toMatch(/loadEngine|workerFailureGraceMs/);
+  });
+});
+
 describe("@mapcairn/sdk dist", () => {
   it("ships a stylesheet that imports the tokens before the map's styles, and an empty declaration for it", () => {
     expect(read("sdk", "styles.css")).toBe(

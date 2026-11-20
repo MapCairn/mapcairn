@@ -5,6 +5,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import {
+  BUILT_SDK_PACKAGES,
   SDK_PACKAGES,
   // @ts-expect-error The scripts are dependency-free JavaScript with JSDoc types.
 } from "../../../../scripts/sdkPackages.mjs";
@@ -38,8 +39,8 @@ const TYPES_PACKAGES: Readonly<Record<string, string>> = {
 /** The custom export condition that points a build tool at source. */
 const SOURCE_CONDITION = "@mapcairn/source";
 
-/** Packages that build to `dist`: every package in the SDK list. */
-const BUILT_PACKAGES: readonly string[] = SDK_PACKAGES;
+/** Packages that build to `dist`: the release set and the private ones that have not joined it. */
+const BUILT_PACKAGES: readonly string[] = BUILT_SDK_PACKAGES;
 
 /** The conditions an entry point of a built package carries, in order. */
 interface ConditionalExport {
@@ -103,6 +104,17 @@ const BUILT_ENTRY_POINTS: Readonly<
       default: "./dist/tokens.css",
     },
   },
+  "adapter-maplibre": {
+    ".": {
+      [SOURCE_CONDITION]: "./src/index.ts",
+      types: "./dist/index.d.ts",
+      default: "./dist/index.js",
+    },
+    "./styles.css": {
+      types: "./dist/styles.css.d.ts",
+      default: "./dist/styles.css",
+    },
+  },
   sdk: {
     ".": {
       [SOURCE_CONDITION]: "./src/index.ts",
@@ -151,6 +163,7 @@ const BUILT_ENTRY_POINTS: Readonly<
 const SIDE_EFFECTS: Readonly<Record<string, unknown>> = {
   core: false,
   map: ["**/*.css", "**/*.css.ts"],
+  "adapter-maplibre": ["**/*.css", "**/*.css.ts"],
   react: false,
   theme: ["**/*.css"],
   sdk: ["**/*.css"],
@@ -245,7 +258,7 @@ function importedPackages(file: string): Set<string> {
 }
 
 describe("SDK package manifests", () => {
-  it.each(SDK_PACKAGES)(
+  it.each(BUILT_PACKAGES)(
     "@mapcairn/%s declares every package its source imports",
     (name) => {
       const manifest = manifestOf(name);
@@ -309,14 +322,21 @@ describe("SDK package manifests", () => {
     },
   );
 
-  it.each(BUILT_PACKAGES)(
+  it.each(SDK_PACKAGES)(
     "@mapcairn/%s is public from the first release candidate on",
     (name) => {
       expect(manifestOf(name)).not.toHaveProperty("private");
     },
   );
 
-  it.each(SDK_PACKAGES)(
+  it.each(BUILT_PACKAGES.filter((name) => !SDK_PACKAGES.includes(name)))(
+    "@mapcairn/%s is private until it joins the release set",
+    (name) => {
+      expect(manifestOf(name).private).toBe(true);
+    },
+  );
+
+  it.each(BUILT_PACKAGES)(
     "@mapcairn/%s says what it is and where it lives, for the npm page",
     (name) => {
       const manifest = manifestOf(name);
@@ -342,7 +362,7 @@ describe("SDK package manifests", () => {
     },
   );
 
-  it.each(SDK_PACKAGES)(
+  it.each(BUILT_PACKAGES)(
     "@mapcairn/%s carries the repository's licence text",
     (name) => {
       const licence = readFileSync(
@@ -353,7 +373,7 @@ describe("SDK package manifests", () => {
     },
   );
 
-  it.each(SDK_PACKAGES)(
+  it.each(BUILT_PACKAGES)(
     "@mapcairn/%s takes React from the host, as a peer",
     (name) => {
       const manifest = manifestOf(name);
@@ -376,14 +396,31 @@ describe("SDK package manifests", () => {
     }
   });
 
+  it("@mapcairn/adapter-maplibre takes the engine from the host as a peer, and depends on core and theme only", () => {
+    const manifest = manifestOf("adapter-maplibre");
+    const version = manifestOf("core").version ?? "";
+    expect(manifest.dependencies).toEqual({
+      "@mapcairn/core": expectedRange(version),
+      "@mapcairn/theme": expectedRange(version),
+    });
+    expect(manifest.peerDependencies).toEqual({ "maplibre-gl": "^6.18.0" });
+    expect(manifest.peerDependenciesMeta).toBeUndefined();
+    // The tests run against the engine, so it is installed beside them, at
+    // the range the host installs.
+    expect(manifest.devDependencies?.["maplibre-gl"]).toBe("^6.18.0");
+    expect(manifestAt("packages/web").dependencies?.["maplibre-gl"]).toBe(
+      "^6.18.0",
+    );
+  });
+
   it("keeps the SDK package versions equal", () => {
-    const versions = SDK_PACKAGES.map((name) => manifestOf(name).version);
+    const versions = BUILT_PACKAGES.map((name) => manifestOf(name).version);
     expect(new Set(versions).size).toBe(1);
     expect(versions[0]).toMatch(/^\d+\.\d+\.\d+/);
   });
 
   it.each([
-    ...SDK_PACKAGES.map((name) => `packages/${name}`),
+    ...BUILT_PACKAGES.map((name) => `packages/${name}`),
     ...INTERNAL_CONSUMERS,
   ])(
     "%s depends on the SDK packages by version, never by file: path",
@@ -394,7 +431,7 @@ describe("SDK package manifests", () => {
         ...manifest.dependencies,
         ...manifest.peerDependencies,
       }).filter(([name]) =>
-        SDK_PACKAGES.some((sdk) => name === `@mapcairn/${sdk}`),
+        BUILT_PACKAGES.some((sdk) => name === `@mapcairn/${sdk}`),
       );
       for (const [name, range] of internal) {
         expect(range, `${folder} ${name}`).toBe(expectedRange(version));

@@ -5,6 +5,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import {
+  BUILT_SDK_PACKAGES,
   SDK_PACKAGES,
   // @ts-expect-error The scripts are dependency-free JavaScript with JSDoc types.
 } from "../../../../scripts/sdkPackages.mjs";
@@ -72,7 +73,14 @@ function codeBlocks(markdown: string): string[] {
   return [...fencedBlocks(markdown, "tsx"), ...fencedBlocks(markdown, "ts")];
 }
 
-describe.each(SDK_PACKAGES)("the README of @mapcairn/%s", (name) => {
+/**
+ * Packages the example app does not use. It runs on the SDK's fakes with no
+ * map engine, so a README that shows one of these cannot be held to what the
+ * example imports.
+ */
+const NOT_USED_BY_THE_EXAMPLE = ["@mapcairn/adapter-maplibre"];
+
+describe.each(BUILT_SDK_PACKAGES)("the README of @mapcairn/%s", (name) => {
   const readme = readmeOf(name);
   const packageName = `@mapcairn/${name}`;
   const exampleImports = exampleSources().flatMap(namedImports);
@@ -81,21 +89,24 @@ describe.each(SDK_PACKAGES)("the README of @mapcairn/%s", (name) => {
     expect(readme.split("\n")[0]).toBe(`# \`${packageName}\``);
   });
 
-  it("installs the package with npm, pnpm and yarn, side by side", () => {
-    const installs = fencedBlocks(readme, "bash").filter((block) =>
-      block.includes(packageName),
-    );
-    expect(installs).toHaveLength(1);
-    const lines = (installs[0] ?? "").trim().split("\n");
-    expect(lines).toHaveLength(INSTALL_VERBS.length);
-    INSTALL_VERBS.forEach((verb, index) => {
-      expect(lines[index]).toMatch(
-        new RegExp(
-          `^${verb} ${packageName}(@next)?( @mapcairn/[a-z]+(@next)?)*$`,
-        ),
+  it.skipIf(!SDK_PACKAGES.includes(name))(
+    "installs the package with npm, pnpm and yarn, side by side",
+    () => {
+      const installs = fencedBlocks(readme, "bash").filter((block) =>
+        block.includes(packageName),
       );
-    });
-  });
+      expect(installs).toHaveLength(1);
+      const lines = (installs[0] ?? "").trim().split("\n");
+      expect(lines).toHaveLength(INSTALL_VERBS.length);
+      INSTALL_VERBS.forEach((verb, index) => {
+        expect(lines[index]).toMatch(
+          new RegExp(
+            `^${verb} ${packageName}(@next)?( (@mapcairn/[a-z-]+(@next)?|maplibre-gl))*$`,
+          ),
+        );
+      });
+    },
+  );
 
   it("has one Status line", () => {
     const lines = readme
@@ -143,6 +154,12 @@ describe.each(SDK_PACKAGES)("the README of @mapcairn/%s", (name) => {
       .flatMap(namedImports)
       .filter(({ specifier }) => specifier.startsWith("@mapcairn/"))
       .filter(
+        ({ specifier }) =>
+          !NOT_USED_BY_THE_EXAMPLE.some((unused) =>
+            specifier.startsWith(unused),
+          ),
+      )
+      .filter(
         ({ specifier, imported }) =>
           !isUsedByExample(exampleImports, specifier, imported),
       )
@@ -160,6 +177,9 @@ describe.each(SDK_PACKAGES)("the README of @mapcairn/%s", (name) => {
         if (
           typeOnly ||
           !specifier.startsWith("@mapcairn/") ||
+          NOT_USED_BY_THE_EXAMPLE.some((unused) =>
+            specifier.startsWith(unused),
+          ) ||
           !/^[A-Z]/.test(local)
         ) {
           continue;
@@ -284,5 +304,21 @@ describe("the README of @mapcairn/map", () => {
     const code = codeBlocks(readme).join("\n");
     expect(code).toMatch(/\blazy\(\s*\(\)\s*=>\s*import\(/);
     expect(code).toContain("<Suspense");
+  });
+});
+
+describe("the README of @mapcairn/adapter-maplibre", () => {
+  const readme = readmeOf("adapter-maplibre");
+
+  it("shows the factory with its one required option, and the engine's worker as the host's to supply", () => {
+    const code = codeBlocks(readme).join("\n");
+    expect(code).toContain("createMapLibreMapAdapter");
+    expect(code).toContain("loadWorkerUrl");
+    expect(readme).toContain("maplibre-gl");
+    expect(readme).toContain("peer dependency");
+  });
+
+  it("names the stylesheet an outside host imports once", () => {
+    expect(readme).toContain("@mapcairn/adapter-maplibre/styles.css");
   });
 });
