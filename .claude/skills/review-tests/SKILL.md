@@ -19,7 +19,7 @@ Example: on #463 the contrast check flattened a translucent text colour over its
 1. Read the pull request with `node scripts/agents/thread.mjs pr <n>`. If it is from outside the project (`land-pr` section 2), do not run its code: review from `gh pr diff <n>` and `git show <sha>:<path>`, do sections 2 and 5 by reading, and say that sections 3 and 4 were not run.
 2. `git fetch <origin-or-upstream> pull/<n>/head`, note the head SHA, and find the base with `git merge-base <origin-or-upstream>/main <head-sha>`.
 3. `git worktree add --detach .claude/worktrees/review-<n> <head-sha>`, then `npm ci --ignore-scripts` inside it. Never edit the branch, the main checkout or another worktree.
-4. List the diff with `git diff --stat <base> <head-sha>` and read large files (a long table row in `DESIGN.md`) with `git diff <base> <head-sha> -- <file>` piped through a filter, not whole. Sort the files into code (what ships), tests (`*.test.ts`, `*.test.tsx`, `packages/web/e2e/**`, fixtures and support) and documents.
+4. List the diff with `git diff --stat <base> <head-sha>` and read large files (a long table row in `DESIGN.md`) by their added lines only (`git diff <base> <head-sha> -- <file>`, keeping the lines that start with `+`, each cut to a readable width), not whole. Sort the files into code (what ships), tests (`*.test.ts`, `*.test.tsx`, `packages/web/e2e/**`, fixtures and support) and documents.
 5. Run the changed and new tests once at the head and confirm they pass. Run Vitest from the package folder (`cd packages/<name>`, then `npx --no-install vitest run src/<file>`): from the repository root the config also loads `packages/web`, which needs the built SDK. A failure here is a finding of its own; stop the experiments until you know why.
 
 ## 2. Read the claims and the assertions
@@ -29,6 +29,7 @@ List every behaviour the change claims: the issue's acceptance criteria, the pul
 Then read each new or changed test for these. The first three apply to any test; the next three mostly to components and browser specs.
 
 - **Tautology**: the expected value comes from the code under test, from a copy of its formula, or from a list the module exports, so the test compares the code with itself.
+- **Inputs off the boundary**: work out the inputs of a case whose name states a boundary ("closer than a gap", "just below the limit") and check they land there. On #488 a case named "closer than a gap" used boxes that overlapped, so the gap was never needed.
 - **Weak matcher**: `toBeTruthy`, `toBeDefined`, `toContain`, `some(...)`, a length above zero, a wide `toBeCloseTo`, or `not.toThrow` alone, where the exact value is known.
 - **Assertion that may not run**: `expect` inside a callback, loop or `if` that can be skipped, an empty case table, a `catch` that swallows.
 - **Start equals end**: the state before the action already satisfies the assertion, so the action is not tested. On #449 focus started on the map region, which was also the fallback's answer.
@@ -44,7 +45,7 @@ In the scratch worktree, put the changed code files back as they were at the bas
 
 Each test written for the change should fail, for the reason its name gives. One that passes is either a guard (it keeps behaviour that already held, such as "leaves focus alone"): list it as a guard; or it claims the change and proves nothing about it: report it. Then `git restore --source=<head-sha> -- <the same files>` and check `git status` is clean.
 
-For a refactor that claims no change in behaviour, or a change made only of new files, skip this and say so; section 4 carries the weight.
+For a refactor that claims no change in behaviour, a change made only of new files, or tests that fail at the base only because a name they use was renamed, skip this for those tests and say so; section 4 carries the weight.
 
 ## 4. Break it on purpose
 
@@ -56,9 +57,10 @@ Choose two to four mutations from the code diff, preferring the places a wrong v
 - a reset removed (a flag that is set and never cleared, a listener never removed);
 - an ordering swapped (two steps, a sort direction, which of two values wins);
 - a member dropped from a list or a set the code checks against;
+- the reading direction ignored (the right-to-left branch of a layout or a key always taking the left-to-right value);
 - a parser rule loosened or tightened (accept an extra argument, drop a flag, refuse a valid form).
 
-For each, one at a time: edit only code in the scratch worktree, with an editor or a one-line in-place substitution; run the narrowest set that should catch it, then the package's tests; record killed or survived and the test that killed it; restore with `git restore -- <file>` and check `git status` is clean. A survivor is a finding. Write the smallest case that would kill it, run that case against the mutant in a temporary test file, then delete the file. If your case does not kill the mutant either, say "fix unproven" rather than offer it.
+For each, one at a time: edit only code in the scratch worktree, with an editor or a one-line in-place substitution, and check with `git diff --stat` that exactly one line changed; run the narrowest set that should catch it, then the package's tests; record killed or survived and the test that killed it; restore with `git restore -- <file>` and check `git status` is clean. A survivor is a finding. Write the smallest case that would kill it, run that case against the mutant in a temporary test file, then delete the file. If your case does not kill the mutant either, say "fix unproven" rather than offer it.
 
 A survivor counts only if the mutated line runs. Coverage shows that for a line (`npx --no-install vitest run --coverage --coverage.include=<file> --coverage.reporter=text` in the package folder), but a covered line that no mutation can break proves nothing: the survivors are the measure, not the percentage. For a handler that runs only on an event, check a test fires that event.
 
