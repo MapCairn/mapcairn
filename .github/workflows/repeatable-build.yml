@@ -1,6 +1,7 @@
 name: Repeatable build
 
-# Builds the site twice from a clean state and compares every output file.
+# Builds the site and the four SDK packages twice from a clean state and
+# compares every output file, the SDK `dist` folders and the packed tarballs.
 # It runs weekly and on request, not on pull requests, so a difference never
 # blocks a change; it fails the run so the difference is seen and fixed.
 on:
@@ -40,23 +41,39 @@ jobs:
 
       - name: Hash the first build
         run: |
-          cd packages/web/.cloudflare/output
-          find . -type f -print0 | sort -z | xargs -0 sha256sum > "${RUNNER_TEMP}/first.sha256"
+          (cd packages/web/.cloudflare/output && find . -type f -print0 | sort -z | xargs -0 sha256sum) > "${RUNNER_TEMP}/first.sha256"
+          for package in core react theme map; do
+            find "packages/${package}/dist" -type f -print0 | sort -z | xargs -0 sha256sum >> "${RUNNER_TEMP}/first.sha256"
+          done
+          mkdir "${RUNNER_TEMP}/first-tarballs"
+          for package in core react theme map; do
+            npm pack --ignore-scripts --workspace "packages/${package}" --pack-destination "${RUNNER_TEMP}/first-tarballs"
+          done
+          (cd "${RUNNER_TEMP}/first-tarballs" && sha256sum -- *.tgz) >> "${RUNNER_TEMP}/first.sha256"
 
       - name: Second build from clean
         run: |
-          rm -rf packages/web/.cloudflare
+          # The SDK packages skip a build their stamp says is current, so their
+          # `dist` folders go too, or this would compare a build with itself.
+          rm -rf packages/web/.cloudflare packages/core/dist packages/react/dist packages/theme/dist packages/map/dist
           npm run build -w @mapcairn/web
 
       - name: Hash the second build
         run: |
-          cd packages/web/.cloudflare/output
-          find . -type f -print0 | sort -z | xargs -0 sha256sum > "${RUNNER_TEMP}/second.sha256"
+          (cd packages/web/.cloudflare/output && find . -type f -print0 | sort -z | xargs -0 sha256sum) > "${RUNNER_TEMP}/second.sha256"
+          for package in core react theme map; do
+            find "packages/${package}/dist" -type f -print0 | sort -z | xargs -0 sha256sum >> "${RUNNER_TEMP}/second.sha256"
+          done
+          mkdir "${RUNNER_TEMP}/second-tarballs"
+          for package in core react theme map; do
+            npm pack --ignore-scripts --workspace "packages/${package}" --pack-destination "${RUNNER_TEMP}/second-tarballs"
+          done
+          (cd "${RUNNER_TEMP}/second-tarballs" && sha256sum -- *.tgz) >> "${RUNNER_TEMP}/second.sha256"
 
-      - name: Compare the two builds
+      - name: Compare the two builds, the SDK dist folders and the tarballs
         run: |
           if diff -u "${RUNNER_TEMP}/first.sha256" "${RUNNER_TEMP}/second.sha256"; then
-            echo "Both builds are byte for byte identical ($(wc -l < "${RUNNER_TEMP}/first.sha256") files)."
+            echo "Both builds, the SDK dist folders and the tarballs are byte for byte identical ($(wc -l < "${RUNNER_TEMP}/first.sha256") files)."
           else
             echo "::error::The two builds differ."
             exit 1

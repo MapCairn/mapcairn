@@ -23,12 +23,7 @@
   },
   "files": [
     "dist",
-    "!dist/.built",
-    "src",
-    "!src/**/*.test.*",
-    "!src/**/*.snap.html",
-    "!src/propertyTesting/**",
-    "!src/layers/legacyDefinitions/**"
+    "!dist/.built"
   ],
   "sideEffects": false,
   "scripts": {
