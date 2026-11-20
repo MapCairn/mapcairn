@@ -450,11 +450,78 @@ describe("scanSources", () => {
       "echo --dry-run && npm publish ./c.tgz",
     ],
     ["it before the command word", "npm --dry-run publish ./c.tgz"],
+    [
+      "the option followed by a false value",
+      "npm publish ./c.tgz --dry-run false",
+    ],
+    [
+      "the option followed by another word",
+      "npm publish ./c.tgz --dry-run --tag next",
+    ],
+    [
+      "the option negated before it, then a word",
+      "npm publish ./c.tgz --dry-run x",
+    ],
   ])("does not take %s for a dry run in the rehearse job", (_name, command) => {
     const workflow = `jobs:\n  rehearse:\n    steps:\n      - run: ${command}\n`;
     expect(scan(".github/workflows/release.yml", workflow)).toEqual([
       { file: ".github/workflows/release.yml", line: 4, command: "publish" },
     ]);
+  });
+
+  it.each([
+    ["a blank line", ["", "          echo --dry-run"]],
+    ["a more-indented line", ["            echo --dry-run"]],
+  ])(
+    "keeps the line break of a folded block at %s as a command separator",
+    (_name, rest) => {
+      const workflow = [
+        "jobs:",
+        "  rehearse:",
+        "    steps:",
+        "      - run: >",
+        "          npm publish ./core.tgz",
+        ...rest,
+        "",
+      ].join("\n");
+      expect(scan(".github/workflows/release.yml", workflow)).toEqual([
+        {
+          file: ".github/workflows/release.yml",
+          line: 4,
+          command: "publish",
+        },
+      ]);
+    },
+  );
+
+  it("does not let a folded block hide a second publish after a dry run", () => {
+    const workflow = [
+      "jobs:",
+      "  rehearse:",
+      "    steps:",
+      "      - run: >",
+      "          npm publish ./core.tgz --dry-run",
+      "          npm publish ./map.tgz",
+      "",
+    ].join("\n");
+    expect(scan(".github/workflows/release.yml", workflow)).toEqual([
+      { file: ".github/workflows/release.yml", line: 4, command: "publish" },
+      { file: ".github/workflows/release.yml", line: 4, command: "publish" },
+    ]);
+  });
+
+  it("allows a folded block that folds a dry run onto several lines", () => {
+    const workflow = [
+      "jobs:",
+      "  rehearse:",
+      "    steps:",
+      "      - run: >",
+      "          npm publish ./core.tgz",
+      "          --provenance",
+      "          --dry-run",
+      "",
+    ].join("\n");
+    expect(scan(".github/workflows/release.yml", workflow)).toEqual([]);
   });
 
   it("does not take a dry-run word on an earlier line for the publish that a backslash continues into", () => {
@@ -710,6 +777,13 @@ describe("publishesOnlyDryRuns", () => {
     expect(publishesOnlyDryRuns("npm publish a.tgz --dry-run=false")).toBe(
       false,
     );
+    expect(publishesOnlyDryRuns("npm publish a.tgz --dry-run false")).toBe(
+      false,
+    );
+    expect(publishesOnlyDryRuns("npm publish a.tgz --no-dry-run")).toBe(false);
+    expect(
+      publishesOnlyDryRuns("npm publish a.tgz --dry-run\nnpm publish b.tgz"),
+    ).toBe(false);
   });
 });
 
