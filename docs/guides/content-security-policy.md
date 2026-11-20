@@ -68,6 +68,8 @@ The reference host's list also includes the content delivery network one of its 
 
 The subtle part is caching. A worker script takes its policy from its own response, and the worker file is cached as immutable, so a copy fetched before the policy changed would keep enforcing the old one for as long as it is cached. The reference host adds a short cache key, derived from the policy, to the worker URL, so every policy change is a new address and no device is left on a stale policy (`workerUrl.ts` and `workerCacheKey.ts`). The adapter does not add a key itself: a host that caches the worker for a long time puts one in the URL its `loadWorkerUrl` resolves to, and keeps the worker same-origin.
 
+A host that installs the packaged adapter writes this directive the same way: `'self'` when `loadWorkerUrl` resolves to a file on the page's own origin, which is what a Vite `?worker&url` import gives (the setup is in [`extending.md`](extending.md#show-a-real-map)). `blob:` is needed only if you serve the worker from another origin and the engine falls back to a blob URL, which was not tried here.
+
 Leave `worker-src` out and the engine's worker never loads, which the adapter treats as fatal, so the map stays blank (`MapLibreMapAdapter.ts`). Reasoned from the adapter's code. The browser leg was also run once with `worker-src 'none'` while it was written: the browser refused the worker, the console and the leg's violation report said so, and the map stayed in its error state. That run is not a standing test.
 
 ## The nonce question

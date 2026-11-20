@@ -33,7 +33,7 @@ The JavaScript imports no CSS, so the components render on the server as plain m
 
 - `MapChrome` fills its container, so give `html`, `body` and the element you render into a height.
 - The tokens name the IBM Plex Sans Variable font, which your app loads (for example from `@fontsource-variable/ibm-plex-sans`). Without it the type falls back to the system font.
-- The map engine and its styles. The package never imports one; your app supplies a `MapAdapter` over MapLibre GL JS in the `Services` bundle. The reference adapter is in the repository's `packages/web` and is not published as a package yet.
+- The map engine and its styles. The package never imports one; your app supplies a `MapAdapter` over MapLibre GL JS in the `Services` bundle. The MapLibre adapter is [`@mapcairn/adapter-maplibre`](https://github.com/MapCairn/mapcairn/tree/main/packages/adapter-maplibre), which `@mapcairn/sdk` re-exports at `@mapcairn/sdk/adapter-maplibre`.
 
 The styles of the primitives (buttons, chips, surfaces and list rows) sit in a cascade layer, so an unlayered rule in your own CSS, such as `button { background: transparent; border: 0; padding: 0 }` or `:focus-visible { outline: none }`, beats them. Put your app's base styles and resets in an `@layer` that is declared before `@mapcairn/map/styles.css` is imported, and they rank below the primitives. This is a known trade-off for 0.1.0; see [Overriding a primitive](https://github.com/MapCairn/mapcairn/blob/main/DESIGN.md#overriding-a-primitive).
 
@@ -41,7 +41,7 @@ The generated names of the CSS custom properties in `tokens.css` are private and
 
 ## Usage
 
-Build the services once, wrap the tree, then render the map with its chrome. This is a whole app. It runs on the SDK's in-memory fakes, so it requests nothing and draws no map tiles; a real map swaps in a `MapAdapter`.
+Build the services once, wrap the tree, then render the map with its chrome. This is a whole app. It runs on the SDK's in-memory fakes, so it requests nothing and draws no map tiles; a real map swaps in the MapLibre adapter, as the [adapter's README](https://github.com/MapCairn/mapcairn/tree/main/packages/adapter-maplibre) shows.
 
 ```tsx
 import { createFakeServices } from "@mapcairn/core";

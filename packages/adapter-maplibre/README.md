@@ -30,6 +30,8 @@ const createMap = () =>
   });
 ```
 
+A Vite app takes the URL from the bundler's own worker import, and another bundler must serve the file the same way. [Show a real map](https://github.com/MapCairn/mapcairn/blob/main/docs/guides/extending.md#show-a-real-map) has the steps, and the [Content Security Policy guide](https://github.com/MapCairn/mapcairn/blob/main/docs/guides/content-security-policy.md#worker-src) covers `worker-src`.
+
 `createMap` is the adapter factory that goes in the `Services` bundle that `ServicesProvider` supplies to `@mapcairn/map`.
 
 - `loadWorkerUrl` resolves to the URL of `maplibre-gl/dist/maplibre-gl-worker.mjs` as your app serves it. MapLibre 6 runs a module worker, and without this URL it looks for the file beside its own module, which inside a bundle names the wrong file, so the map never draws. It is a function so the adapter asks for the URL only when a map mounts, which lets a bundler load the worker lazily. A host that serves a hashed worker file with a long cache lifetime adds a key that names its Content Security Policy to the URL, so a changed policy reaches devices that already have the file.
