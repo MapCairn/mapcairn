@@ -85,6 +85,6 @@ export const SECURITY_HEADERS: Readonly<Record<string, string>> = {
     "geolocation=(self), camera=(), microphone=(), interest-cohort=(), browsing-topics=()",
   "Cross-Origin-Opener-Policy": "same-origin",
   "Cross-Origin-Resource-Policy": "same-origin",
-  "Strict-Transport-Security": "max-age=31536000; includeSubDomains",
+  "Strict-Transport-Security": "max-age=31536000; includeSubDomains; preload",
   "Content-Security-Policy": buildContentSecurityPolicy(),
 };

@@ -14,7 +14,7 @@ The reference host sends one strict policy on every response, in two copies: the
 
 Two of the closing set carry a detail worth copying. `frame-src 'none'` is written out, not inherited, so it does not fall back to `child-src`, which also governs workers (`securityHeaders.ts`). And the worker section of the policy is not idle: a worker script enforces the Content Security Policy of its own response, so the origin lists below reach the engine's fetching inside the worker too.
 
-Besides the policy itself the host sends `X-Frame-Options: DENY`, `X-Content-Type-Options: nosniff`, a referrer policy, a Permissions-Policy that keeps camera and microphone off and geolocation on the same origin, `Strict-Transport-Security: max-age=31536000; includeSubDomains` and the cross-origin headers (`_headers`). The policy sets neither `upgrade-insecure-requests` nor a reporting directive, and no file in the repository records a decision about either.
+Besides the policy itself the host sends `X-Frame-Options: DENY`, `X-Content-Type-Options: nosniff`, a referrer policy, a Permissions-Policy that keeps camera and microphone off and geolocation on the same origin, `Strict-Transport-Security: max-age=31536000; includeSubDomains; preload` and the cross-origin headers (`_headers`). The policy sets neither `upgrade-insecure-requests` nor a reporting directive, and no file in the repository records a decision about either.
 
 ## script-src
 

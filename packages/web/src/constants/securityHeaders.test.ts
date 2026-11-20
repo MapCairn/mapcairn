@@ -68,6 +68,21 @@ describe("tile origins", () => {
   });
 });
 
+describe("Strict-Transport-Security", () => {
+  const PRELOAD_VALUE = "max-age=31536000; includeSubDomains; preload";
+
+  it("asks browsers to preload the domain, for a year and for every subdomain", () => {
+    expect(SECURITY_HEADERS["Strict-Transport-Security"]).toBe(PRELOAD_VALUE);
+  });
+
+  it("carries the same value in _headers", () => {
+    const parsedHeaders = parseGlobalHeadersBlock(
+      readFileSync(HEADERS_FILE_PATH, "utf8"),
+    );
+    expect(parsedHeaders["Strict-Transport-Security"]).toBe(PRELOAD_VALUE);
+  });
+});
+
 describe("Permissions-Policy", () => {
   it("lets this origin use geolocation for Locate me and blocks camera and microphone", () => {
     const policy = SECURITY_HEADERS["Permissions-Policy"];
