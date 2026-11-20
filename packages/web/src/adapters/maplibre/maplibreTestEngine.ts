@@ -994,3 +994,11 @@ export function rasterBasemap(): BasemapDefinition {
     maxZoom: 19,
   });
 }
+
+/** The worker URL the tests' host hands the adapter. */
+export const TEST_WORKER_URL = "mock-maplibre-worker-url";
+
+/** The options every test adapter is built with: the host's loader, resolved at once. */
+export const TEST_ADAPTER_OPTIONS = {
+  loadWorkerUrl: async () => TEST_WORKER_URL,
+};

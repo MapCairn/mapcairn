@@ -11,6 +11,7 @@ import { BrowserFileSaver } from "../adapters/files/BrowserFileSaver";
 import { FetchLayerSource } from "../adapters/layers/FetchLayerSource";
 import { BrowserLocationProvider } from "../adapters/location/BrowserLocationProvider";
 import { createMapLibreMapAdapter } from "../adapters/maplibre/MapLibreMapAdapter";
+import { loadWorkerUrl } from "../adapters/maplibre/workerUrl";
 import { BrowserDevicePreferences } from "../adapters/preferences/BrowserDevicePreferences";
 import { ValhallaRoutingProvider } from "../adapters/routing/ValhallaRoutingProvider";
 import { NominatimSearchProvider } from "../adapters/search/NominatimSearchProvider";
@@ -19,7 +20,6 @@ import { LocalStorageSettingsStore } from "../adapters/settings/LocalStorageSett
 import { BrowserThemeSource } from "../adapters/theme/BrowserThemeSource";
 import { BrowserUrlState } from "../adapters/url/BrowserUrlState";
 import { HOST_BASEMAP_CATALOGUE } from "../basemaps/hostBasemaps";
-import { WORKER_CACHE_KEY } from "../constants/workerCacheKey";
 import { ENGLISH, HOST_LANGUAGE_CATALOGUE } from "../i18n/hostLanguages";
 import { createHostLayerCatalogue } from "../layers";
 import { readTestOverrides } from "./testSeam";
@@ -69,8 +69,7 @@ export function createServices(options: CreateServicesOptions = {}): Services {
   const real: Services = {
     // The adapter loads MapLibre lazily, so building one costs nothing
     // until it mounts.
-    createMapAdapter: () =>
-      createMapLibreMapAdapter({ workerCacheKey: WORKER_CACHE_KEY }),
+    createMapAdapter: () => createMapLibreMapAdapter({ loadWorkerUrl }),
     search: new NominatimSearchProvider({ isOnline }),
     suggestions: new PhotonSuggestionProvider({ isOnline }),
     location: new BrowserLocationProvider(),

@@ -21,12 +21,20 @@ import {
 } from "@mapcairn/core/contracts";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { BrowserFileOpener } from "../adapters/files/BrowserFileOpener";
-import { MapLibreMapAdapter } from "../adapters/maplibre/MapLibreMapAdapter";
+import { createMapLibreMapAdapter } from "../adapters/maplibre/MapLibreMapAdapter";
 import { ValhallaRoutingProvider } from "../adapters/routing/ValhallaRoutingProvider";
 import { PhotonSuggestionProvider } from "../adapters/search/PhotonSuggestionProvider";
 import { HOST_BASEMAP_CATALOGUE } from "../basemaps/hostBasemaps";
+import { WORKER_CACHE_KEY } from "../constants/workerCacheKey";
 import { LAYER_DEFINITIONS } from "../layers";
 import { createServices } from "./createServices";
+
+vi.mock("../adapters/maplibre/MapLibreMapAdapter", () => ({
+  createMapLibreMapAdapter: vi.fn(() => ({})),
+}));
+vi.mock("maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url", () => ({
+  default: "/assets/maplibre-gl-worker-HASH.js",
+}));
 
 const builtPortNames: readonly PortName[] = PORT_NAMES.filter(
   (name) => !HOST_SUPPLIED_PORT_NAMES.some((supplied) => supplied === name),
@@ -127,11 +135,23 @@ describe("createServices", () => {
     expect(second.search).not.toBe(first.search);
   });
 
-  it("builds a new MapLibre adapter on every call", () => {
+  it("builds a new MapLibre adapter on every call, giving it the host's worker URL", async () => {
+    const created = vi.mocked(createMapLibreMapAdapter);
+    created.mockClear();
+    const firstBuilt = {} as ReturnType<typeof createMapLibreMapAdapter>;
+    const secondBuilt = {} as ReturnType<typeof createMapLibreMapAdapter>;
+    created.mockReturnValueOnce(firstBuilt).mockReturnValueOnce(secondBuilt);
     const { createMapAdapter } = createServices();
-    const first = createMapAdapter();
-    expect(first).toBeInstanceOf(MapLibreMapAdapter);
-    expect(createMapAdapter()).not.toBe(first);
+    expect(created).not.toHaveBeenCalled();
+
+    expect(createMapAdapter()).toBe(firstBuilt);
+    expect(createMapAdapter()).toBe(secondBuilt);
+
+    expect(created).toHaveBeenCalledTimes(2);
+    const options = created.mock.calls[0]?.[0];
+    await expect(options?.loadWorkerUrl()).resolves.toBe(
+      `/assets/maplibre-gl-worker-HASH.js?v=${WORKER_CACHE_KEY}`,
+    );
   });
 
   describe("the online signal", () => {

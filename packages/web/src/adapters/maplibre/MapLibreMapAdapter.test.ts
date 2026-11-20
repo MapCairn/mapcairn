@@ -21,6 +21,8 @@ import {
   FAKE_VIEWPORT_WIDTH,
   FakeMapLibreMap,
   simulateFeatureHits,
+  TEST_ADAPTER_OPTIONS,
+  TEST_WORKER_URL,
 } from "./maplibreTestEngine";
 
 // happy-dom has no WebGL, so these tests drive a scripted engine and cover
@@ -38,19 +40,16 @@ vi.mock("maplibre-gl", async () => ({
   setWorkerUrl: engine.setWorkerUrl,
 }));
 vi.mock("maplibre-gl/dist/maplibre-gl.css", () => ({}));
-vi.mock("maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url", () => ({
-  default: "mock-maplibre-worker-url",
-}));
 
+import { IMAGE_WAIT_MS } from "./imageExport";
 import {
   createMapLibreMapAdapter,
-  IMAGE_WAIT_MS,
   MapLibreMapAdapter,
   TILE_LAYER_SLOW_MS,
-  TILE_SETTLE_NUDGE_MS,
-  WORKER_FAILURE_GRACE_MS,
 } from "./MapLibreMapAdapter";
 import { FakeGPUInitializationError } from "./maplibreTestEngine";
+import { TILE_SETTLE_NUDGE_MS } from "./repaintUntilIdle";
+import { WORKER_FAILURE_GRACE_MS } from "./workerFailureCheck";
 
 /** The exact error maplibre-gl 6.17 fires from `createActors` for any worker `error` event. */
 function workerFailure(): Record<string, unknown> {
@@ -131,7 +130,7 @@ function createHost(): HTMLDivElement {
 
 async function mounted(
   options: Partial<MapMountOptions> = {},
-  adapter = new MapLibreMapAdapter(),
+  adapter = new MapLibreMapAdapter(TEST_ADAPTER_OPTIONS),
 ) {
   const host = createHost();
   const before = FakeMapLibreMap.instances.length;
@@ -185,17 +184,15 @@ const layerIds = (map: FakeMap) => map.styleLayers.map((layer) => layer.id);
 
 describe("MapLibreMapAdapter", () => {
   it("is built fresh by the factory", () => {
-    const adapter = createMapLibreMapAdapter();
+    const adapter = createMapLibreMapAdapter(TEST_ADAPTER_OPTIONS);
     expect(adapter).toBeInstanceOf(MapLibreMapAdapter);
-    expect(createMapLibreMapAdapter()).not.toBe(adapter);
+    expect(createMapLibreMapAdapter(TEST_ADAPTER_OPTIONS)).not.toBe(adapter);
   });
 
   describe("mount", () => {
-    it("points MapLibre at the bundled worker before creating the map", async () => {
+    it("points MapLibre at the worker URL the host's loader gives, before creating the map", async () => {
       await mounted();
-      expect(engine.setWorkerUrl).toHaveBeenCalledWith(
-        "mock-maplibre-worker-url",
-      );
+      expect(engine.setWorkerUrl).toHaveBeenCalledWith(TEST_WORKER_URL);
     });
 
     it("creates a flat map with no controls and MapLibre's keyboard handler off", async () => {
@@ -250,7 +247,7 @@ describe("MapLibreMapAdapter", () => {
     });
 
     it("waits for the first load before resolving", async () => {
-      const adapter = new MapLibreMapAdapter();
+      const adapter = new MapLibreMapAdapter(TEST_ADAPTER_OPTIONS);
       const resolved = vi.fn();
       void adapter.mount(createHost(), MOUNT).then(resolved);
       await vi.waitFor(() => {
@@ -266,7 +263,7 @@ describe("MapLibreMapAdapter", () => {
 
     it("rejects with webgl-unavailable when MapLibre cannot create a GPU context", async () => {
       FakeMapLibreMap.nextConstructError = new FakeGPUInitializationError();
-      const adapter = new MapLibreMapAdapter();
+      const adapter = new MapLibreMapAdapter(TEST_ADAPTER_OPTIONS);
       const result = adapter.mount(createHost(), MOUNT);
       await expect(result).rejects.toBeInstanceOf(MapEngineError);
       await expect(result).rejects.toMatchObject({
@@ -278,7 +275,7 @@ describe("MapLibreMapAdapter", () => {
       const lookalike = new Error("WebGL2 is required");
       lookalike.name = "GPUInitializationError";
       FakeMapLibreMap.nextConstructError = lookalike;
-      const adapter = new MapLibreMapAdapter();
+      const adapter = new MapLibreMapAdapter(TEST_ADAPTER_OPTIONS);
       await expect(adapter.mount(createHost(), MOUNT)).rejects.toMatchObject({
         reason: "load-failed",
       });
@@ -286,7 +283,7 @@ describe("MapLibreMapAdapter", () => {
 
     it("rejects with load-failed when the map constructor fails for another reason", async () => {
       FakeMapLibreMap.nextConstructError = new Error("Invalid container");
-      const adapter = new MapLibreMapAdapter();
+      const adapter = new MapLibreMapAdapter(TEST_ADAPTER_OPTIONS);
       await expect(adapter.mount(createHost(), MOUNT)).rejects.toMatchObject({
         name: "MapEngineError",
         reason: "load-failed",
@@ -301,13 +298,13 @@ describe("MapLibreMapAdapter", () => {
       engine.setWorkerUrl.mockImplementationOnce(() => {
         throw new Error("chunk failed");
       });
-      const failing = new fresh.MapLibreMapAdapter();
+      const failing = new fresh.MapLibreMapAdapter(TEST_ADAPTER_OPTIONS);
       await expect(failing.mount(createHost(), MOUNT)).rejects.toMatchObject({
         reason: "load-failed",
       });
       expect(FakeMapLibreMap.instances).toHaveLength(0);
 
-      const retrying = new fresh.MapLibreMapAdapter().mount(
+      const retrying = new fresh.MapLibreMapAdapter(TEST_ADAPTER_OPTIONS).mount(
         createHost(),
         MOUNT,
       );
@@ -319,9 +316,40 @@ describe("MapLibreMapAdapter", () => {
       expect(engine.setWorkerUrl).toHaveBeenCalledTimes(2);
     });
 
+    it("rejects with load-failed when the host's worker URL loader rejects, and asks it again next time", async () => {
+      vi.resetModules();
+      const fresh = await import("./MapLibreMapAdapter");
+      const loadWorkerUrl = vi
+        .fn<() => Promise<string>>()
+        .mockRejectedValueOnce(new Error("worker chunk failed"))
+        .mockResolvedValueOnce(TEST_WORKER_URL);
+      const failing = new fresh.MapLibreMapAdapter({ loadWorkerUrl });
+
+      await expect(failing.mount(createHost(), MOUNT)).rejects.toMatchObject({
+        name: "MapEngineError",
+        reason: "load-failed",
+      });
+      expect(engine.setWorkerUrl).not.toHaveBeenCalled();
+      expect(FakeMapLibreMap.instances).toHaveLength(0);
+
+      const retrying = new fresh.MapLibreMapAdapter({ loadWorkerUrl }).mount(
+        createHost(),
+        MOUNT,
+      );
+      await vi.waitFor(() => {
+        expect(FakeMapLibreMap.instances).toHaveLength(1);
+      });
+      FakeMapLibreMap.instances[0]?.fire("load");
+      await expect(retrying).resolves.toBeUndefined();
+      expect(loadWorkerUrl).toHaveBeenCalledTimes(2);
+      expect(engine.setWorkerUrl).toHaveBeenCalledExactlyOnceWith(
+        TEST_WORKER_URL,
+      );
+    });
+
     it("rejects with load-failed and removes the map when the style fails before the first load", async () => {
       vi.spyOn(console, "error").mockImplementation(() => {});
-      const adapter = new MapLibreMapAdapter();
+      const adapter = new MapLibreMapAdapter(TEST_ADAPTER_OPTIONS);
       const host = createHost();
       const result = adapter.mount(host, MOUNT);
       await vi.waitFor(() => {
@@ -336,7 +364,7 @@ describe("MapLibreMapAdapter", () => {
 
     it("keeps waiting when the sprite fails after the style document loaded", async () => {
       vi.spyOn(console, "error").mockImplementation(() => {});
-      const adapter = new MapLibreMapAdapter();
+      const adapter = new MapLibreMapAdapter(TEST_ADAPTER_OPTIONS);
       const tileError = vi.fn();
       adapter.on("tileError", tileError);
       const result = adapter.mount(createHost(), MOUNT);
@@ -355,7 +383,7 @@ describe("MapLibreMapAdapter", () => {
 
     it("rejects the mount when a worker fails after the style document loaded", async () => {
       vi.spyOn(console, "error").mockImplementation(() => {});
-      const adapter = new MapLibreMapAdapter();
+      const adapter = new MapLibreMapAdapter(TEST_ADAPTER_OPTIONS);
       const fatalError = vi.fn();
       adapter.on("fatalError", fatalError);
       const result = adapter.mount(createHost(), MOUNT);
@@ -370,7 +398,7 @@ describe("MapLibreMapAdapter", () => {
 
     it("keeps waiting when only a tile fails before the first load", async () => {
       vi.spyOn(console, "error").mockImplementation(() => {});
-      const adapter = new MapLibreMapAdapter();
+      const adapter = new MapLibreMapAdapter(TEST_ADAPTER_OPTIONS);
       const tileError = vi.fn();
       adapter.on("tileError", tileError);
       const result = adapter.mount(createHost(), MOUNT);
@@ -406,7 +434,7 @@ describe("MapLibreMapAdapter", () => {
     });
 
     it("removes a map built after destroy was called during loading", async () => {
-      const adapter = new MapLibreMapAdapter();
+      const adapter = new MapLibreMapAdapter(TEST_ADAPTER_OPTIONS);
       const result = adapter.mount(createHost(), MOUNT);
       adapter.destroy();
       await expect(result).resolves.toBeUndefined();
@@ -416,7 +444,7 @@ describe("MapLibreMapAdapter", () => {
     });
 
     it("settles the mount when destroyed while waiting for the first load", async () => {
-      const adapter = new MapLibreMapAdapter();
+      const adapter = new MapLibreMapAdapter(TEST_ADAPTER_OPTIONS);
       const result = adapter.mount(createHost(), MOUNT);
       await vi.waitFor(() => {
         expect(FakeMapLibreMap.instances).toHaveLength(1);
@@ -463,7 +491,7 @@ describe("MapLibreMapAdapter", () => {
     });
 
     it("returns the mount view before the engine exists", () => {
-      const adapter = new MapLibreMapAdapter();
+      const adapter = new MapLibreMapAdapter(TEST_ADAPTER_OPTIONS);
       void adapter.mount(createHost(), MOUNT);
       expect(adapter.getView()).toEqual(MOUNT.view);
     });
@@ -582,7 +610,7 @@ describe("MapLibreMapAdapter", () => {
     });
 
     it("ignores camera calls before the engine exists", () => {
-      const adapter = new MapLibreMapAdapter();
+      const adapter = new MapLibreMapAdapter(TEST_ADAPTER_OPTIONS);
       expect(() => {
         adapter.setView({ zoom: 3 });
         adapter.zoomIn();
@@ -874,7 +902,7 @@ describe("MapLibreMapAdapter", () => {
     });
 
     it("emits load once per style and loading only on transitions", async () => {
-      const adapter = new MapLibreMapAdapter();
+      const adapter = new MapLibreMapAdapter(TEST_ADAPTER_OPTIONS);
       const load = vi.fn();
       const loading = vi.fn();
       adapter.on("load", load);
@@ -896,7 +924,7 @@ describe("MapLibreMapAdapter", () => {
     });
 
     it("reports loading from construction, because MapLibre starts the style fetch before listeners exist", async () => {
-      const adapter = new MapLibreMapAdapter();
+      const adapter = new MapLibreMapAdapter(TEST_ADAPTER_OPTIONS);
       const loading = vi.fn();
       adapter.on("loading", loading);
       void adapter.mount(createHost(), MOUNT);
@@ -912,7 +940,7 @@ describe("MapLibreMapAdapter", () => {
       /** Mounts with the loaded style's own sources named, none of them in yet. */
       async function mountedWithStyleSources(...ids: string[]) {
         FakeMapLibreMap.styleSourceIds = ids;
-        const adapter = new MapLibreMapAdapter();
+        const adapter = new MapLibreMapAdapter(TEST_ADAPTER_OPTIONS);
         const loading = vi.fn();
         adapter.on("loading", loading);
         const mounting = adapter.mount(createHost(), MOUNT);
@@ -987,7 +1015,7 @@ describe("MapLibreMapAdapter", () => {
 
       it("is held by the imagery a hybrid basemap adds", async () => {
         FakeMapLibreMap.styleSourceIds = ["openmaptiles"];
-        const adapter = new MapLibreMapAdapter();
+        const adapter = new MapLibreMapAdapter(TEST_ADAPTER_OPTIONS);
         const loading = vi.fn();
         adapter.on("loading", loading);
         const mounting = adapter.mount(createHost(), {
@@ -1078,7 +1106,7 @@ describe("MapLibreMapAdapter", () => {
 
       it("is reported with the basemap, even when the map loads and settles before the mount has resolved", async () => {
         vi.spyOn(console, "error").mockImplementation(() => {});
-        const adapter = new MapLibreMapAdapter();
+        const adapter = new MapLibreMapAdapter(TEST_ADAPTER_OPTIONS);
         const unavailable = vi.fn();
         adapter.on("basemapUnavailable", unavailable);
         const mounting = adapter.mount(createHost(), {
@@ -1841,7 +1869,9 @@ describe("MapLibreMapAdapter", () => {
         vi.spyOn(console, "error").mockImplementation(() => {});
         const { adapter, map } = await mounted(
           {},
-          new MapLibreMapAdapter({ workerFailureGraceMs: 10 }),
+          new MapLibreMapAdapter(TEST_ADAPTER_OPTIONS, {
+            workerFailureGraceMs: 10,
+          }),
         );
         vi.useFakeTimers();
         const fatalError = vi.fn();
@@ -1872,7 +1902,7 @@ describe("MapLibreMapAdapter", () => {
 
     it("rejects a mount when the worker fails while it loads, rather than reporting it as fatal", async () => {
       vi.spyOn(console, "error").mockImplementation(() => {});
-      const adapter = new MapLibreMapAdapter();
+      const adapter = new MapLibreMapAdapter(TEST_ADAPTER_OPTIONS);
       const fatalError = vi.fn();
       adapter.on("fatalError", fatalError);
       const result = adapter.mount(createHost(), MOUNT);
@@ -2240,7 +2270,7 @@ describe("MapLibreMapAdapter", () => {
 
     it("rejects the mount, rather than leaving it pending, when the hybrid cannot be put together", async () => {
       vi.spyOn(console, "error").mockImplementation(() => {});
-      const adapter = new MapLibreMapAdapter();
+      const adapter = new MapLibreMapAdapter(TEST_ADAPTER_OPTIONS);
       const mounting = adapter.mount(createHost(), {
         ...MOUNT,
         basemap: FAKE_HYBRID_BASEMAP,
@@ -2460,7 +2490,7 @@ describe("MapLibreMapAdapter", () => {
     });
 
     it("rejects before mount", async () => {
-      const adapter = new MapLibreMapAdapter();
+      const adapter = new MapLibreMapAdapter(TEST_ADAPTER_OPTIONS);
       await expect(adapter.setBasemap(DARK)).rejects.toBeInstanceOf(
         MapEngineError,
       );
@@ -2672,7 +2702,7 @@ describe("MapLibreMapAdapter", () => {
     });
 
     it("refuses to mount after destroy", async () => {
-      const adapter = new MapLibreMapAdapter();
+      const adapter = new MapLibreMapAdapter(TEST_ADAPTER_OPTIONS);
       adapter.destroy();
       await expect(adapter.mount(createHost(), MOUNT)).rejects.toMatchObject({
         reason: "load-failed",
@@ -3344,7 +3374,7 @@ describe("MapLibreMapAdapter data layers", () => {
     });
 
     it("draws layers set before mount once the first style loads", async () => {
-      const adapter = new MapLibreMapAdapter();
+      const adapter = new MapLibreMapAdapter(TEST_ADAPTER_OPTIONS);
       adapter.setStyledShapes("regions", STYLED_AREAS);
       adapter.setVectorLayer("districts", VECTOR);
       adapter.setHeatmapLayer("density", HEAT_POINTS);
@@ -3484,7 +3514,7 @@ describe("MapLibreMapAdapter data layers", () => {
       map.queryError = new Error("style not loaded");
       expect(adapter.featuresAt({ x: 1, y: 1 })).toEqual([]);
       map.queryError = undefined;
-      const unmounted = new MapLibreMapAdapter();
+      const unmounted = new MapLibreMapAdapter(TEST_ADAPTER_OPTIONS);
       expect(unmounted.featuresAt({ x: 1, y: 1 })).toEqual([]);
       void adapter.setBasemap(DARK);
       expect(adapter.featuresAt({ x: 1, y: 1 })).toEqual([]);
@@ -3502,7 +3532,7 @@ describe("MapLibreMapAdapter data layers", () => {
     });
 
     it("covers the whole world before the map is mounted", () => {
-      const bounds = new MapLibreMapAdapter().getBounds();
+      const bounds = new MapLibreMapAdapter(TEST_ADAPTER_OPTIONS).getBounds();
       expect(bounds.west).toBe(-180);
       expect(bounds.east).toBe(180);
       expect(bounds.south).toBeLessThan(-80);
@@ -3804,7 +3834,9 @@ describe("MapLibreMapAdapter data layers", () => {
     });
 
     it("rejects with export-failed when the map is not mounted or was destroyed", async () => {
-      await expect(new MapLibreMapAdapter().toImage()).rejects.toMatchObject({
+      await expect(
+        new MapLibreMapAdapter(TEST_ADAPTER_OPTIONS).toImage(),
+      ).rejects.toMatchObject({
         reason: "export-failed",
       });
       const { adapter } = await ready();
@@ -4161,7 +4193,9 @@ describe("MapLibreMapAdapter data layers", () => {
       });
 
       it("gives up with a timed-out error when the render map's tiles do not finish, and removes it", async () => {
-        const patient = new MapLibreMapAdapter({ imageTilesWaitMs: 20 });
+        const patient = new MapLibreMapAdapter(TEST_ADAPTER_OPTIONS, {
+          imageTilesWaitMs: 20,
+        });
         const { map } = await mounted({}, patient);
         map.fire("style.load");
         FakeMapLibreMap.autoLoad = true;
@@ -4334,7 +4368,9 @@ describe("MapLibreMapAdapter data layers", () => {
       });
 
       it("stops painting a render map that is removed before it reports idle", async () => {
-        const patient = new MapLibreMapAdapter({ imageTilesWaitMs: 20 });
+        const patient = new MapLibreMapAdapter(TEST_ADAPTER_OPTIONS, {
+          imageTilesWaitMs: 20,
+        });
         const { map, host } = await mounted({}, patient);
         setLayoutSize(host, FAKE_VIEWPORT_WIDTH, FAKE_VIEWPORT_HEIGHT);
         map.fire("style.load");

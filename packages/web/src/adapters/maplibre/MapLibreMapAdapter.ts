@@ -32,7 +32,6 @@ import type {
   Map as MapLibreMap,
   Subscription,
 } from "maplibre-gl";
-import { Emitter } from "../shared/emitter";
 import { BasemapLoadState } from "./basemapLoadState";
 import {
   applyZoomLimits,
@@ -45,6 +44,7 @@ import { Camera, pixelOf, viewOfMap } from "./camera";
 import type { DataLayer } from "./dataLayerPlan";
 import { DataLayerStore, toPropertyBag } from "./dataLayerStore";
 import { EditHandleController } from "./editHandles";
+import { Emitter } from "./emitter";
 import { isUserEvent } from "./engineErrors";
 import { loadEngine, type MapLibreModule } from "./engineLoader";
 import { engineMapOptions, neutraliseEngineAccessibility } from "./engineMap";
@@ -55,22 +55,23 @@ import type { PendingLoad } from "./pendingLoad";
 import { positionOf } from "./positionOf";
 import { RenderMapOpener } from "./renderMapOpener";
 
-export { dataLayerEngineIds } from "./dataLayerPlan";
-export { loadEngine } from "./engineLoader";
-export { IMAGE_TILES_WAIT_MS, IMAGE_WAIT_MS } from "./imageExport";
-export { TILE_SETTLE_NUDGE_MS } from "./repaintUntilIdle";
 export { TILE_LAYER_SLOW_MS } from "./tileLayerTraffic";
-export { WORKER_FAILURE_GRACE_MS } from "./workerFailureCheck";
 
 /** Options for {@link MapLibreMapAdapter}. */
 export interface MapLibreMapAdapterOptions {
+  /**
+   * Resolves to the URL of the engine's worker script, as the host serves
+   * it. Called when the first map mounts, never before, so the host can
+   * import the worker lazily. A host that caches the worker for a long time
+   * puts a key that names its Content Security Policy in the URL.
+   */
+  readonly loadWorkerUrl: () => Promise<string>;
+}
+
+/** Options only a test sets. */
+export interface MapLibreMapAdapterTestOptions {
   /** Overrides {@link WORKER_FAILURE_GRACE_MS}, for example 0 in a test. */
   readonly workerFailureGraceMs?: number;
-  /**
-   * Added to the engine worker's URL, so a worker cached under an older
-   * Content Security Policy is fetched again when the policy changes.
-   */
-  readonly workerCacheKey?: string;
   /** Overrides {@link IMAGE_TILES_WAIT_MS}, for example a few milliseconds in a test. */
   readonly imageTilesWaitMs?: number;
   /** Overrides {@link TILE_LAYER_SLOW_MS}, for example a few milliseconds in a test. */
@@ -140,7 +141,7 @@ export class MapLibreMapAdapter implements MapAdapter {
   private readonly lifetime = new AbortController();
   /** Counts the changes to the basemap, data layers and projection, for an export that waited in the queue. */
   private styleVersion = 0;
-  private readonly workerCacheKey: string | undefined;
+  private readonly loadWorkerUrl: () => Promise<string>;
   private map: MapLibreMap | undefined;
   private host: MapHostElement | undefined;
   private basemap: BasemapDefinition | undefined;
@@ -157,8 +158,11 @@ export class MapLibreMapAdapter implements MapAdapter {
   /** True between a style's `style.load` and the next swap: only then can sources be added. */
   private styleReady = false;
 
-  constructor(options: MapLibreMapAdapterOptions = {}) {
-    this.workerCacheKey = options.workerCacheKey;
+  constructor(
+    options: MapLibreMapAdapterOptions,
+    testOptions: MapLibreMapAdapterTestOptions = {},
+  ) {
+    this.loadWorkerUrl = options.loadWorkerUrl;
     this.failure = new FailureDetection(
       {
         tileError: () => this.emitter.emit("tileError", undefined),
@@ -174,7 +178,7 @@ export class MapLibreMapAdapter implements MapAdapter {
         pendingLoad: () => this.pending,
         failPending: (pending, error) => this.failPending(pending, error),
       },
-      options,
+      testOptions,
     );
     this.dataLayers = new DataLayerStore({
       readyMap: () => this.readyMap(),
@@ -191,7 +195,7 @@ export class MapLibreMapAdapter implements MapAdapter {
         engineZoom: (zoom) => this.camera.engineZoom(zoom),
         applyProjection: (map) => this.applyProjection(map),
       },
-      this.workerCacheKey,
+      this.loadWorkerUrl,
     );
     this.imageExporter = new MapImageExporter(
       {
@@ -203,7 +207,7 @@ export class MapLibreMapAdapter implements MapAdapter {
         styleVersion: () => this.styleVersion,
         openRenderMap: (request) => this.renderMaps.open(request),
       },
-      options.imageTilesWaitMs,
+      testOptions.imageTilesWaitMs,
     );
   }
 
@@ -231,7 +235,7 @@ export class MapLibreMapAdapter implements MapAdapter {
 
     let maplibre: MapLibreModule;
     try {
-      maplibre = await loadEngine(this.workerCacheKey);
+      maplibre = await loadEngine(this.loadWorkerUrl);
     } catch (error) {
       throw new MapEngineError(
         "load-failed",
@@ -758,7 +762,7 @@ export class MapLibreMapAdapter implements MapAdapter {
 
 /** Builds a fresh MapLibre adapter. The composition root's adapter factory. */
 export function createMapLibreMapAdapter(
-  options: MapLibreMapAdapterOptions = {},
+  options: MapLibreMapAdapterOptions,
 ): MapAdapter {
   return new MapLibreMapAdapter(options);
 }
