@@ -10,8 +10,12 @@ on:
 permissions:
   contents: read
 
+# A new push cancels the run for the older commit, but a title or description
+# edit has a group of its own: it would otherwise cancel the run in progress for
+# the same commit, and its own run skips the SDK packages job, so that check
+# would be lost until the next push.
 concurrency:
-  group: ci-${{ github.workflow }}-${{ github.ref }}
+  group: ci-${{ github.workflow }}-${{ github.ref }}${{ github.event.action == 'edited' && '-edited' || '' }}
   cancel-in-progress: true
 
 jobs:
