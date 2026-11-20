@@ -64,6 +64,7 @@ Tell the agent the issue and the skill, in your own words. For example:
 - "Look at the running app and follow the `visual-check` skill."
 - "Review pull request 130 for security with the `security-reviewer` role."
 - "Check the documents in pull request 130 against the code and follow the `review-docs` skill."
+- "Review the layer in pull request 130 and follow the `review-layer` skill."
 - "Write the Playwright tests for issue 123 and follow the `playwright-tests` skill."
 - "Shape issue 123 and follow the `shape-work` skill. Do not post on GitHub."
 - "Review the tests of pull request 130 and follow the `review-tests` skill."
@@ -85,6 +86,8 @@ Three skills come before an issue is picked up. `shape-work` turns an idea or a 
 Two read-only agents review a design without having written it. `architecture-reviewer` runs the review in `design-solution` section 5 on a plan, design notes or a pull request, which is the non-author check `plan-change` asks for before a plan merges. In Claude Code it runs `opus`, the most capable tier, because `AGENTS.md` gives that tier to a design that decides a public API. `ux-reviewer` runs `design-ux` against an issue, plan or pull request and reports the missing states, routes and copy; it runs `sonnet`.
 
 `security-reviewer` runs the `review-security` skill on a pull request, a plan or a list of files: it threat-models the change and checks the Content-Security-Policy and its hashes, third-party origins, client error reporting and privacy, link and file parsing, markup injection, dependencies, GitHub Actions and release workflows, and prompt injection in what an agent reads. It reports each finding with its file, severity, an exploit scenario in words and a fix, writes no exploit code and never touches a secret. In Claude Code it runs `sonnet`; the skill says when to run it again on the most capable tier (a public API, a security boundary, the Content-Security-Policy, a workflow, or the release and publish path). It is read-only by instruction, like the other reviewers, and it never edits `SECURITY.md` or `PRIVACY.md`, which stay the maintainer's.
+
+`review-layer` checks a proposed or changed layer or provider definition for what the loop test in `packages/web/src/layers/layers.test.ts` cannot decide: the provider's own terms and the attribution wording it asks for, whether the browser can fetch it directly (CORS), what the provider learns about a visitor, the origins in `_headers` and `securityHeaders.ts`, rate limits and what a person sees when the provider fails, and the English and Afrikaans text. It produces a short review record with the items it could not confirm and the questions that are the maintainer's, and it never adds a dataset. It has no agent of its own: it only reads a diff, the provider's public pages and the tests, so `fresh-eyes-reviewer` following the skill is enough, as with `review-docs`. Use a more capable tier when the layer needs a new port or adapter or a licence question the first review hedged on, and add `security-reviewer` when the change goes beyond a layer's own origins.
 
 ## Tests
 
