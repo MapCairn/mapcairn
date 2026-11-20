@@ -52,7 +52,7 @@ function attribute(attributes: string, name: string): string | undefined {
 /** The `<script>` elements of a page: their attribute text and body. */
 function scripts(html: string): { attributes: string; body: string }[] {
   return [
-    ...html.matchAll(/<script((?:\s[^>]*)?)>([\s\S]*?)<\/script\s*>/gi),
+    ...html.matchAll(/<script(?=[\s/>])([^>]*)>([\s\S]*?)<\/script\b[^>]*>/gi),
   ].map(([, attributes, body]) => ({
     attributes: attributes ?? "",
     body: body ?? "",
@@ -168,6 +168,16 @@ describe("violations", () => {
   it("is not fooled by a data- attribute named like a real one", () => {
     expect(violations('<script data-src="/a.js">z</script>', policy)).toEqual([
       cspHash("z"),
+    ]);
+  });
+
+  it("reads scripts whose start or end tag is upper case or carries extra text", () => {
+    expect(violations("<SCRIPT>a</SCRIPT >", policy)).toEqual([cspHash("a")]);
+    expect(violations('<script>b</script foo="bar">', policy)).toEqual([
+      cspHash("b"),
+    ]);
+    expect(violations("<script>c</script\t\n bar>", policy)).toEqual([
+      cspHash("c"),
     ]);
   });
 
