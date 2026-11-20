@@ -16,7 +16,11 @@ import {
 } from "@mapcairn/core";
 import { defaultFetch, isAbortError } from "../shared/fetch";
 import { RequestSpacer } from "../shared/RequestSpacer";
-import { type ResponseBodyError, readJsonWithin } from "../shared/readJson";
+import {
+  bodyFailureMessage,
+  bodyFailureReason,
+  readJsonWithin,
+} from "../shared/readJson";
 import { decodePolyline } from "./polyline";
 
 const DEFAULT_ENDPOINT = "https://valhalla1.openstreetmap.de";
@@ -74,9 +78,10 @@ export interface ValhallaRoutingProviderOptions {
 }
 
 /**
- * 2 MiB. A route is an encoded polyline for each leg and an isochrone a
- * handful of polygons, so even a long route with many stops is far under it.
- * The recorded answers in `fixtures` are under a kilobyte.
+ * 2 MiB. A route answer holds an encoded polyline and a summary for each leg
+ * (the request asks for no maneuvers), and an isochrone a handful of polygons.
+ * The recorded answers in `fixtures` are under a kilobyte; a host that routes
+ * very long trips sets `maxResponseBytes` higher.
  */
 const DEFAULT_MAX_RESPONSE_BYTES = 2 * 1024 * 1024;
 
@@ -342,6 +347,7 @@ export class ValhallaRoutingProvider implements RoutingProvider {
       {
         locations: stops.map((stop) => ({ lat: stop.lat, lon: stop.lng })),
         costing,
+        directions_type: "none",
       },
       signal,
     );
@@ -409,27 +415,24 @@ export class ValhallaRoutingProvider implements RoutingProvider {
       try {
         return await readJsonWithin(response, this.#maxResponseBytes);
       } catch (error) {
-        throw this.#readFailure(error as ResponseBodyError, signal);
+        throw this.#readFailure(error, signal);
       }
     }
     throw await this.#refusal(response, signal);
   }
 
   /** The error for a success whose body could not be read. */
-  #readFailure(
-    error: ResponseBodyError,
-    signal: AbortSignal | undefined,
-  ): RoutingError {
+  #readFailure(error: unknown, signal: AbortSignal | undefined): RoutingError {
     if (signal?.aborted) {
       return abortedError();
     }
-    switch (error.reason) {
+    switch (bodyFailureReason(error)) {
       case "not-json":
         return invalidBody("the body is not JSON");
       case "too-large":
-        return new RoutingError("invalid", error.message);
+        return new RoutingError("invalid", bodyFailureMessage(error));
       case "unreadable":
-        return new RoutingError("network", error.message);
+        return new RoutingError("network", bodyFailureMessage(error));
     }
   }
 

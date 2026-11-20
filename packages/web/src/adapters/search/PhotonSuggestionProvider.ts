@@ -11,7 +11,7 @@ import {
 } from "@mapcairn/core";
 import { defaultFetch, isAbortError, throwIfAborted } from "../shared/fetch";
 import { RequestSpacer } from "../shared/RequestSpacer";
-import { type ResponseBodyError, readJsonWithin } from "../shared/readJson";
+import { bodyFailureMessage, readJsonWithin } from "../shared/readJson";
 
 const DEFAULT_ENDPOINT = "https://photon.komoot.io/api/";
 const DEFAULT_LIMIT = 5;
@@ -325,7 +325,7 @@ export class PhotonSuggestionProvider implements SuggestionProvider {
       try {
         return await readJsonWithin(response, this.#maxResponseBytes);
       } catch (error) {
-        throw failure(error, "failed", (error as ResponseBodyError).message);
+        throw failure(error, "failed", bodyFailureMessage(error));
       }
     } finally {
       clearTimeout(timer);

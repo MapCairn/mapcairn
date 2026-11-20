@@ -11,7 +11,7 @@ import {
 } from "@mapcairn/core";
 import { defaultFetch, isAbortError, throwIfAborted } from "../shared/fetch";
 import { RequestSpacer } from "../shared/RequestSpacer";
-import { type ResponseBodyError, readJsonWithin } from "../shared/readJson";
+import { bodyFailureMessage, readJsonWithin } from "../shared/readJson";
 
 const DEFAULT_ENDPOINT = "https://nominatim.openstreetmap.org";
 const DEFAULT_LIMIT = 6;
@@ -268,7 +268,7 @@ export class NominatimSearchProvider implements SearchProvider {
       if (signal?.aborted) {
         throw new PortAbortError();
       }
-      throw new SearchError("failed", (error as ResponseBodyError).message);
+      throw new SearchError("failed", bodyFailureMessage(error));
     }
   }
 }

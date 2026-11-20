@@ -23,6 +23,19 @@ export class ResponseBodyError extends Error {
   }
 }
 
+/**
+ * The message of a {@link ResponseBodyError}, for an adapter to carry into its
+ * own error, or `undefined` for any other value.
+ */
+export function bodyFailureMessage(error: unknown): string | undefined {
+  return error instanceof ResponseBodyError ? error.message : undefined;
+}
+
+/** Why a read failed: the reason of a {@link ResponseBodyError}, or `unreadable` for any other value. */
+export function bodyFailureReason(error: unknown): ResponseBodyFailure {
+  return error instanceof ResponseBodyError ? error.reason : "unreadable";
+}
+
 function tooLarge(maxBytes: number): ResponseBodyError {
   return new ResponseBodyError(
     "too-large",
@@ -57,8 +70,8 @@ async function readText(response: Response, maxBytes: number): Promise<string> {
 
 /**
  * Reads a response as JSON, refusing one larger than `maxBytes`. The only way
- * an adapter reads a provider's body (`bodyReads.test.ts` holds them
- * to it).
+ * an adapter reads a provider's body (`packages/core/src/lint/bodyReads.test.ts` holds every
+ * source file to it).
  *
  * @remarks The size is checked twice: against `Content-Length` when the
  *   server sends one, so an answer that says it is too large is never read,
@@ -74,7 +87,7 @@ export async function readJsonWithin(
   maxBytes: number,
 ): Promise<unknown> {
   if (Number(response.headers.get("content-length")) > maxBytes) {
-    await response.body?.cancel();
+    await response.body?.cancel().catch(() => undefined);
     throw tooLarge(maxBytes);
   }
   const text = await readText(response, maxBytes).catch((error: unknown) => {

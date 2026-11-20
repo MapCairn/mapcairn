@@ -206,6 +206,7 @@ describe("ValhallaRoutingProvider requests", () => {
           { lat: 45.764, lon: 4.8357 },
         ],
         costing,
+        directions_type: "none",
       });
       expect(call?.init?.method ?? "GET").toBe("GET");
       expect(call?.init?.body).toBeUndefined();
@@ -223,6 +224,7 @@ describe("ValhallaRoutingProvider requests", () => {
         { lat: 43.2965, lon: 5.3698 },
       ],
       costing: "auto",
+      directions_type: "none",
     });
   });
 

@@ -2,6 +2,8 @@
 // Copyright MapCairn contributors
 import { describe, expect, it } from "vitest";
 import {
+  bodyFailureMessage,
+  bodyFailureReason,
   ResponseBodyError,
   type ResponseBodyFailure,
   readJsonWithin,
@@ -72,5 +74,35 @@ describe("readJsonWithin", () => {
     await expect(readJsonWithin(response, LIMIT)).resolves.toHaveProperty(
       "pad",
     );
+  });
+
+  it("refuses a Content-Length over the limit even when cancelling the body fails", async () => {
+    const body = new ReadableStream<Uint8Array>({
+      cancel() {
+        throw new TypeError("cannot cancel");
+      },
+    });
+    const response = new Response(body, {
+      headers: { "content-length": String(LIMIT + 1) },
+    });
+    const error = await failure(readJsonWithin(response, LIMIT));
+    expect(error.reason).toBe("too-large");
+  });
+});
+
+describe("bodyFailureMessage", () => {
+  it("gives the message of a body error and nothing for anything else", () => {
+    expect(
+      bodyFailureMessage(new ResponseBodyError("too-large", "Too big.")),
+    ).toBe("Too big.");
+    expect(bodyFailureMessage(new TypeError("other"))).toBeUndefined();
+    expect(bodyFailureMessage("text")).toBeUndefined();
+  });
+
+  it("gives the reason of a body error, and unreadable for anything else", () => {
+    expect(
+      bodyFailureReason(new ResponseBodyError("too-large", "Too big.")),
+    ).toBe("too-large");
+    expect(bodyFailureReason(new TypeError("other"))).toBe("unreadable");
   });
 });
