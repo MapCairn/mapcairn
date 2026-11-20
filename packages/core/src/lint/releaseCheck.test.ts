@@ -106,18 +106,22 @@ describe("buildReport", () => {
     expect(report({ registry }).text).toContain("no provenance");
   });
 
-  it("blocks on a package that is on npm when the others are not", () => {
+  it("reports the registry per package when only some are on npm, without blocking, and says what the run will do", () => {
     const registry = Object.fromEntries(
       NAMES.map((name) => [
         name,
-        name === "@mapcairn/core"
-          ? { exists: true, latest: "0.1.0-rc.1", provenance: false }
+        name === "@mapcairn/core" || name === "@mapcairn/react"
+          ? { exists: true, latest: "0.1.0-rc.1", provenance: true }
           : { exists: false },
       ]),
     );
     const { text, blockers } = report({ registry });
-    expect(text).toContain("only @mapcairn/core is on npm");
-    expect(blockers.join("\n")).toContain("only @mapcairn/core is on npm");
+    expect(text).toContain("on npm: @mapcairn/core, @mapcairn/react");
+    expect(text).toContain("not on npm yet: @mapcairn/theme, @mapcairn/map");
+    expect(text).toMatch(/Left for you: .*approve the deployment/);
+    expect(text).toMatch(/Left for you: .*by hand/);
+    expect(text).toMatch(/Left for you: .*Re-run failed jobs/);
+    expect(blockers).toEqual([]);
   });
 
   it("says the registry could not be read, and does not guess", () => {
@@ -409,6 +413,20 @@ describe("the reviewer rule when a merge would publish", () => {
     });
     expect(blockers).toEqual([]);
     expect(text).toContain("Could not check whether");
+  });
+
+  it("blocks when nobody has to approve and some packages are on npm, because a merge then publishes those", () => {
+    const some = { ...onNpm, "@mapcairn/map": { exists: false } };
+    const { blockers } = report({ reviewers: "none", registry: some });
+    expect(blockers.join("\n")).toContain(
+      "publishes without a second approval",
+    );
+  });
+
+  it("blocks when nobody has to approve and the registry could not be read, since a merge may then publish", () => {
+    const { blockers } = report({ reviewers: "none", registry: null });
+    expect(blockers.join("\n")).toContain("no required reviewer");
+    expect(blockers.join("\n")).toContain("could not be read");
   });
 
   it("does not block while the first publish is by hand, since the npm job publishes nothing", () => {

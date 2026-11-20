@@ -382,11 +382,41 @@ export function forbiddenCommandAfterProgram(words) {
 const SHELL_SEGMENTS = /\r?\n|&&|\|\||[;|&()`]/;
 
 /**
+ * Whether the text quotes or escapes in a way the word split cannot follow:
+ * a backslash (an escaped space, or a `\n` that a YAML string has not
+ * decoded), a quote left open, or white space inside a quote. The check
+ * refuses these, so a word is never read apart from the quoting around it.
+ *
+ * @param {string} text
+ * @returns {boolean}
+ */
+function hasAmbiguousQuoting(text) {
+  if (text.includes("\\")) {
+    return true;
+  }
+  let open = "";
+  for (const character of text) {
+    if (open !== "") {
+      if (/\s/.test(character)) {
+        return true;
+      }
+      open = character === open ? "" : open;
+    } else if (character === '"' || character === "'") {
+      open = character;
+    }
+  }
+  return open !== "";
+}
+
+/**
  * Whether the text publishes, and every publish in it carries the exact word
- * `--dry-run` after `publish` in its own command (split where the scanner
- * splits). `--dry-run=...`, `--no-dry-run`, a longer word that starts with
- * it, the word in another command or before `publish`, and a comment (the
- * caller strips comments first) do not count.
+ * `--dry-run` as the last word of its own command (split where the scanner
+ * splits), because npm reads a word after a boolean option as its value
+ * (`--dry-run false`). `--dry-run=...`, `--no-dry-run`, a longer word that
+ * starts with it, the word in another command or before `publish`, and a
+ * comment (the caller strips comments first) do not count. Nor does a
+ * `--dry-run` after a `--`, where npm reads it as the package, or any text
+ * with a backslash, an open quote or white space inside a quote.
  *
  * @param {string} text One logical line, without comments.
  * @returns {boolean}
@@ -395,6 +425,9 @@ export function publishesOnlyDryRuns(text) {
   let publishes = 0;
   let dryRuns = 0;
   const joined = text.replace(/\\\r?\n/g, " ");
+  if (hasAmbiguousQuoting(joined)) {
+    return false;
+  }
   for (const segment of joined.split(SHELL_SEGMENTS)) {
     const words = segment.split(WORD_SEPARATORS).filter(Boolean);
     const cleaned = words.map(unquote);
@@ -416,7 +449,8 @@ export function publishesOnlyDryRuns(text) {
       const negated = options.some((option) =>
         /^--(?:no-dry-run|dry-run=)/.test(option),
       );
-      if (options.includes("--dry-run") && !negated) {
+      const afterDoubleDash = options.slice(0, -1).includes("--");
+      if (options.at(-1) === "--dry-run" && !negated && !afterDoubleDash) {
         dryRuns += 1;
       }
     });
@@ -867,8 +901,10 @@ function foldingIndent(lines, index) {
  * The lines of a shell or YAML file as the shell or YAML reader joins them:
  * a line that ends in a backslash continues on the next, and the lines of a
  * folded block (`run: >`) or of a multi-line scalar after a command key
- * (`run:`, `command:`) become one line. Each result keeps the number of its
- * first line, and comments are removed.
+ * (`run:`, `command:`) become one line, except that YAML keeps a newline at a
+ * blank line and, in a folded block, at a more-indented line, and those
+ * newlines stay as the command separators they are. Each result keeps the
+ * number of its first line, and comments are removed.
  *
  * @param {string} text
  * @returns {{ line: number, text: string }[]}
@@ -883,11 +919,26 @@ export function logicalLines(text) {
     let joined = stripShellComment(lines[i]);
     i += 1;
     if (foldsOver !== undefined) {
+      const block = FOLDED_HEADER.test(stripShellComment(lines[first - 1]));
+      let contentIndent;
+      let blanks = 0;
+      let previousMoreIndented = false;
       while (
         i < lines.length &&
         (lines[i].trim() === "" || lines[i].search(/\S|$/) > foldsOver)
       ) {
-        joined += ` ${stripShellComment(lines[i]).trim()}`;
+        if (lines[i].trim() === "") {
+          blanks += 1;
+          i += 1;
+          continue;
+        }
+        const indent = lines[i].search(/\S|$/);
+        contentIndent ??= indent;
+        const moreIndented = block && indent > contentIndent;
+        const keepsBreak = blanks > 0 || moreIndented || previousMoreIndented;
+        joined += `${keepsBreak ? "\n".repeat(Math.max(blanks, 1)) : " "}${stripShellComment(lines[i]).trim()}`;
+        blanks = 0;
+        previousMoreIndented = moreIndented;
         i += 1;
       }
     }

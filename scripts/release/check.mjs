@@ -131,7 +131,7 @@ export function buildReport(facts) {
     tagLines({ facts, line, blocker });
     tarballLines({ facts, line, blocker });
   }
-  const registry = registryLines({ facts, line, blocker });
+  const registry = registryLines({ facts, line });
   environmentLines({ facts, line, blocker });
   reviewerLines({ facts, registry, line, blocker });
   lines.push(...credentialLines({ facts, warnings }));
@@ -280,10 +280,9 @@ function tarballLines({ facts, line, blocker }) {
  * @param {object} input
  * @param {Facts} input.facts
  * @param {(label: string, text: string) => void} input.line
- * @param {(label: string, text: string) => void} input.blocker
- * @returns {"unknown" | "none" | "all"} What the registry holds.
+ * @returns {"unknown" | "none" | "some" | "all"} What the registry holds.
  */
-function registryLines({ facts, line, blocker }) {
+function registryLines({ facts, line }) {
   if (facts.registry === null) {
     line(
       "npm",
@@ -300,11 +299,12 @@ function registryLines({ facts, line, blocker }) {
     return "none";
   }
   if (present.length < SDK_NAMES.length) {
-    blocker(
+    const absent = SDK_NAMES.filter((name) => !present.includes(name));
+    line(
       "npm",
-      `only ${present.join(", ")} ${present.length === 1 ? "is" : "are"} on npm. The four are published together, so look into this before releasing.`,
+      `on npm: ${present.join(", ")}; not on npm yet: ${absent.join(", ")}. The npm job publishes by package, so it publishes what npm has and then fails naming the rest, which are uploaded by hand (${GUIDE}).`,
     );
-    return "unknown";
+    return "some";
   }
   const latest = SDK_NAMES.map((name) => {
     const answer = facts.registry?.[name];
@@ -345,9 +345,21 @@ function environmentLines({ facts, line, blocker }) {
 }
 
 /**
+ * Whether a merge of a Release pull request may publish from CI: the `npm`
+ * job publishes each package npm already has, so it does once any is there,
+ * and when the registry could not be read it cannot be ruled out.
+ *
+ * @param {"unknown" | "none" | "some" | "all"} registry What the registry holds.
+ * @returns {boolean}
+ */
+function publishes(registry) {
+  return registry !== "none";
+}
+
+/**
  * @param {object} input
  * @param {Facts} input.facts
- * @param {"unknown" | "none" | "all"} input.registry What the registry holds.
+ * @param {"unknown" | "none" | "some" | "all"} input.registry What the registry holds.
  * @param {(label: string, text: string) => void} input.line
  * @param {(label: string, text: string) => void} input.blocker
  */
@@ -357,10 +369,10 @@ function reviewerLines({ facts, registry, line, blocker }) {
       "npm environment reviewers",
       "a required reviewer approves each deployment.",
     );
-  } else if (facts.reviewers === "none" && registry === "all") {
+  } else if (facts.reviewers === "none" && publishes(registry)) {
     blocker(
       "npm environment reviewers",
-      `no required reviewer, and all four packages are on npm, so a merge of a Release pull request publishes without a second approval. Add a required reviewer to the npm environment first (${GUIDE}, maintainer steps).`,
+      `no required reviewer, and ${registry === "unknown" ? "the registry could not be read" : "some packages are already on npm"}, so a merge of a Release pull request publishes without a second approval. Add a required reviewer to the npm environment first (${GUIDE}, maintainer steps).`,
     );
   } else if (facts.reviewers === "none") {
     line("npm environment reviewers", "none: nobody approves a deployment.");
@@ -386,7 +398,7 @@ const ADMIN_BYPASS_TEXT =
  *
  * @param {object} input
  * @param {Facts} input.facts
- * @param {"unknown" | "none" | "all"} input.registry What the registry holds.
+ * @param {"unknown" | "none" | "some" | "all"} input.registry What the registry holds.
  * @param {string[]} input.warnings Receives each warning.
  * @returns {string[]} The sentences, or none.
  */
@@ -397,7 +409,7 @@ function reviewerWarning({ facts, registry, warnings }) {
     sentences.push(
       `Could not check whether the npm environment has a required reviewer; check Settings, Environments on GitHub (${GUIDE}).`,
     );
-  } else if (facts.reviewers === "none" && registry !== "all") {
+  } else if (facts.reviewers === "none" && !publishes(registry)) {
     const text =
       "the npm environment has no required reviewer: a merge of a Release pull request publishes without a second approval.";
     warnings.push(text);
@@ -466,7 +478,7 @@ function identityLines({ facts, warnings }) {
  * @param {object} input
  * @param {string[]} input.blockers
  * @param {boolean} input.prepared
- * @param {"unknown" | "none" | "all"} input.registry
+ * @param {"unknown" | "none" | "some" | "all"} input.registry
  * @returns {string}
  */
 function leftForYou({ blockers, prepared, registry }) {
@@ -478,6 +490,9 @@ function leftForYou({ blockers, prepared, registry }) {
   }
   if (registry === "none") {
     return "merge the Release pull request, then publish the four tarballs from the GitHub Release by hand, because none is on npm yet.";
+  }
+  if (registry === "some") {
+    return `merge the Release pull request, then approve the deployment of the npm environment in GitHub; the workflow publishes the packages npm has and then fails naming the ones it does not. Upload those by hand from the GitHub Release, link their trusted publishers, then use Re-run failed jobs (${GUIDE}).`;
   }
   if (registry === "all") {
     return "merge the Release pull request, then approve the deployment of the npm environment in GitHub; the workflow publishes the four packages.";

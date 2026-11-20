@@ -12,7 +12,7 @@
  * under `.claude/worktrees/<name>/`. Everything else that writes to the
  * repository, to the remote or to GitHub is blocked. What the guard cannot
  * read it refuses: a program named by a variable, a glob or a brace list, a
- * wrapper with options, a shell without `-c`, and a command longer than
+ * wrapper with options, a shell without a leading `-c`, `rsync`, `scp`, and a command longer than
  * `MAX_COMMAND_LENGTH` or with more than `MAX_STATEMENTS` statements.
  */
 import { checkGh } from "./guardGh.mjs";
@@ -51,8 +51,15 @@ const MAX_SHELL_DEPTH = 4;
 /** Output a command may write to without touching a file. */
 const NULL_DEVICES = new Set(["/dev/" + "null", "/dev/stdout", "/dev/stderr"]);
 
-/** Words that start a statement without being the command. */
+/**
+ * Words that start a statement without being the command. `noglob`,
+ * `nocorrect` and `-` are zsh precommand modifiers that pass the rest of the
+ * statement through, so the words after them are read as the statement.
+ */
 const KEYWORDS = new Set([
+  "noglob",
+  "nocorrect",
+  "-",
   "if",
   "then",
   "else",
@@ -84,10 +91,7 @@ const WRITES_ALL = new Set([
 ]);
 
 /** Commands that write to the last path they are given, or to the `-t` folder. */
-const WRITES_LAST = new Set(["cp", "ln", "install", "rsync", "scp"]);
-
-/** Commands whose last word may be a `host:path` on another machine. */
-const REMOTE_TARGETS = new Set(["rsync", "scp"]);
+const WRITES_LAST = new Set(["cp", "ln", "install"]);
 
 /** Programs that run another command in a way the guard cannot read. */
 const UNREADABLE = [
@@ -120,16 +124,42 @@ const UNREADABLE = [
   "chrt",
   "unbuffer",
   "rlwrap",
+  "coproc",
+  "fish",
+  "always",
+  "unsetenv",
+  "setenv",
+  "repeat",
+  "select",
+  "foreach",
+  "function",
+  "rsync",
+  "scp",
 ];
 
-/** Programs whose words are assignments to variables. */
+/**
+ * Programs whose words are assignments to variables: the shell builtins that
+ * set them, and `make`, which exports a variable given on its command line to
+ * every recipe it runs. Other programs may be given `PATH=` as an ordinary
+ * argument (`grep 'PATH=' .github`), so their words are not read as assignments.
+ */
 const ASSIGNERS = new Set([
   "export",
   "declare",
   "typeset",
   "local",
   "readonly",
+  "integer",
+  "float",
+  "make",
+  "gmake",
 ]);
+
+/**
+ * The start of an assignment: a name, an optional array index, an optional `+`
+ * for append, then `=`.
+ */
+const ASSIGNMENT = String.raw`(?:\[[^\]]*\])?\+?=`;
 
 /** Shells that run the text after `-c` as a command. */
 const SHELLS = [
@@ -138,7 +168,6 @@ const SHELLS = [
   "zsh",
   "dash",
   "ksh",
-  "fish",
   "csh",
   "tcsh",
   "mksh",
@@ -146,12 +175,48 @@ const SHELLS = [
 ];
 
 /**
+ * What may follow `LESS` in the name of a variable that `less` reads (its
+ * manual lists them), as an alternation. `LESS` alone is risky too, and a name
+ * such as `LESSON` is not on the list.
+ */
+const LESS_NAMES = [
+  "OPEN",
+  "CLOSE",
+  "KEY",
+  "KEY_SYSTEM",
+  "KEY_CONTENT",
+  "KEY_CONTENT_SYSTEM",
+  "KEYIN",
+  "KEYIN_SYSTEM",
+  "CHARSET",
+  "CHARDEF",
+  "UTFCHARDEF",
+  "BINFMT",
+  "UTFBINFMT",
+  "EDIT",
+  "ECHO",
+  "COLOR",
+  "COLORING",
+  "HISTFILE",
+  "HISTSIZE",
+  "SECURE",
+  "ANSIENDCHARS",
+  "ANSIMIDCHARS",
+  "GLOBALTAGS",
+  "METACHARS",
+  "METAESCAPE",
+  "NOCONFIG",
+].join("|");
+
+/**
  * Variables that change what a command runs or which files it reads, so a
  * reviewer may not set them: git's, the home and config folders, the search
  * path, pagers and editors, and the loader and startup-file variables.
  */
-const RISKY_VARIABLE =
-  /^(GIT_\w*|HOME|XDG_\w*|PATH|PAGER|EDITOR|VISUAL|LESS(OPEN|CLOSE|KEY|KEY_SYSTEM|CHARSET|CHARDEF|EDIT|HISTFILE|HISTSIZE|SECURE|ANSIENDCHARS|ANSIMIDCHARS|GLOBALTAGS|COLORING)?|LD_\w*|DYLD_\w*|NODE_OPTIONS|BASH_ENV|ENV|SSH_\w*)=/i;
+const RISKY_VARIABLE = new RegExp(
+  `^(?:GIT_\\w*|HOME|XDG_\\w*|PATH|PAGER|EDITOR|VISUAL|LESS(?:${LESS_NAMES})?|LD_\\w*|DYLD_\\w*|GH_\\w*|BROWSER|BASH_FUNC_\\w*|NODE_OPTIONS|NODE_PATH|NPM_CONFIG_\\w*|PYTHON(?:STARTUP|PATH|HOME)|PERL5(?:OPT|LIB)|RUBY(?:OPT|LIB)|ZDOTDIR|SHELLOPTS|BASHOPTS|PROMPT_COMMAND|IFS|CDPATH|PS4|BASH_ENV|ENV|SSH_\\w*)${ASSIGNMENT}`,
+  "i",
+);
 
 /** Package-manager commands that add a package when given a name. */
 const INSTALLS_PACKAGES = new Set([
@@ -221,9 +286,6 @@ function checkPathWrites(program, targets, walk) {
   }
   for (const target of targets) {
     const place = resolvePath(target, walk.cwd, walk.context.platform, true);
-    if (isRemote(program, target)) {
-      return `${program} would copy to ${target}, on another machine`;
-    }
     if (canWrite(place, walk.context)) {
       continue;
     }
@@ -232,21 +294,6 @@ function checkPathWrites(program, targets, walk) {
       : `${program} would write to ${target}, which is not a plain path inside .claude/worktrees/<name>/`;
   }
   return undefined;
-}
-
-/**
- * Whether a target of `rsync` or `scp` is `host:path` or `user@host:path`.
- *
- * @param {string} program
- * @param {string} target
- * @returns {boolean}
- */
-function isRemote(program, target) {
-  return (
-    REMOTE_TARGETS.has(program) &&
-    /^[^/\\:]+:/.test(target) &&
-    !/^[a-zA-Z]:[\\/]/.test(target)
-  );
 }
 
 /**
@@ -321,9 +368,7 @@ function pathTargets(program, args) {
   if (!WRITES_LAST.has(program)) {
     return { targets: positional, sources: [], missing: false };
   }
-  const directory = REMOTE_TARGETS.has(program)
-    ? { found: false, folder: undefined }
-    : targetDirectory(args);
+  const directory = targetDirectory(args);
   if (directory.found) {
     const skip = directory.folder === undefined ? [] : [directory.folder];
     const sources = positional.filter((arg) => !skip.includes(arg));
@@ -473,9 +518,55 @@ function checkFind(args) {
     : undefined;
 }
 
+/** Short options of a shell that change nothing the guard has to read. */
+const PLAIN_SHELL_OPTIONS = /^-[abefhilmnpuvxc]+$/;
+
+/** Long options of a shell that change nothing the guard has to read. */
+const PLAIN_LONG_SHELL_OPTIONS = /^--(norc|noprofile|posix|login|restricted)$/;
+
 /**
- * Decides on a shell: only one started with `-c` can be read, and its command
- * is read as one of ours, a level deeper.
+ * Reads the options at the front of a shell's words, up to the first operand
+ * (or `--`). Only these set the command: `-c` after the script runs the script.
+ *
+ * @param {string[]} args
+ * @returns {{ command: boolean, operand: number, reason?: string }}
+ */
+function readShellOptions(args) {
+  let command = false;
+  let interactive = false;
+  let index = 0;
+  for (; index < args.length; index += 1) {
+    const arg = args[index] ?? "";
+    if (arg === "--") {
+      index += 1;
+      break;
+    }
+    if (!/^[-+]./.test(arg)) {
+      break;
+    }
+    if (!PLAIN_SHELL_OPTIONS.test(arg) && !PLAIN_LONG_SHELL_OPTIONS.test(arg)) {
+      return {
+        command,
+        operand: index,
+        reason: `the shell option ${arg} can load a start-up file or run a command the guard cannot read`,
+      };
+    }
+    command ||= /^-[a-z]*c/.test(arg);
+    interactive ||= /^-[a-z]*i/.test(arg);
+  }
+  return interactive && command
+    ? {
+        command,
+        operand: index,
+        reason:
+          "an interactive shell with -c reads start-up files the guard cannot read",
+      }
+    : { command, operand: index };
+}
+
+/**
+ * Decides on a shell: only one started with `-c` among its leading options can
+ * be read, and its command is read as one of ours, a level deeper.
  *
  * @param {string} program
  * @param {string[]} args
@@ -483,12 +574,52 @@ function checkFind(args) {
  * @returns {string | undefined}
  */
 function checkShell(program, args, walk) {
-  const flag = args.findIndex((arg) => /^-[a-z]*c[a-z]*$/.test(arg));
-  const text = args.slice(flag + 1).find((arg) => !arg.startsWith("-"));
-  if (flag === -1) {
-    return `${program} without -c runs a script or reads commands the guard cannot see, so a reviewer may not use it`;
+  const { command, operand, reason } = readShellOptions(args);
+  if (reason !== undefined) {
+    return reason;
   }
-  return checkCommand(text ?? "", { ...walk, depth: walk.depth + 1 });
+  if (!command) {
+    return `${program} without -c among its leading options runs a script or reads commands the guard cannot see, so a reviewer may not use it`;
+  }
+  return checkCommand(args[operand] ?? "", { ...walk, depth: walk.depth + 1 });
+}
+
+/**
+ * Decides on `set`: keyword mode (`-k`, `-o keyword`) hands later words that
+ * look like assignments to the next command as variables.
+ *
+ * @param {string[]} args
+ * @returns {string | undefined}
+ */
+function checkSet(args) {
+  return args.some((arg) => /^-[a-zA-Z]*k/.test(arg) || arg === "keyword")
+    ? "set -k (keyword mode) passes assignments in a command's words to it as variables, so a reviewer may not use it"
+    : undefined;
+}
+
+/**
+ * Decides on `shopt`: `-o` works on the options of `set`, so it can turn on
+ * keyword mode, and `keyword` names it.
+ *
+ * @param {string[]} args
+ * @returns {string | undefined}
+ */
+function checkShopt(args) {
+  return args.some((arg) => /^-[a-zA-Z]*o/.test(arg) || arg === "keyword")
+    ? "shopt -o and keyword mode pass assignments in a command's words to it as variables, so a reviewer may not use them"
+    : undefined;
+}
+
+/**
+ * Decides on `unset -m`, which unsets every variable that matches a pattern.
+ *
+ * @param {string[]} args
+ * @returns {string | undefined}
+ */
+function checkUnset(args) {
+  return args.some((arg) => /^-[a-zA-Z]*m/.test(arg))
+    ? "unset -m unsets every variable that matches a pattern, which can drop the limited GitHub token, so a reviewer may not use it"
+    : undefined;
 }
 
 /**
@@ -507,6 +638,9 @@ const PROGRAMS = new Map([
   ["awk", (args) => awkProblem(args)],
   ["gawk", (args) => awkProblem(args)],
   ["find", (args) => checkFind(args)],
+  ["set", (args) => checkSet(args)],
+  ["shopt", (args) => checkShopt(args)],
+  ["unset", (args) => checkUnset(args)],
   ["dd", (args, walk, program) => checkFileCommand(program, args, walk)],
 ]);
 
@@ -530,7 +664,30 @@ for (const program of ["npm", "pnpm", "yarn", "bun"]) {
  * @returns {boolean}
  */
 function isAssignment(word) {
-  return /^[A-Za-z_][A-Za-z0-9_]*=/.test(word);
+  return /^[A-Za-z_][A-Za-z0-9_]*(?:\[[0-9]+\])?\+?=/.test(word);
+}
+
+/**
+ * Whether `env` takes a word as a setting: any word with an `=` that is not an
+ * option, whatever its name (`X.Y=1`), because `env` does not check the name.
+ *
+ * @param {string} word
+ * @returns {boolean}
+ */
+function isEnvSetting(word) {
+  return !word.startsWith("-") && word.includes("=");
+}
+
+/**
+ * Whether the name of an `env` setting is a plain identifier, as a shell
+ * assignment is. Any other name (`BASH_FUNC_git%%`, `X.Y`, a backslash) is not
+ * one the guard can check against the risky variables.
+ *
+ * @param {string} word
+ * @returns {boolean}
+ */
+function hasPlainName(word) {
+  return isAssignment(word);
 }
 
 /**
@@ -568,7 +725,14 @@ function envWrapper(words, at) {
   /** @type {string[]} */
   const assignments = [];
   let next = at;
-  while (isAssignment(words[next] ?? "")) {
+  while (isEnvSetting(words[next] ?? "")) {
+    if (!hasPlainName(words[next] ?? "")) {
+      return {
+        next,
+        assignments,
+        reason: `env with the setting ${words[next]}, whose name is not a plain identifier, cannot be read`,
+      };
+    }
     assignments.push(words[next] ?? "");
     next += 1;
   }
@@ -683,15 +847,18 @@ function checkRedirect(op, target, walk) {
  *
  * @param {Token[]} tokens
  * @param {Walk} walk
- * @returns {{ reason?: string, words: string[] }}
+ * @returns {{ reason?: string, words: string[], quoted: boolean[] }}
  */
 function readRedirects(tokens, walk) {
   /** @type {string[]} */
   const words = [];
+  /** @type {boolean[]} */
+  const quoted = [];
   for (let index = 0; index < tokens.length; index += 1) {
     const token = tokens[index];
     if (token?.type === "word") {
       words.push(token.text);
+      quoted.push(token.quoted);
     } else if (token?.type === "redirect" && token.op !== "<<") {
       const target = tokens[index + 1];
       index += 1;
@@ -700,11 +867,11 @@ function readRedirects(tokens, walk) {
         ? checkRedirect(token.op, target.text, walk)
         : undefined;
       if (reason !== undefined) {
-        return { reason, words };
+        return { reason, words, quoted };
       }
     }
   }
-  return { words };
+  return { words, quoted };
 }
 
 /**
@@ -726,6 +893,67 @@ function builtProgramProblem(word, platform) {
 }
 
 /**
+ * Why a statement may hold a command the guard does not read. In zsh a command
+ * may follow `]]` or a closing brace as a short form of `if`, and `always`
+ * follows a block, so the first `]]` must be the last word and a `}` may not be
+ * followed by more words. A quoted `}` or `]]` is text, not a keyword.
+ *
+ * @param {string[]} words
+ * @param {boolean[]} quoted Whether each word held a quote or a backslash.
+ * @returns {string | undefined}
+ */
+function hiddenCommandProblem(words, quoted) {
+  const last = words.length - 1;
+  const first = (/** @type {string} */ text) =>
+    words.findIndex((word, index) => word === text && !quoted[index]);
+  if (words[0] === "[[" && !quoted[0] && first("]]") !== last) {
+    return "[[ is allowed only when its first ]] is its last word, because zsh runs a command written after it";
+  }
+  const brace = first("}");
+  return brace !== -1 && brace !== last
+    ? "a } that is followed by more words can end a block that runs a command the guard does not read"
+    : undefined;
+}
+
+/** A variable name, with at most a number as a subscript and `+` for append. */
+const PLAIN_NAME = /^[A-Za-z_][A-Za-z0-9_]*(?:\[[0-9]+\])?\+?$/;
+
+/** A variable name for `unset`, which takes no subscript. */
+const UNSET_NAME = /^[A-Za-z_][A-Za-z0-9_]*$/;
+
+/**
+ * Why the names an assigning builtin or `unset` is given cannot be read. A name
+ * that the shell builds (a variable, a glob, a brace list, a subscript that is
+ * arithmetic) can be any variable, so only plain names are allowed, and a
+ * `GH_*` name is never named without a value, which would drop or shadow the
+ * limited GitHub token. Backslashes are taken out first, as the shell does.
+ *
+ * @param {string} program
+ * @param {string[]} args
+ * @returns {string | undefined}
+ */
+function nameProblem(program, args) {
+  const unsets = program === "unset";
+  const operands = args
+    .map((text) => text.replaceAll("\\", ""))
+    .filter((text) =>
+      program === "make" || program === "gmake"
+        ? !text.startsWith("-") && text.includes("=")
+        : !/^[-+]/.test(text),
+    );
+  for (const operand of operands) {
+    const name = operand.split("=")[0] ?? "";
+    if (!(unsets ? UNSET_NAME : PLAIN_NAME).test(name)) {
+      return `the variable name ${name} is not a plain name (letters, digits and underscores, and for ${program} a number as a subscript at most), so the guard cannot tell which variable ${program} changes`;
+    }
+    if (/^GH_/i.test(name) && (unsets || !operand.includes("="))) {
+      return `${program} on ${name} without a value would drop or shadow the limited GitHub token, so a reviewer may not do it`;
+    }
+  }
+  return undefined;
+}
+
+/**
  * Decides on one statement of a shell command.
  *
  * @param {Token[]} tokens
@@ -738,17 +966,31 @@ function checkStatement(tokens, walk) {
     return redirects.reason;
   }
   const { rest, reason, assignments } = unwrap(redirects.words);
-  const assigned = ASSIGNERS.has(programName(rest[0] ?? ""))
-    ? [...assignments, ...rest.slice(1)]
+  const name = programName(rest[0] ?? "");
+  const assigns = ASSIGNERS.has(name);
+  const assigned = assigns
+    ? [
+        ...assignments,
+        ...rest.slice(1).map((text) => text.replaceAll("\\", "")),
+      ]
     : assignments;
   const risky = assigned.find((text) => RISKY_VARIABLE.test(text));
   if (risky !== undefined) {
     return `the variable ${risky.split("=")[0]} changes what a command runs or which files it reads (git's repository, the home folder, the search path, a pager, the loader), so a reviewer may not set it`;
   }
+  const unnamed =
+    assigns || name === "unset" ? nameProblem(name, rest.slice(1)) : undefined;
+  if (unnamed !== undefined) {
+    return unnamed;
+  }
   const word = rest[0] ?? "";
   const program = programName(word);
   return (
     reason ??
+    hiddenCommandProblem(
+      rest,
+      redirects.quoted.slice(redirects.words.length - rest.length),
+    ) ??
     builtProgramProblem(word, walk.context.platform) ??
     PROGRAMS.get(program)?.(rest.slice(1), walk, program)
   );
@@ -768,12 +1010,29 @@ export function checkCommand(command, walk) {
   if (command.length > MAX_COMMAND_LENGTH) {
     return `the command is too long to check (over ${MAX_COMMAND_LENGTH} characters)`;
   }
-  const { statements, unterminated, expands, glued } = tokenize(command);
+  const {
+    statements,
+    unterminated,
+    expands,
+    glued,
+    ansi,
+    continued,
+    substitution,
+  } = tokenize(command);
   if (unterminated) {
     return "a here-document is never closed, so what follows it cannot be told from its body";
   }
   if (expands) {
     return "an unquoted here-document body holds a command substitution, which the shell runs; quote the delimiter ('EOF')";
+  }
+  if (continued) {
+    return "a backslash before a newline is not read by the guard, because the shell deletes it and can join the text around it into a quote or a name; write the command on one line";
+  }
+  if (substitution) {
+    return "a command substitution, a braced variable or an arithmetic bracket inside double quotes is run by the shell but not read by the guard; use single quotes, or run the command on its own";
+  }
+  if (ansi) {
+    return "$'...' and $\"...\" quoting is not read by the guard, because the shell ends it at a different quote; use plain quotes";
   }
   if (glued) {
     return "a backtick command substitution is joined to a word, which can build a program name the guard cannot read";
