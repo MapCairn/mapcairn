@@ -107,6 +107,50 @@ function violations(html: string, policy: string): string[] {
   return [...unhashed, ...wrongNonces];
 }
 
+/** The keywords that let script run that a nonce or hash would not. */
+const UNSAFE_KEYWORDS: readonly string[] = [
+  "'unsafe-inline'",
+  "'unsafe-eval'",
+  "'unsafe-hashes'",
+];
+
+/** The directives that govern scripts; `default-src` counts only without `script-src`. */
+const SCRIPT_DIRECTIVES: readonly string[] = [
+  "script-src",
+  "script-src-elem",
+  "script-src-attr",
+];
+
+/**
+ * Each unsafe keyword a policy gives script, as `<directive> allows <keyword>`:
+ * in `script-src`, `script-src-elem` and `script-src-attr`, and in
+ * `default-src` when the policy has no `script-src` for it to stand in for.
+ * Directive names and keywords are read in any letter case.
+ */
+function unsafeSources(policy: string): string[] {
+  const directives = policy
+    .split(";")
+    .map((directive) => directive.trim().toLowerCase().split(/\s+/))
+    .filter(([name]) => name !== undefined && name !== "");
+  const named = (name: string) => directives.filter(([n]) => n === name);
+  const governing = [
+    ...SCRIPT_DIRECTIVES,
+    ...(named("script-src").length === 0 ? ["default-src"] : []),
+  ];
+  return governing.flatMap((name) =>
+    named(name).flatMap(([, ...sources]) =>
+      UNSAFE_KEYWORDS.filter((keyword) => sources.includes(keyword)).map(
+        (keyword) => `${name} allows ${keyword}`,
+      ),
+    ),
+  );
+}
+
+/** Whether no script on the page carries a nonce, which a page that uses one must not do. */
+function missingNonce(html: string): string[] {
+  return nonces(html).length === 0 ? ["no script carries a nonce"] : [];
+}
+
 /** The nonces the page's scripts carry. */
 function nonces(html: string): string[] {
   return scripts(html)
@@ -123,21 +167,22 @@ function reusedNonces(first: string, second: string): string[] {
 /**
  * Everything wrong with a page and the policy it was sent with, so each check
  * fails closed: a `<script` the reader above did not match (counted with a
- * plain case-insensitive search, not parsed), an `unsafe-inline` source in
- * `script-src`, and whatever {@link violations} reports.
+ * plain case-insensitive search, not parsed), an unsafe keyword in a script
+ * directive ({@link unsafeSources}), and whatever {@link violations} reports.
+ *
+ * The count also raises a false alarm on a literal `<script` inside an inline
+ * script's body, which is why it is a count and not a parse: a future alarm
+ * from that is understood, not hidden. It does not cover markup that runs
+ * script without a `<script` tag (`on*=` attributes, `javascript:` URLs,
+ * `srcdoc`); the page's policy blocks those, and this test reads only
+ * `<script` elements.
  */
 function problems(html: string, policy: string): string[] {
   const found = (html.match(/<script/gi) ?? []).length;
   const read = scripts(html).length;
   const unreadable =
     found === read ? [] : [`${found} \`<script\` found, ${read} read`];
-  const unsafe = scriptSources(policy)
-    .toLowerCase()
-    .split(/\s+/)
-    .includes("'unsafe-inline'")
-    ? ["script-src allows 'unsafe-inline'"]
-    : [];
-  return [...unreadable, ...unsafe, ...violations(html, policy)];
+  return [...unreadable, ...unsafeSources(policy), ...violations(html, policy)];
 }
 
 /** Set to `1` by the CI step that runs after the build, so a missing output fails. */
@@ -268,6 +313,59 @@ describe("problems", () => {
   });
 });
 
+describe("unsafeSources", () => {
+  it("is empty for a policy with none of them", () => {
+    expect(
+      unsafeSources("default-src 'self'; script-src 'self' 'nonce-a'"),
+    ).toEqual([]);
+  });
+
+  it.each(["'unsafe-inline'", "'unsafe-eval'", "'unsafe-hashes'"])(
+    "reports %s in each script directive",
+    (keyword) => {
+      for (const name of ["script-src", "script-src-elem", "script-src-attr"]) {
+        expect(unsafeSources(`${name} 'self' ${keyword}`)).toEqual([
+          `${name} allows ${keyword}`,
+        ]);
+      }
+    },
+  );
+
+  it("reads directive names and keywords in any letter case", () => {
+    expect(unsafeSources("Script-Src 'self' 'Unsafe-Eval'")).toEqual([
+      "script-src allows 'unsafe-eval'",
+    ]);
+  });
+
+  it("reads default-src only when there is no script-src", () => {
+    expect(unsafeSources("default-src 'unsafe-inline'")).toEqual([
+      "default-src allows 'unsafe-inline'",
+    ]);
+    expect(
+      unsafeSources("default-src 'unsafe-inline'; script-src 'self'"),
+    ).toEqual([]);
+  });
+
+  it("ignores the keywords in other directives", () => {
+    expect(
+      unsafeSources("style-src 'unsafe-inline'; script-src 'self'"),
+    ).toEqual([]);
+  });
+});
+
+describe("missingNonce", () => {
+  it("reports a page whose scripts carry no nonce", () => {
+    expect(missingNonce("<script>x</script>")).toEqual([
+      "no script carries a nonce",
+    ]);
+    expect(missingNonce("")).toHaveLength(1);
+  });
+
+  it("accepts a page with a nonce on a script", () => {
+    expect(missingNonce('<script nonce="a">x</script>')).toEqual([]);
+  });
+});
+
 describe("reusedNonces", () => {
   it("is empty when two renders carry different nonces", () => {
     expect(
@@ -339,6 +437,10 @@ describe.skipIf(
       expect(scriptSources(headersPolicy)).toContain("'self'");
     });
 
+    it("gives script no unsafe keyword in the public/_headers policy", () => {
+      expect(unsafeSources(headersPolicy)).toEqual([]);
+    });
+
     it.each(PAGES)(
       "%s: carries %i hashed inline script(s), each allowed by the policy it is sent with and by public/_headers, a fresh nonce per render and no unsafe-inline",
       async (page, count) => {
@@ -348,7 +450,7 @@ describe.skipIf(
         const again = await (await render(page)).text();
         expect(hashedScripts(html)).toHaveLength(count);
         expect(problems(html, policy)).toEqual([]);
-        expect(nonces(html).length).toBeGreaterThan(0);
+        expect(missingNonce(html)).toEqual([]);
         expect(reusedNonces(html, again)).toEqual([]);
         expect(
           hashedScripts(html)
