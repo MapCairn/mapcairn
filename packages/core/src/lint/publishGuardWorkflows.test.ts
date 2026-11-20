@@ -482,6 +482,8 @@ function runPublishStep(input: {
   states: Record<string, string>;
   /** Per package, the internal packages its tarball depends on. */
   dependencies?: Record<string, string[]>;
+  /** Packages whose tarball cannot be read for its dependencies. */
+  dependenciesFail?: string[];
   /** Packages whose publish command fails. */
   publishFails?: string[];
   /** Packages whose read-back fails. */
@@ -506,6 +508,11 @@ function runPublishStep(input: {
     for (const [name, deps] of Object.entries(input.dependencies ?? {})) {
       writeFileSync(path.join(dependencies, name), deps.join("\n"));
     }
+    const dependenciesFail = path.join(folder, "deps-fail");
+    mkdirSync(dependenciesFail);
+    for (const name of input.dependenciesFail ?? []) {
+      writeFileSync(path.join(dependenciesFail, name), "");
+    }
     const confirmFails = path.join(folder, "confirm-fails");
     mkdirSync(confirmFails);
     for (const name of input.confirmFails ?? []) {
@@ -528,7 +535,8 @@ function runPublishStep(input: {
         '    echo "$state"',
         "    ;;",
         "  dependencies)",
-        '    cat "$FOLDER/deps/$short" 2>/dev/null || true',
+        '    if [ -e "$FOLDER/deps-fail/$short" ]; then echo "Could not read package.json" >&2; exit 1; fi',
+        '    if [ -e "$FOLDER/deps/$short" ]; then cat "$FOLDER/deps/$short"; fi',
         "    ;;",
         "  confirm-published)",
         '    if [ -e "$FOLDER/confirm-fails/$short" ]; then echo "did not appear" >&2; exit 1; fi',
@@ -773,6 +781,16 @@ describe.skipIf(process.platform === "win32")(
       );
       expect(run.stdout).not.toContain("::error::@mapcairn/theme depends");
       expect(run.stdout).toContain("by hand");
+    });
+
+    it("publishes nothing and fails when a tarball's dependencies cannot be read, so a failed read is never taken for no dependencies", () => {
+      const run = runPublishStep({
+        mode: "publish",
+        states: ALL_MISSING,
+        dependenciesFail: ["react"],
+      });
+      expect(run.status).not.toBe(0);
+      expect(actions(run)).toEqual([]);
     });
 
     it("publishes the others and then fails for a new leaf package that nothing depends on", () => {
