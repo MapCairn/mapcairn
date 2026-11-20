@@ -42,7 +42,7 @@ export const SECTION_HEADINGS = [
 const UPGRADE_HEADING = "What to change when you upgrade";
 
 const COMMIT_PREFIX =
-  /^\s*[-*]?\s*(feat|fix|perf|refactor|docs|chore|build|ci|test|style|revert)(\(.*\))?!?:/;
+  /^\s*[-*]?\s*(feat|fix|perf|refactor|docs|chore|build|ci|test|style|revert)(\([^)]*\))?!?:/;
 /** An `@` handle that is not inside a code span and not a scoped package name such as `@mapcairn/map`. */
 const HANDLE = /(^|[^\w`])@[\w-]+(?![\w-]*\/)/;
 const RAW_PULL_REQUEST = /\(#\d+\)/;
@@ -54,7 +54,7 @@ const RAW_PULL_REQUEST = /\(#\d+\)/;
 const EMOJI =
   /\p{Emoji_Presentation}|[\u{2600}-\u{27BF}\u{2B50}\u{2B55}\u{1F000}-\u{1FAFF}]|\u{FE0F}|\u{20E3}/u;
 const ATTRIBUTION =
-  /generated (?:with|by)\b|co-authored-by\s*:|(?:written|created|authored|assisted|drafted) (?:with|by) (?:an? )?(?:ai\b|claude|chatgpt|copilot|codex|gemini|llm)/i;
+  /^[\s>*_-]*generated (?:with|by)\b|co-authored-by\s*:|(?:generated|written|created|authored|assisted|drafted) (?:with|by) (?:an? )?(?:ai\b|claude|chatgpt|copilot|codex|gemini|llm)/i;
 const PACKAGE_HEADING = /^`?(?:@mapcairn\/)?(?:core|map|react|theme)`?$/;
 const BULLET = /^(?:[-*]|\d+\.)\s+/;
 const ENTRY_START = /^(?:[-*]\s|\d+\.\s|\*\*)/;
