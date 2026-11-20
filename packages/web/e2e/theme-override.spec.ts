@@ -154,6 +154,57 @@ async function showTooltip(page: Page): Promise<void> {
 const textColour = (locator: Locator): Promise<string> =>
   locator.evaluate((element) => getComputedStyle(element).color);
 
+/** The bubble's text colour and surface, as the browser computes them. */
+interface BubbleColours {
+  text: string;
+  surface: string;
+}
+
+const BUBBLE_SELECTOR = "[data-radix-popper-content-wrapper] > [data-side]";
+
+/**
+ * Reads both colours in one step, so the bubble cannot close between them,
+ * and opens the tooltip again if a late scroll or layout shift closed it.
+ */
+async function bubbleColours(page: Page): Promise<BubbleColours> {
+  let read: BubbleColours | null = null;
+  await expect(async () => {
+    if ((await bubble(page).count()) === 0) {
+      await faceNorth(page).blur();
+      await showTooltip(page);
+    }
+    read = await page.evaluate((selector) => {
+      const element = document.querySelector(selector);
+      if (element === null) {
+        return null;
+      }
+      const style = getComputedStyle(element);
+      return { text: style.color, surface: style.backgroundColor };
+    }, BUBBLE_SELECTOR);
+    expect(read).not.toBeNull();
+  }).toPass();
+  return read as unknown as BubbleColours;
+}
+
+/** The red, green and blue of a computed `rgb()`, `rgba()` or `color(srgb ...)`. */
+function channelsOf(computed: string): number[] {
+  const numbers = computed.match(/-?\d*\.?\d+/g)?.map(Number) ?? [];
+  const scale = computed.startsWith("color(") ? 255 : 1;
+  return numbers.slice(0, 3).map((value) => value * scale);
+}
+
+/** Expects a computed colour to be a hex colour, give or take one step per channel. */
+function expectColour(computed: string, hex: string): void {
+  const actual = channelsOf(computed);
+  const wanted = channelsOf(rgb(hex));
+  expect(actual, `${computed} is not ${hex}`).toHaveLength(3);
+  for (const [index, channel] of wanted.entries()) {
+    expect(
+      Math.abs((actual[index] ?? Number.NaN) - channel),
+    ).toBeLessThanOrEqual(1);
+  }
+}
+
 test.describe("a generated host theme", () => {
   test("applies to its own scope in each theme, from a same-origin file under the strict policy", async ({
     page,
@@ -187,19 +238,17 @@ test.describe("a generated host theme", () => {
     await applyThemes(page);
     await openTooltip(page);
 
-    expect(await textColour(bubble(page))).toBe(rgb(SAGE.light.text));
-    expect(await background(bubble(page))).toContain(
-      rgb(SAGE.light.surface).slice(4, -1),
-    );
+    const light = await bubbleColours(page);
+    expectColour(light.text, SAGE.light.text);
+    expectColour(light.surface, SAGE.light.surface);
     await expect(page.locator(`.host-sage [data-side]`)).toHaveCount(0);
 
     await faceNorth(page).blur();
     await design.themeControl.getByRole("radio", { name: "Dark" }).click();
     await showTooltip(page);
-    expect(await textColour(bubble(page))).toBe(rgb(SAGE.dark.text));
-    expect(await background(bubble(page))).toContain(
-      rgb(SAGE.dark.surface).slice(4, -1),
-    );
+    const dark = await bubbleColours(page);
+    expectColour(dark.text, SAGE.dark.text);
+    expectColour(dark.surface, SAGE.dark.surface);
   });
 
   test("leaves a tooltip with no scope in the SDK's colours", async ({
@@ -218,7 +267,7 @@ test.describe("a generated host theme", () => {
       page.getByTestId("demo-SkipLink").locator("h3"),
     );
     expect(sdkText).not.toBe(rgb(SAGE.light.text));
-    expect(await textColour(bubble(page))).toBe(sdkText);
+    expect((await bubbleColours(page)).text).toBe(sdkText);
   });
 
   test("is served from the app's own origin, for the policy that blocks inline styles", async ({
@@ -348,11 +397,10 @@ test.describe("a generated host theme accessibility @a11y", () => {
       await applyThemes(page);
       await openTooltip(page);
 
-      const text = await textColour(bubble(page));
-      const surface = await background(bubble(page));
+      const { text, surface } = await bubbleColours(page);
       // The SDK's own colours also pass, so first prove the bubble is themed.
-      expect(text).toBe(rgb(SAGE[colorScheme].text));
-      expect(surface).toContain(rgb(SAGE[colorScheme].surface).slice(4, -1));
+      expectColour(text, SAGE[colorScheme].text);
+      expectColour(surface, SAGE[colorScheme].surface);
       for (const backdrop of ["#ffffff", "#000000"]) {
         const flattened = compositeOver(surface, backdrop);
         expect(contrastRatio(text, flattened)).toBeGreaterThanOrEqual(4.5);
