@@ -51,7 +51,7 @@ afterEach(() => {
 
 describe("SDK_BUILD_ORDER", () => {
   it("builds a package after the SDK packages it depends on", () => {
-    expect(SDK_BUILD_ORDER).toEqual(["core", "react", "theme", "map"]);
+    expect(SDK_BUILD_ORDER).toEqual(["core", "react", "theme", "map", "sdk"]);
   });
 });
 

@@ -8,6 +8,7 @@ import {
   readdirSync,
   readFileSync,
   rmSync,
+  symlinkSync,
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
@@ -91,6 +92,13 @@ export async function generateReports(folder) {
       const copied = path.join(scratch, name, `${name}.d.ts`);
       mkdirSync(path.dirname(copied), { recursive: true });
       copyFileSync(declaration, copied);
+      // A star re-export of another package (the umbrella's) is resolved to
+      // list its names, so the scratch folder finds the workspace's packages.
+      symlinkSync(
+        path.join(REPO, "node_modules"),
+        path.join(scratch, name, "node_modules"),
+        "junction",
+      );
       const reportFolder = path.join(scratch, name, "report");
       const tempFolder = path.join(scratch, name, "temp");
       mkdirSync(reportFolder, { recursive: true });

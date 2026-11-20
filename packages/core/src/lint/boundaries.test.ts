@@ -127,6 +127,24 @@ describe("dependency-cruiser boundaries", () => {
     "examples/demo/src/goodEntry.ts":
       'import { ServicesProvider } from "@mapcairn/map";\nexport const x = ServicesProvider;\n',
 
+    // the umbrella package only re-exports the four packages' entry points,
+    // and nothing in packages/ imports it.
+    "packages/sdk/package.json":
+      '{ "name": "@mapcairn/sdk", "exports": { ".": "./src/index.ts" } }\n',
+    "packages/sdk/src/index.ts": 'export * from "@mapcairn/map";\n',
+    "packages/sdk/src/badNpm.ts": 'export * from "zod";\n',
+    "packages/sdk/src/badDeep.ts": 'export * from "../../map/src/ui/index";\n',
+    "packages/sdk/src/badCode.ts":
+      'import { ui } from "../../map/src/ui/index";\nexport const x = ui;\n',
+    "packages/web/src/routes/badUmbrella.ts":
+      'import { x } from "../../../sdk/src/index";\nexport const y = x;\n',
+    "packages/core/src/bad/importsUmbrella.ts":
+      'import { x } from "../../../sdk/src/index";\nexport const y = x;\n',
+    "packages/map/src/ui/badUmbrella.ts":
+      'import { x } from "../../../sdk/src/index";\nexport const y = x;\n',
+    "examples/demo/src/goodUmbrella.ts":
+      'import { ServicesProvider } from "@mapcairn/sdk";\nexport const x = ServicesProvider;\n',
+
     // the SDK never depends on an example.
     "packages/map/src/ui/badExample.ts":
       'import { ui } from "../../../../examples/demo/src/badDeep";\nexport const x = ui;\n',
@@ -150,6 +168,19 @@ describe("dependency-cruiser boundaries", () => {
       path.join(root, "examples/demo/node_modules/@mapcairn/map"),
       "junction",
     );
+    for (const [consumer, target] of [
+      ["examples/demo", "sdk"],
+      ["packages/sdk", "map"],
+    ] as const) {
+      mkdirSync(path.join(root, consumer, "node_modules/@mapcairn"), {
+        recursive: true,
+      });
+      symlinkSync(
+        path.join(root, "packages", target),
+        path.join(root, consumer, "node_modules/@mapcairn", target),
+        "junction",
+      );
+    }
     const result = spawnSync(
       process.execPath,
       [
@@ -233,6 +264,17 @@ describe("dependency-cruiser boundaries", () => {
       "examples/demo/src/badRelativeEntry.ts",
     ],
     ["packages-do-not-import-examples", "packages/map/src/ui/badExample.ts"],
+    ["umbrella-reexports-entry-points-only", "packages/sdk/src/badNpm.ts"],
+    ["umbrella-reexports-entry-points-only", "packages/sdk/src/badDeep.ts"],
+    ["umbrella-reexports-entry-points-only", "packages/sdk/src/badCode.ts"],
+    ["nothing-imports-the-umbrella", "packages/web/src/routes/badUmbrella.ts"],
+    [
+      "nothing-imports-the-umbrella",
+      "packages/core/src/bad/importsUmbrella.ts",
+    ],
+    ["nothing-imports-the-umbrella", "packages/map/src/ui/badUmbrella.ts"],
+    ["core-is-dependency-free", "packages/core/src/bad/importsUmbrella.ts"],
+    ["map-has-no-web-dependency", "packages/map/src/ui/badUmbrella.ts"],
   ])("reports %s for %s", (rule, file) => {
     expect(findings).toContain(`${rule}: ${file}`);
   });
@@ -262,6 +304,8 @@ describe("dependency-cruiser boundaries", () => {
     "packages/map/src/ui/Switch/goodRadix.ts",
     "packages/map/src/ui/Tooltip/goodRadix.ts",
     "examples/demo/src/goodEntry.ts",
+    "examples/demo/src/goodUmbrella.ts",
+    "packages/sdk/src/index.ts",
   ])("accepts %s", (file) => {
     expect(findings.filter((f) => f.endsWith(file))).toEqual([]);
   });

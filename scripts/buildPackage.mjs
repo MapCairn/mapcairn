@@ -2,6 +2,8 @@
 // Copyright MapCairn contributors
 import { spawnSync } from "node:child_process";
 import {
+  copyFileSync,
+  existsSync,
   mkdirSync,
   readFileSync,
   rmSync,
@@ -86,6 +88,23 @@ export function stylesheetOf(exportsField) {
     }
   }
   return undefined;
+}
+
+/**
+ * The stylesheet a package writes by hand: an export whose `default` is a
+ * `.css` file with a source of the same name in `src`. The build copies it
+ * as it is; a package whose stylesheet is compiled from `.css.ts` files has
+ * no such source.
+ *
+ * @param {string} folder The package folder.
+ * @param {string | undefined} stylesheet The name `stylesheetOf` found.
+ * @returns {boolean}
+ */
+export function hasHandWrittenStylesheet(folder, stylesheet) {
+  return (
+    stylesheet !== undefined &&
+    existsSync(path.join(folder, "src", `${stylesheet}.css`))
+  );
 }
 
 /**
@@ -253,15 +272,22 @@ export async function buildPackage(folder) {
   const manifest = JSON.parse(readFileSync(manifestPath, "utf8"));
   const entries = entryPointsOf(manifest.exports ?? {});
   const stylesheet = stylesheetOf(manifest.exports ?? {});
+  const handWritten = hasHandWrittenStylesheet(folder, stylesheet);
   const dist = path.join(folder, "dist");
   rmSync(dist, { recursive: true, force: true });
   mkdirSync(dist, { recursive: true });
 
-  await buildJavaScript(folder, entries, stylesheet);
+  await buildJavaScript(folder, entries, handWritten ? undefined : stylesheet);
   if (stylesheet !== undefined) {
     // A stylesheet has no types, and a project that checks side-effect imports
     // (`noUncheckedSideEffectImports`) fails on an import it cannot resolve.
     writeFileSync(path.join(dist, `${stylesheet}.css.d.ts`), "export {};\n");
+  }
+  if (stylesheet !== undefined && handWritten) {
+    copyFileSync(
+      path.join(folder, "src", `${stylesheet}.css`),
+      path.join(dist, `${stylesheet}.css`),
+    );
   }
   emitDeclarations(folder);
   const declarationOf = (/** @type {string} */ source) =>

@@ -7,7 +7,7 @@
  */
 import { spawnSync } from "node:child_process";
 import { readdirSync } from "node:fs";
-import { SDK_PACKAGES } from "./sdkPackages.mjs";
+import { BUILT_SDK_PACKAGES } from "./sdkPackages.mjs";
 
 /** Every example app, so a new one is cruised without editing this list. */
 const examples = readdirSync("examples", { withFileTypes: true })
@@ -16,7 +16,7 @@ const examples = readdirSync("examples", { withFileTypes: true })
 
 /** Every directory cruised; each must yield at least one module. */
 const roots = [
-  ...[...SDK_PACKAGES, "web"].map((name) => `packages/${name}/src`),
+  ...[...BUILT_SDK_PACKAGES, "web"].map((name) => `packages/${name}/src`),
   ...examples,
 ];
 
