@@ -8,6 +8,7 @@ import {
   parseIdentity,
   parseRegistryAnswer,
   parseReviewers,
+  readIdentity,
   // @ts-expect-error The scripts are dependency-free JavaScript with JSDoc types.
 } from "../../../../scripts/release/check.mjs";
 
@@ -660,5 +661,28 @@ describe("parseIdentity", () => {
     expect(parseIdentity(answer(false, "", "gh: Not Found (HTTP 404)"))).toBe(
       "unknown",
     );
+  });
+});
+
+describe("readIdentity", () => {
+  it("probes the branch protection of main on the project repository, read-only", () => {
+    const calls: Array<[string, string[], string]> = [];
+    const identity = readIdentity("/work", (command, args, cwd) => {
+      calls.push([command, args, cwd]);
+      return {
+        ok: false,
+        stdout: "",
+        stderr:
+          "gh: Resource not accessible by personal access token (HTTP 403)",
+      };
+    });
+    expect(calls).toEqual([
+      [
+        "gh",
+        ["api", "repos/MapCairn/mapcairn/branches/main/protection"],
+        "/work",
+      ],
+    ]);
+    expect(identity).toBe("limited");
   });
 });

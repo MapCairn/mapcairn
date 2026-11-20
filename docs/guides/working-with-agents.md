@@ -181,7 +181,7 @@ The token's permissions, for this repository only:
 Rules for an agent:
 
 - Use only the identity in `GH_TOKEN`. Never unset, clear or override it (no `env -u GH_TOKEN`, no `GH_TOKEN=` prefix, no `--hostname` or `--user` switch to another login), never run `gh auth login`, `logout`, `switch`, `refresh`, `token` or `setup-git`, and never read `~/.config/gh`, the keyring or a credentials file.
-- Know which identity is active. Reading `repos/<owner>/<repo>/branches/main/protection` needs Administration, so a limited token is refused (HTTP 403) and an answer means an administrator login is active. If that read succeeds, or `GH_TOKEN` is missing, stop and tell the person. `npm run release:check` makes the same read and prints a warning, never a failure; it prints a notice instead when `gh` is missing or signed out.
+- Know which identity is active. Reading `repos/<owner>/<repo>/branches/main/protection` needs Administration, so a limited token is refused (GitHub answers 403, or 404 for some identities) and an answer means an administrator login is active. If that read succeeds, or `GH_TOKEN` is missing, stop and tell the person. `npm run release:check` makes the same read and prints a warning, never a failure; it prints a notice instead when `gh` is missing or signed out, or the answer is unclear (a 404 is unclear, so it gives the notice).
 - A permission the token lacks is a stop, not a workaround: say which permission, and let the person add it.
 - Put these rules in every sub-agent brief that uses `gh`.
 

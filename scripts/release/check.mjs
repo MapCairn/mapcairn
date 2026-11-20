@@ -601,6 +601,24 @@ export function parseIdentity(answer) {
 }
 
 /**
+ * Asks GitHub, as the session's identity, for the branch protection of `main`,
+ * and reads the answer with `parseIdentity`.
+ *
+ * @param {string} root
+ * @param {typeof run} [runCommand] Runs a program; replaced in tests.
+ * @returns {"administrator" | "limited" | "unknown"}
+ */
+export function readIdentity(root, runCommand = run) {
+  return parseIdentity(
+    runCommand(
+      "gh",
+      ["api", `repos/${REPOSITORY}/branches/main/protection`],
+      root,
+    ),
+  );
+}
+
+/**
  * Reads what `npm view <name> --json` says about one package.
  *
  * @param {{ status: number | null, stdout: string, stderr: string }} result
@@ -696,9 +714,7 @@ function readFacts(root) {
     ),
     reviewers: parseReviewers(environment),
     adminBypass: parseAdminBypass(environment),
-    identity: parseIdentity(
-      run("gh", ["api", `repos/${REPOSITORY}/branches/main/protection`], root),
-    ),
+    identity: readIdentity(root),
     signedIn: runNpm(["whoami"], { cwd: root }).status === 0,
     tokenInEnvironment: ["NPM_TOKEN", "NODE_AUTH_TOKEN"].some(
       (name) => (process.env[name] ?? "") !== "",
