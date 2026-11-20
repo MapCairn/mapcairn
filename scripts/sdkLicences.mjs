@@ -48,14 +48,10 @@ import { readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { isEntryPoint } from "./entryPoint.mjs";
+import { SDK_PACKAGES } from "./sdkPackages.mjs";
 
 /** The workspace folders held to the rule, relative to the repository root. */
-export const SDK_PACKAGE_PATHS = [
-  "packages/core",
-  "packages/map",
-  "packages/react",
-  "packages/theme",
-];
+export const SDK_PACKAGE_PATHS = SDK_PACKAGES.map((name) => `packages/${name}`);
 /** Workspaces the rule leaves out, named in the output. */
 export const EXEMPT_PATHS = ["packages/web", "examples/embed"];
 /** The file a person edits to allow a licence or a package, as written in messages. */

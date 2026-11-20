@@ -5,6 +5,10 @@ import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { describe, expect, it } from "vitest";
+import {
+  SDK_PACKAGES,
+  // @ts-expect-error The scripts are dependency-free JavaScript with JSDoc types.
+} from "../../../../scripts/sdkPackages.mjs";
 
 const REPO = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
@@ -12,7 +16,7 @@ const REPO = path.resolve(
 );
 
 /** The packages that build to `dist`. */
-const BUILT_PACKAGES = ["core", "map", "react", "theme"] as const;
+const BUILT_PACKAGES: readonly string[] = SDK_PACKAGES;
 
 interface Manifest {
   readonly dependencies?: Readonly<Record<string, string>>;

@@ -6,6 +6,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { STAMP_FILE } from "./buildPackage.mjs";
 import { isEntryPoint } from "./entryPoint.mjs";
+import { SDK_PACKAGES } from "./sdkPackages.mjs";
 
 const REPO = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -15,7 +16,7 @@ const REPO = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
  * (see `isStale`). `map` builds against the built `theme`, so its stylesheet
  * names the same custom properties as `theme`'s `tokens.css`.
  */
-export const SDK_BUILD_ORDER = ["core", "react", "theme", "map"];
+export const SDK_BUILD_ORDER = SDK_PACKAGES;
 
 /** Files that cannot change what a package builds. */
 const NOT_BUILD_INPUT = /\.(test\.[cm]?[jt]sx?|snap\.html)$/;

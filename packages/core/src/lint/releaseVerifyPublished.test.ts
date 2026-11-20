@@ -15,6 +15,10 @@ import {
   provenanceReport,
   // @ts-expect-error The scripts are dependency-free JavaScript with JSDoc types.
 } from "../../../../scripts/release/verifyPublished.mjs";
+import {
+  SDK_PACKAGES,
+  // @ts-expect-error The scripts are dependency-free JavaScript with JSDoc types.
+} from "../../../../scripts/sdkPackages.mjs";
 
 const LOCKED = {
   react: "19.2.0",
@@ -205,10 +209,7 @@ describe("provenanceReport", () => {
 describe("distTagReport", () => {
   const all = (answer: unknown) =>
     Object.fromEntries(
-      ["core", "map", "react", "theme"].map((name) => [
-        `@mapcairn/${name}`,
-        answer,
-      ]),
+      (SDK_PACKAGES as string[]).map((name) => [`@mapcairn/${name}`, answer]),
     );
 
   it("expects a prerelease on next, and reports latest without judging it", () => {

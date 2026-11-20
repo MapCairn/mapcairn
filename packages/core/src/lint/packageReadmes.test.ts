@@ -4,6 +4,10 @@ import { existsSync, readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
+import {
+  SDK_PACKAGES,
+  // @ts-expect-error The scripts are dependency-free JavaScript with JSDoc types.
+} from "../../../../scripts/sdkPackages.mjs";
 import { fencedBlocks, namedImports, tagAttributes } from "./markdownSupport";
 
 /**
@@ -22,7 +26,6 @@ const REPO = path.resolve(
   "../../../..",
 );
 const EXAMPLE_SOURCE = "examples/embed/src";
-const SDK_PACKAGES = ["core", "map", "react", "theme"] as const;
 
 /** Where a link to a file of the repository must start. */
 const REPOSITORY_FILES = "https://github.com/MapCairn/mapcairn/blob/main/";

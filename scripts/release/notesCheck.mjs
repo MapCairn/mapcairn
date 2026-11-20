@@ -22,6 +22,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { isEntryPoint } from "../entryPoint.mjs";
 import { FORBIDDEN, findForbidden } from "../names-check.mjs";
+import { SDK_PACKAGES } from "../sdkPackages.mjs";
 import { parseChangelog, scanLines, splitLines } from "./changelog.mjs";
 import { contentProblems } from "./notesContent.mjs";
 import { parseVersion, previousTag, releaseTags } from "./semver.mjs";
@@ -47,6 +48,10 @@ const UPGRADE_HEADING = "What to change when you upgrade";
 
 const COMMIT_PREFIX =
   /^[ \t]*(?:(?:[-*]|\d+\.)[ \t]*)?(feat|fix|perf|refactor|docs|chore|build|ci|test|style|revert)(\([^)]*\))?!?:/;
+/** The SDK package folder names as a regular expression alternation. */
+const SDK_ALTERNATION = SDK_PACKAGES.join("|");
+/** The SDK package folder names as a sentence list: "core, react, theme or map". */
+const SDK_PACKAGE_LIST = `${SDK_PACKAGES.slice(0, -1).join(", ")} or ${SDK_PACKAGES.at(-1)}`;
 /**
  * An `@` handle in prose. A backtick before it does not exempt it: a code span
  * that is never closed would otherwise let a live mention through.
@@ -57,8 +62,10 @@ const HANDLE = /(^|[^\w])@[\w-]+/;
  * scoped names that may stand outside a code span: `@MapCairn/maintainers`
  * would mention a team.
  */
-const SDK_PACKAGE_NAME =
-  /@mapcairn\/(?:core|map|react|theme)(?![\w-])(?:\/[\w.-]+)*/g;
+const SDK_PACKAGE_NAME = new RegExp(
+  `@mapcairn/(?:${SDK_ALTERNATION})(?![\\w-])(?:/[\\w.-]+)*`,
+  "g",
+);
 const RAW_PULL_REQUEST = /\(#\d+\)/;
 /**
  * Emoji: those shown as a picture by default, and the variation selector and
@@ -78,7 +85,9 @@ const ATTRIBUTION =
 const MARKED_FENCE = /^[ \t]*(?:(?:[-*+]|\d+[.)]|>)[ \t]*)+(?:`{3,}|~{3,})/;
 /** A control character other than a tab: a lone carriage return, a form feed and so on. */
 const CONTROL_CHARACTER = /[^\P{Cc}\t]/u;
-const PACKAGE_HEADING = /^`?(?:@mapcairn\/)?(?:core|map|react|theme)`?$/;
+const PACKAGE_HEADING = new RegExp(
+  `^\`?(?:@mapcairn/)?(?:${SDK_ALTERNATION})\`?$`,
+);
 const BULLET = /^(?:[-*]|\d+\.)\s+/;
 const ENTRY_START = /^(?:[-*]\s|\d+\.\s|\*\*)/;
 
@@ -189,7 +198,7 @@ function subheadingFindings({ level, title }, line, inVersion) {
   } else if (level === 4) {
     message =
       !inVersion || !PACKAGE_HEADING.test(title)
-        ? "A `####` heading must name a package: core, map, react or theme."
+        ? `A \`####\` heading must name a package: ${SDK_PACKAGE_LIST}.`
         : null;
   } else {
     message = "Headings go no deeper than `####`.";

@@ -4,14 +4,15 @@ import { readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
+import {
+  SDK_PACKAGES,
+  // @ts-expect-error The scripts are dependency-free JavaScript with JSDoc types.
+} from "../../../../scripts/sdkPackages.mjs";
 
 const REPO = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
   "../../../..",
 );
-
-/** The packages an outside app installs. */
-const SDK_PACKAGES = ["core", "map", "react", "theme"] as const;
 
 /**
  * Directories and files that are test code shipped as modules, for a host's
@@ -37,8 +38,8 @@ const TYPES_PACKAGES: Readonly<Record<string, string>> = {
 /** The custom export condition that points a build tool at source. */
 const SOURCE_CONDITION = "@mapcairn/source";
 
-/** Packages that build to `dist`: all four. */
-const BUILT_PACKAGES = ["core", "map", "react", "theme"] as const;
+/** Packages that build to `dist`: every package in the SDK list. */
+const BUILT_PACKAGES: readonly string[] = SDK_PACKAGES;
 
 /** The conditions an entry point of a built package carries, in order. */
 interface ConditionalExport {
@@ -57,11 +58,9 @@ interface StylesheetExport {
  * Every entry point each built SDK package offers, and nothing else. A
  * stylesheet is a plain path, since it has no source form.
  */
+// Keyed by name, so a package added to the SDK list fails at the lookup until it has an entry here.
 const BUILT_ENTRY_POINTS: Readonly<
-  Record<
-    (typeof BUILT_PACKAGES)[number],
-    Record<string, ConditionalExport | StylesheetExport>
-  >
+  Record<string, Record<string, ConditionalExport | StylesheetExport>>
 > = {
   core: {
     ".": {
@@ -112,13 +111,13 @@ const BUILT_ENTRY_POINTS: Readonly<
  * too, because a host that resolves the source condition compiles those files
  * and their stylesheets must survive tree-shaking.
  */
-const SIDE_EFFECTS: Readonly<Record<(typeof BUILT_PACKAGES)[number], unknown>> =
-  {
-    core: false,
-    map: ["**/*.css", "**/*.css.ts"],
-    react: false,
-    theme: ["**/*.css"],
-  };
+// Keyed by name, so a package added to the SDK list fails at the lookup until it has an entry here.
+const SIDE_EFFECTS: Readonly<Record<string, unknown>> = {
+  core: false,
+  map: ["**/*.css", "**/*.css.ts"],
+  react: false,
+  theme: ["**/*.css"],
+};
 
 /**
  * The repository URL npm's trusted publishing compares with the GitHub

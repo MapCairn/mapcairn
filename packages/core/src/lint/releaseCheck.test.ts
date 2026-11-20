@@ -66,7 +66,7 @@ describe("buildReport", () => {
     const { text, blockers } = report();
     expect(text).toContain("Release readiness for v0.1.0-rc.1");
     expect(text).toContain(
-      "Versions: core, map, react and theme are all 0.1.0-rc.1; internal ranges match.",
+      "Versions: core, react, theme and map are all 0.1.0-rc.1; internal ranges match.",
     );
     expect(text).toContain("Notes: CHANGELOG.md has a section for 0.1.0-rc.1");
     expect(text).toContain("Tarballs: 4 packed, contents as expected");
