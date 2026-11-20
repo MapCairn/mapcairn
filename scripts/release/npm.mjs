@@ -34,8 +34,25 @@ export function npmCliPath(env = process.env, execPath = process.execPath) {
 }
 
 /**
+ * The environment without the `npm_*` variables that `npm run` sets. A
+ * child npm reads them as its configuration, so one that inherits the
+ * repository's `npm_config_local_prefix` would work on the repository, not
+ * on the folder it is run in.
+ *
+ * @param {NodeJS.ProcessEnv} [env] The environment to filter.
+ * @returns {NodeJS.ProcessEnv}
+ */
+export function withoutNpmVariables(env = process.env) {
+  return Object.fromEntries(
+    Object.entries(env).filter(
+      ([name]) => !name.toLowerCase().startsWith("npm_"),
+    ),
+  );
+}
+
+/**
  * Runs npm with an argument array and no shell, so it behaves the same on
- * every system.
+ * every system, and with none of the `npm run` variables.
  *
  * @param {string[]} args The npm arguments.
  * @param {import("node:child_process").SpawnSyncOptions} options Spawn options.
@@ -44,6 +61,7 @@ export function npmCliPath(env = process.env, execPath = process.execPath) {
 export function runNpm(args, options = {}) {
   return spawnSync(process.execPath, [npmCliPath(), ...args], {
     encoding: "utf8",
+    env: withoutNpmVariables(),
     ...options,
   });
 }

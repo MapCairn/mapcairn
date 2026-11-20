@@ -17,8 +17,12 @@ import {
   unmetPeers,
   // @ts-expect-error The scripts are dependency-free JavaScript with JSDoc types.
 } from "../../../../scripts/release/consumerCheck.mjs";
-// @ts-expect-error The scripts are dependency-free JavaScript with JSDoc types.
-import { npmCliPath } from "../../../../scripts/release/npm.mjs";
+
+import {
+  npmCliPath,
+  withoutNpmVariables,
+  // @ts-expect-error The scripts are dependency-free JavaScript with JSDoc types.
+} from "../../../../scripts/release/npm.mjs";
 
 describe("lockedVersion", () => {
   const lock = { packages: { "node_modules/react": { version: "19.3.1" } } };
@@ -158,6 +162,20 @@ describe("pnpm", () => {
         "",
       ].join("\n"),
     );
+  });
+});
+
+describe("withoutNpmVariables", () => {
+  it("drops what npm run sets, whatever the case, and keeps the rest", () => {
+    expect(
+      withoutNpmVariables({
+        PATH: "/bin",
+        npm_config_local_prefix: "/repo",
+        NPM_CONFIG_CACHE: "/cache",
+        Npm_Execpath: "/npm",
+        HOME: "/home",
+      }),
+    ).toEqual({ PATH: "/bin", HOME: "/home" });
   });
 });
 

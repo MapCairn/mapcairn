@@ -33,7 +33,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { isEntryPoint } from "../entryPoint.mjs";
-import { runNpm } from "./npm.mjs";
+import { runNpm, withoutNpmVariables } from "./npm.mjs";
 import { PACKAGES } from "./packCheck.mjs";
 
 const REPO = path.resolve(
@@ -217,6 +217,7 @@ function runNode(label, args, cwd) {
   const result = spawnSync(process.execPath, args, {
     cwd,
     encoding: "utf8",
+    env: withoutNpmVariables(),
     maxBuffer: MAX_OUTPUT,
   });
   if (result.status !== 0) {
