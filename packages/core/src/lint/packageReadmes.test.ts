@@ -255,7 +255,7 @@ describe("the README of @mapcairn/map", () => {
 
   it("installs core and theme beside it, because the examples import them", () => {
     expect(readme).toContain(
-      "npm install @mapcairn/map @mapcairn/core @mapcairn/theme",
+      "npm install @mapcairn/map@next @mapcairn/core@next @mapcairn/theme@next",
     );
   });
 
