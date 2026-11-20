@@ -293,6 +293,25 @@ export function umbrellaSource(source) {
 }
 
 /**
+ * The specifiers of the four packages that an umbrella app's source still
+ * names after `umbrellaSource`. npm hoists them, so an import the rewrite
+ * missed would resolve anyway and the leg would pass without the umbrella.
+ *
+ * @param {string} source The rewritten text.
+ * @returns {string[]}
+ */
+export function umbrellaLeftovers(source) {
+  const others = SDK_PACKAGES.filter((name) => name !== UMBRELLA_PACKAGE).join(
+    "|",
+  );
+  return [
+    ...source.matchAll(
+      new RegExp(`["'](@mapcairn/(?:${others})(?:/[^"']*)?)["']`, "g"),
+    ),
+  ].map((match) => match[1]);
+}
+
+/**
  * The custom properties `styles.css` reads that a component sets from script
  * (the sheet's offset, the chrome's measured boxes), so no stylesheet defines
  * them. They were read from the built `styles.css`; a new one is added here
@@ -479,7 +498,14 @@ function prepareApp(app, manifest, { umbrella = false } = {}) {
     for (const file of readdirSync(app, { recursive: true }).map(String)) {
       if (/\.(?:tsx?|mjs)$/.test(file)) {
         const target = path.join(app, file);
-        writeFileSync(target, umbrellaSource(readFileSync(target, "utf8")));
+        const rewritten = umbrellaSource(readFileSync(target, "utf8"));
+        const left = umbrellaLeftovers(rewritten);
+        if (left.length > 0) {
+          throw new Error(
+            `${file} still imports ${left.join(", ")} after the rewrite to the umbrella.`,
+          );
+        }
+        writeFileSync(target, rewritten);
       }
     }
   }

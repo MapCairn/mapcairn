@@ -24,6 +24,7 @@ import {
   SCRIPT_SET_PROPERTIES,
   stylesheetProblems,
   TYPE_CHECKS,
+  umbrellaLeftovers,
   umbrellaSource,
   // @ts-expect-error The scripts are dependency-free JavaScript with JSDoc types.
 } from "../../../../scripts/release/consumerCheck.mjs";
@@ -167,6 +168,36 @@ describe("umbrellaSource", () => {
     expect(umbrellaSource('declare module "@mapcairn/core" {')).toBe(
       'declare module "@mapcairn/sdk" {',
     );
+  });
+});
+
+describe("umbrellaLeftovers", () => {
+  it("is empty for source that umbrellaSource has rewritten", () => {
+    const source = [
+      'import "@mapcairn/theme/tokens.css";',
+      'import "@mapcairn/map/styles.css";',
+      'import { a } from "@mapcairn/core";',
+      'import * as c from "@mapcairn/core/contracts";',
+      'declare module "@mapcairn/core" {}',
+    ].join("\n");
+    expect(umbrellaLeftovers(umbrellaSource(source))).toEqual([]);
+  });
+
+  it("names an import of one of the four packages that the rewrite did not reach", () => {
+    expect(
+      umbrellaLeftovers(
+        umbrellaSource('import { x } from "@mapcairn/map/internal";'),
+      ),
+    ).toEqual(["@mapcairn/map/internal"]);
+    expect(umbrellaLeftovers("import { x } from '@mapcairn/react';")).toEqual([
+      "@mapcairn/react",
+    ]);
+  });
+
+  it("does not name the umbrella itself", () => {
+    expect(
+      umbrellaLeftovers('import { x } from "@mapcairn/sdk/core/contracts";'),
+    ).toEqual([]);
   });
 });
 
