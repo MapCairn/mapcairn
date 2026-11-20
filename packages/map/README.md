@@ -4,14 +4,14 @@ The map user interface of MapCairn, in React: the chrome around the map, the bot
 
 It never imports a map engine, an adapter or a browser service. Everything it needs comes from the `Services` bundle that `ServicesProvider` supplies, so the same components run against real adapters in an app and against fakes in a test. It is built on [`@mapcairn/core`](https://github.com/MapCairn/mapcairn/tree/main/packages/core), [`@mapcairn/react`](https://github.com/MapCairn/mapcairn/tree/main/packages/react) and [`@mapcairn/theme`](https://github.com/MapCairn/mapcairn/tree/main/packages/theme).
 
-**Status:** a release candidate, for early adopters. The API is still settling, so a breaking change can land before `0.1.0`; the [changelog](https://github.com/MapCairn/mapcairn/blob/main/CHANGELOG.md) lists each one. Until `0.1.0`, add `@next` to the package name in the install commands below.
+**Status:** a release candidate, for early adopters. The API is still settling, so a breaking change can land before `0.1.0`; the [changelog](https://github.com/MapCairn/mapcairn/blob/main/CHANGELOG.md) lists each one. Until `0.1.0`, add `@next` to every package name in the install commands below.
 
 ## Install
 
 ```bash
-npm install @mapcairn/map @mapcairn/core @mapcairn/theme
-pnpm add @mapcairn/map @mapcairn/core @mapcairn/theme
-yarn add @mapcairn/map @mapcairn/core @mapcairn/theme
+npm install @mapcairn/map@next @mapcairn/core@next @mapcairn/theme@next
+pnpm add @mapcairn/map@next @mapcairn/core@next @mapcairn/theme@next
+yarn add @mapcairn/map@next @mapcairn/core@next @mapcairn/theme@next
 ```
 
 The examples below import from `@mapcairn/core` and `@mapcairn/theme` too, so install them beside it. React and React DOM 19 are peer dependencies, and your app already has them.

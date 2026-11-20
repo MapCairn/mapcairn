@@ -11,8 +11,7 @@ import { fencedBlocks, namedImports, tagAttributes } from "./markdownSupport";
  * on its own, away from the repository. They install the package with npm,
  * pnpm and yarn side by side, hold one Status line that matches the
  * manifest (unpublished while private, a release candidate for an `-rc`
- * version), show
- * code that only uses what `examples/embed` uses, say the package is ESM
+ * version), show code that only uses what `examples/embed` uses, say the package is ESM
  * only, link to the licence, the contribution guide and the changelog, and
  * link to the repository only by absolute URL, because a relative link means
  * nothing on npm.
@@ -83,7 +82,9 @@ describe.each(SDK_PACKAGES)("the README of @mapcairn/%s", (name) => {
     expect(lines).toHaveLength(INSTALL_VERBS.length);
     INSTALL_VERBS.forEach((verb, index) => {
       expect(lines[index]).toMatch(
-        new RegExp(`^${verb} ${packageName}( @mapcairn/[a-z]+)*$`),
+        new RegExp(
+          `^${verb} ${packageName}(@next)?( @mapcairn/[a-z]+(@next)?)*$`,
+        ),
       );
     });
   });

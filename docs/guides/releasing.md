@@ -82,7 +82,7 @@ Inputs and pull request text reach scripts only through `env`, and `verifyReleas
 
 The `release` skill is the procedure: plan, notes, apply, check, rehearse, open the Release pull request, then watch the run after the merge and run the post-release check. The pull request is titled `chore(release): v<version>`, carries the `release` label, and holds the notes as they will appear, the readiness report and a go/no-go list. The two decisions that are the maintainer's are to **merge** it and to **approve** the four staged packages on npmjs.com (avatar menu, Packages, each package's "Staged Packages" tab, or `npm stage approve <stage-id>`), with two-factor authentication. Leaving them unapproved makes a GitHub-only release.
 
-`"private": true` stays on the four manifests until the `rc.1` Release pull request, which removes it and changes each package README's `**Status:**` line in the same pull request. `npm run release:check` reports the flag as expected at `0.0.0` and as a blocker for a prepared release.
+The four manifests had `"private": true` until the `rc.1` Release pull request, which removed it and changed each package README's `**Status:**` line in the same pull request. From `rc.1` on, `npm run release:check` reports a `private` flag on an SDK package as a blocker.
 
 ## The public API
 
