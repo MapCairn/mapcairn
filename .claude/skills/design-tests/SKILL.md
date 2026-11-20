@@ -41,6 +41,8 @@ jsdom has no layout, no real focus order across the page and no map canvas, so a
 
 A build-output test runs in CI only where a step runs it. Before a test depends on CI or on a file another step writes, read the job in `.github/workflows/` and check the order: on #481 a rule keyed on `CI` failed the build job, because the coverage run, where `CI` is already set, comes before the build. Name the step that runs the test in the plan.
 
+A check that is itself the test (a release script leg, a lint script, a CI step) is unit-tested in its pure helpers, and its own failure path is shown once by hand: break its input, see the named failure, restore, and record it in the pull request, as #481 did with a renamed function in a copy of the built chunk. A leg that skips when its tool is missing is not a pass: say where a skip is a warning and where it must fail.
+
 ## 4. Substitutes
 
 - Unit and component tests use the fakes in `packages/core/src/fakes`, not a `vi.mock` of a module the project owns. Add to a fake (and its own test) when it lacks a behaviour you need.
@@ -61,6 +63,7 @@ For each test, write the wrong implementation it rejects. If you cannot name one
 - Weights and factors: a case where dropping one (an alpha, a scale, a unit factor) changes the result.
 - Branches: one case per branch that only that branch passes. A test whose starting state equals the fallback's result cannot tell the two apart: on #449 focus started on the map region, which was also where the fallback sent it.
 - Ordering: a case where swapping two steps changes the output.
+- Source: where the same result could come from somewhere else (a registry copy instead of the packed tarball, a cached file, a default), check where it came from.
 - "Does nothing" cases are paired with a positive control through the same helpers, so a helper that never fires the event fails the pair (#447).
 - Accessibility: run `axeViolations` (`e2e/support/a11y.ts`) while the state under test is on screen, not after it has gone (#449). Name the keyboard route and the announcement each flow is tested for.
 - Hostile input, for anything that parses text from outside: empty, whitespace, wrong case, extra or missing arguments, out-of-range numbers, `NaN` and infinities, very long input, objects of the wrong shape or that throw when read. Valid input written every way the format allows (spaces or none, percentages, legacy and modern syntax) is hostile input too: #463 misread valid CSS.
@@ -68,7 +71,7 @@ For each test, write the wrong implementation it rejects. If you cannot name one
 
 ## 7. The failing-first test
 
-Pick the one test that shows the issue is real. Say the command that runs it (`npx --no-install vitest run <file>`, or `npm run test:e2e -w @mapcairn/web -- <spec>`) and the failure you expect: an assertion naming the wrong value, not an import error or a missing export. For a refactor with no change in behaviour, the failing-first test is replaced by the existing tests passing before and after; say which.
+Pick the one test that shows the issue is real. Say the command that runs it (`npx --no-install vitest run src/<file>` in the package folder, or `npm run test:e2e -w @mapcairn/web -- <spec>`) and the failure you expect: an assertion naming the wrong value. A test of a new export fails first on the missing export; add a stub that returns a wrong value and see the assertion fail too, so the test is known to check something. For a refactor with no change in behaviour, the failing-first test is replaced by the existing tests passing before and after; say which.
 
 ## 8. Output
 

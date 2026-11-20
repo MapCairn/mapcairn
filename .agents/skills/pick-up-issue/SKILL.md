@@ -48,7 +48,7 @@ Several issues at once, or an agent beside you, means a separate worktree for ea
 
 ## 4. Build it, test first, with its documents
 
-1. Write a failing behavioural test, run it, and see it fail for the intended reason. Implement the smallest change that passes. Do not weaken assertions or exclude code from coverage.
+1. Write a failing behavioural test, run it, and see it fail for the intended reason (`design-tests` chooses which tests, at which level). Implement the smallest change that passes. Do not weaken assertions or exclude code from coverage.
 2. Follow the principles and conventions in `AGENTS.md` (`npm run licence:write` adds the SPDX header). Add no dependency without need; if you must, follow its dependency rules.
 3. Keep to the task. Anything unrelated that you notice becomes its own issue (`create-issue` skill). A delegated agent lists it under **Issues to file** in its report instead, and its caller files it.
 4. Tick the issue's task list as steps land: start from the current body (`node scripts/agents/issue-body.mjs <n> <file>`, which saves the body exactly as GitHub holds it, so you edit the file in place and never retype the body; do not use a shell `>`, which writes UTF-16 in Windows PowerShell 5.1). Choose `<file>` outside the repository, in your tool's scratch or temporary folder, so the body is never committed; `node -p "require('node:os').tmpdir()"` prints a temporary folder on every system. The script refuses to overwrite an existing file unless you add `--force`. Change only the boxes, and save it with `gh issue edit <n> --repo MapCairn/mapcairn --body-file <file>`. Without triage rights, post the status as a comment or in the pull request description and leave ticking, closing and labels to the maintainer.
