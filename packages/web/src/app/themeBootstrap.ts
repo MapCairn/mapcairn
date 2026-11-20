@@ -12,7 +12,9 @@ import { OFFERED_LANGUAGES } from "../i18n/hostLanguages";
  * @remarks Its SHA-256 is allowed by the content security policy in
  *   `public/_headers` and `constants/securityHeaders.ts`.
  *   `inlineScripts.test.ts` hashes this exact string and checks both files,
- *   so any change here fails until the hash is updated in both.
+ *   so any change here fails until the hash is updated in both. The script is
+ *   made from the text of core functions, which the bundler can rewrite, so
+ *   `inlineScriptsBuild.test.ts` also checks the pages the built bundle renders.
  */
 export const THEME_BOOTSTRAP_SCRIPT =
   buildThemeBootstrapScript(OFFERED_LANGUAGES);

@@ -66,8 +66,11 @@ jobs:
       - name: Check the API reports
         run: npm run api:check -- --verbose
       # The coverage run above comes before the build, so the tests that read
-      # the build output skip there. Run them here, against it.
-      - run: npx --no-install vitest run packages/web/src/workerBundle.test.ts packages/web/src/deployConfig.test.ts
+      # the build output skip there. Run them here, against it. The variable
+      # makes inlineScriptsBuild.test.ts fail, not skip, if the output is missing.
+      - run: npx --no-install vitest run packages/web/src/workerBundle.test.ts packages/web/src/deployConfig.test.ts packages/web/src/inlineScriptsBuild.test.ts
+        env:
+          MAPCAIRN_REQUIRE_BUILD_OUTPUT: "1"
 
   # Its own job, so a registry outage or a package that publishes without a
   # signature cannot fail the required `build` check. Nothing depends on it.
