@@ -60,6 +60,45 @@ describe("scanLines", () => {
     expect(lines[4].number).toBe(5);
   });
 
+  it("reads ATX headings with up to three spaces of indent and setext headings", () => {
+    const headings = scanLines(
+      "# A\n   ## B ##\n    ### C\nD\n===\nE\n---\n- F\n---\n```\n# G\n```",
+    ).map((line: { heading: object | null }) => line.heading);
+    expect(headings).toEqual([
+      { level: 1, title: "A", form: "atx" },
+      { level: 2, title: "B", form: "indented" },
+      null,
+      { level: 1, title: "D", form: "setext" },
+      null,
+      { level: 2, title: "E", form: "setext" },
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+    ]);
+  });
+
+  it("takes code spans out of the prose, unless a backtick has no partner", () => {
+    const lines = scanLines("a `b` c\n\nd ` e\nf ` `g`\n");
+    expect(lines.map((line: { prose: string }) => line.prose)).toEqual([
+      "a   c",
+      "",
+      "d ` e",
+      "f ` `g`",
+      "",
+    ]);
+  });
+
+  it("marks a fence that is never closed, and ignores a backtick fence with a backtick in its info", () => {
+    const [open, inside] = scanLines("```a\nx\n```b`c\ny");
+    expect([open.unclosed, inside.fenced]).toEqual([true, true]);
+    expect(scanLines("```\nx\n```\ny")[0].unclosed).toBe(false);
+    expect(scanLines("```a`b\ny")[1].fenced).toBe(false);
+    expect(scanLines("~~~\ny")[0].unclosed).toBe(true);
+  });
+
   it("does not close a fence on a different character or a shorter run", () => {
     const lines = scanLines("```\nx\n~~~\n``\ny");
     expect(lines.every((line: { fenced: boolean }) => line.fenced)).toBe(true);
