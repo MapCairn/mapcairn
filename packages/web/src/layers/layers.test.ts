@@ -8,7 +8,10 @@ import {
   decodeDetail,
   decodeFeed,
   defaultControlValues,
+  detailResponseLimit,
+  EN_GB_CATALOGUE,
   FakeMessageCatalogue,
+  feedResponseLimit,
   feedUrl,
   type IdentifiableLayerDefinition,
   type IdentifyTarget,
@@ -40,6 +43,27 @@ const ATTRIBUTIONS = readFileSync(
   resolve(here, "../../../../ATTRIBUTIONS.md"),
   "utf8",
 );
+
+/**
+ * How many times the largest documented size a layer's response limit must
+ * be, so a feed that grows a little still loads.
+ */
+const RESPONSE_LIMIT_MARGIN = 4;
+
+/**
+ * The largest size, in bytes, an English `dataCost` text states, such as
+ * "about 30 KB, up to 220 KB for a week" (220 KB). The text must be a
+ * message key whose English reads that way, so the test fails, rather than
+ * passes, when a cost is worded in a way this does not understand.
+ */
+function largestDocumentedBytes(dataCost: unknown): number {
+  const text = EN_GB_CATALOGUE[dataCost as keyof typeof EN_GB_CATALOGUE];
+  const sizes = [...String(text).matchAll(/([\d.]+) (KB|MB)/g)].map(
+    ([, amount, unit]) => Number(amount) * (unit === "MB" ? 1_000_000 : 1000),
+  );
+  expect(sizes.length, `no size in "${text}"`).toBeGreaterThan(0);
+  return Math.max(...sizes);
+}
 
 /** What the fixture manifest says about one feed layer. */
 interface FixtureEntry {
@@ -306,6 +330,19 @@ describe("the host's layer definitions", () => {
         expect(count(() => decodeFeed(definition, raw, LAYER_DECODERS))).toBe(
           entry?.features,
         );
+      });
+
+      it("reads its documented data cost with room to spare under its response limit", () => {
+        const limit = feedResponseLimit(definition);
+        expect(limit).toBeGreaterThanOrEqual(
+          RESPONSE_LIMIT_MARGIN * largestDocumentedBytes(definition.dataCost),
+        );
+        if (definition.detail) {
+          expect(detailResponseLimit(definition)).toBeGreaterThanOrEqual(
+            RESPONSE_LIMIT_MARGIN *
+              largestDocumentedBytes(definition.detail.dataCost),
+          );
+        }
       });
 
       if (definition.detail) {

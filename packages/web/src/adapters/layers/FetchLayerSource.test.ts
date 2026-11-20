@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
 import {
+  DEFAULT_MAX_RESPONSE_BYTES,
+  type DetailSource,
   type IdentifiableLayerDefinition,
   type IdentifyTarget,
   identifyUrl,
@@ -97,6 +99,65 @@ function pointsAnswer(
   );
 }
 
+const textEncoder = new TextEncoder();
+
+/**
+ * A GeoJSON answer of exactly `bytes` bytes holding `feature`, padded with a
+ * property, and streamed in chunks with no `Content-Length`, as a provider
+ * that does not say how much it will send.
+ */
+function streamedAnswerOfBytes(feature: object, bytes: number): Response {
+  const build = (filler: string) =>
+    JSON.stringify(
+      geojson([
+        {
+          ...feature,
+          properties: {
+            ...(feature as { properties?: object }).properties,
+            filler,
+          },
+        },
+      ]),
+    );
+  const empty = textEncoder.encode(build("")).byteLength;
+  const whole = textEncoder.encode(build("x".repeat(bytes - empty)));
+  const chunkBytes = 512;
+  let at = 0;
+  return new Response(
+    new ReadableStream<Uint8Array>({
+      pull(controller) {
+        if (at >= whole.byteLength) {
+          controller.close();
+          return;
+        }
+        controller.enqueue(whole.slice(at, at + chunkBytes));
+        at += chunkBytes;
+      },
+    }),
+    { status: 200 },
+  );
+}
+
+const contractPoint = {
+  type: "Feature",
+  id: "a",
+  geometry: { type: "Point", coordinates: [18.4, -33.9] },
+  properties: { title: "Alpha" },
+};
+
+const contractLine = {
+  type: "Feature",
+  id: "line",
+  geometry: {
+    type: "LineString",
+    coordinates: [
+      [0, 0],
+      [1, 1],
+    ],
+  },
+  properties: {},
+};
+
 /** What a failing `fetch` does for each kind of failure the contract asks for. */
 const failure = (kind: "network" | "invalid"): Reply =>
   kind === "network"
@@ -131,6 +192,14 @@ runLayerSourceContract("FetchLayerSource", () => {
               properties: {},
             },
           ]),
+        );
+      },
+      respondWithAnswerOfBytes: (kind, bytes) => {
+        net.replyWith(async () =>
+          streamedAnswerOfBytes(
+            kind === "feed" ? contractPoint : contractLine,
+            bytes,
+          ),
         );
       },
       failWith: (kind) => {
@@ -507,24 +576,158 @@ describe("FetchLayerSource identify", () => {
       controller.abort();
       await expect(asking).rejects.toMatchObject({ kind: "aborted" });
     });
+  });
+});
 
-    it("leaves a feed unbounded, as before", async () => {
-      const net = scriptedFetch();
-      const long = "x".repeat(MAX_IDENTIFY_RESPONSE_BYTES);
-      net.reply(
-        geojson([
-          {
-            ...found,
-            properties: { title: "Pit", kind: "keep", filler: long },
-          },
-        ]),
-      );
-      const features = await new FetchLayerSource({ fetch: net.fetch }).load({
-        definition: SAMPLE_FEED_LAYER,
-        controls: {},
-        now,
-      });
-      expect(features).toHaveLength(1);
+describe("FetchLayerSource, the size of a feed or detail answer", () => {
+  const now = Date.UTC(2026, 10, 9, 8);
+  const feedPoint = {
+    type: "Feature",
+    id: "a",
+    geometry: { type: "Point", coordinates: [18.4, -33.9] },
+    properties: { title: "a", kind: "keep" },
+  };
+  const loadFeed = (
+    net: ReturnType<typeof scriptedFetch>,
+    maxResponseBytes?: number,
+  ) =>
+    new FetchLayerSource({ fetch: net.fetch }).load({
+      definition:
+        maxResponseBytes === undefined
+          ? SAMPLE_FEED_LAYER
+          : {
+              ...SAMPLE_FEED_LAYER,
+              source: { ...SAMPLE_FEED_LAYER.source, maxResponseBytes },
+            },
+      controls: {},
+      now,
     });
+
+  it("reads a feed answer of exactly the default limit when the definition sets none", async () => {
+    const net = scriptedFetch();
+    net.replyWith(async () =>
+      streamedAnswerOfBytes(feedPoint, DEFAULT_MAX_RESPONSE_BYTES),
+    );
+    await expect(loadFeed(net)).resolves.toHaveLength(1);
+  });
+
+  it("stops reading a feed answer over the default limit that has no Content-Length", async () => {
+    const net = scriptedFetch();
+    let cancelled = false;
+    let sent = 0;
+    const chunk = textEncoder.encode(
+      "x".repeat(DEFAULT_MAX_RESPONSE_BYTES / 4),
+    );
+    const body = new ReadableStream<Uint8Array>({
+      pull(controller) {
+        sent += 1;
+        controller.enqueue(chunk);
+      },
+      cancel() {
+        cancelled = true;
+      },
+    });
+    net.replyWith(async () => new Response(body, { status: 200 }));
+    await expect(loadFeed(net)).rejects.toMatchObject({ kind: "invalid" });
+    expect(cancelled).toBe(true);
+    expect(sent).toBeLessThan(8);
+  });
+
+  it("refuses a feed answer whose Content-Length is over the limit, unread", async () => {
+    const net = scriptedFetch();
+    let cancelled = false;
+    const body = new ReadableStream<Uint8Array>({
+      pull(controller) {
+        controller.enqueue(textEncoder.encode("{}"));
+      },
+      cancel() {
+        cancelled = true;
+      },
+    });
+    net.replyWith(
+      async () =>
+        new Response(body, {
+          status: 200,
+          headers: { "content-length": String(DEFAULT_MAX_RESPONSE_BYTES + 1) },
+        }),
+    );
+    await expect(loadFeed(net)).rejects.toMatchObject({ kind: "invalid" });
+    expect(cancelled).toBe(true);
+  });
+
+  it("applies the limit the definition sets, lower or higher than the default", async () => {
+    const lower = scriptedFetch();
+    lower.replyWith(async () => streamedAnswerOfBytes(feedPoint, 4000));
+    await expect(loadFeed(lower, 3999)).rejects.toMatchObject({
+      kind: "invalid",
+    });
+    const higher = scriptedFetch();
+    higher.replyWith(async () =>
+      streamedAnswerOfBytes(feedPoint, DEFAULT_MAX_RESPONSE_BYTES + 1),
+    );
+    await expect(
+      loadFeed(higher, DEFAULT_MAX_RESPONSE_BYTES + 1),
+    ).resolves.toHaveLength(1);
+  });
+
+  it("says how large the refused answer was allowed to be", async () => {
+    const net = scriptedFetch();
+    net.replyWith(async () => streamedAnswerOfBytes(feedPoint, 4000));
+    await expect(loadFeed(net, 3999)).rejects.toMatchObject({
+      kind: "invalid",
+      message: "The response is larger than 3999 bytes.",
+    });
+  });
+
+  it("does not keep a refused answer, so a later load asks again", async () => {
+    const net = scriptedFetch();
+    net.replyWith(async () => streamedAnswerOfBytes(feedPoint, 4000));
+    const source = new FetchLayerSource({ fetch: net.fetch });
+    const definition = {
+      ...SAMPLE_FEED_LAYER,
+      source: { ...SAMPLE_FEED_LAYER.source, maxResponseBytes: 3999 },
+    };
+    await expect(
+      source.load({ definition, controls: {}, now }),
+    ).rejects.toMatchObject({ kind: "invalid" });
+    await expect(
+      source.load({ definition, controls: {}, now }),
+    ).rejects.toMatchObject({ kind: "invalid" });
+    expect(net.urls).toHaveLength(2);
+  });
+
+  it("applies the detail's own limit, and the default when it sets none", async () => {
+    const feature = {
+      id: "a",
+      geometry: { type: "Point" as const, coordinates: [0, 0] as const },
+      fields: { area: "https://alerts.test/g" },
+    };
+    const line = {
+      type: "Feature",
+      geometry: {
+        type: "LineString",
+        coordinates: [
+          [0, 0],
+          [1, 1],
+        ],
+      },
+      properties: {},
+    };
+    const limited = {
+      ...SAMPLE_ALERT_LAYER,
+      detail: {
+        ...(SAMPLE_ALERT_LAYER.detail as DetailSource),
+        maxResponseBytes: 3999,
+      },
+    };
+    const net = scriptedFetch();
+    net.replyWith(async () => streamedAnswerOfBytes(line, 4000));
+    const source = new FetchLayerSource({ fetch: net.fetch });
+    await expect(
+      source.loadDetail({ definition: limited, feature }),
+    ).rejects.toMatchObject({ kind: "invalid" });
+    await expect(
+      source.loadDetail({ definition: SAMPLE_ALERT_LAYER, feature }),
+    ).resolves.toHaveLength(1);
   });
 });

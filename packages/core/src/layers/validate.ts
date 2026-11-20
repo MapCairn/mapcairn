@@ -4,6 +4,7 @@ import { isIsoDate } from "./controls";
 import { MAX_MINUTES_AGO, MINUTES_PER_DAY, slotTime } from "./dateTime";
 import type { LayerDefinition } from "./definition";
 import { isCategoricalSlot } from "./palette";
+import { MAX_RESPONSE_BYTES_CEILING } from "./responseLimit";
 import { parseTemplate } from "./template";
 import { checkIdentify } from "./validateIdentify";
 import {
@@ -535,6 +536,27 @@ function checkList(
   );
 }
 
+/** A response limit, when a definition sets one, is a whole number of bytes up to the ceiling. */
+function checkResponseLimit(
+  problems: Problems,
+  block: Json,
+  path: string,
+): void {
+  const limit = block.maxResponseBytes;
+  if (
+    limit !== undefined &&
+    (typeof limit !== "number" ||
+      !Number.isInteger(limit) ||
+      limit < 1 ||
+      limit > MAX_RESPONSE_BYTES_CEILING)
+  ) {
+    problems.add(
+      `${path}.maxResponseBytes`,
+      `must be a whole number of bytes from 1 to ${MAX_RESPONSE_BYTES_CEILING}`,
+    );
+  }
+}
+
 function checkDetail(
   problems: Problems,
   detail: unknown,
@@ -561,6 +583,7 @@ function checkDetail(
   checkColourSlot(problems, detail.colour, "detail.colour");
   problems.definitionText(detail.label, "detail.label");
   problems.definitionText(detail.dataCost, "detail.dataCost");
+  checkResponseLimit(problems, detail, "detail");
 }
 
 /** Checks a feed or query source, and returns the decoded field names. */
@@ -577,6 +600,7 @@ function checkFeedSource(
   }
   checkDecoder(problems, source.decoder, "source.decoder", options);
   const fields = checkFields(problems, source.fields, "source.fields");
+  checkResponseLimit(problems, source, "source");
   const { cacheSeconds } = source;
   if (
     cacheSeconds !== undefined &&

@@ -6,12 +6,14 @@ import {
   SAMPLE_FEED_LAYER,
   SAMPLE_IDENTIFY_LAYER,
   SAMPLE_LAYERS,
+  SAMPLE_QUERY_LAYER,
   SAMPLE_TILE_LAYER,
   SAMPLE_TIME_LAYER,
   SAMPLE_VECTOR_LAYER,
 } from "../fakes/layerFixtures";
 import { createDecoderRegistry } from "./decoders";
 import { createFormatterRegistry } from "./formatters";
+import { MAX_RESPONSE_BYTES_CEILING } from "./responseLimit";
 import { assertValidDefinitions, validateLayerDefinition } from "./validate";
 
 const options = {
@@ -1257,6 +1259,46 @@ describe("validateLayerDefinition", () => {
     change(definition);
     const found = problems(definition);
     expect(found.some((problem) => problem.startsWith(expected))).toBe(true);
+  });
+
+  describe("maxResponseBytes", () => {
+    const withLimit = (
+      base: unknown,
+      path: "source" | "detail",
+      value: unknown,
+    ) => {
+      const definition = copy(base);
+      (definition[path] as Json).maxResponseBytes = value;
+      return problems(definition);
+    };
+
+    it.each([
+      ["a feed source", SAMPLE_FEED_LAYER, "source"],
+      ["a query source", SAMPLE_QUERY_LAYER, "source"],
+      ["a detail source", SAMPLE_ALERT_LAYER, "detail"],
+    ] as const)("accepts a limit in %s", (_name, base, path) => {
+      expect(withLimit(base, path, 2 * 1024 * 1024)).toEqual([]);
+      expect(withLimit(base, path, MAX_RESPONSE_BYTES_CEILING)).toEqual([]);
+    });
+
+    it.each([
+      ["zero", 0],
+      ["negative", -1],
+      ["fractional", 1.5],
+      ["a string", "4194304"],
+      ["over the ceiling", MAX_RESPONSE_BYTES_CEILING + 1],
+    ])("rejects a limit that is %s", (_name, value) => {
+      expect(
+        withLimit(SAMPLE_FEED_LAYER, "source", value).some((problem) =>
+          problem.startsWith("source.maxResponseBytes:"),
+        ),
+      ).toBe(true);
+      expect(
+        withLimit(SAMPLE_ALERT_LAYER, "detail", value).some((problem) =>
+          problem.startsWith("detail.maxResponseBytes:"),
+        ),
+      ).toBe(true);
+    });
   });
 
   it("accepts colour categories without shapes when the card names the category", () => {

@@ -47,6 +47,26 @@ runLayerSourceContract("FakeLayerSource", () => {
           },
         ]);
       },
+      respondWithAnswerOfBytes: (kind, bytes) => {
+        source.setAnswerBytes(CONTRACT_LAYER.id, bytes);
+        if (kind === "feed") {
+          source.setFeatures(CONTRACT_LAYER.id, [samplePoint("a")]);
+        } else {
+          source.setDetail(CONTRACT_LAYER.id, [
+            {
+              id: "line",
+              geometry: {
+                type: "LineString",
+                coordinates: [
+                  [0, 0],
+                  [1, 1],
+                ],
+              },
+              fields: {},
+            },
+          ]);
+        }
+      },
       failWith: (kind) => {
         source.fail(CONTRACT_LAYER.id, kind);
       },

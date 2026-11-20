@@ -13,6 +13,12 @@ import type {
 } from "../ports/layers";
 
 /**
+ * The most bytes of an answer {@link CONTRACT_LAYER} lets its source and its
+ * detail read, small so a test can send more than that cheaply.
+ */
+export const CONTRACT_RESPONSE_LIMIT_BYTES = 2048;
+
+/**
  * The feed layer every layer source is checked with: the `geojson` decoder,
  * an id and a title field, and an on-demand detail on its own origin.
  */
@@ -29,6 +35,7 @@ export const CONTRACT_LAYER: FeedLayerDefinition = {
     url: "https://contract.test/points.json",
     decoder: "geojson",
     fields: { id: "id", title: "properties.title", area: "properties.area" },
+    maxResponseBytes: CONTRACT_RESPONSE_LIMIT_BYTES,
   },
   style: { colour: { kind: "fixed", colour: "blue", label: "Point" } },
   card: { title: "{title}", lines: [] },
@@ -43,6 +50,7 @@ export const CONTRACT_LAYER: FeedLayerDefinition = {
     colour: "vermillion",
     label: "Show area",
     dataCost: "about 1 KB",
+    maxResponseBytes: CONTRACT_RESPONSE_LIMIT_BYTES,
   },
   emptyText: "No contract points.",
 };
@@ -111,6 +119,14 @@ export interface LayerSourceControls {
     from: readonly [number, number],
     to: readonly [number, number],
   ): void;
+  /**
+   * Makes the next load, or the next detail load, of {@link CONTRACT_LAYER}
+   * read an answer of exactly this many bytes that is otherwise valid, as
+   * one a provider streams with no `Content-Length`. The answer decodes to
+   * the same points (or the same detail line) as the other `respondWith`
+   * controls.
+   */
+  respondWithAnswerOfBytes(kind: "feed" | "detail", bytes: number): void;
   /** Makes the next loads fail the way a source fails for that kind. */
   failWith(kind: "network" | "invalid"): void;
   /** Makes the next loads wait until the returned function is called. */
@@ -259,6 +275,53 @@ export function runLayerSourceContract(
         }),
       );
       expect(error.kind).toBe("invalid");
+    });
+
+    describe("the size of an answer", () => {
+      const detailRequest = {
+        definition: CONTRACT_LAYER,
+        feature: feature("https://contract.test/area?id=a"),
+      };
+
+      it("loads a feed answer of exactly the definition's limit", async () => {
+        const { source, controls } = create();
+        controls.respondWithAnswerOfBytes(
+          "feed",
+          CONTRACT_RESPONSE_LIMIT_BYTES,
+        );
+        const features = await source.load(request());
+        expect(features.map((f) => f.id)).toEqual(["a"]);
+      });
+
+      it("refuses a feed answer one byte over the limit as invalid", async () => {
+        const { source, controls } = create();
+        controls.respondWithAnswerOfBytes(
+          "feed",
+          CONTRACT_RESPONSE_LIMIT_BYTES + 1,
+        );
+        expect((await rejection(source.load(request()))).kind).toBe("invalid");
+      });
+
+      it("loads a detail answer of exactly the definition's limit", async () => {
+        const { source, controls } = create();
+        controls.respondWithAnswerOfBytes(
+          "detail",
+          CONTRACT_RESPONSE_LIMIT_BYTES,
+        );
+        const shapes = await source.loadDetail(detailRequest);
+        expect(shapes).toHaveLength(1);
+      });
+
+      it("refuses a detail answer one byte over the limit as invalid", async () => {
+        const { source, controls } = create();
+        controls.respondWithAnswerOfBytes(
+          "detail",
+          CONTRACT_RESPONSE_LIMIT_BYTES + 1,
+        );
+        expect((await rejection(source.loadDetail(detailRequest))).kind).toBe(
+          "invalid",
+        );
+      });
     });
 
     describe("identify", () => {

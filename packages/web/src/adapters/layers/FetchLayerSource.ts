@@ -6,7 +6,9 @@ import {
   decodeDetail,
   decodeFeed,
   decodeIdentify,
+  detailResponseLimit,
   detailUrl,
+  feedResponseLimit,
   feedUrl,
   identifyRequestUrl,
   type LayerDetailRequest,
@@ -20,7 +22,7 @@ import {
   SharedResponseCache,
 } from "@mapcairn/core";
 import { defaultFetch } from "../shared/fetch";
-import { NO_BYTE_LIMIT, readJsonWithin } from "./readJson";
+import { readJsonWithin } from "./readJson";
 
 /**
  * The most bytes of an identify answer that are read: 1 MiB. A service
@@ -55,7 +57,10 @@ export interface FetchLayerSourceOptions {
  * template, fetches it, and decodes it with the decoder the definition names.
  * Nothing here knows a provider.
  *
- * @remarks Requests send no cookies and no referrer. Feed responses are kept
+ * @remarks Requests send no cookies and no referrer. A feed, query or detail
+ *   answer is read at most `maxResponseBytes` of its definition, or
+ *   {@link DEFAULT_MAX_RESPONSE_BYTES}, and a larger one is refused as
+ *   `invalid`. Feed responses are kept
  *   in a {@link SharedResponseCache} for their `Cache-Control` `max-age`, and
  *   a request in flight is shared, so several layers split from one feed cost
  *   one request. A detail URL comes from the provider's data, so it is
@@ -88,6 +93,7 @@ export class FetchLayerSource implements LayerSource {
     const raw = await this.#get(
       feedUrl(definition, controls, now, area),
       signal,
+      feedResponseLimit(definition),
       cacheSeconds,
     );
     return decodeFeed(definition, raw, this.#decoders);
@@ -100,7 +106,11 @@ export class FetchLayerSource implements LayerSource {
     if (url === null) {
       throw new LayerError("invalid", "The detail URL is not allowed.");
     }
-    const raw = await this.#get(url, request.signal);
+    const raw = await this.#get(
+      url,
+      request.signal,
+      detailResponseLimit(request.definition),
+    );
     return decodeDetail(request.definition, raw, this.#decoders);
   }
 
@@ -116,10 +126,14 @@ export class FetchLayerSource implements LayerSource {
     return decodeIdentify(definition, value, this.#decoders, at);
   }
 
-  /** A feed or detail answer, kept and shared as the cache decides. `minimumSeconds` is a floor under the provider's `max-age`. */
+  /**
+   * A feed or detail answer of at most `maxBytes`, kept and shared as the
+   * cache decides. `minimumSeconds` is a floor under the provider's `max-age`.
+   */
   #get(
     url: string,
     signal: AbortSignal | undefined,
+    maxBytes: number,
     minimumSeconds = 0,
   ): Promise<unknown> {
     return this.#cache.load(
@@ -128,7 +142,7 @@ export class FetchLayerSource implements LayerSource {
         const { value, cacheControl } = await this.#fetchJson(
           url,
           requestSignal,
-          NO_BYTE_LIMIT,
+          maxBytes,
         );
         return {
           value,

@@ -2,9 +2,6 @@
 // Copyright MapCairn contributors
 import { LayerError } from "@mapcairn/core";
 
-/** The bound that never refuses: for an answer the caller does not limit. */
-export const NO_BYTE_LIMIT = Number.POSITIVE_INFINITY;
-
 function tooLarge(maxBytes: number): LayerError {
   return new LayerError(
     "invalid",

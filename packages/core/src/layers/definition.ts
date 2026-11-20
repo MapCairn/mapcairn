@@ -199,6 +199,13 @@ export interface FeedSource {
    * from one feed then cost one request. Nothing is stored beyond the page.
    */
   readonly cacheSeconds?: number;
+  /**
+   * The most bytes of an answer that are read, at most 16 MiB. An answer
+   * past it is refused as `invalid` while it is read. Defaults to
+   * `DEFAULT_MAX_RESPONSE_BYTES` (4 MiB); set it only for a provider whose
+   * answer is larger by design.
+   */
+  readonly maxResponseBytes?: number;
 }
 
 /** Raster tiles drawn as an overlay, such as WMTS imagery or a WMS map. */
@@ -243,6 +250,13 @@ export interface QuerySource {
   readonly maxFeatures: number;
   /** Nothing is requested below this normalised zoom; the layer says to zoom in. */
   readonly minzoom?: number;
+  /**
+   * The most bytes of an answer that are read, at most 16 MiB. An answer
+   * past it is refused as `invalid` while it is read. Defaults to
+   * `DEFAULT_MAX_RESPONSE_BYTES` (4 MiB); set it only for a provider whose
+   * answer is larger by design.
+   */
+  readonly maxResponseBytes?: number;
 }
 
 /**
@@ -465,6 +479,13 @@ export interface DetailSource {
   readonly label: DefinitionText;
   /** Roughly how much one request costs, such as `about 300 KB`. */
   readonly dataCost: DefinitionText;
+  /**
+   * The most bytes of an answer that are read, at most 16 MiB. An answer
+   * past it is refused as `invalid` while it is read. Defaults to
+   * `DEFAULT_MAX_RESPONSE_BYTES` (4 MiB); set it only for a provider whose
+   * answer is larger by design.
+   */
+  readonly maxResponseBytes?: number;
 }
 
 /** A sort option for the list of loaded features. */
