@@ -1968,6 +1968,149 @@ describe("hardening of the write guard (#534)", () => {
     });
   });
 
+  describe("round three of the security review of #558", () => {
+    it.each([
+      "echo $\\\n'\\' '; git push; #'",
+      'echo $\\\n"a"; git push',
+      "echo a \\\n b",
+      "git status \\\n && touch /x",
+    ])("refuses a backslash-newline, which hides a quote: %s", (command) => {
+      const decision = bash(command);
+      expect(decision.allow).toBe(false);
+      expect(decision.reason).toMatch(/backslash/);
+    });
+
+    it("allows a backslash-newline inside single quotes", () => {
+      expect(bash("echo 'a\\\nb'").allow).toBe(true);
+    });
+
+    it.each([
+      "export $n=1",
+      "export $n",
+      "declare BAR$z=2",
+      "export {BAZ,Q}=3",
+      "export GIT_CONFIG_COUNT$x=1; git diff",
+      "export GIT_CONFIG_COUNT$x=1 git diff",
+      "export *=1",
+      "export A*=1",
+      "local ${n}=1",
+      'export "$n"=1',
+      "typeset FOO.BAR=1",
+      "readonly a-b=1",
+      "unset {GH,X}_TOKEN",
+      'unset "$n"',
+      "unset ${n}",
+      "unset $n",
+      "export -n $n",
+      "make $n=1 all",
+      "make BAR$z=2",
+      "make {A,B}=1",
+    ])("refuses a name that is not plain: %s", (command) => {
+      const decision = bash(command);
+      expect(decision.allow).toBe(false);
+      expect(decision.reason).toMatch(/plain name|variable/);
+    });
+
+    it.each([
+      "export FOO=1",
+      "export FOO_BAR2=x",
+      "export a[0]=1",
+      "export",
+      "export -p",
+      "declare -p",
+      "declare -x FOO=1",
+      "local x=1",
+      "readonly FOO",
+      "unset FOO",
+      "unset -v FOO_2",
+      "make all",
+      "make -j4 all",
+      "make FOO=bar all",
+      "make build/out.o",
+      "make -C packages/core test",
+    ])("allows %s", (command) => {
+      expect(bash(command).allow).toBe(true);
+    });
+
+    it.each([
+      "unset -m 'GH_*'",
+      "unset -vm GH_TOKEN",
+      "unset -m 'X*'",
+      "declare +x GH_TOKEN",
+      "typeset +x GH_TOKEN",
+      "export +x GH_TOKEN",
+      "local GH_TOKEN",
+      "typeset GH_TOKEN",
+      "declare GH_TOKEN",
+      "readonly GH_TOKEN",
+      "local gh_token",
+      "unsetenv GH_TOKEN",
+      "setenv X y",
+    ])(
+      "refuses a form that drops or shadows the GitHub token: %s",
+      (command) => {
+        expect(bash(command).allow).toBe(false);
+      },
+    );
+
+    it.each([
+      'echo "$(git push)"',
+      'echo "`git push`"',
+      'echo "$(touch /x)"',
+      'echo "a $(touch /x) b"',
+      'echo "${HOME}"',
+      'echo "${x:-$(touch /x)}"',
+      'echo "$((1+1))"',
+      'echo "$[1]"',
+      'git commit -m "$(touch /x)"',
+    ])("refuses a substitution inside double quotes: %s", (command) => {
+      const decision = bash(command);
+      expect(decision.allow).toBe(false);
+      expect(decision.reason).toMatch(/double quotes/);
+    });
+
+    it.each([
+      'echo "$HOME"',
+      'echo "$a and $b"',
+      'echo "\\$(touch /x)"',
+      "echo '$(touch /x)'",
+      "echo '\"$(x)\"'",
+      'echo "cost: $"',
+      'grep -rn "PATH=" .github',
+    ])("allows %s", (command) => {
+      expect(bash(command).allow).toBe(true);
+    });
+
+    it.each([
+      "rg '}' file",
+      'rg "}" file',
+      "grep -n '}' file",
+      "grep -n '}' file | head",
+      "rg '{' file",
+      "rg ']]' file",
+      "rg '[[' file",
+      "git grep -n '}' abc123 -- .github",
+    ])("allows a brace inside quotes, which is a word: %s", (command) => {
+      expect(bash(command).allow).toBe(true);
+    });
+
+    it.each([
+      "if { true } touch /x",
+      "{ true } always { touch /x }",
+      "if [[ -n x ]] touch /x ]]",
+      "{ true } touch /x",
+    ])(
+      "still refuses a bare block end that is followed by words: %s",
+      (command) => {
+        expect(bash(command).allow).toBe(false);
+      },
+    );
+
+    it("keeps refusing ANSI-C quoting, so grep $'\\t' needs a literal tab", () => {
+      expect(bash("grep $'\\t' file").allow).toBe(false);
+    });
+  });
+
   describe("commands the reviewers use", () => {
     it.each([
       "gh pr diff 534",

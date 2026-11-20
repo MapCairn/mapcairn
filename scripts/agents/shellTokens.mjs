@@ -16,7 +16,7 @@
 /**
  * One shell token: a word, or a redirection operator such as `>`, `2>&`.
  *
- * @typedef {{ type: "word", text: string } | { type: "redirect", op: string }} Token
+ * @typedef {{ type: "word", text: string, quoted: boolean } | { type: "redirect", op: string }} Token
  */
 
 /**
@@ -36,6 +36,14 @@
  * @property {boolean} ansi Whether `$'` or `$"` appears outside quotes: bash and
  *   zsh read `\'` inside `$'...'`, so the end of the quoted text is not where
  *   this lexer would put it.
+ * @property {boolean} quoted Whether the word being read held a quote or a
+ *   backslash, so a `}` or `]]` in it is text and not a keyword.
+ * @property {boolean} continued Whether a backslash before a newline was
+ *   seen outside quotes: the shell deletes it before it reads the rest, so it
+ *   can join a `$` to a quote.
+ * @property {boolean} substitution Whether a double-quoted string held a
+ *   command substitution, `${`, `$[` or a backtick, which the shell runs or
+ *   evaluates.
  * @property {boolean} inBacktick Whether the lexer is between two backticks.
  */
 
@@ -65,8 +73,9 @@ function append(lexer, text) {
 /** @param {Lexer} lexer */
 function endWord(lexer) {
   if (lexer.word !== null) {
-    lexer.tokens.push({ type: "word", text: lexer.word });
+    lexer.tokens.push({ type: "word", text: lexer.word, quoted: lexer.quoted });
     lexer.word = null;
+    lexer.quoted = false;
   }
 }
 
@@ -142,7 +151,9 @@ function backslash(lexer) {
     return false;
   }
   const next = peek(lexer, 1);
+  lexer.quoted = true;
   if (next === "\n") {
+    lexer.continued = true;
     lexer.index += 2;
   } else if (ESCAPABLE.test(next)) {
     append(lexer, next);
@@ -175,6 +186,7 @@ function singleQuote(lexer) {
   if (peek(lexer) !== "'") {
     return false;
   }
+  lexer.quoted = true;
   const end = lexer.text.indexOf("'", lexer.index + 1);
   const stop = end === -1 ? lexer.text.length : end;
   append(lexer, lexer.text.slice(lexer.index + 1, stop));
@@ -188,8 +200,13 @@ function doubleQuote(lexer) {
     return false;
   }
   append(lexer, "");
+  lexer.quoted = true;
   lexer.index += 1;
   while (lexer.index < lexer.text.length && peek(lexer) !== '"') {
+    lexer.substitution ||=
+      peek(lexer) === "`" ||
+      (peek(lexer) === "$" && /[([{]/.test(peek(lexer, 1)));
+    lexer.continued ||= peek(lexer) === "\\" && peek(lexer, 1) === "\n";
     const escaped = peek(lexer) === "\\" && /["\\$`]/.test(peek(lexer, 1));
     append(lexer, escaped ? peek(lexer, 1) : peek(lexer));
     lexer.index += escaped ? 2 : 1;
@@ -343,7 +360,7 @@ const READERS = [
  * Splits a shell command into statements of words and redirections.
  *
  * @param {string} command
- * @returns {{ statements: Token[][], unterminated: boolean, expands: boolean, glued: boolean, ansi: boolean }}
+ * @returns {{ statements: Token[][], unterminated: boolean, expands: boolean, glued: boolean, ansi: boolean, continued: boolean, substitution: boolean }}
  *   `unterminated` is true when a here-document has no closing line, so the
  *   text after it cannot be told apart from its body. `expands` is true when
  *   an unquoted here-document body holds a command substitution. `glued` is
@@ -362,6 +379,9 @@ export function tokenize(command) {
     expands: false,
     glued: false,
     ansi: false,
+    quoted: false,
+    continued: false,
+    substitution: false,
     inBacktick: false,
   };
   while (lexer.index < lexer.text.length) {
@@ -377,5 +397,7 @@ export function tokenize(command) {
     expands: lexer.expands,
     glued: lexer.glued,
     ansi: lexer.ansi,
+    continued: lexer.continued,
+    substitution: lexer.substitution,
   };
 }

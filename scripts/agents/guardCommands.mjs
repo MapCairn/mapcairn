@@ -127,6 +127,8 @@ const UNREADABLE = [
   "coproc",
   "fish",
   "always",
+  "unsetenv",
+  "setenv",
   "repeat",
   "select",
   "foreach",
@@ -609,35 +611,14 @@ function checkShopt(args) {
 }
 
 /**
- * Decides on `unset`: dropping a `GH_*` variable (the limited token) lets `gh`
- * fall back to a stored login, and a subscript is evaluated as arithmetic.
+ * Decides on `unset -m`, which unsets every variable that matches a pattern.
  *
  * @param {string[]} args
  * @returns {string | undefined}
  */
 function checkUnset(args) {
-  const names = args
-    .filter((arg) => !arg.startsWith("-"))
-    .map((arg) => arg.replaceAll("\\", ""));
-  return names.some((name) => /^GH_/i.test(name) || name.includes("["))
-    ? "unset of a GH_* variable or of a name with a subscript is not allowed, because it drops the limited GitHub token or runs arithmetic"
-    : undefined;
-}
-
-/**
- * Decides on `export -n`, which removes a variable from the environment, for
- * the `GH_*` names `gh` reads.
- *
- * @param {string[]} args
- * @returns {string | undefined}
- */
-function checkExport(args) {
-  const removes = args.some((arg) => /^-[a-zA-Z]*n/.test(arg));
-  const names = args
-    .filter((arg) => !arg.startsWith("-"))
-    .map((arg) => arg.replaceAll("\\", ""));
-  return removes && names.some((name) => /^GH_/i.test(name))
-    ? "export -n of a GH_* variable drops the limited GitHub token, so a reviewer may not use it"
+  return args.some((arg) => /^-[a-zA-Z]*m/.test(arg))
+    ? "unset -m unsets every variable that matches a pattern, which can drop the limited GitHub token, so a reviewer may not use it"
     : undefined;
 }
 
@@ -660,7 +641,6 @@ const PROGRAMS = new Map([
   ["set", (args) => checkSet(args)],
   ["shopt", (args) => checkShopt(args)],
   ["unset", (args) => checkUnset(args)],
-  ["export", (args) => checkExport(args)],
   ["dd", (args, walk, program) => checkFileCommand(program, args, walk)],
 ]);
 
@@ -867,15 +847,18 @@ function checkRedirect(op, target, walk) {
  *
  * @param {Token[]} tokens
  * @param {Walk} walk
- * @returns {{ reason?: string, words: string[] }}
+ * @returns {{ reason?: string, words: string[], quoted: boolean[] }}
  */
 function readRedirects(tokens, walk) {
   /** @type {string[]} */
   const words = [];
+  /** @type {boolean[]} */
+  const quoted = [];
   for (let index = 0; index < tokens.length; index += 1) {
     const token = tokens[index];
     if (token?.type === "word") {
       words.push(token.text);
+      quoted.push(token.quoted);
     } else if (token?.type === "redirect" && token.op !== "<<") {
       const target = tokens[index + 1];
       index += 1;
@@ -884,11 +867,11 @@ function readRedirects(tokens, walk) {
         ? checkRedirect(token.op, target.text, walk)
         : undefined;
       if (reason !== undefined) {
-        return { reason, words };
+        return { reason, words, quoted };
       }
     }
   }
-  return { words };
+  return { words, quoted };
 }
 
 /**
@@ -909,26 +892,65 @@ function builtProgramProblem(word, platform) {
     : undefined;
 }
 
-/** A variable name with a subscript that is not a plain number. */
-const UNSAFE_SUBSCRIPT = /^[A-Za-z_][A-Za-z0-9_]*\[(?![0-9]+\])/;
-
 /**
  * Why a statement may hold a command the guard does not read. In zsh a command
  * may follow `]]` or a closing brace as a short form of `if`, and `always`
  * follows a block, so the first `]]` must be the last word and a `}` may not be
- * followed by more words.
+ * followed by more words. A quoted `}` or `]]` is text, not a keyword.
  *
  * @param {string[]} words
+ * @param {boolean[]} quoted Whether each word held a quote or a backslash.
  * @returns {string | undefined}
  */
-function hiddenCommandProblem(words) {
+function hiddenCommandProblem(words, quoted) {
   const last = words.length - 1;
-  if (words[0] === "[[" && words.indexOf("]]") !== last) {
+  const first = (/** @type {string} */ text) =>
+    words.findIndex((word, index) => word === text && !quoted[index]);
+  if (words[0] === "[[" && !quoted[0] && first("]]") !== last) {
     return "[[ is allowed only when its first ]] is its last word, because zsh runs a command written after it";
   }
-  return words.indexOf("}") !== -1 && words.indexOf("}") !== last
+  const brace = first("}");
+  return brace !== -1 && brace !== last
     ? "a } that is followed by more words can end a block that runs a command the guard does not read"
     : undefined;
+}
+
+/** A variable name, with at most a number as a subscript and `+` for append. */
+const PLAIN_NAME = /^[A-Za-z_][A-Za-z0-9_]*(?:\[[0-9]+\])?\+?$/;
+
+/** A variable name for `unset`, which takes no subscript. */
+const UNSET_NAME = /^[A-Za-z_][A-Za-z0-9_]*$/;
+
+/**
+ * Why the names an assigning builtin or `unset` is given cannot be read. A name
+ * that the shell builds (a variable, a glob, a brace list, a subscript that is
+ * arithmetic) can be any variable, so only plain names are allowed, and a
+ * `GH_*` name is never named without a value, which would drop or shadow the
+ * limited GitHub token. Backslashes are taken out first, as the shell does.
+ *
+ * @param {string} program
+ * @param {string[]} args
+ * @returns {string | undefined}
+ */
+function nameProblem(program, args) {
+  const unsets = program === "unset";
+  const operands = args
+    .map((text) => text.replaceAll("\\", ""))
+    .filter((text) =>
+      program === "make" || program === "gmake"
+        ? !text.startsWith("-") && text.includes("=")
+        : !/^[-+]/.test(text),
+    );
+  for (const operand of operands) {
+    const name = operand.split("=")[0] ?? "";
+    if (!(unsets ? UNSET_NAME : PLAIN_NAME).test(name)) {
+      return `the variable name ${name} is not a plain name (letters, digits and underscores, and for ${program} a number as a subscript at most), so the guard cannot tell which variable ${program} changes`;
+    }
+    if (/^GH_/i.test(name) && (unsets || !operand.includes("="))) {
+      return `${program} on ${name} without a value would drop or shadow the limited GitHub token, so a reviewer may not do it`;
+    }
+  }
+  return undefined;
 }
 
 /**
@@ -944,7 +966,9 @@ function checkStatement(tokens, walk) {
     return redirects.reason;
   }
   const { rest, reason, assignments } = unwrap(redirects.words);
-  const assigned = ASSIGNERS.has(programName(rest[0] ?? ""))
+  const name = programName(rest[0] ?? "");
+  const assigns = ASSIGNERS.has(name);
+  const assigned = assigns
     ? [
         ...assignments,
         ...rest.slice(1).map((text) => text.replaceAll("\\", "")),
@@ -954,17 +978,19 @@ function checkStatement(tokens, walk) {
   if (risky !== undefined) {
     return `the variable ${risky.split("=")[0]} changes what a command runs or which files it reads (git's repository, the home folder, the search path, a pager, the loader), so a reviewer may not set it`;
   }
-  const subscript = ASSIGNERS.has(programName(rest[0] ?? ""))
-    ? assigned.find((text) => UNSAFE_SUBSCRIPT.test(text))
-    : undefined;
-  if (subscript !== undefined) {
-    return `${subscript} has a subscript that is not a number, which the shell evaluates as arithmetic and can run a command`;
+  const unnamed =
+    assigns || name === "unset" ? nameProblem(name, rest.slice(1)) : undefined;
+  if (unnamed !== undefined) {
+    return unnamed;
   }
   const word = rest[0] ?? "";
   const program = programName(word);
   return (
     reason ??
-    hiddenCommandProblem(rest) ??
+    hiddenCommandProblem(
+      rest,
+      redirects.quoted.slice(redirects.words.length - rest.length),
+    ) ??
     builtProgramProblem(word, walk.context.platform) ??
     PROGRAMS.get(program)?.(rest.slice(1), walk, program)
   );
@@ -984,12 +1010,26 @@ export function checkCommand(command, walk) {
   if (command.length > MAX_COMMAND_LENGTH) {
     return `the command is too long to check (over ${MAX_COMMAND_LENGTH} characters)`;
   }
-  const { statements, unterminated, expands, glued, ansi } = tokenize(command);
+  const {
+    statements,
+    unterminated,
+    expands,
+    glued,
+    ansi,
+    continued,
+    substitution,
+  } = tokenize(command);
   if (unterminated) {
     return "a here-document is never closed, so what follows it cannot be told from its body";
   }
   if (expands) {
     return "an unquoted here-document body holds a command substitution, which the shell runs; quote the delimiter ('EOF')";
+  }
+  if (continued) {
+    return "a backslash before a newline is not read by the guard, because the shell deletes it and can join the text around it into a quote or a name; write the command on one line";
+  }
+  if (substitution) {
+    return "a command substitution, a braced variable or an arithmetic bracket inside double quotes is run by the shell but not read by the guard; use single quotes, or run the command on its own";
   }
   if (ansi) {
     return "$'...' and $\"...\" quoting is not read by the guard, because the shell ends it at a different quote; use plain quotes";
