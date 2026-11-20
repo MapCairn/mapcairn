@@ -18,6 +18,7 @@ export * from "./ports";
 export * from "./scale";
 export * from "./sheet";
 export * from "./spatial/boundsAroundPoint";
+export * from "./spatial/boundsOfPaths";
 export * from "./spatial/boundsOfPoints";
 export * from "./spatial/lookupPosition";
 export * from "./spatial/measurement";

@@ -272,7 +272,7 @@ A gap is filed only when it is real, small enough to pick up (or says it needs a
 - **Distance matrices, closest facility and stop-order optimisation.** They belong to a routing service's own API. The routing port could grow, but nothing needs it yet.
 - **An installable, offline-capable app.** A service worker belongs to the host, and the reference site would need a decision about what it stores ([#196] is the research for tiles).
 - **Wrappers for other UI frameworks.** Wait until the mount function in [#44] settles, because a wrapper is a thin layer over it.
-- **Shapes crossing the antimeridian.** A documented limit: the helpers refuse such a shape and ask for it to be split. Fitting the map to points or a feature on both sides of the line is not limited: `boundsOfPoints` returns the short box, with `east` past 180.
+- **Shapes crossing the antimeridian.** A documented limit: the helpers refuse such a shape and ask for it to be split. Fitting the map to points or a feature on both sides of the line is not limited: `boundsOfPoints` returns the short box, with `east` past 180, and `boundsOfPaths` (used for a polygon or line feature) also holds every edge taken the short way, so a shape wider than half the globe with few vertices is fitted on the side it covers, and a shape that covers every longitude gets the whole circle (-180 to 180).
 
 [#1]: https://github.com/MapCairn/mapcairn/issues/1
 [#4]: https://github.com/MapCairn/mapcairn/issues/4

@@ -16,7 +16,9 @@ import type { Bounds, LatLng } from "../ports/geometry";
  *   that does not cross the line keeps both edges inside [-180, 180]. Take the
  *   middle with `wrapLongitude((west + east) / 2)`. The engine's `fitBounds`
  *   accepts the unwrapped `east`. A set of points wider than half the globe
- *   with a wide gap in it may be boxed on the other side of the gap.
+ *   with a wide gap in it may be boxed on the other side of the gap, because
+ *   points say nothing about what lies between them. For a polygon or a line,
+ *   use {@link boundsOfPaths}, which also holds every edge.
  */
 export function boundsOfPoints(points: readonly LatLng[]): Bounds | undefined {
   const usable = points.filter(
