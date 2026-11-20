@@ -6,11 +6,7 @@ import { HOST_THEMES } from "../designGuide/hostThemes";
 import { loader } from "./design.host-theme";
 
 function request(name: string | undefined) {
-  return loader({
-    params: { name },
-    request: new Request("http://localhost/design/host-theme/x"),
-    context: {},
-  } as Parameters<typeof loader>[0]);
+  return loader({ params: { name } });
 }
 
 describe("/design/host-theme/:name route", () => {

@@ -15,7 +15,9 @@ import { HOST_THEMES } from "../designGuide/hostThemes";
  * belongs to; the guide's marker in a header lets `verifyNoTestSeam.mjs` see
  * it in a production build.
  */
-export function loader({ params }: LoaderFunctionArgs): Response {
+export function loader({
+  params,
+}: Pick<LoaderFunctionArgs, "params">): Response {
   const theme = Object.hasOwn(HOST_THEMES, params.name ?? "")
     ? HOST_THEMES[params.name ?? ""]
     : undefined;
