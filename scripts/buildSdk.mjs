@@ -6,17 +6,9 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { STAMP_FILE } from "./buildPackage.mjs";
 import { isEntryPoint } from "./entryPoint.mjs";
-import { SDK_PACKAGES } from "./sdkPackages.mjs";
+import { BUILT_SDK_PACKAGES } from "./sdkPackages.mjs";
 
 const REPO = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-
-/**
- * The umbrella package, `@mapcairn/sdk`. It is private and outside
- * `SDK_PACKAGES` until it joins the release set (issue 541), but it builds and
- * has API reports like the others, and it comes last because it depends on all
- * of them.
- */
-export const UMBRELLA_PACKAGE = "sdk";
 
 /**
  * The SDK packages that build to `dist`, in dependency order: a package comes
@@ -24,7 +16,7 @@ export const UMBRELLA_PACKAGE = "sdk";
  * (see `isStale`). `map` builds against the built `theme`, so its stylesheet
  * names the same custom properties as `theme`'s `tokens.css`.
  */
-export const SDK_BUILD_ORDER = [...SDK_PACKAGES, UMBRELLA_PACKAGE];
+export const SDK_BUILD_ORDER = BUILT_SDK_PACKAGES;
 
 /** Files that cannot change what a package builds. */
 const NOT_BUILD_INPUT = /\.(test\.[cm]?[jt]sx?|snap\.html)$/;

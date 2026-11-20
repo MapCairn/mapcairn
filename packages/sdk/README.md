@@ -40,7 +40,7 @@ A new name that two packages declare fails the type check until the umbrella set
 
 ## Dependencies and declaration merging
 
-The umbrella depends on the four packages at one exact version, and the five packages will be released together. If your app also imports one of the four directly, keep it at the umbrella's version, or you get two copies of it.
+The umbrella depends on the four packages at one exact version, and the five packages will be released together. If your app also imports one of the four directly, keep it at the umbrella's version, or you get two copies of it. Two copies each have their own React context, so a component from one copy does not see a `ServicesProvider` from the other.
 
 A host that adds a service of its own by declaration merging augments `@mapcairn/core` directly (`declare module "@mapcairn/core"`), and lists `@mapcairn/core` as a dependency at the umbrella's version.
 

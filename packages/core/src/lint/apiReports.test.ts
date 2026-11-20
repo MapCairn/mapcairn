@@ -25,7 +25,7 @@ import {
   // @ts-expect-error The scripts are dependency-free JavaScript with JSDoc types.
 } from "../../../../scripts/buildPackage.mjs";
 import {
-  SDK_PACKAGES,
+  BUILT_SDK_PACKAGES,
   // @ts-expect-error The scripts are dependency-free JavaScript with JSDoc types.
 } from "../../../../scripts/sdkPackages.mjs";
 
@@ -34,8 +34,7 @@ const REPO = path.resolve(
   "../../../..",
 );
 
-// The umbrella package builds and has reports although it is not in the release set yet.
-const BUILT_PACKAGES: readonly string[] = [...SDK_PACKAGES, "sdk"];
+const BUILT_PACKAGES: readonly string[] = BUILT_SDK_PACKAGES;
 
 interface Comparison {
   readonly missing: string[];

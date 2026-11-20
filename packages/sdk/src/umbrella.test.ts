@@ -5,7 +5,7 @@ import * as contracts from "@mapcairn/core/contracts";
 import * as map from "@mapcairn/map";
 import * as react from "@mapcairn/react";
 import * as theme from "@mapcairn/theme";
-import { describe, expect, it } from "vitest";
+import { describe, expect, expectTypeOf, it } from "vitest";
 import * as sdkCore from "./core";
 import * as sdkContracts from "./coreContracts";
 import * as sdk from "./index";
@@ -46,9 +46,18 @@ describe("the umbrella root", () => {
     }
   });
 
-  it("resolves the two names the four packages declare twice to the packages the plan chose", () => {
+  it("resolves ScaleBar to the map component", () => {
     expect(sdk.ScaleBar).toBe(map.ScaleBar);
-    expect(sdk.useReadingDirection).toBe(react.useReadingDirection);
+  });
+
+  // `tsc` checks these (`npm run typecheck`): without the tie-breaks in
+  // index.ts the root fails with TS2308, and with the wrong ones these differ.
+  it("resolves the two names the four packages declare twice, as types, to the packages the plan chose", () => {
+    expectTypeOf<sdk.ReadingDirection>().toEqualTypeOf<core.ReadingDirection>();
+    expectTypeOf(sdk.ScaleBar).toEqualTypeOf(map.ScaleBar);
+    // @ts-expect-error core's `ScaleBar` interface is left out of the root; it is at `@mapcairn/sdk/core`.
+    expectTypeOf<sdk.ScaleBar>().toBeObject();
+    expectTypeOf<sdkCore.ScaleBar>().toEqualTypeOf<core.ScaleBar>();
   });
 
   it("leaves out the contract suites, which import a test runner", () => {
