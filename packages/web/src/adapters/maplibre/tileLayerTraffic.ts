@@ -14,7 +14,7 @@ import type { TileLayerReport, TileSourceRegistry } from "./dataLayerStore";
  * measures how long the layer has had nothing to show. It is a judgement, not a
  * measured figure: long enough that a provider that is merely slow to render
  * a tile is not flagged, and well inside the time the map keeps painting for
- * a tile that never answers (`TILE_SETTLE_GIVE_UP_MS`), which is counted from
+ * a tile that never answers (the give-up wait in `repaintUntilIdle.ts`), which is counted from
  * the last tile asked for and so never ends before this does. The map keeps
  * repainting until then, so a tile answered late with a 404 can still turn the
  * report into `tileLayerUnavailable`.

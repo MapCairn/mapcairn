@@ -45,6 +45,7 @@ export class RepaintUntilIdle {
     this.giveUp = setTimeout(() => this.stop(), TILE_SETTLE_GIVE_UP_MS);
   }
 
+  /** Stops painting and cancels the give-up wait; safe when nothing is running. */
   stop(): void {
     clearInterval(this.nudge);
     clearTimeout(this.giveUp);

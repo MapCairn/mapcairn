@@ -1040,6 +1040,27 @@ describe("MapLibreMapAdapter", () => {
       expect(log).toHaveBeenCalledTimes(2);
     });
 
+    it("logs an engine error before it re-reads the busy state", async () => {
+      FakeMapLibreMap.styleSourceIds = ["planet"];
+      const log = vi.spyOn(console, "error").mockImplementation(() => {});
+      const { map } = await mounted();
+      map.fire("style.load");
+      const order: string[] = [];
+      log.mockImplementation(() => {
+        order.push("log");
+      });
+      vi.spyOn(map, "isSourceLoaded").mockImplementation(() => {
+        order.push("busy state");
+        return true;
+      });
+      map.fire("error", {
+        error: new Error("tile"),
+        tile: {},
+        sourceId: "planet",
+      });
+      expect(order).toEqual(["log", "busy state"]);
+    });
+
     describe("an unavailable basemap", () => {
       async function watched() {
         vi.spyOn(console, "error").mockImplementation(() => {});

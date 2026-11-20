@@ -154,10 +154,8 @@ export class FailureDetection {
     this.traffic.reportUnavailable();
   }
 
-  /** Classifies an engine `error` event (see the class). */
+  /** Classifies an engine `error` event (see the class). The caller logs it first. */
   handleError(event: object & { error?: unknown }, map: MapLibreMap): void {
-    // Listening to "error" silences MapLibre's own console logging.
-    console.error("MapLibre basemap error", event.error);
     if (isTileOrSourceError(event)) {
       const { sourceId } = event as { sourceId?: unknown };
       this.basemapTiles.recordFailed(sourceId);

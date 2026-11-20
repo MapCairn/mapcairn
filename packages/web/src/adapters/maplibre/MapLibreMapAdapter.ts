@@ -629,6 +629,8 @@ export class MapLibreMapAdapter implements MapAdapter {
       this.failure.tileAborted(event);
     });
     listen("error", (event) => {
+      // Listening to "error" silences MapLibre's own console logging.
+      console.error("MapLibre basemap error", event.error);
       this.trackBasemapSource(event, map);
       this.failure.handleError(event, map);
     });
