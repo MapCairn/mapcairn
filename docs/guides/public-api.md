@@ -1,6 +1,6 @@
 # The public API
 
-What a host can rely on from the four SDK packages (`@mapcairn/core`, `@mapcairn/map`, `@mapcairn/react` and `@mapcairn/theme`), how a change to it is found in review, and how a change is classed for a release. The packages are private at version `0.0.0` until the first release (`docs/plans/0014-sdk-release.md`); this guide is the rule the release scripts and reviewers use from then on.
+What a host can rely on from the four SDK packages (`@mapcairn/core`, `@mapcairn/map`, `@mapcairn/react` and `@mapcairn/theme`), how a change to it is found in review, and how a change is classed for a release. The packages have been public since the `0.1.0-rc.1` release candidate (`docs/plans/0014-sdk-release.md`); this guide is the rule the release scripts and reviewers use.
 
 ## What counts as public
 
@@ -45,7 +45,7 @@ Some legs skip with a warning annotation on GitHub Actions when their tool is mi
 
 CI runs both in the `SDK packages` job, which is not a required check, and the weekly Repeatable build compares the `dist` folders and the tarballs of two clean builds.
 
-The package READMEs are written for the npm page, which shows each one away from the repository. They install the package with npm, pnpm and yarn side by side, hold one **Status** line that says the packages are not published yet (the first release changes it), and link to the repository only by absolute URL, because a relative link means nothing on npm. `packages/core/src/lint/packageReadmes.test.ts` checks this, and that the code in them imports only what `examples/embed` imports. The `repository.url` is `git+https://github.com/MapCairn/mapcairn.git`: npm's trusted publishing requires it to match the GitHub repository exactly, so a fork that publishes must change it.
+The package READMEs are written for the npm page, which shows each one away from the repository. They install the package with npm, pnpm and yarn side by side, hold one **Status** line that says the packages are a release candidate (the `0.1.0` release changes it), and link to the repository only by absolute URL, because a relative link means nothing on npm. `packages/core/src/lint/packageReadmes.test.ts` checks this, and that the code in them imports only what `examples/embed` imports. The `repository.url` is `git+https://github.com/MapCairn/mapcairn.git`: npm's trusted publishing requires it to match the GitHub repository exactly, so a fork that publishes must change it.
 
 ## The report of the exports
 

@@ -9,8 +9,9 @@ import { fencedBlocks, namedImports, tagAttributes } from "./markdownSupport";
 /**
  * Keeps the four package READMEs fit for the npm page, which shows each one
  * on its own, away from the repository. They install the package with npm,
- * pnpm and yarn side by side, say once that it is not published yet, show
- * code that only uses what `examples/embed` uses, say the package is ESM
+ * pnpm and yarn side by side, hold one Status line that matches the
+ * manifest (unpublished while private, a release candidate for an `-rc`
+ * version), show code that only uses what `examples/embed` uses, say the package is ESM
  * only, link to the licence, the contribution guide and the changelog, and
  * link to the repository only by absolute URL, because a relative link means
  * nothing on npm.
@@ -81,17 +82,30 @@ describe.each(SDK_PACKAGES)("the README of @mapcairn/%s", (name) => {
     expect(lines).toHaveLength(INSTALL_VERBS.length);
     INSTALL_VERBS.forEach((verb, index) => {
       expect(lines[index]).toMatch(
-        new RegExp(`^${verb} ${packageName}( @mapcairn/[a-z]+)*$`),
+        new RegExp(
+          `^${verb} ${packageName}(@next)?( @mapcairn/[a-z]+(@next)?)*$`,
+        ),
       );
     });
   });
 
-  it("says in one line that it is not published yet", () => {
+  it("has one Status line", () => {
     const lines = readme
       .split("\n")
       .filter((line) => line.startsWith("**Status:**"));
     expect(lines).toHaveLength(1);
-    expect(lines[0]).toMatch(/not published to npm/i);
+  });
+
+  it("calls the release a candidate in the Status line while the version is a release candidate", () => {
+    const status = readme
+      .split("\n")
+      .find((line) => line.startsWith("**Status:**"));
+    const manifest = JSON.parse(
+      readFileSync(path.join(REPO, "packages", name, "package.json"), "utf8"),
+    ) as { readonly version: string };
+    expect(/release candidate/i.test(status ?? "")).toBe(
+      /-rc\.\d+$/.test(manifest.version),
+    );
   });
 
   it("says in the Status line that it is unpublished only while the manifest is private", () => {
@@ -241,7 +255,7 @@ describe("the README of @mapcairn/map", () => {
 
   it("installs core and theme beside it, because the examples import them", () => {
     expect(readme).toContain(
-      "npm install @mapcairn/map @mapcairn/core @mapcairn/theme",
+      "npm install @mapcairn/map@next @mapcairn/core@next @mapcairn/theme@next",
     );
   });
 
