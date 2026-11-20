@@ -22,6 +22,9 @@ export interface ThemeStylesheetOptions {
    * element, which is where the SDK sets it, so a theme change reaches the
    * scope without any script.
    *
+   * A `#id` or `.class` scope is matched as a descendant of `:root`, so a class
+   * on `<html>` itself does nothing: use `:root` to theme the whole page.
+   *
    * Two maps on one page take two scopes and two calls.
    */
   scope: string;
@@ -38,7 +41,10 @@ export interface ThemeStylesheetCreated {
   css: string;
   /**
    * One finding for each pair, theme and backdrop, measured on the colours
-   * written to `css`. Every one passes.
+   * written to `css` with the surface as written (translucent). Every one
+   * passes. The opaque surfaces written for reduced transparency are checked
+   * as well, and a failure there refuses the theme, so no finding for them is
+   * listed here.
    */
   findings: ContrastFinding[];
 }
@@ -148,7 +154,9 @@ function normalise(override: ThemeOverride): Record<ThemeName, ColourSet> {
     for (const [role, value] of Object.entries(
       override.colour?.[theme] ?? {},
     )) {
-      Object.assign(sets[theme], { [role]: toHex(parseColour(value)) });
+      if (value !== undefined) {
+        Object.assign(sets[theme], { [role]: toHex(parseColour(value)) });
+      }
     }
   }
   return sets;

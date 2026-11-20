@@ -462,6 +462,45 @@ describe("createThemeStylesheet", () => {
       }
     });
 
+    it("skips a role set to undefined, as the check does", () => {
+      const result = createThemeStylesheet(
+        {
+          colour: {
+            light: {
+              text: undefined,
+              accent: "#0b5c3a",
+              accentTint: "#d9efe4",
+            },
+          },
+        },
+        { scope: ".brand" },
+      );
+
+      expect(result.ok).toBe(true);
+      expect(result.css).toContain("#0b5c3a");
+    });
+
+    it("refuses a tint that leaves a selected row's muted text and the switch edge below AA", () => {
+      const result = createThemeStylesheet(
+        { colour: { light: { accentTint: "#709080", accent: "#000000" } } },
+        { scope: ".brand" },
+      );
+
+      expect(result.ok).toBe(false);
+      expect(result.css).toBeUndefined();
+      expect(
+        !result.ok &&
+          result.findings.filter(
+            (finding) => !finding.passes && finding.background === "accentTint",
+          ),
+      ).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ foreground: "textMuted" }),
+          expect.objectContaining({ foreground: "controlBoundary" }),
+        ]),
+      );
+    });
+
     it("refuses a translucent role that must be opaque", () => {
       const result = createThemeStylesheet(
         { colour: { light: { accent: "#0b5c3a80" } } },
@@ -488,7 +527,7 @@ describe("createThemeStylesheet", () => {
       expect(result.css).toBeUndefined();
     });
 
-    it("is total: a value that changes between reads is refused, not trusted", () => {
+    it("refuses a value that reads differently the second time, and writes nothing", () => {
       let reads = 0;
       const colour = {
         get accent(): string {
