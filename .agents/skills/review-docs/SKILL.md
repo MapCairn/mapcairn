@@ -5,7 +5,7 @@ description: "Check that MapCairn documents are true: every named command, file,
 
 # Review docs
 
-`AGENTS.md` ("Boundaries") requires the documents to change with the code. This review asks the other question: is what a document says true? Reviewers have found a guide that named two unit tables as persisted settings keys, a description that called a whole build output identical when only the stylesheets were, and a sentence that overstated what a test checks. A script finds references that point at nothing; the rest is reading each claim against its source.
+`AGENTS.md` ("Boundaries") requires the documents to change with the code. This review asks the other question: is what a document says true? Reviewers keep finding documents that name a file, key or number that the code does not have, or that claim more than a test checks. A script finds references that point at nothing; the rest is reading each claim against its source.
 
 Example: a guide says the host keeps the unit choice under a named storage key. Search the code for that key, read where it is written and read, and if it differs report one line giving the guide's line, the key the guide names, and the key and file the code uses.
 
@@ -15,7 +15,7 @@ Use the files the person gave. For a pull request, take the changed documents fr
 
 ## 2. Run the mechanical check first
 
-Run `node scripts/agents/docs-refs.mjs <files>`. It prints each file or folder in backticks, relative link and `npm run` script that does not resolve, as `file:line - reference`. It cannot tell a typo from a path that is planned or lives in another tool's folder, so read each hit: a plan may name what it will add, `docs/guides/working-with-agents.md` names folders other tools read, and `docs/guides/public-api.md` names a stylesheet by its export name, `theme/tokens.css`. Then `npm run lint`, which checks formatting, the agent copies, the roadmap links and the names list. Report each real hit once and do not repeat the rest of the lint.
+Run `node scripts/agents/docs-refs.mjs --ref <sha> <files>`, with the pull request head (fetch it first: `git fetch origin pull/<n>/head`) or `HEAD` for an audit of the current branch. It reads the documents and the list of files through git, so it needs no checkout and is safe for a pull request from outside the project. Without `--ref` it reads the working tree. It prints each file or folder named in backticks or a code block, relative link and `npm run` script that does not resolve, as `file:line - reference`, at most fifty and then a count. It cannot tell a typo from a path that is planned or lives in another tool's folder, so read each hit: a plan may name what it will add, and `docs/guides/working-with-agents.md` names folders other tools read. Then `npm run lint`, which checks formatting, the agent copies, the roadmap links and the names list. Report each real hit once and do not repeat the rest of the lint.
 
 ## 3. Verify every claim against its source
 
