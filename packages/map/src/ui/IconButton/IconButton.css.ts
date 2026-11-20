@@ -2,7 +2,7 @@
 // Copyright MapCairn contributors
 import { focusRing, tokens } from "@mapcairn/theme";
 import { style } from "@vanilla-extract/css";
-import { recipe } from "@vanilla-extract/recipes";
+import { primitiveRecipe } from "../primitiveRecipe";
 
 const notDisabled = ':not([aria-disabled="true"])';
 
@@ -11,7 +11,7 @@ const notDisabled = ':not([aria-disabled="true"])';
  * an accent tint fills the button and a short bar sits under the icon (see
  * {@link pressedBar}), so it reads without colour.
  */
-export const iconButton = recipe({
+export const iconButton = primitiveRecipe({
   base: {
     display: "inline-grid",
     placeItems: "center",
@@ -33,7 +33,9 @@ export const iconButton = recipe({
     "@media": {
       "(hover: hover)": {
         selectors: {
-          [`&:hover${notDisabled}`]: { backgroundColor: tokens.color.hairline },
+          [`&:hover${notDisabled}`]: {
+            backgroundColor: tokens.color.hairline,
+          },
         },
       },
     },

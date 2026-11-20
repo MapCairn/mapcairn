@@ -271,6 +271,18 @@ describe("@mapcairn/map dist", () => {
     expect(repeated).toEqual([]);
   });
 
+  it("uses one cascade layer, whose name is declared before any block uses it (primitiveLayer.test.ts checks which classes sit in it)", () => {
+    const names = new Set(
+      [...styles.matchAll(/@layer\s+([\w-]+)/g)].map((match) => match[1]),
+    );
+    expect([...names]).toHaveLength(1);
+    const [layer] = [...names];
+    const declaration = styles.indexOf(`@layer ${layer};`);
+    const firstBlock = styles.indexOf(`@layer ${layer} {`);
+    expect(declaration).toBeGreaterThanOrEqual(0);
+    expect(firstBlock).toBeGreaterThan(declaration);
+  });
+
   it("imports no style runtime but recipes, in code or declarations", () => {
     for (const file of distFiles("map").filter((f) =>
       /\.(js|d\.ts)$/.test(f),

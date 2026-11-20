@@ -23,23 +23,19 @@ export const root = style({
  * controls, so the icon reads over any basemap, over place names on a raster
  * map included. Hover keeps the surface and adds the hairline tint over it.
  *
- * The surface sits behind a doubled class selector: the `IconButton` recipe
- * sets a transparent background, a radius and no shadow at one class of
- * specificity, so which of the two won depended on the order the stylesheets
- * loaded in. When the recipe won, the button lost its dark surface and showed
- * a bare blur over a light map. The recipe's hover tint and focus ring tie
- * with the plain hover and focus rules, so those are doubled as well, and the
- * focus ring (whose inner ring is a shadow) stays above the floating shadow.
+ * It overrides the `IconButton` recipe, which sits in a lower cascade layer
+ * (DESIGN.md, "Overriding a primitive"), so the surface, radius and shadow win
+ * whatever order the stylesheets load in. The focus ring (whose inner ring is a
+ * shadow) and the hover tint are set here too, to stay above the floating
+ * shadow and the surface.
  */
 export const onMapIcon = style({
+  ...surfaceBlurStyle,
+  borderRadius: "50%",
+  boxShadow: tokens.shadow.floating,
   selectors: {
-    "&&": {
-      ...surfaceBlurStyle,
-      borderRadius: "50%",
-      boxShadow: tokens.shadow.floating,
-    },
-    "&&:focus-visible": focusRing,
-    '&&:hover:not([aria-disabled="true"])': {
+    "&:focus-visible": focusRing,
+    '&:hover:not([aria-disabled="true"])': {
       backgroundColor: tokens.color.surface,
       backgroundImage: `linear-gradient(${tokens.color.hairline}, ${tokens.color.hairline})`,
     },
