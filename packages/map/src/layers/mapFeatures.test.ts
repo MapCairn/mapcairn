@@ -3,6 +3,7 @@
 import {
   createFormatterRegistry,
   FakeMessageCatalogue,
+  type LayerFeature,
   PALETTE_SLOTS,
   SAMPLE_ALERT_LAYER,
   SAMPLE_AREA_LAYER,
@@ -143,6 +144,58 @@ describe("featureBounds", () => {
         fields: {},
       }),
     ).toBeNull();
+  });
+});
+
+describe("featureBounds, for features that cross or span the globe", () => {
+  const polygon = (ring: [number, number][]): LayerFeature => ({
+    id: "p",
+    geometry: { type: "Polygon", coordinates: [ring] },
+    fields: {},
+  });
+
+  it("fits a sparse polygon wider than half the globe to its true extent", () => {
+    expect(
+      featureBounds(
+        polygon([
+          [0, 10],
+          [120, 10],
+          [-120, 10],
+          [0, 10],
+        ]),
+      ),
+    ).toEqual({ west: -180, south: 10, east: 180, north: 10 });
+  });
+
+  it("keeps the short box for a feature across the antimeridian", () => {
+    expect(
+      featureBounds(
+        polygon([
+          [177, -19],
+          [180, -16],
+          [-179, -17],
+          [-179, -19],
+          [177, -19],
+        ]),
+      ),
+    ).toEqual({ west: 177, south: -19, east: 181, north: -16 });
+  });
+
+  it("does not join the parts of a multi-part geometry with an edge", () => {
+    const part = (west: number): [number, number][] => [
+      [west, 0],
+      [west + 10, 0],
+    ];
+    expect(
+      featureBounds({
+        id: "m",
+        geometry: {
+          type: "MultiLineString",
+          coordinates: [part(-100), part(90)],
+        },
+        fields: {},
+      }),
+    ).toEqual({ west: 90, south: 0, east: 270, north: 0 });
   });
 });
 

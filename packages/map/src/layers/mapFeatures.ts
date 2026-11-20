@@ -2,7 +2,7 @@
 // Copyright MapCairn contributors
 import {
   type Bounds,
-  boundsOfPoints,
+  boundsOfPaths,
   type ControlValues,
   evaluatePointStyle,
   type FeedLayerDefinition,
@@ -55,22 +55,21 @@ export function paletteColour(slot: PaletteSlot): string {
   return colour;
 }
 
-/** Every position of a geometry, in any nesting. */
-function positionsOf(geometry: LayerGeometry): LatLng[] {
+const toPath = (line: readonly (readonly [number, number])[]): LatLng[] =>
+  line.map(([lng, lat]) => ({ lat, lng }));
+
+/** The rings and lines of a geometry, each as its own path (a point is a path of one). */
+function pathsOf(geometry: LayerGeometry): LatLng[][] {
   switch (geometry.type) {
     case "Point":
-      return [{ lng: geometry.coordinates[0], lat: geometry.coordinates[1] }];
+      return [[{ lng: geometry.coordinates[0], lat: geometry.coordinates[1] }]];
     case "LineString":
-      return geometry.coordinates.map(([lng, lat]) => ({ lat, lng }));
+      return [toPath(geometry.coordinates)];
     case "MultiLineString":
     case "Polygon":
-      return geometry.coordinates.flatMap((line) =>
-        line.map(([lng, lat]) => ({ lat, lng })),
-      );
+      return geometry.coordinates.map(toPath);
     case "MultiPolygon":
-      return geometry.coordinates.flatMap((rings) =>
-        rings.flatMap((ring) => ring.map(([lng, lat]) => ({ lat, lng }))),
-      );
+      return geometry.coordinates.flatMap((rings) => rings.map(toPath));
   }
 }
 
@@ -134,13 +133,14 @@ export function featureOutlines(feature: LayerFeature): FeatureOutline[] {
 
 /**
  * The box around a feature's geometry, or null when it has no coordinates.
- * Across the antimeridian `east` passes 180 (see `boundsOfPoints`).
+ * It holds every vertex and every edge taken the short way round, so a polygon
+ * wider than half the globe is fitted on the side it covers. Across the
+ * antimeridian `east` passes 180 (see `boundsOfPaths`).
  *
  * @internal
  */
 export function featureBounds(feature: LayerFeature): Bounds | null {
-  const positions = positionsOf(feature.geometry);
-  return boundsOfPoints(positions) ?? null;
+  return boundsOfPaths(pathsOf(feature.geometry)) ?? null;
 }
 
 /**

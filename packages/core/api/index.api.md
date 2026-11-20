@@ -326,6 +326,9 @@ export interface Bounds {
 export function boundsAroundPoint(centre: LatLng, radiusMetres: number): Bounds;
 
 // @public
+export function boundsOfPaths(paths: readonly (readonly LatLng[])[]): Bounds | undefined;
+
+// @public
 export function boundsOfPoints(points: readonly LatLng[]): Bounds | undefined;
 
 // @public
