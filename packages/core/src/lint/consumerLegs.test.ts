@@ -214,7 +214,7 @@ describe("browser leg availability", () => {
     );
     writeFileSync(
       path.join(scratch, "node_modules", "playwright-core", "index.js"),
-      `exports.chromium = { executablePath: () => ${JSON.stringify(path.join(scratch, "no-chrome"))} };`,
+      "exports.chromium = { executablePath: () => `${__dirname}/no-chrome` };",
     );
     writeFileSync(path.join(scratch, "package.json"), "{}");
     expect(chromiumExecutable(scratch, path.join(scratch, "none"))).toBe(
