@@ -10,7 +10,10 @@
  * It fails on a commit prefix in the notes, an `@handle` outside a code span
  * (which would notify someone), a raw pull request number, an emoji, an
  * attribution line, a heading the guide does not name, a change to make on
- * upgrade without a before and an after, and a forbidden name. A bullet that
+ * upgrade without a before and an after, raw HTML, an image, a link to
+ * another site, a heading that is indented or underlined, a code block that
+ * is never closed, and a forbidden name (`notesContent.mjs` holds the content
+ * rules). A bullet that
  * repeats a commit subject needs the history, so that rule runs only where
  * git has it and prints a notice in a shallow clone.
  */
@@ -20,6 +23,7 @@ import { fileURLToPath } from "node:url";
 import { isEntryPoint } from "../entryPoint.mjs";
 import { FORBIDDEN, findForbidden } from "../names-check.mjs";
 import { parseChangelog, scanLines } from "./changelog.mjs";
+import { contentProblems } from "./notesContent.mjs";
 import { parseVersion, previousTag, releaseTags } from "./semver.mjs";
 import { git } from "./tools.mjs";
 import { parseCommit } from "./versionRules.mjs";
@@ -81,16 +85,6 @@ const ENTRY_START = /^(?:[-*]\s|\d+\.\s|\*\*)/;
  */
 
 /**
- * The line without its inline code spans, which may hold anything.
- *
- * @param {string} text
- * @returns {string}
- */
-function withoutCodeSpans(text) {
-  return text.replace(/(`+)[^`]*?\1/g, "");
-}
-
-/**
  * The plain words of a bullet or a subject, for comparing one with the other:
  * no bullet marker, emphasis, link, pull request tail or case.
  *
@@ -150,6 +144,56 @@ function versionHeadingFindings(section, line, seen) {
 }
 
 /**
+ * The finding about how a heading is written, if it is not a plain `#` heading
+ * at the left margin.
+ *
+ * @param {import("./changelog.mjs").Heading} heading
+ * @param {number} line
+ * @returns {Finding[]}
+ */
+function formFindings({ form }, line) {
+  if (form === "atx") {
+    return [];
+  }
+  return [
+    {
+      line,
+      message:
+        form === "indented"
+          ? "Start a heading at the left margin, with no spaces before the `#` marks."
+          : "Write a heading with `#` marks, not underlined with `=` or `-`.",
+    },
+  ];
+}
+
+/**
+ * The finding about a `###` or deeper heading that the guide does not name.
+ *
+ * @param {import("./changelog.mjs").Heading} heading
+ * @param {number} line
+ * @param {boolean} inVersion Whether a version heading has been seen.
+ * @returns {Finding[]}
+ */
+function subheadingFindings({ level, title }, line, inVersion) {
+  /** @type {string | null} */
+  let message = null;
+  if (level === 3) {
+    message =
+      !inVersion || !SECTION_HEADINGS.includes(title)
+        ? `A \`###\` heading must be one of: ${SECTION_HEADINGS.join(", ")}.`
+        : null;
+  } else if (level === 4) {
+    message =
+      !inVersion || !PACKAGE_HEADING.test(title)
+        ? "A `####` heading must name a package: core, map, react or theme."
+        : null;
+  } else {
+    message = "Headings go no deeper than `####`.";
+  }
+  return message === null ? [] : [{ line, message }];
+}
+
+/**
  * Headings the style guide does not allow.
  *
  * @param {string} text
@@ -163,12 +207,11 @@ function headingFindings(text) {
   let inVersion = false;
   let titles = 0;
   for (const line of scanLines(text)) {
-    const heading = /^(#{1,6})\s+(.*?)\s*$/.exec(line.text);
-    if (line.fenced || heading === null) {
+    if (line.fenced || line.heading === null) {
       continue;
     }
-    const [, marks, title] = heading;
-    if (marks.length === 1) {
+    findings.push(...formFindings(line.heading, line.number));
+    if (line.heading.level === 1) {
       titles += 1;
       if (inVersion || titles > 1) {
         findings.push({
@@ -176,32 +219,16 @@ function headingFindings(text) {
           message: "Only one `#` title, above the first version, is allowed.",
         });
       }
-    } else if (marks.length === 2) {
+    } else if (line.heading.level === 2) {
       inVersion = true;
       const section = sections.find(
         (candidate) => candidate.headingLine === line.number,
       );
       findings.push(...versionHeadingFindings(section, line.number, seen));
-    } else if (marks.length === 3) {
-      if (!inVersion || !SECTION_HEADINGS.includes(title)) {
-        findings.push({
-          line: line.number,
-          message: `A \`###\` heading must be one of: ${SECTION_HEADINGS.join(", ")}.`,
-        });
-      }
-    } else if (marks.length === 4) {
-      if (!inVersion || !PACKAGE_HEADING.test(title)) {
-        findings.push({
-          line: line.number,
-          message:
-            "A `####` heading must name a package: core, map, react or theme.",
-        });
-      }
     } else {
-      findings.push({
-        line: line.number,
-        message: "Headings go no deeper than `####`.",
-      });
+      findings.push(
+        ...subheadingFindings(line.heading, line.number, inVersion),
+      );
     }
   }
   return findings;
@@ -218,9 +245,15 @@ function textFindings(text) {
   /** @type {Finding[]} */
   const findings = [];
   for (const line of scanLines(text)) {
-    const prose = withoutCodeSpans(line.text);
+    const prose = line.prose;
     const problems = [];
+    if (line.unclosed) {
+      problems.push(
+        "This code block is never closed, so everything after it would read as code. Close it with a matching fence.",
+      );
+    }
     if (!line.fenced) {
+      problems.push(...contentProblems(prose));
       if (COMMIT_PREFIX.test(line.text)) {
         problems.push(
           "A line that starts like a commit subject (`feat:`, `fix:` and so on) reads as a commit log. Say what someone can now do.",
@@ -301,9 +334,9 @@ function upgradeGroups(text) {
   const groups = [];
   let inside = false;
   for (const line of scanLines(text)) {
-    const heading = /^(#{1,6})\s+(.*?)\s*$/.exec(line.text);
-    if (!line.fenced && heading !== null) {
-      inside = heading[1] === "###" && heading[2] === UPGRADE_HEADING;
+    if (!line.fenced && line.heading !== null) {
+      inside =
+        line.heading.level === 3 && line.heading.title === UPGRADE_HEADING;
       if (inside) {
         groups.push([line]);
       }

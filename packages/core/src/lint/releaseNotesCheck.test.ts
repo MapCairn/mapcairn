@@ -7,6 +7,10 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
+  parseChangelog,
+  // @ts-expect-error The scripts are dependency-free JavaScript with JSDoc types.
+} from "../../../../scripts/release/changelog.mjs";
+import {
   checkChangelog,
   isShallowClone,
   runCheck,
@@ -195,7 +199,7 @@ describe("checkChangelog", () => {
         messages(
           edited(
             "The scale bar",
-            "The scale bar ([#123](https://example.test/123))",
+            "The scale bar ([#123](https://github.com/MapCairn/mapcairn/pull/123))",
           ),
         ),
       ).toEqual([]);
@@ -454,7 +458,7 @@ describe("checkChangelog", () => {
       for (const bullet of [
         "- feat(map): add multi-select (#412)",
         "- Add multi-select",
-        "- **Add multi-select.** ([#412](https://example.test/412))",
+        "- **Add multi-select.** ([#412](https://github.com/MapCairn/mapcairn/pull/412))",
         "* ADD MULTI-SELECT",
         "1. Stop a flicker.",
       ]) {
@@ -625,5 +629,234 @@ describe("git history", () => {
       .mockImplementation(() => undefined);
     expect(runCheck(path.join(scratch(), "CHANGELOG.md"), scratch())).toBe(2);
     expect(String(errors.mock.calls[0][0])).toContain("does not exist");
+  });
+});
+
+describe("published text", () => {
+  /** The first line a finding is reported on, or null for none. */
+  function lineOf(text: string): number | null {
+    return checkChangelog(text)[0]?.line ?? null;
+  }
+
+  /** The good changelog with one line added to the "What got better" bullet. */
+  function withLine(line: string): string {
+    return edited(BULLET_LINE, `${BULLET_LINE}\n\n${line}`);
+  }
+
+  /** The line number the added line lands on. */
+  function addedLine(text: string, line: string): number {
+    return text.split("\n").indexOf(line) + 1;
+  }
+
+  describe("raw HTML", () => {
+    it.each([
+      '<img src="https://example.test/x.png">',
+      "<script>alert(1)</script>",
+      "text <b>bold</b> text",
+      "</div>",
+      "<!-- hidden -->",
+      "<?php echo 1 ?>",
+      "<https://example.test>",
+      "Array<string> is a type",
+    ])("fails %s, on its line", (bad) => {
+      const text = withLine(bad);
+      expect(lineOf(text)).toBe(addedLine(text, bad));
+      expect(messages(text).join(" ")).toContain("HTML");
+    });
+
+    it("passes a less-than sign that does not open a tag, and HTML in code", () => {
+      for (const good of [
+        "Fewer than 3 < 4 items, or a <3 sign.",
+        "Write `<img>` and ``<b>`x</b>`` in a code span.",
+        "```html\n<img src=x>\n<!-- c -->\n```",
+        "~~~\n<script>\n~~~",
+      ]) {
+        expect(messages(withLine(good))).toEqual([]);
+      }
+    });
+
+    it("does not let an escaped backtick or a line from another span hide a tag", () => {
+      for (const bad of [
+        "\\`<img src=x>\\`",
+        "a ` b\nc ` <img src=x> `",
+        "a `` b\n`` <img src=x> `",
+        "- a ` <img src=x>\n- b `",
+        "`a` `<img src=x>",
+        "``<img src=x>`",
+      ]) {
+        expect(messages(withLine(bad)).join(" ")).toContain("HTML");
+      }
+    });
+
+    it("does not read a backtick fence with a backtick in its info string as code", () => {
+      expect(
+        messages(withLine("```a`b\n<img src=x>\n```")).join(" "),
+      ).toContain("HTML");
+    });
+
+    it("fails a code block that is never closed, on the line that opens it", () => {
+      const text = `${GOOD}\n\`\`\`text\n<img src=x>\n`;
+      const open = text.split("\n").indexOf("```text") + 1;
+      const found = checkChangelog(text).find((finding: { message: string }) =>
+        finding.message.includes("never closed"),
+      );
+      expect(found.line).toBe(open);
+    });
+  });
+
+  describe("images", () => {
+    it.each([
+      "![chart](https://github.com/MapCairn/mapcairn/raw/main/a.png)",
+      "![chart](docs/a.png)",
+      "![chart][a]",
+      "see ![](x.png) here",
+    ])("fails %s, on its line", (bad) => {
+      const text = withLine(bad);
+      expect(lineOf(text)).toBe(addedLine(text, bad));
+      expect(messages(text).join(" ")).toContain("Images");
+    });
+
+    it("passes a bang in plain text, and an image written in a code span", () => {
+      expect(messages(withLine("Hello! [x](docs/a.md)"))).toEqual([]);
+      expect(messages(withLine("Write `![a](b)` for an image."))).toEqual([]);
+    });
+  });
+
+  describe("links", () => {
+    it.each([
+      "[a](https://example.test/page)",
+      "[a](http://github.com/MapCairn/mapcairn/pull/1)",
+      "[a](https://github.com/other/repo/pull/1)",
+      "[a](https://github.com/MapCairn/mapcairn-extra/pull/1)",
+      "[a](https://github.com.example.test/MapCairn/mapcairn)",
+      "[a](https://github.com@example.test/MapCairn/mapcairn)",
+      "[a](//example.test/page)",
+      "[a](\\\\example.test)",
+      "[a](/\\example.test)",
+      "[a](javascript:alert(1))",
+      "[a](data:text/html,x)",
+      "[a](mailto:someone@example.test)",
+      "[a](&#104;ttps://example.test)",
+      '[a]( https://example.test/page "title")',
+      "[a]: https://example.test/page",
+      "  [a]: //example.test/page",
+      "[a]: javascript:alert(1)",
+      "Visit https://example.test/page today",
+      "Visit www.example.test today",
+      "Visit http://example.test.",
+    ])("fails %s, on its line", (bad) => {
+      const text = withLine(bad);
+      expect(lineOf(text)).toBe(addedLine(text, bad));
+      expect(messages(text).join(" ")).toMatch(/link|address/i);
+    });
+
+    it.each([
+      "[a](docs/guides/releasing.md)",
+      "[a](./docs/guides/releasing.md#heading)",
+      "[a](../docs/a.md)",
+      "[a](/docs/a.md)",
+      "[a](#what-is-new)",
+      "[a](https://github.com/MapCairn/mapcairn)",
+      "[a](https://github.com/MapCairn/mapcairn/pull/1)",
+      "[a](https://github.com/MapCairn/mapcairn/issues/1#issuecomment-2)",
+      "[a](https://github.com/MapCairn/mapcairn/blob/main/docs/a.md?plain=1)",
+      '[a](https://github.com/mapcairn/mapcairn/pull/1 "title")',
+      "[a]: docs/guides/releasing.md",
+      "[a]: https://github.com/MapCairn/mapcairn/pull/1",
+      "Fixed in #123 and see https://github.com/MapCairn/mapcairn/pull/1.",
+      "Write `[a](https://example.test)` and `https://example.test` in code.",
+      "```text\nhttps://example.test\n[a](//example.test)\n```",
+    ])("passes %s", (good) => {
+      expect(messages(withLine(good))).toEqual([]);
+    });
+  });
+
+  describe("headings", () => {
+    const VERSION = "## 0.2.0 (2026-12-01)";
+
+    it.each([
+      [`   ${VERSION}`, 1],
+      [`${VERSION.replace("##", " ##")}`, 1],
+    ])("fails a version heading indented to %j", (heading) => {
+      const text = GOOD.replace(VERSION, heading);
+      expect(messages(text).join(" ")).toContain("left margin");
+    });
+
+    it("fails an indented section heading and package heading", () => {
+      const section = GOOD.replace("### What is new", "  ### What is new");
+      const pkg = GOOD.replace(
+        "#### `@mapcairn/theme`",
+        "   #### `@mapcairn/theme`",
+      );
+      expect(messages(section).join(" ")).toContain("left margin");
+      expect(messages(pkg).join(" ")).toContain("left margin");
+    });
+
+    it("reads an indented heading as a heading, so a wrong one is named and a correct one is not a bullet", () => {
+      const text = GOOD.replace("### Thanks", "   ### Unknown heading");
+      expect(messages(text).join(" ")).toContain("must be one of");
+    });
+
+    it("fails an indented title and does not count it as a version", () => {
+      const text = GOOD.replace("# Changelog", "  # Changelog");
+      expect(messages(text).join(" ")).toContain("left margin");
+    });
+
+    it("does not read four spaces of indent as a heading, nor a heading in a code block", () => {
+      expect(messages(withLine("    ## not a heading"))).toEqual([]);
+      expect(
+        messages(withLine("```md\n  ## in code\nTitle\n===\n```")),
+      ).toEqual([]);
+    });
+
+    it("fails a setext heading of either level, on the text line", () => {
+      for (const underline of ["===", "---", "  ===", "-", "======="]) {
+        const text = withLine(`Sneaky\n${underline}`);
+        const found = checkChangelog(text).find(
+          (finding: { message: string }) =>
+            finding.message.includes("underlined"),
+        );
+        expect(found.line).toBe(addedLine(text, "Sneaky"));
+      }
+    });
+
+    it("fails a setext version heading and keeps its notes out of the previous version", () => {
+      const text = `${PREAMBLE}## 0.1.0 (2026-11-01)\n\n### What is new\n\nOld.\n\n0.2.0 (2026-12-01)\n------------------\n\n### What is new\n\nNew.\n`;
+      expect(messages(text).join(" ")).toContain("underlined");
+      expect(
+        parseChangelog(text).sections.map(
+          (section: { version: string | null }) => section.version,
+        ),
+      ).toEqual(["0.1.0", null]);
+    });
+
+    it("reads an indented upgrade heading, so its entries still need a before and an after", () => {
+      const text = GOOD.replace(
+        "### What to change when you upgrade",
+        "  ### What to change when you upgrade",
+      ).replace("Before:", "Earlier:");
+      expect(messages(text).join(" ")).toContain("Before and an After");
+    });
+
+    it("does not read a line under an underline as a second heading", () => {
+      const text = withLine("Sneaky\n===\n---");
+      const underlined = checkChangelog(text).filter(
+        (finding: { message: string }) =>
+          finding.message.includes("underlined"),
+      );
+      expect(underlined).toHaveLength(1);
+    });
+
+    it("passes a thematic break and a list item followed by dashes", () => {
+      for (const good of [
+        "---",
+        "***",
+        "- one\n---",
+        "> quote\n---",
+        "a\n\n---",
+      ]) {
+        expect(messages(withLine(good))).toEqual([]);
+      }
+    });
   });
 });

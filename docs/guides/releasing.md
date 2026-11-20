@@ -43,6 +43,7 @@ One text is both the `CHANGELOG.md` entry and the body of the GitHub Release. Wr
 - **Thank people by their public GitHub handle, and notify nobody.** Write the handle without the `@`, plainly or in a code span. A bare `@handle` in a release body notifies that person and adds an avatar list, so the notes check refuses it. The names of the four SDK packages (such as `@mapcairn/map`) are fine; any other scoped name, such as a team, goes in a code span. Thank people for their own public contributions; the maintainer and bots are not listed. `release:plan` lists who to thank.
 - **Warm, specific, plain British English.** No hype, no emoji, no commit prefixes, no raw `(#123)` tails and no attribution line.
 - **Do not paste commit subjects.** A commit says what changed in the code. A note says what changed for the reader.
+- **Hold only what the project wrote.** The notes are published text, on GitHub Releases and on the npm package pages, so they may contain plain text, code spans and fenced code blocks (where `<`, URLs and any tag are fine), links to a relative path, an anchor or a page of this repository on GitHub (`https://github.com/MapCairn/mapcairn/...`), and bare issue or pull request numbers. Raw HTML, images and links to other sites are refused: write an address you want to show in a code span. Write every heading with `#` marks at the left margin; an indented heading or one underlined with `=` or `-` is refused.
 
 A good entry:
 
@@ -57,7 +58,7 @@ A bad one, shown in a code block so the handle notifies nobody (the original has
 
 What it gets wrong: a commit subject and its `(#412)` tail, a prefix, an emoji, hype that says nothing, and a handle that would notify someone.
 
-The notes check also fails a heading that is not the version heading (`## 0.1.0 (2026-12-01)`), one of the four section headings or a package subheading, an attribution line, a forbidden name, and a bullet that repeats a commit subject word for word. That last rule needs the full history, so it is skipped with a notice in a shallow clone.
+The notes check also fails raw HTML (any `<` followed by a letter, `/`, `!` or `?` outside code), an image (`![`), a link or a written-out web address that goes anywhere but a relative path, an anchor or this repository, a code block that is never closed, a heading that is indented or underlined, a heading that is not the version heading (`## 0.1.0 (2026-12-01)`), one of the four section headings or a package subheading, an attribution line, a forbidden name, and a bullet that repeats a commit subject word for word. That last rule needs the full history, so it is skipped with a notice in a shallow clone.
 
 ## The release workflow
 
