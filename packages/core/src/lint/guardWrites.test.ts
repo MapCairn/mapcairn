@@ -1773,6 +1773,118 @@ describe("hardening of the write guard (#534)", () => {
     });
   });
 
+  describe("holes the security review of #558 found", () => {
+    it.each([
+      `env X.Y=1 sh -c 'touch /x'`,
+      `env X.Y=1 git push`,
+      `env a-b=1 git commit -m x`,
+      `env X.Y=1 HOME=/x git status`,
+    ])("reads the program after env words with odd names: %s", (command) => {
+      expect(bash(command).allow).toBe(false);
+    });
+
+    it("still reads env options and plain settings", () => {
+      expect(bash("env X.Y=1 git status").allow).toBe(true);
+      expect(bash("env CI=1 git status").allow).toBe(true);
+      expect(bash("env -u X git status").allow).toBe(false);
+    });
+
+    it.each([
+      "repeat 2 git push",
+      "repeat 1 touch /x",
+      "select x in a; do git push; done",
+      "foreach x (a b) git push",
+      "function f { git push; }",
+      "function f { touch /x }; f",
+      "if [[ -n x ]] git push",
+      "if [[ -n x ]] touch /x",
+      "[[ -n x ]] touch /x",
+    ])("refuses a form that hides a command: %s", (command) => {
+      expect(bash(command).allow).toBe(false);
+    });
+
+    it.each([
+      "[[ -n x ]] && git status",
+      "[[ -n x ]]",
+      "if [[ -n x ]]; then git status; fi",
+      "[ -n x ] && git status",
+    ])("allows %s", (command) => {
+      expect(bash(command).allow).toBe(true);
+    });
+
+    it.each([
+      "a[b]=1 git status",
+      "b='x[$(touch /y)]'; a[b]=1",
+      "export a[b]=1",
+      "declare a[b]=1",
+      "local a[$x]=1",
+      "typeset a[b+c]=1",
+    ])("refuses a subscript that is not a number: %s", (command) => {
+      expect(bash(command).allow).toBe(false);
+    });
+
+    it.each(["export a[0]=1", "declare a[12]=1", "CI[0]=1 git status"])(
+      "allows a numeric subscript: %s",
+      (command) => {
+        expect(bash(command).allow).toBe(true);
+      },
+    );
+
+    it.each([
+      "bash -kc 'git diff GIT_EXTERNAL_DIFF=x'",
+      "bash -k -c 'git status'",
+      "set -k; git status",
+      "set -o keyword; git status",
+      "set -ek",
+      "sh -c 'set -k; git status'",
+    ])("refuses keyword mode: %s", (command) => {
+      expect(bash(command).allow).toBe(false);
+    });
+
+    it("allows set without keyword mode", () => {
+      expect(bash("set -e; git status").allow).toBe(true);
+    });
+
+    it.each([
+      "GH_PAGER=x gh pr diff 1",
+      "GH_BROWSER=x gh pr view 1",
+      "GH_EDITOR=x gh pr view 1",
+      "GH_CONFIG_DIR=/x gh pr view 1",
+      "GH_HOST=example.com gh pr view 1",
+      "GH_TOKEN=x gh pr view 1",
+      "BROWSER=x gh pr view 1",
+      "export GH_PAGER=x",
+      "env GH_PAGER=x gh pr diff 1",
+    ])("refuses %s", (command) => {
+      const decision = bash(command);
+      expect(decision.allow).toBe(false);
+      expect(decision.reason).toMatch(/the variable/);
+    });
+
+    it.each([
+      "BROWSERS=1 git status",
+      "GHOST=1 git status",
+      "grep -rn 'GH_TOKEN=' .github",
+      "gh pr diff 558",
+    ])("allows %s", (command) => {
+      expect(bash(command).allow).toBe(true);
+    });
+
+    it.each([
+      "fish -c 'true' -C 'touch /x'",
+      "fish -c true -C 'touch /x'",
+      "fish -c 'git status' name",
+      "fish --init-command=x -c true",
+      "fish -c true --command=x",
+    ])("reads fish only as exactly -c and a string: %s", (command) => {
+      expect(bash(command).allow).toBe(false);
+    });
+
+    it("allows fish -c with one string", () => {
+      expect(bash("fish -c 'git status'").allow).toBe(true);
+    });
+  });
+
   describe("commands the reviewers use", () => {
     it.each([
       "gh pr diff 534",

@@ -125,6 +125,10 @@ const UNREADABLE = [
   "unbuffer",
   "rlwrap",
   "coproc",
+  "repeat",
+  "select",
+  "foreach",
+  "function",
   "rsync",
   "scp",
 ];
@@ -207,7 +211,7 @@ const LESS_NAMES = [
  * path, pagers and editors, and the loader and startup-file variables.
  */
 const RISKY_VARIABLE = new RegExp(
-  `^(?:GIT_\\w*|HOME|XDG_\\w*|PATH|PAGER|EDITOR|VISUAL|LESS(?:${LESS_NAMES})?|LD_\\w*|DYLD_\\w*|NODE_OPTIONS|NODE_PATH|NPM_CONFIG_\\w*|PYTHON(?:STARTUP|PATH|HOME)|PERL5(?:OPT|LIB)|RUBY(?:OPT|LIB)|ZDOTDIR|SHELLOPTS|BASHOPTS|PROMPT_COMMAND|IFS|CDPATH|PS4|BASH_ENV|ENV|SSH_\\w*)${ASSIGNMENT}`,
+  `^(?:GIT_\\w*|HOME|XDG_\\w*|PATH|PAGER|EDITOR|VISUAL|LESS(?:${LESS_NAMES})?|LD_\\w*|DYLD_\\w*|GH_\\w*|BROWSER|NODE_OPTIONS|NODE_PATH|NPM_CONFIG_\\w*|PYTHON(?:STARTUP|PATH|HOME)|PERL5(?:OPT|LIB)|RUBY(?:OPT|LIB)|ZDOTDIR|SHELLOPTS|BASHOPTS|PROMPT_COMMAND|IFS|CDPATH|PS4|BASH_ENV|ENV|SSH_\\w*)${ASSIGNMENT}`,
   "i",
 );
 
@@ -512,7 +516,7 @@ function checkFind(args) {
 }
 
 /** Short options of a shell that change nothing the guard has to read. */
-const PLAIN_SHELL_OPTIONS = /^-[abefhiklmnpuvxc]+$/;
+const PLAIN_SHELL_OPTIONS = /^-[abefhilmnpuvxc]+$/;
 
 /** Long options of a shell that change nothing the guard has to read. */
 const PLAIN_LONG_SHELL_OPTIONS = /^--(norc|noprofile|posix|login|restricted)$/;
@@ -567,6 +571,9 @@ function readShellOptions(args) {
  * @returns {string | undefined}
  */
 function checkShell(program, args, walk) {
+  if (program === "fish" && !(args.length === 2 && args[0] === "-c")) {
+    return "fish is read only as -c and one command string, because its options (-C, --init-command) run commands the guard cannot read";
+  }
   const { command, operand, reason } = readShellOptions(args);
   if (reason !== undefined) {
     return reason;
@@ -575,6 +582,19 @@ function checkShell(program, args, walk) {
     return `${program} without -c among its leading options runs a script or reads commands the guard cannot see, so a reviewer may not use it`;
   }
   return checkCommand(args[operand] ?? "", { ...walk, depth: walk.depth + 1 });
+}
+
+/**
+ * Decides on `set`: keyword mode (`-k`, `-o keyword`) hands later words that
+ * look like assignments to the next command as variables.
+ *
+ * @param {string[]} args
+ * @returns {string | undefined}
+ */
+function checkSet(args) {
+  return args.some((arg) => /^-[a-zA-Z]*k/.test(arg) || arg === "keyword")
+    ? "set -k (keyword mode) passes assignments in a command's words to it as variables, so a reviewer may not use it"
+    : undefined;
 }
 
 /**
@@ -593,6 +613,7 @@ const PROGRAMS = new Map([
   ["awk", (args) => awkProblem(args)],
   ["gawk", (args) => awkProblem(args)],
   ["find", (args) => checkFind(args)],
+  ["set", (args) => checkSet(args)],
   ["dd", (args, walk, program) => checkFileCommand(program, args, walk)],
 ]);
 
@@ -616,7 +637,18 @@ for (const program of ["npm", "pnpm", "yarn", "bun"]) {
  * @returns {boolean}
  */
 function isAssignment(word) {
-  return /^[A-Za-z_][A-Za-z0-9_]*(?:\[[^\]]*\])?\+?=/.test(word);
+  return /^[A-Za-z_][A-Za-z0-9_]*(?:\[[0-9]+\])?\+?=/.test(word);
+}
+
+/**
+ * Whether `env` takes a word as a setting: any word with an `=` that is not an
+ * option, whatever its name (`X.Y=1`), because `env` does not check the name.
+ *
+ * @param {string} word
+ * @returns {boolean}
+ */
+function isEnvSetting(word) {
+  return !word.startsWith("-") && word.includes("=");
 }
 
 /**
@@ -654,7 +686,7 @@ function envWrapper(words, at) {
   /** @type {string[]} */
   const assignments = [];
   let next = at;
-  while (isAssignment(words[next] ?? "")) {
+  while (isEnvSetting(words[next] ?? "")) {
     assignments.push(words[next] ?? "");
     next += 1;
   }
@@ -811,6 +843,22 @@ function builtProgramProblem(word, platform) {
     : undefined;
 }
 
+/** A variable name with a subscript that is not a plain number. */
+const UNSAFE_SUBSCRIPT = /^[A-Za-z_][A-Za-z0-9_]*\[(?![0-9]+\])/;
+
+/**
+ * Why a `[[ ... ]]` cannot be read: in zsh a command may follow `]]` as a
+ * short form of `if`, so `]]` must be the last word.
+ *
+ * @param {string[]} words
+ * @returns {string | undefined}
+ */
+function testBracketProblem(words) {
+  return words[0] === "[[" && words[words.length - 1] !== "]]"
+    ? "[[ is allowed only when ]] is its last word, because zsh runs a command written after it"
+    : undefined;
+}
+
 /**
  * Decides on one statement of a shell command.
  *
@@ -831,10 +879,17 @@ function checkStatement(tokens, walk) {
   if (risky !== undefined) {
     return `the variable ${risky.split("=")[0]} changes what a command runs or which files it reads (git's repository, the home folder, the search path, a pager, the loader), so a reviewer may not set it`;
   }
+  const subscript = ASSIGNERS.has(programName(rest[0] ?? ""))
+    ? rest.slice(1).find((text) => UNSAFE_SUBSCRIPT.test(text))
+    : undefined;
+  if (subscript !== undefined) {
+    return `${subscript} has a subscript that is not a number, which the shell evaluates as arithmetic and can run a command`;
+  }
   const word = rest[0] ?? "";
   const program = programName(word);
   return (
     reason ??
+    testBracketProblem(rest) ??
     builtProgramProblem(word, walk.context.platform) ??
     PROGRAMS.get(program)?.(rest.slice(1), walk, program)
   );
