@@ -59,7 +59,8 @@ export interface ControlCondition {
   readonly in: readonly string[];
 }
 
-interface ControlBase {
+/** The fields every layer control has, whatever its kind. */
+export interface ControlBase {
   /** Unique inside the layer. Lowercase letters, digits and hyphens, starting with a letter. */
   readonly id: string;
   readonly label: DefinitionText;
@@ -495,7 +496,8 @@ export interface ListSpec {
   readonly sorts: readonly ListSort[];
 }
 
-interface LayerDefinitionBase {
+/** The fields every layer definition has, whatever its kind. */
+export interface LayerDefinitionBase {
   /** Lowercase letters, digits and hyphens, starting with a letter. Used in the permalink. */
   readonly id: string;
   readonly name: DefinitionText;

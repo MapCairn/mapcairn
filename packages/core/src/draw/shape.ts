@@ -17,7 +17,11 @@ import {
 } from "./geo";
 import type { DrawIssue, DrawKind, DrawShape, ShapeMeasure } from "./types";
 
-/** How many positions the ring of a circle has when it is drawn or exported. */
+/**
+ * How many positions the ring of a circle has when it is drawn or exported.
+ *
+ * @internal
+ */
 export const CIRCLE_EXPORT_STEPS = 72;
 
 /** The largest radius a circle may have, in metres (10,000 km). */

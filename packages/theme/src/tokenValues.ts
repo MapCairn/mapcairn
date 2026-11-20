@@ -550,6 +550,17 @@ export const motion = {
   spring,
 } as const;
 
+/** Name of a z layer. */
+export type ZLayerName =
+  | "map"
+  | "mapOverlay"
+  | "chrome"
+  | "chromeRaised"
+  | "sheet"
+  | "toolbar"
+  | "popover"
+  | "toast";
+
 /** Z layers from bottom to top, with room between for local adjustments. */
 export const zIndex = {
   map: "0",
@@ -560,10 +571,7 @@ export const zIndex = {
   toolbar: "50",
   popover: "60",
   toast: "70",
-} as const;
-
-/** Name of a z layer. */
-export type ZLayerName = keyof typeof zIndex;
+} as const satisfies Record<ZLayerName, string>;
 
 /** Z layer names in stacking order, bottom to top. */
 export const zLayerOrder = [

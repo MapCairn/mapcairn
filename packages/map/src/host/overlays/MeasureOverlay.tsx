@@ -9,7 +9,11 @@ import {
 import { roundPixel, toSvgPoints, usePlacement } from "./geometry";
 import * as styles from "./overlays.css";
 
-/** Radius of a measure vertex, in pixels. */
+/**
+ * Radius of a measure vertex, in pixels.
+ *
+ * @internal
+ */
 export const MEASURE_VERTEX_RADIUS_PX = 5;
 
 /** Props for {@link MeasureOverlay}. */

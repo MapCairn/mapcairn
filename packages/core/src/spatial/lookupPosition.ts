@@ -6,6 +6,8 @@ import type { LatLng } from "../ports/geometry";
  * How many decimal places a position keeps before it leaves the device for an
  * address lookup. Four places is about 11 m, enough to name a street or a
  * building but not a doorstep.
+ *
+ * @internal
  */
 export const LOOKUP_DECIMAL_PLACES = 4;
 

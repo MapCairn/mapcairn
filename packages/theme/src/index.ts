@@ -10,6 +10,7 @@ export {
   type ThemeOverride,
 } from "./checkThemeContrast";
 export {
+  type ColourInput,
   compositeOver,
   contrastRatio,
   parseColour,
@@ -37,6 +38,6 @@ export {
   surfaceBlurSupported,
   tokens,
 } from "./tokens.css";
-export type { ThemeName } from "./tokenValues";
+export type { ThemeName, ZLayerName } from "./tokenValues";
 export * as tokenValues from "./tokenValues";
 export { zLayer } from "./zLayer";

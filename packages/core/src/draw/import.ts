@@ -39,6 +39,8 @@ export const MAX_IMPORT_BYTES = 1_000_000;
  * MultiPolygon in a GeometryCollection in a FeatureCollection, needs ten
  * levels; 32 leaves room for nested properties and is still a safe depth for
  * any engine.
+ *
+ * @internal
  */
 export const MAX_IMPORT_DEPTH = 32;
 

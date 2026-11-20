@@ -5,8 +5,6 @@ export * from "./CentreCrosshair";
 export * from "./DrawOverlay";
 export {
   type OverlayMap,
-  overlayPlacement,
-  screenRadiusForMetres,
   usePlacement,
 } from "./geometry";
 export * from "./MapOverlayLayer";

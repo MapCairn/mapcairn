@@ -2,7 +2,7 @@
 
 ## Project skills and agents
 
-The skills in `.claude/skills/` (`shape-work`, `design-solution`, `design-ux`, `create-issue`, `plan-change`, `split-plan`, `pick-up-issue`, `land-pr`, `visual-check`, `review-ui`, `review-docs`, `review-security`, `web-platform-guidance`, `playwright-tests`, `design-tests`, `review-tests`, `release`) are the procedures behind `AGENTS.md`; load the one that matches the task before you start. The agents `implementer`, `fresh-eyes-reviewer`, `ui-verifier`, `ux-reviewer`, `test-reviewer` and `security-reviewer` in `.claude/agents/` run `sonnet`, and `architecture-reviewer` runs `opus`; each follows those skills. Use them for the tasks they name. Other tools read generated copies of the rest (see `docs/guides/working-with-agents.md`), so after editing a skill or agent run `npm run agents:sync`.
+The skills in `.claude/skills/` (`shape-work`, `design-solution`, `design-ux`, `create-issue`, `plan-change`, `split-plan`, `pick-up-issue`, `land-pr`, `visual-check`, `review-ui`, `review-docs`, `review-security`, `web-platform-guidance`, `playwright-tests`, `design-tests`, `review-tests`, `delete-first`, `release`) are the procedures behind `AGENTS.md`; load the one that matches the task before you start. The agents `implementer`, `fresh-eyes-reviewer`, `ui-verifier`, `ux-reviewer`, `test-reviewer`, `security-reviewer` and `lean-reviewer` in `.claude/agents/` run `sonnet`, and `architecture-reviewer` runs `opus`; each follows those skills. Use them for the tasks they name. Other tools read generated copies of the rest (see `docs/guides/working-with-agents.md`), so after editing a skill or agent run `npm run agents:sync`.
 
 ## Models
 

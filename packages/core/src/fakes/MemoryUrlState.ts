@@ -4,7 +4,7 @@ import type { UrlState, UrlStateValue } from "../ports/url";
 import { serialiseUrlHash } from "../urlHash/urlHash";
 
 /** The address {@link MemoryUrlState.link} puts links on. */
-export const MEMORY_URL_BASE = "https://mapcairn.example/";
+const MEMORY_URL_BASE = "https://mapcairn.example/";
 
 /**
  * An in-memory {@link UrlState}.

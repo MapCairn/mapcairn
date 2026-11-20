@@ -47,7 +47,11 @@ import {
   MAX_IDENTIFY_LAYERS,
 } from "./useDataLayers";
 
-/** The closest "Show on map" zooms out to: far enough to see the region. */
+/**
+ * The closest "Show on map" zooms out to: far enough to see the region.
+ *
+ * @internal
+ */
 export const SHOW_ON_MAP_MIN_ZOOM = 5;
 
 /** Half the side, in metres, of the box "Show on map" fits around a point. Small enough that the fit always ends at the zoom cap. */

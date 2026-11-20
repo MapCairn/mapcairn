@@ -72,20 +72,24 @@ import {
 } from "../../services";
 import { useAnnounce } from "../../ui/LiveRegion";
 
-/** How long a moved vertex must stay still before the new measure is announced, in milliseconds. */
+/**
+ * How long a moved vertex must stay still before the new measure is announced, in milliseconds.
+ *
+ * @internal
+ */
 export const DRAW_ANNOUNCE_DELAY_MS = 800;
 
 /** How near, in CSS pixels, a tap must be to a shape's edge, line or point to select it. */
-export const SHAPE_PICK_TOLERANCE_PX = 12;
+const SHAPE_PICK_TOLERANCE_PX = 12;
 
 /** The name of the GeoJSON file. */
-export const GEOJSON_FILENAME = "mapcairn-shapes.geojson";
+const GEOJSON_FILENAME = "mapcairn-shapes.geojson";
 
 /** The name of the CSV file. */
-export const CSV_FILENAME = "mapcairn-shapes.csv";
+const CSV_FILENAME = "mapcairn-shapes.csv";
 
 /** The name of the WKT file. */
-export const WKT_FILENAME = "mapcairn-shapes.wkt";
+const WKT_FILENAME = "mapcairn-shapes.wkt";
 
 /** What to say when no file could be opened. A cancelled picker says nothing. */
 const FILE_OPEN_MESSAGES: Readonly<

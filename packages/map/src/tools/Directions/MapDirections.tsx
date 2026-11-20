@@ -9,11 +9,23 @@ import { useMap } from "../../host";
 import { FIT_MAX_ZOOM, fitPadding } from "../../layers/reveal";
 import type { DirectionsOutcome } from "./useDirections";
 
-/** Map ids of what directions draws. Definition ids cannot contain a colon, so they never meet a layer's. */
+/**
+ * Map ids of what directions draws. Definition ids cannot contain a colon, so they never meet a layer's.
+ *
+ * @internal
+ */
 export const ROUTE_CASING_LAYER_ID = ":route-casing";
-/** Map id of the route line. */
+/**
+ * Map id of the route line.
+ *
+ * @internal
+ */
 export const ROUTE_LAYER_ID = ":route";
-/** Map id of the travel-time area. */
+/**
+ * Map id of the travel-time area.
+ *
+ * @internal
+ */
 export const AREA_LAYER_ID = ":area";
 
 /** Width of the route line, in pixels, and of the white casing under it. */
