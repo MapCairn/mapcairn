@@ -3,12 +3,13 @@
 import { isInSrgbGamut, parseColour } from "./contrast";
 import {
   type BackdropName,
+  type ContrastBackground,
   type ContrastPair,
   contrastPairs,
   measurePair,
   opaqueRoles,
-  type PairBackground,
   type PairKind,
+  type ThemeColourRole,
 } from "./contrastPairs";
 import { type ColourRoles, type ThemeName, themeValues } from "./tokenValues";
 
@@ -17,23 +18,7 @@ import { type ColourRoles, type ThemeName, themeValues } from "./tokenValues";
  * overlay roles and the data palette are not here: they carry their own
  * guarantees or belong to the host.
  */
-export type ThemeColours = Pick<
-  ColourRoles,
-  | "surface"
-  | "surfaceRaised"
-  | "text"
-  | "textMuted"
-  | "accent"
-  | "accentTint"
-  | "accentContrast"
-  | "hairline"
-  | "controlBoundary"
-  | "danger"
-  | "dangerTint"
-  | "scrim"
-  | "focusRing"
-  | "focusRingInner"
->;
+export type ThemeColours = Record<ThemeColourRole, string>;
 
 /** A proposed theme: some colour roles, per theme. A role left out keeps its default. */
 export interface ThemeOverride {
@@ -49,9 +34,9 @@ export interface ContrastFinding {
   /** The theme the finding is for. */
   theme: ThemeName;
   /** The role drawn: text, an icon, an edge or a ring. */
-  foreground: keyof ThemeColours;
+  foreground: ThemeColourRole;
   /** The role it sits on, or `map` for the bare map. */
-  background: PairBackground;
+  background: ContrastBackground;
   /** The map backdrop checked over, or `null` for an opaque background. */
   backdrop: BackdropName | null;
   /** Whether the foreground is text or a non-text mark. */
@@ -259,7 +244,7 @@ function findingsFor(
         const ratio = measurePair(roles, pair, backdrop);
         return {
           theme,
-          foreground: pair.foreground as keyof ThemeColours,
+          foreground: pair.foreground,
           background: pair.background,
           backdrop: backdrop ?? null,
           kind: pair.kind,

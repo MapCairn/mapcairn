@@ -8,23 +8,52 @@ export const AA_TEXT = 4.5;
 /** WCAG 2.2 AA contrast for icons, control edges, selection and the focus ring. */
 export const AA_NON_TEXT = 3;
 
-/** Name of one of the representative map backdrops. */
-export type BackdropName = keyof typeof representativeBackdrops;
+/**
+ * Name of one of the representative map backdrops: white, black, a light map
+ * and the default basemap's land colour. Indexing `representativeBackdrops`
+ * with it keeps the two in step at compile time.
+ */
+export type BackdropName = "white" | "black" | "lightMap" | "defaultBasemap";
 
 /** What a pair's foreground is: text, or a non-text mark such as an edge or ring. */
 export type PairKind = "text" | "non-text";
 
 /**
+ * The interface colour roles a host may override, and so the roles a
+ * finding's foreground can name.
+ */
+export type ThemeColourRole =
+  | "surface"
+  | "surfaceRaised"
+  | "text"
+  | "textMuted"
+  | "accent"
+  | "accentTint"
+  | "accentContrast"
+  | "hairline"
+  | "controlBoundary"
+  | "danger"
+  | "dangerTint"
+  | "scrim"
+  | "focusRing"
+  | "focusRingInner";
+
+/**
  * The colour a pair's foreground sits on. `surface` and `surfaceRaised` are
  * translucent, so they are flattened over each backdrop first; `map` is the
- * bare map itself; the rest are opaque roles.
+ * bare map itself; the page background and the map halo are fixed defaults
+ * a host cannot override; the rest are opaque roles.
  */
-export type PairBackground = keyof ColourRoles | "map";
+export type ContrastBackground =
+  | ThemeColourRole
+  | "pageBackground"
+  | "mapHalo"
+  | "map";
 
 /** One foreground-and-background pair that must reach a contrast ratio. */
 export interface ContrastPair {
-  foreground: keyof ColourRoles;
-  background: PairBackground;
+  foreground: ThemeColourRole;
+  background: ContrastBackground;
   kind: PairKind;
   /** Minimum contrast ratio. */
   required: number;
@@ -75,8 +104,8 @@ const surfacePairs: readonly ContrastPair[] = surfaceRoles.flatMap(
 );
 
 const opaquePair = (
-  foreground: keyof ColourRoles,
-  background: keyof ColourRoles,
+  foreground: ThemeColourRole,
+  background: ContrastBackground,
   kind: PairKind,
 ): ContrastPair => ({
   foreground,

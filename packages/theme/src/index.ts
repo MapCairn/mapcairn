@@ -16,6 +16,12 @@ export {
   type Rgba,
   toHex,
 } from "./contrast";
+export type {
+  BackdropName,
+  ContrastBackground,
+  PairKind,
+  ThemeColourRole,
+} from "./contrastPairs";
 export { mapOverlayTokens } from "./mapOverlayTokens";
 export {
   blur,
@@ -24,5 +30,6 @@ export {
   surfaceBlurSupported,
   tokens,
 } from "./tokens.css";
+export type { ThemeName } from "./tokenValues";
 export * as tokenValues from "./tokenValues";
 export { zLayer } from "./zLayer";

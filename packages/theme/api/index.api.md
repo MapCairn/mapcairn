@@ -5,6 +5,9 @@
 ```ts
 
 // @public
+export type BackdropName = "white" | "black" | "lightMap" | "defaultBasemap";
+
+// @public
 const blur_2: `var(--${string})`;
 export { blur_2 as blur }
 
@@ -17,18 +20,17 @@ export function checkThemeContrast(override: ThemeOverride): ThemeContrastCheck;
 export function compositeOver(foreground: ColourInput, backdrop: ColourInput): Rgba;
 
 // @public
+export type ContrastBackground = ThemeColourRole | "pageBackground" | "mapHalo" | "map";
+
+// @public
 export interface ContrastFinding {
-    // Warning: (ae-forgotten-export) The symbol "BackdropName" needs to be exported by the entry point index.d.ts
     backdrop: BackdropName | null;
-    // Warning: (ae-forgotten-export) The symbol "PairBackground" needs to be exported by the entry point index.d.ts
-    background: PairBackground;
-    foreground: keyof ThemeColours;
-    // Warning: (ae-forgotten-export) The symbol "PairKind" needs to be exported by the entry point index.d.ts
+    background: ContrastBackground;
+    foreground: ThemeColourRole;
     kind: PairKind;
     passes: boolean;
     ratio: number;
     required: number;
-    // Warning: (ae-forgotten-export) The symbol "ThemeName" needs to be exported by the entry point index.d.ts
     theme: ThemeName;
 }
 
@@ -70,6 +72,9 @@ export const mapOverlayTokens: {
 };
 
 // @public
+export type PairKind = "text" | "non-text";
+
+// @public
 export function parseColour(colour: string): Rgba;
 
 // @public
@@ -94,10 +99,11 @@ export const surfaceBlurStyle: {
 // @public
 export const surfaceBlurSupported = "(backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))";
 
-// Warning: (ae-forgotten-export) The symbol "ColourRoles" needs to be exported by the entry point index.d.ts
-//
 // @public
-export type ThemeColours = Pick<ColourRoles, "surface" | "surfaceRaised" | "text" | "textMuted" | "accent" | "accentTint" | "accentContrast" | "hairline" | "controlBoundary" | "danger" | "dangerTint" | "scrim" | "focusRing" | "focusRingInner">;
+export type ThemeColourRole = "surface" | "surfaceRaised" | "text" | "textMuted" | "accent" | "accentTint" | "accentContrast" | "hairline" | "controlBoundary" | "danger" | "dangerTint" | "scrim" | "focusRing" | "focusRingInner";
+
+// @public
+export type ThemeColours = Record<ThemeColourRole, string>;
 
 // @public
 export interface ThemeContrastCheck {
@@ -105,6 +111,9 @@ export interface ThemeContrastCheck {
     invalid: InvalidColour[];
     passes: boolean;
 }
+
+// @public
+export type ThemeName = "light" | "dark";
 
 // @public
 export interface ThemeOverride {
