@@ -42,6 +42,8 @@ This is the first release of the four MapCairn SDK packages: `@mapcairn/core`, `
 
 **Controls that keep still.** The credits button, scale, coordinates and map key in the bottom corners now move only when a toolbar or banner would actually cover them, rather than whenever something opens in the middle. The credits button is also legible over a light map. ([#488](https://github.com/MapCairn/mapcairn/pull/488), [#493](https://github.com/MapCairn/mapcairn/pull/493))
 
+**A size limit on layer data.** A feed, query or detail response from a provider is refused as invalid once it passes 4 MiB, and the layer shows its usual error state. A host can set a different limit for a source it creates. Search and routing answers have no limit yet. ([#526](https://github.com/MapCairn/mapcairn/pull/526))
+
 **Offline, said once.** `DevicePreferences` reports whether the device is online, and the reference site says so once when it is not, without making a request to find out. ([#447](https://github.com/MapCairn/mapcairn/pull/447))
 
 **Type that suits the script.** Letter spacing and line height adjust for non-Latin scripts. ([#380](https://github.com/MapCairn/mapcairn/pull/380))
