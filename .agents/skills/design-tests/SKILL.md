@@ -85,7 +85,7 @@ Fails first: `<file>` - "<test name>": <the assertion that fails today, and why>
 | Behaviour | Level | File | Substitutes and timing | Rejects |
 | --------- | ----- | ---- | ---------------------- | ------- |
 
-Runs in: <the job and step of `.github/workflows/` for each row; Vitest tests, `packages/core/src/lint` included, run in the `CI` workflow's coverage step, browser specs in `Playwright E2E`>.
+Runs in: <the job and step of `.github/workflows/` for each row; Vitest unit tests run in the `CI` workflow's coverage step, build-output tests (they skip there, so a later step runs them after `npm run build`) in that later step, browser specs in `Playwright E2E`>.
 Not tested, and why: <each behaviour left out, or "none">.
 ```
 

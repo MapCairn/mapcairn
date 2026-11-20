@@ -19,7 +19,7 @@ Example: on #463 the contrast check flattened a translucent text colour over its
 1. Read the pull request with `node scripts/agents/thread.mjs pr <n>`. If it is from outside the project (`land-pr` section 2), do not run its code: review from `gh pr diff <n>` and `git show <sha>:<path>`, do sections 2 and 5 by reading, and say that sections 3 and 4 were not run.
 2. `git fetch <origin-or-upstream> pull/<n>/head`, note the head SHA, and find the base with `git merge-base <origin-or-upstream>/main <head-sha>`.
 3. `git worktree add --detach .claude/worktrees/review-<n> <head-sha>`, then `npm ci --ignore-scripts` inside it. Never edit the branch, the main checkout or another worktree.
-4. List the diff with `git diff --stat <base> <head-sha>` and read large files (a long table row in `DESIGN.md`) by their added lines only (`git diff <base> <head-sha> -- <file>`, keeping the lines that start with `+`, each cut to a readable width), not whole. Sort the files into code (what ships), tests (`*.test.ts`, `*.test.tsx`, `packages/web/e2e/**`, fixtures and support) and documents.
+4. List the diff with `git diff --stat <base> <head-sha>` and read large files (a long table row in `DESIGN.md`) by their added lines only (`git diff -U0 <base> <head-sha> -- <file>` shows the changed lines with no context; read the ones that start with `+` by eye), not whole. Sort the files into code (what ships), tests (`*.test.ts`, `*.test.tsx`, `packages/web/e2e/**`, fixtures and support) and documents.
 5. Run the changed and new tests once at the head and confirm they pass. Run Vitest from the package folder (`cd packages/<name>`, then `npx --no-install vitest run src/<file>`): from the repository root the config also loads `packages/web`, which needs the built SDK. A failure here is a finding of its own; stop the experiments until you know why.
 
 ## 2. Read the claims and the assertions
@@ -60,7 +60,7 @@ Choose two to four mutations from the code diff, preferring the places a wrong v
 - the reading direction ignored (the right-to-left branch of a layout or a key always taking the left-to-right value);
 - a parser rule loosened or tightened (accept an extra argument, drop a flag, refuse a valid form).
 
-For each, one at a time: edit only code in the scratch worktree, with an editor or a one-line in-place substitution, and check with `git diff --stat` that exactly one line changed; run the narrowest set that should catch it, then the package's tests; record killed or survived and the test that killed it; restore with `git restore -- <file>` and check `git status` is clean. A survivor is a finding. Write the smallest case that would kill it, run that case against the mutant in a temporary test file, then delete the file. If your case does not kill the mutant either, say "fix unproven" rather than offer it.
+For each, one at a time: edit only code in the scratch worktree, with your edit tool, and check with `git diff --stat` that exactly one line changed; run the narrowest set that should catch it, then the package's tests; record killed or survived and the test that killed it; restore with `git restore -- <file>` and check `git status` is clean. A survivor is a finding. Write the smallest case that would kill it, run that case against the mutant in a temporary test file, then delete the file. If your case does not kill the mutant either, say "fix unproven" rather than offer it.
 
 A survivor counts only if the mutated line runs. Coverage shows that for a line (`npx --no-install vitest run --coverage --coverage.include=<file> --coverage.reporter=text` in the package folder), but a covered line that no mutation can break proves nothing: the survivors are the measure, not the percentage. For a handler that runs only on an event, check a test fires that event.
 
@@ -86,7 +86,7 @@ When a test fails sometimes:
 
 ## 7. Clean up
 
-Delete any temporary test file, check `git status` is clean, `git worktree remove .claude/worktrees/review-<n>`, and confirm with a port check that nothing you started is still running.
+Delete any temporary test file, check `git status` is clean, `git worktree remove .claude/worktrees/review-<n>`, and confirm with a port check that nothing you started is still running. If a restore fails or `git worktree remove` refuses on a dirty tree, report the path and its state under Deviations; do not use `--force` or touch other worktrees.
 
 ## Report
 
