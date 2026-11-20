@@ -17,6 +17,8 @@ pre-commit:
       run: npm run names:check
     portability:
       run: npm run portability:check
+    release-notes:
+      run: npm run release:notes-check
 
 commit-msg:
   commands:

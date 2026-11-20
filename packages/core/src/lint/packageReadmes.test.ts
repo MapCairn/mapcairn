@@ -32,7 +32,7 @@ const REPOSITORY_FOLDERS = "https://github.com/MapCairn/mapcairn/tree/main/";
  * Files a README links to before they exist. Remove a name here when its file
  * lands, so the test then checks the link like any other.
  */
-const NOT_YET_IN_THE_REPOSITORY: readonly string[] = ["CHANGELOG.md"];
+const NOT_YET_IN_THE_REPOSITORY: readonly string[] = [];
 
 /** The install line each package shows, for one package manager. */
 const INSTALL_VERBS = ["npm install", "pnpm add", "yarn add"] as const;
@@ -203,12 +203,13 @@ describe.each(SDK_PACKAGES)("the README of @mapcairn/%s", (name) => {
 });
 
 describe("the files a README may link to before they exist", () => {
-  it.each(NOT_YET_IN_THE_REPOSITORY)(
-    "%s is still missing, or its entry is removed from the list",
-    (file) => {
-      expect(existsSync(path.join(REPO, file))).toBe(false);
-    },
-  );
+  it("lists only files that are still missing", () => {
+    expect(
+      NOT_YET_IN_THE_REPOSITORY.filter((file) =>
+        existsSync(path.join(REPO, file)),
+      ),
+    ).toEqual([]);
+  });
 });
 
 describe("the stylesheet imports in the README of @mapcairn/map and @mapcairn/theme", () => {

@@ -1,0 +1,629 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright MapCairn contributors
+import { spawnSync } from "node:child_process";
+import { createHash } from "node:crypto";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import path from "node:path";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import {
+  checkChangelog,
+  isShallowClone,
+  runCheck,
+  subjectsSincePreviousTag,
+  // @ts-expect-error The scripts are dependency-free JavaScript with JSDoc types.
+} from "../../../../scripts/release/notesCheck.mjs";
+
+const PREAMBLE = "# Changelog\n\nWhat changed in each release.\n\n";
+
+const GOOD = `${PREAMBLE}## 0.2.0 (2026-12-01)
+
+### What is new
+
+**Selecting several features.** You can now hold Shift and click to add features to a selection, and \`useFeatureSelection\` returns them all. ([#49](https://github.com/MapCairn/mapcairn/pull/49))
+
+#### \`@mapcairn/theme\`
+
+**Checking a theme.** \`checkThemeContrast\` reports the contrast of a proposed theme. ([#463](https://github.com/MapCairn/mapcairn/pull/463))
+
+### What got better
+
+- The scale bar no longer flickers while you zoom. ([#470](https://github.com/MapCairn/mapcairn/pull/470))
+
+### What to change when you upgrade
+
+**\`LayerKind\` has a new member.** A \`switch\` over it now needs an \`"image"\` case, because layers can now draw images. ([#480](https://github.com/MapCairn/mapcairn/pull/480))
+
+Before:
+
+\`\`\`ts
+import type { LayerKind } from "@mapcairn/core";
+switch (kind) {
+  case "tiles":
+    break;
+}
+\`\`\`
+
+After:
+
+\`\`\`ts
+import type { LayerKind } from "@mapcairn/core";
+switch (kind) {
+  case "tiles":
+    break;
+  case "image":
+    break;
+}
+\`\`\`
+
+### Thanks
+
+Thank you to \`octo-cat\` and plain-handle for their first contributions.
+`;
+
+function messages(text: string, options = {}): string[] {
+  return checkChangelog(text, options).map(
+    (finding: { message: string }) => finding.message,
+  );
+}
+
+/** The bullet the tests below replace when they need a whole line. */
+const BULLET_LINE =
+  "- The scale bar no longer flickers while you zoom. ([#470](https://github.com/MapCairn/mapcairn/pull/470))";
+
+/** Replaces one fragment of the good changelog, failing when it is not there. */
+function edited(from: string, to: string): string {
+  if (!GOOD.includes(from)) {
+    throw new Error(`The good changelog has no ${from}`);
+  }
+  return GOOD.replace(from, to);
+}
+
+describe("checkChangelog", () => {
+  it("passes the good changelog, an empty one and a title with an introduction", () => {
+    expect(checkChangelog(GOOD)).toEqual([]);
+    expect(checkChangelog(PREAMBLE)).toEqual([]);
+    expect(checkChangelog("")).toEqual([]);
+  });
+
+  it("fails the bad example from the plan: a commit subject and a handle", () => {
+    const bad = `${PREAMBLE}## 0.1.0 (2026-12-01)\n\n### What is new\n\n- feat(map): add multi-select (#412)\n- Huge DX improvements, thanks @some-handle!\n`;
+    const found = checkChangelog(bad);
+    expect(found.map((finding: { line: number }) => finding.line)).toEqual([
+      9, 9, 10,
+    ]);
+    expect(messages(bad).join(" ")).toContain("commit subject");
+    expect(messages(bad).join(" ")).toContain("notifies");
+    expect(messages(bad).join(" ")).toContain("(#123)");
+  });
+
+  describe("commit prefixes", () => {
+    it.each([
+      "feat:",
+      "fix(core):",
+      "chore!:",
+      "- docs(map)!:",
+      "* perf:",
+      "1. fix:",
+      "12. feat(map)!:",
+    ])("fails a line that starts with %s", (start) => {
+      expect(
+        messages(edited("- The scale bar", `${start} The scale bar`)),
+      ).toContain(
+        "A line that starts like a commit subject (`feat:`, `fix:` and so on) reads as a commit log. Say what someone can now do.",
+      );
+    });
+
+    it("passes the same words inside a sentence or a code block", () => {
+      expect(messages(edited("The scale bar", "A fix: the scale bar"))).toEqual(
+        [],
+      );
+      expect(
+        messages(edited(BULLET_LINE, "```text\nfix: the scale bar\n```")),
+      ).toEqual([]);
+    });
+  });
+
+  describe("handles", () => {
+    it("fails an @handle outside a code span, in prose, a link text and a bold lead", () => {
+      for (const bad of [
+        "thanks @some-handle!",
+        "[@some-handle](https://github.com/some-handle)",
+        "**@octo** helped",
+        "@octo",
+      ]) {
+        expect(messages(edited("The scale bar", bad)).join(" ")).toContain(
+          "notifies",
+        );
+      }
+    });
+
+    it("passes a handle in a code span, written plainly, and a scoped package name", () => {
+      for (const good of [
+        "thanks `@some-handle`",
+        "thanks some-handle",
+        "see @mapcairn/map and @mapcairn/core/contracts",
+        "mail a@b.example",
+        "`` @a `` and `b`",
+      ]) {
+        expect(messages(edited("The scale bar", good))).toEqual([]);
+      }
+    });
+
+    it("fails a handle after a code span that is never closed", () => {
+      for (const bad of ["`alice` and `@bob for the fix", "thanks `@bob"]) {
+        expect(messages(edited("The scale bar", bad)).join(" ")).toContain(
+          "notifies",
+        );
+      }
+    });
+
+    it("lets only the four SDK package names stand outside a code span", () => {
+      for (const bad of [
+        "thanks @MapCairn/maintainers",
+        "see @mapcairn/other",
+        "see @mapcairn/map-extra",
+        "ask @mapcairn",
+      ]) {
+        expect(messages(edited("The scale bar", bad)).join(" ")).toContain(
+          "notifies",
+        );
+      }
+      for (const good of [
+        "see `@MapCairn/maintainers`",
+        "import from @mapcairn/theme/tokens.css",
+        "@mapcairn/react and @mapcairn/core.",
+      ]) {
+        expect(messages(edited("The scale bar", good))).toEqual([]);
+      }
+    });
+
+    it("passes an import in a code block", () => {
+      expect(GOOD).toContain('from "@mapcairn/core"');
+      expect(messages(GOOD)).toEqual([]);
+    });
+  });
+
+  describe("raw pull request tails", () => {
+    it("fails a raw (#123) and passes a link to the pull request", () => {
+      expect(
+        messages(edited("The scale bar", "The scale bar (#123)")),
+      ).toContain(
+        "A raw `(#123)` tail comes from a commit subject. Link the pull request instead.",
+      );
+      expect(
+        messages(
+          edited(
+            "The scale bar",
+            "The scale bar ([#123](https://example.test/123))",
+          ),
+        ),
+      ).toEqual([]);
+    });
+  });
+
+  describe("emoji and attribution", () => {
+    it.each([
+      ["\u{1F680}"],
+      ["✨"],
+      ["✅"],
+      ["\u{1F44D}\u{1F3FD}"],
+      ["1️⃣"],
+      ["❤️"],
+    ])("fails the emoji %s", (emoji) => {
+      expect(
+        messages(edited("The scale bar", `The scale bar ${emoji}`)),
+      ).toContain("Emoji are not used in the notes.");
+    });
+
+    it("passes the check and cross marks, which are not emoji", () => {
+      expect(
+        messages(
+          edited(
+            "The scale bar",
+            "Works \u2713, not \u2717, and \u2605 or \u260E",
+          ),
+        ),
+      ).toEqual([]);
+    });
+
+    it("passes plain symbols that are not emoji", () => {
+      expect(
+        messages(edited("The scale bar", "The scale bar © ® ™ → é अ")),
+      ).toEqual([]);
+    });
+
+    it.each([
+      "Generated with a tool",
+      "Co-Authored-By: Someone <a@b.example>",
+      "Written by Claude",
+      "drafted with an AI",
+      "> Generated by a tool",
+      "Generated with Claude Code",
+    ])("fails the attribution %s", (line) => {
+      expect(messages(edited("The scale bar", line))).toContain(
+        "An attribution line does not belong in the notes.",
+      );
+    });
+
+    it.each([
+      "The API reports are generated by API Extractor.",
+      "The file is generated with the build.",
+      "- Written by the whole team.",
+    ])("passes a sentence that only uses the words: %s", (line) => {
+      expect(messages(edited("The scale bar", line))).toEqual([]);
+    });
+
+    it("looks for them inside code blocks too", () => {
+      expect(
+        messages(edited(BULLET_LINE, "```text\nGenerated with a tool\n```")),
+      ).toContain("An attribution line does not belong in the notes.");
+    });
+  });
+
+  describe("headings", () => {
+    it("fails a heading the style guide does not name", () => {
+      expect(
+        messages(edited("### Thanks", "### Highlights")).join(" "),
+      ).toContain("must be one of");
+      expect(messages(edited("### Thanks", "## Thanks")).join(" ")).toContain(
+        "## <version>",
+      );
+      expect(
+        messages(edited("#### `@mapcairn/theme`", "#### Theme tweaks")).join(
+          " ",
+        ),
+      ).toContain("must name a package");
+      expect(
+        messages(
+          edited("#### `@mapcairn/theme`", "##### `@mapcairn/theme`"),
+        ).join(" "),
+      ).toContain("no deeper");
+    });
+
+    it("passes each package subheading form", () => {
+      for (const form of [
+        "`@mapcairn/theme`",
+        "@mapcairn/theme",
+        "theme",
+        "`core`",
+      ]) {
+        expect(messages(edited("`@mapcairn/theme`", form))).toEqual([]);
+      }
+    });
+
+    it("fails a malformed, impossible or repeated version heading", () => {
+      expect(
+        messages(edited("## 0.2.0 (2026-12-01)", "## 0.2.0")).join(" "),
+      ).toContain("## <version>");
+      expect(
+        messages(
+          edited("## 0.2.0 (2026-12-01)", "## v0.2.0 (2026-12-01)"),
+        ).join(" "),
+      ).toContain("## <version>");
+      expect(
+        messages(edited("(2026-12-01)", "(2026-13-45)")).join(" "),
+      ).toContain("is not a real date");
+      expect(
+        messages(
+          `${GOOD}\n## 0.2.0 (2026-11-01)\n\n### Thanks\n\nThanks.\n`,
+        ).join(" "),
+      ).toContain("more than one section");
+    });
+
+    it("passes a prerelease version heading", () => {
+      expect(
+        messages(edited("## 0.2.0 (2026-12-01)", "## 0.2.0-rc.1 (2026-12-01)")),
+      ).toEqual([]);
+    });
+
+    it("allows one title above the first version only", () => {
+      expect(messages(`${GOOD}\n# Another title\n`).join(" ")).toContain(
+        "Only one `#` title",
+      );
+      expect(
+        messages(
+          `# One\n\n# Two\n\n## 0.1.0 (2026-12-01)\n\n### Thanks\n\nThanks.\n`,
+        ).join(" "),
+      ).toContain("Only one `#` title");
+    });
+
+    it("fails a section heading above any version", () => {
+      expect(
+        messages("# Changelog\n\n### Thanks\n\nHi.\n").join(" "),
+      ).toContain("must be one of");
+      expect(messages("# Changelog\n\n#### core\n\nHi.\n").join(" ")).toContain(
+        "must name a package",
+      );
+    });
+
+    it("fails a version with nothing under its heading", () => {
+      expect(
+        messages(`${PREAMBLE}## 0.1.0 (2026-12-01)\n\n`).join(" "),
+      ).toContain("no notes");
+    });
+
+    it("reads a heading-like line in a code block as code", () => {
+      expect(
+        messages(edited(BULLET_LINE, "```md\n### Highlights\n```")),
+      ).toEqual([]);
+    });
+  });
+
+  describe("changes to make on upgrade", () => {
+    it("fails an entry with no before and after blocks", () => {
+      const bad = edited(
+        GOOD.slice(GOOD.indexOf("Before:"), GOOD.indexOf("### Thanks")),
+        "",
+      );
+      expect(messages(bad).join(" ")).toContain(
+        "needs a Before and an After code block",
+      );
+    });
+
+    it("fails an entry with only a before block, or with the blocks in the wrong order", () => {
+      const afterStart = GOOD.indexOf("After:");
+      const onlyBefore =
+        GOOD.slice(0, afterStart) + GOOD.slice(GOOD.indexOf("### Thanks"));
+      expect(messages(onlyBefore).join(" ")).toContain(
+        "needs a Before and an After code block",
+      );
+      const swapped = GOOD.replace("Before:", "After:").replace(
+        /After:(?![\s\S]*After:)/,
+        "Before:",
+      );
+      expect(messages(swapped).join(" ")).toContain(
+        "needs a Before and an After code block",
+      );
+    });
+
+    it("checks each entry on its own", () => {
+      const second = "\n**Another change.** Rename it.\n";
+      const found = messages(edited("### Thanks", `${second}\n### Thanks`));
+      expect(
+        found.filter((message) => message.includes("Before and an After")),
+      ).toHaveLength(1);
+    });
+
+    it("passes bullet entries and emphasised labels", () => {
+      const bulleted = `${PREAMBLE}## 0.1.0 (2026-12-01)\n\n### What to change when you upgrade\n\n- Rename \`a\` to \`b\`.\n\n  **Before**\n\n  \`\`\`ts\n  a();\n  \`\`\`\n\n  _After_\n\n  \`\`\`ts\n  b();\n  \`\`\`\n`;
+      expect(messages(bulleted)).toEqual([]);
+    });
+
+    it("asks for a bullet or bold lead when the section has text but no entry", () => {
+      const loose = `${PREAMBLE}## 0.1.0 (2026-12-01)\n\n### What to change when you upgrade\n\nRename a to b.\n`;
+      expect(messages(loose).join(" ")).toContain(
+        "Start each change with a bullet or a bold lead",
+      );
+    });
+
+    it("does not ask for blocks under the other sections", () => {
+      expect(
+        messages(
+          edited(
+            "### Thanks",
+            "### What got better\n\n- Faster.\n\n### Thanks",
+          ),
+        ),
+      ).toEqual([]);
+    });
+  });
+
+  describe("forbidden names", () => {
+    const word = "zorblaxname";
+    const forbidden = [
+      {
+        hash: createHash("sha256").update(word).digest("hex"),
+        length: word.length,
+        whole: false,
+      },
+    ];
+
+    it("fails a listed name without printing it", () => {
+      const found = checkChangelog(
+        edited("The scale bar", `The scale bar, said ${word}`),
+        { forbidden },
+      );
+      expect(found).toEqual([
+        {
+          line: GOOD.split("\n").indexOf(BULLET_LINE) + 1,
+          message: "A forbidden name (see the names check).",
+        },
+      ]);
+      expect(JSON.stringify(found)).not.toContain(word);
+    });
+
+    it("passes the same text with another list", () => {
+      expect(
+        checkChangelog(edited("The scale bar", `The scale bar, said ${word}`)),
+      ).toEqual([]);
+    });
+  });
+
+  describe("repeated commit subjects", () => {
+    const subjectsFor = (version: string) =>
+      version === "0.2.0"
+        ? [
+            "feat(map): add multi-select (#412)",
+            "fix: stop a flicker (#413)",
+            "chore(release): v0.1.0 (#6)",
+          ]
+        : null;
+
+    it("fails a bullet that repeats a subject, with or without its prefix and tail", () => {
+      for (const bullet of [
+        "- feat(map): add multi-select (#412)",
+        "- Add multi-select",
+        "- **Add multi-select.** ([#412](https://example.test/412))",
+        "* ADD MULTI-SELECT",
+        "1. Stop a flicker.",
+      ]) {
+        expect(
+          messages(
+            edited(
+              "- The scale bar no longer flickers while you zoom. ([#470](https://github.com/MapCairn/mapcairn/pull/470))",
+              bullet,
+            ),
+            { subjectsFor },
+          ).join(" "),
+        ).toContain("repeats a commit subject");
+      }
+    });
+
+    it("passes a bullet that says more than the subject, and a paragraph that repeats it", () => {
+      expect(messages(GOOD, { subjectsFor })).toEqual([]);
+      expect(
+        messages(
+          edited("**Selecting several features.**", "Add multi-select"),
+          { subjectsFor },
+        ),
+      ).toEqual([]);
+    });
+
+    it("skips the rule when no subjects are given, or none are known for a version", () => {
+      expect(
+        messages(
+          edited("- The scale bar", "- Add multi-select\n- The scale bar"),
+        ),
+      ).toEqual([]);
+      expect(
+        messages(
+          edited("- The scale bar", "- Add multi-select\n- The scale bar"),
+          { subjectsFor: () => null },
+        ),
+      ).toEqual([]);
+    });
+
+    it("ignores a code block", () => {
+      expect(
+        messages(edited(BULLET_LINE, "```text\n- Add multi-select\n```"), {
+          subjectsFor,
+        }),
+      ).toEqual([]);
+    });
+  });
+});
+
+describe("git history", () => {
+  const folders: string[] = [];
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+    for (const folder of folders.splice(0)) {
+      rmSync(folder, { recursive: true, force: true });
+    }
+  });
+
+  function git(root: string, ...args: string[]): string {
+    const result = spawnSync(
+      "git",
+      [
+        "-c",
+        "user.name=Test",
+        "-c",
+        "user.email=test@example.test",
+        "-c",
+        "commit.gpgsign=false",
+        "-c",
+        "tag.gpgsign=false",
+        ...args,
+      ],
+      { cwd: root, encoding: "utf8" },
+    );
+    if (result.status !== 0) {
+      throw new Error(result.stderr);
+    }
+    return result.stdout.trim();
+  }
+
+  function scratch(): string {
+    const folder = mkdtempSync(path.join(tmpdir(), "mapcairn-check-"));
+    folders.push(folder);
+    return folder;
+  }
+
+  /** A repository with two releases and a changelog that repeats one subject. */
+  function repository(): string {
+    const root = scratch();
+    git(root, "init", "-q", "-b", "main");
+    writeFileSync(path.join(root, "a.txt"), "1");
+    git(root, "add", "-A");
+    git(root, "commit", "-q", "-m", "feat: the first thing (#1)");
+    git(root, "tag", "v0.1.0");
+    writeFileSync(path.join(root, "a.txt"), "2");
+    git(root, "commit", "-q", "-am", "fix(core): stop a crash (#2)");
+    git(root, "tag", "v0.1.1");
+    writeFileSync(path.join(root, "a.txt"), "3");
+    git(root, "commit", "-q", "-am", "feat: add a button (#3)");
+    writeFileSync(
+      path.join(root, "CHANGELOG.md"),
+      `${PREAMBLE}## 0.2.0 (2026-12-01)\n\n### What is new\n\n- Add a button\n\n## 0.1.1 (2026-11-01)\n\n### What got better\n\n- Add a button, which is not in this release\n`,
+    );
+    return root;
+  }
+
+  it("reads the subjects between the tag before a version and its own tag, or the head", () => {
+    const subjectsFor = subjectsSincePreviousTag(repository());
+    expect(subjectsFor("0.1.1")).toEqual(["fix(core): stop a crash (#2)"]);
+    expect(subjectsFor("0.2.0")).toEqual(["feat: add a button (#3)"]);
+    expect(subjectsFor("0.1.0")).toEqual(["feat: the first thing (#1)"]);
+    expect(subjectsFor("not a version")).toBeNull();
+  });
+
+  it("runs the rule in a full clone and reports each finding with its file and line", () => {
+    const root = repository();
+    const errors = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => undefined);
+    const logs = vi.spyOn(console, "log").mockImplementation(() => undefined);
+    expect(isShallowClone(root)).toBe(false);
+    expect(runCheck(path.join(root, "CHANGELOG.md"), root)).toBe(1);
+    expect(errors).toHaveBeenCalledTimes(1);
+    expect(String(errors.mock.calls[0][0])).toMatch(
+      /^CHANGELOG\.md:9: This bullet repeats a commit subject/,
+    );
+    expect(logs).not.toHaveBeenCalled();
+  });
+
+  it("skips the rule with a notice in a shallow clone", () => {
+    const origin = repository();
+    git(origin, "add", "-A");
+    git(origin, "commit", "-q", "-m", "docs: changelog");
+    const clone = path.join(scratch(), "clone");
+    mkdirSync(clone);
+    git(
+      clone,
+      "clone",
+      "-q",
+      "--depth",
+      "1",
+      `file://${origin.split(path.sep).join("/")}`,
+      ".",
+    );
+    const errors = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => undefined);
+    const logs = vi.spyOn(console, "log").mockImplementation(() => undefined);
+    expect(isShallowClone(clone)).toBe(true);
+    expect(runCheck(path.join(clone, "CHANGELOG.md"), clone)).toBe(0);
+    expect(errors).not.toHaveBeenCalled();
+    expect(String(logs.mock.calls[0][0])).toContain("is skipped");
+  });
+
+  it("says nothing about history when the changelog has no version", () => {
+    const root = scratch();
+    writeFileSync(path.join(root, "CHANGELOG.md"), PREAMBLE);
+    const logs = vi.spyOn(console, "log").mockImplementation(() => undefined);
+    expect(isShallowClone(root)).toBeNull();
+    expect(runCheck(path.join(root, "CHANGELOG.md"), root)).toBe(0);
+    expect(logs).not.toHaveBeenCalled();
+  });
+
+  it("cannot run on a missing file", () => {
+    const errors = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => undefined);
+    expect(runCheck(path.join(scratch(), "CHANGELOG.md"), scratch())).toBe(2);
+    expect(String(errors.mock.calls[0][0])).toContain("does not exist");
+  });
+});

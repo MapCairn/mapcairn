@@ -99,11 +99,12 @@ CI prints each warning in a group and a count for each package as one annotation
 
 ## How a change is classed for a release
 
-The release script (plan 0014, step 8, not built yet) is to read the reports' change since the last tag and the commits' types, and to flag each change below as a likely breaking change. It cannot see everything above, so a person reads the go/no-go list in the Release pull request.
+`npm run release:plan` (`scripts/release/plan.mjs`, described in `docs/guides/releasing.md`) reads the reports' change since the last tag and the commits' types, and flags each change below as a likely breaking change. It cannot see everything above, so a person reads the go/no-go list in the Release pull request.
 
 - a removed or changed line in a report, and a line that gained an `@internal` tag;
-- an added member of an exported union. API Extractor prints a short union on one line, so a new member shows as a changed line, and a long one on several lines. For step 8, `docModel` (the `.api.json` output, not enabled now) is the machine-readable form to read members from;
-- a change under `packages/core/src/urlHash/sharedLinks.test.ts` or `packages/core/src/layers/legacyDefinitions/` that removes or edits an entry. Adding an entry is not breaking.
+- a required member added to an exported interface or abstract class a host implements (an optional member, or a member of an ordinary class, does not count; for an abstract class only a new abstract member does). Hosts implement the ports, so adding a required member to one breaks them;
+- an added member of an exported union or enum. API Extractor prints a short union on one line, so a new member shows as a changed line, and a long one on several lines; the script reads the members from the report text itself;
+- a change under `packages/core/src/urlHash/sharedLinks.test.ts` or `packages/core/src/layers/legacyDefinitions/` that removes or edits an entry (any removed line in the diff since the last tag). Adding an entry is not breaking.
 
 Two kinds of change need a person, because no check sees them: a message key removed or renamed (the release notes list new keys so a host can translate them), and a stored format changed. While the version is `0.x`, a likely breaking change gives a minor bump; from `1.0.0` it gives a major one (the rules are in plan 0014).
 
