@@ -5,8 +5,10 @@ import {
   buildReport,
   parseAdminBypass,
   parseEnvironment,
+  parseIdentity,
   parseRegistryAnswer,
   parseReviewers,
+  readIdentity,
   // @ts-expect-error The scripts are dependency-free JavaScript with JSDoc types.
 } from "../../../../scripts/release/check.mjs";
 
@@ -49,6 +51,7 @@ function ready(overrides: Facts = {}): Facts {
     environment: { state: "ok" },
     reviewers: "present",
     adminBypass: false,
+    identity: "limited",
     ...overrides,
   };
 }
@@ -590,5 +593,96 @@ describe("parseEnvironment", () => {
       parseEnvironment({ ok: true, stdout: "not json", stderr: "" }, ok({}))
         .state,
     ).toBe("unknown");
+  });
+});
+
+describe("the GitHub identity of the session", () => {
+  it("warns, without blocking, when the session has administrator access, and says to use a limited token", () => {
+    const { text, warnings, blockers } = report({ identity: "administrator" });
+    expect(text).toContain("GitHub identity: administrator access");
+    expect(text).toContain("limited fine-grained token");
+    expect(warnings.join("\n")).toContain("administrator access");
+    expect(blockers).toEqual([]);
+  });
+
+  it("says a limited identity is fine and warns about nothing", () => {
+    const { text, warnings } = report({ identity: "limited" });
+    expect(text).toContain("GitHub identity: no administrator access");
+    expect(warnings).toEqual([]);
+  });
+
+  it("notes, without warning, when the identity could not be checked", () => {
+    const { text, warnings, blockers } = report({ identity: "unknown" });
+    expect(text).toContain("GitHub identity: could not be checked");
+    expect(warnings).toEqual([]);
+    expect(blockers).toEqual([]);
+  });
+});
+
+describe("parseIdentity", () => {
+  const answer = (ok: boolean, stdout = "", stderr = "") => ({
+    ok,
+    stdout,
+    stderr,
+  });
+
+  it("reads a branch-protection answer as administrator access", () => {
+    expect(parseIdentity(answer(true, "{}"))).toBe("administrator");
+  });
+
+  it("reads 'Branch not protected' as administrator access, because only an administrator sees it", () => {
+    expect(
+      parseIdentity(answer(false, "", "gh: Branch not protected (HTTP 404)")),
+    ).toBe("administrator");
+  });
+
+  it("reads a refusal for lack of permission as a limited identity", () => {
+    expect(
+      parseIdentity(
+        answer(
+          false,
+          "",
+          "gh: Resource not accessible by personal access token (HTTP 403)",
+        ),
+      ),
+    ).toBe("limited");
+    expect(
+      parseIdentity(answer(false, "", "gh: Must have admin rights (HTTP 403)")),
+    ).toBe("limited");
+  });
+
+  it("says unknown when gh is missing, signed out or the answer is something else", () => {
+    expect(parseIdentity(answer(false))).toBe("unknown");
+    expect(
+      parseIdentity(
+        answer(false, "", "To get started with GitHub CLI, run: gh auth login"),
+      ),
+    ).toBe("unknown");
+    expect(parseIdentity(answer(false, "", "gh: Not Found (HTTP 404)"))).toBe(
+      "unknown",
+    );
+  });
+});
+
+describe("readIdentity", () => {
+  it("probes the branch protection of main on the project repository, read-only", () => {
+    const calls: Array<[string, string[], string]> = [];
+    const identity = readIdentity("/work", (command, args, cwd) => {
+      calls.push([command, args, cwd]);
+      return {
+        ok: false,
+        stdout: "",
+        stderr:
+          "gh: Resource not accessible by personal access token (HTTP 403)",
+      };
+    });
+    expect(calls).toEqual([
+      [
+        "gh",
+        ["api", "repos/MapCairn/mapcairn/branches/main/protection"],
+        "/work",
+      ],
+    ]);
+    expect(identity).toBe("limited");
   });
 });

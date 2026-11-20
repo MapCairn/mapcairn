@@ -68,6 +68,7 @@ const BYTES_PER_KB = 1000;
  * @property {{ state: "ok" | "missing" | "unprotected" | "unknown", detail?: string }} environment The `npm` environment on GitHub.
  * @property {"present" | "none" | "unknown"} reviewers Whether the `npm` environment requires a reviewer to approve a deployment.
  * @property {boolean | null} adminBypass Whether repository administrators can bypass the environment's protection rules, null when it could not be read.
+ * @property {"administrator" | "limited" | "unknown"} identity Whether the session's `gh` identity can read branch protection, which needs administrator access.
  */
 
 /** @param {string} name */
@@ -133,6 +134,7 @@ export function buildReport(facts) {
   environmentLines({ facts, line, blocker });
   reviewerLines({ facts, registry, line, blocker });
   lines.push(...credentialLines({ facts, warnings }));
+  lines.push(...identityLines({ facts, warnings }));
   line(
     "Trusted publishing",
     `cannot be read without signing in; the maintainer checks it as ${GUIDE} describes`,
@@ -434,6 +436,32 @@ function credentialLines({ facts, warnings }) {
 }
 
 /**
+ * What the session's GitHub identity means for the gate: a warning, never a
+ * blocker, when it has administrator access.
+ *
+ * @param {object} input
+ * @param {Facts} input.facts
+ * @param {string[]} input.warnings Receives each warning.
+ * @returns {string[]} The report lines for the identity.
+ */
+function identityLines({ facts, warnings }) {
+  if (facts.identity === "administrator") {
+    const text =
+      "administrator access in this session, so it could approve the npm environment's deployment or edit the environment. An agent must stop and say so; run agents with a limited fine-grained token in GH_TOKEN instead.";
+    warnings.push(text);
+    return [
+      `  Warning: GitHub identity: ${text} (${GUIDE}, "Running agents under a limited GitHub identity")`,
+    ];
+  }
+  if (facts.identity === "limited") {
+    return ["  GitHub identity: no administrator access in this session."];
+  }
+  return [
+    "  GitHub identity: could not be checked (gh is missing, signed out or gave an unclear answer); check which login agents run under.",
+  ];
+}
+
+/**
  * @param {object} input
  * @param {string[]} input.blockers
  * @param {boolean} input.prepared
@@ -554,6 +582,43 @@ export function parseAdminBypass(environment) {
 }
 
 /**
+ * Reads which kind of GitHub identity the session has, from the answer for
+ * `repos/<owner>/<repo>/branches/main/protection`. Reading branch protection
+ * needs administrator access, so an answer means an administrator login, and
+ * a refusal for lack of permission means a limited one.
+ *
+ * @param {{ ok: boolean, stdout: string, stderr: string }} answer
+ * @returns {"administrator" | "limited" | "unknown"} Unknown when gh is missing or signed out, or the answer is not one of those.
+ */
+export function parseIdentity(answer) {
+  if (answer.ok || /Branch not protected/i.test(answer.stderr)) {
+    return "administrator";
+  }
+  if (/Resource not accessible|Must have admin rights/i.test(answer.stderr)) {
+    return "limited";
+  }
+  return "unknown";
+}
+
+/**
+ * Asks GitHub, as the session's identity, for the branch protection of `main`,
+ * and reads the answer with `parseIdentity`.
+ *
+ * @param {string} root
+ * @param {typeof run} [runCommand] Runs a program; replaced in tests.
+ * @returns {"administrator" | "limited" | "unknown"}
+ */
+export function readIdentity(root, runCommand = run) {
+  return parseIdentity(
+    runCommand(
+      "gh",
+      ["api", `repos/${REPOSITORY}/branches/main/protection`],
+      root,
+    ),
+  );
+}
+
+/**
  * Reads what `npm view <name> --json` says about one package.
  *
  * @param {{ status: number | null, stdout: string, stderr: string }} result
@@ -649,6 +714,7 @@ function readFacts(root) {
     ),
     reviewers: parseReviewers(environment),
     adminBypass: parseAdminBypass(environment),
+    identity: readIdentity(root),
     signedIn: runNpm(["whoami"], { cwd: root }).status === 0,
     tokenInEnvironment: ["NPM_TOKEN", "NODE_AUTH_TOKEN"].some(
       (name) => (process.env[name] ?? "") !== "",
