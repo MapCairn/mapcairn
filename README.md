@@ -19,7 +19,7 @@ This repository also holds the playground, a reference site built from the SDK's
 <p>
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="docs/images/playground-dark.png">
-    <img src="docs/images/playground-light.png" alt="The playground showing Africa with the earthquakes layer turned on and a straight line measured from the south of the continent to Kenya, about 4,000 kilometres, with the map credits open at the bottom right" width="100%">
+    <img src="docs/images/playground-light.png" alt="The playground showing Africa with the earthquakes layer turned on for the past week and a straight line measured from the south of the continent to Kenya, about 4,000 kilometres, with the map credits open at the bottom right" width="100%">
   </picture>
 </p>
 
@@ -29,9 +29,14 @@ The playground in its light and dark themes, with the earthquakes layer on and a
 
 ## Try the playground
 
-The playground at [mapcairn.timothybrits.co.za/map](https://mapcairn.timothybrits.co.za/map) is a complete map built from the SDK's four packages, and it is where the SDK is shown working and where its browser tests run. Search for a place, measure a distance or draw a shape, turn on an open data layer such as earthquakes or rainfall, switch the interface between English and Afrikaans in Settings, and open Help to find the About block that links back here. The recording below searches for a place, turns on the earthquakes layer and measures a distance.
+The playground at [mapcairn.timothybrits.co.za/map](https://mapcairn.timothybrits.co.za/map) is a complete map built from the SDK's four packages, and it is where the SDK is shown working and where its browser tests run. Search for a place, measure a distance or draw a shape, turn on an open data layer such as earthquakes or rainfall, switch the interface between English and Afrikaans in Settings, and open Help to find the About block that links back here. The recording below searches for a place, turns on the earthquakes layer for the past week, measures a distance and opens the map credits.
 
-![A recording of the playground: a search box suggests places, the earthquakes layer is turned on in Map options, and a distance is measured across Africa](docs/images/playground-demo.gif)
+<p>
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/images/playground-demo-dark.gif">
+    <img src="docs/images/playground-demo.gif" alt="A recording of the playground: a search box suggests places, the earthquakes layer is turned on for the past week in Map options, a distance is measured across Africa and the map credits are opened" width="100%">
+  </picture>
+</p>
 
 ## Embed a map
 
