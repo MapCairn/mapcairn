@@ -3,6 +3,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   DESIGN_GUIDE_PATH,
+  DESIGN_HOST_THEME_PATH,
   designGuideRoutes,
   isDesignGuideEnabled,
 } from "./designGuideRoutes";
@@ -27,12 +28,14 @@ describe("isDesignGuideEnabled", () => {
 });
 
 describe("designGuideRoutes", () => {
-  it("adds the /design route in development and e2e", () => {
+  it("adds the /design route and the host theme stylesheets in development and e2e", () => {
     for (const mode of ["development", "e2e"]) {
       const routes = designGuideRoutes(mode);
-      expect(routes).toHaveLength(1);
+      expect(routes).toHaveLength(2);
       expect(routes[0]?.path).toBe(DESIGN_GUIDE_PATH);
       expect(routes[0]?.file).toBe("./routes/design.tsx");
+      expect(routes[1]?.path).toBe(DESIGN_HOST_THEME_PATH);
+      expect(routes[1]?.file).toBe("./routes/design.host-theme.ts");
     }
   });
 
@@ -58,10 +61,13 @@ describe("the route table", () => {
   it("has no /design route in a production build", async () => {
     const paths = await routePathsIn("production");
     expect(paths).not.toContain(DESIGN_GUIDE_PATH);
+    expect(paths).not.toContain(DESIGN_HOST_THEME_PATH);
     expect(paths).toContain("privacy");
   });
 
   it("has the /design route in an e2e build", async () => {
-    expect(await routePathsIn("e2e")).toContain(DESIGN_GUIDE_PATH);
+    const paths = await routePathsIn("e2e");
+    expect(paths).toContain(DESIGN_GUIDE_PATH);
+    expect(paths).toContain(DESIGN_HOST_THEME_PATH);
   });
 });

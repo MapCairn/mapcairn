@@ -291,7 +291,7 @@ describe("checkThemeContrast", () => {
     );
   });
 
-  it("fails a text colour that clears every surface but not the page", () => {
+  it("fails a text colour that clears every surface but not the tint or the page", () => {
     const check = checkThemeContrast({
       colour: {
         light: {
@@ -307,9 +307,27 @@ describe("checkThemeContrast", () => {
       expect.objectContaining({
         theme: "light",
         foreground: "textMuted",
+        background: "accentTint",
+      }),
+      expect.objectContaining({
+        theme: "light",
+        foreground: "textMuted",
         background: "pageBackground",
       }),
     ]);
+  });
+
+  it("refuses a tint that leaves selected rows' secondary text and the switch edge below AA", () => {
+    const check = checkThemeContrast({
+      colour: { light: { accentTint: "#709080", accent: "#000000" } },
+    });
+
+    expect(check.passes).toBe(false);
+    expect(
+      check.findings
+        .filter((f) => !f.passes && f.background === "accentTint")
+        .map((f) => f.foreground),
+    ).toEqual(expect.arrayContaining(["textMuted", "controlBoundary"]));
   });
 
   describe("at the thresholds", () => {

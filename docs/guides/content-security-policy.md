@@ -32,6 +32,8 @@ In development the policy is relaxed in `style-src` and `connect-src` by the `de
 
 Without `'unsafe-inline'`, two things a host might otherwise reach for are blocked: a `<style>` element and a `style=""` attribute written into markup. Styling through the CSS object model still works. The adapter sizes the hidden container it builds an image-export map in by assigning to `element.style`, which the production policy allows, unlike a `style` attribute (`imageExport.ts`).
 
+A host theme is a file too: `createThemeStylesheet` in `@mapcairn/theme` makes a stylesheet for the host to serve from its own origin, so `style-src 'self'` allows it with no nonce (see [Theme the SDK with your own colours](extending.md#theme-the-sdk-with-your-own-colours)). The browser test `theme-override.spec.ts` loads one under the reference policy and records no violation.
+
 The SDK keeps style attributes out of server-rendered markup for this reason, and its tests require it: the map host, the chrome, the sheet, the readout and the served pages are each asserted to render none (`MapView.tsx`, `MapChrome.test.tsx`, `Sheet.test.tsx`, `MapReadout.test.tsx` and `ChromeSkeleton.test.tsx` in `packages/map`; `root.test.tsx`, `home.test.tsx` and the e2e `design.spec.ts` in `packages/web`). The one React style prop in the SDK, the fill custom property of the slider track (`Slider.tsx`), reaches the page only in the browser: the sections that hold it are not server-rendered, and the server sends a decorative skeleton in their place (`home.test.tsx`). How React applies a style prop in the browser was not checked.
 
 ## img-src

@@ -23,6 +23,8 @@ describe("contrastPairs", () => {
       "accentContrast on accent 4.5:1 over nothing",
       "text on accentTint 4.5:1 over nothing",
       "accent on accentTint 4.5:1 over nothing",
+      "textMuted on accentTint 4.5:1 over nothing",
+      "controlBoundary on accentTint 3:1 over nothing",
       "text on dangerTint 4.5:1 over nothing",
       "danger on dangerTint 4.5:1 over nothing",
       "focusRing on map 3:1 over white+black",
