@@ -76,6 +76,24 @@ describe("the SDK packages job in ci.yml", () => {
     );
   });
 
+  it("keeps a description edit out of the group that cancels the run for the commit", () => {
+    const workflow = withoutComments(read(".github/workflows/ci.yml"));
+    const group =
+      /concurrency:\n\s+group: (.+)\n\s+cancel-in-progress: true/.exec(
+        workflow,
+      )?.[1];
+    expect(group).toBeDefined();
+    expect(group).toContain("github.event.action == 'edited'");
+  });
+
+  it("is the only workflow that runs on an edit, so no other cancels a run on one", () => {
+    const folder = path.join(REPO, ".github/workflows");
+    const editing = readdirSync(folder).filter((file) =>
+      /\bedited\b/.test(withoutComments(read(`.github/workflows/${file}`))),
+    );
+    expect(editing).toEqual(["ci.yml"]);
+  });
+
   describe("the step that decides whether to run", () => {
     const script = job.slice(job.indexOf("changed="));
     const filter = new RegExp(

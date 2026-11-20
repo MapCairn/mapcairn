@@ -41,6 +41,26 @@ describe("versions", () => {
     }
   });
 
+  it("rejects leading zeros, oversized numbers, a trailing newline and a v prefix", () => {
+    for (const text of [
+      "00.1.0",
+      "0.01.0",
+      "0.1.00",
+      "1.2.3-rc.01",
+      "0.1.0\n",
+      "\n0.1.0",
+      " 0.1.0",
+      "v0.1.0",
+      "1234567890.0.0",
+      "0.99999999999999999999.0",
+      "1.2.3-rc.12345678901",
+    ]) {
+      expect(parseVersion(text), JSON.stringify(text)).toBeNull();
+    }
+    expect(parseVersion("0.0.0")).not.toBeNull();
+    expect(parseVersion("10.20.30-rc.10")).not.toBeNull();
+  });
+
   it("orders versions as semver does, with a prerelease before its release", () => {
     const ordered = [
       "0.1.0-rc.1",

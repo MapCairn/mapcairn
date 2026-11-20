@@ -142,6 +142,20 @@ export function publishedSkipped(tool, env = process.env) {
 }
 
 /**
+ * The skip line for a Yarn or Bun install when the check is run against a
+ * published version, and nothing otherwise. Packed tarballs (`--tarballs` or
+ * packed here) are `file:` installs, which the release age does not apply to.
+ *
+ * @param {string} tool The package manager.
+ * @param {string | null} published The published version, or null.
+ * @param {NodeJS.ProcessEnv} [env] The environment to read.
+ * @returns {string | undefined}
+ */
+export function publishedLegSkip(tool, published, env = process.env) {
+  return published === null ? undefined : publishedSkipped(tool, env);
+}
+
+/**
  * The line for a skipped workerd run: Miniflare comes from the repository's
  * installed dependencies, which a job that runs no install does not have.
  *

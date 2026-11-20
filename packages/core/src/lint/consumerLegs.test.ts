@@ -18,6 +18,7 @@ import {
   bunVersionProblem,
   corepackCliPath,
   miniflareAvailable,
+  publishedLegSkip,
   publishedSkipped,
   WORKER_CONDITIONS,
   workerdSkipped,
@@ -144,6 +145,26 @@ describe("published mode", () => {
       /^::warning::.*Yarn.*published/,
     );
     expect(publishedSkipped("Bun", {})).not.toMatch(/^::/);
+  });
+});
+
+describe("published mode wiring", () => {
+  it("skips a Yarn or Bun leg against a published version", () => {
+    expect(publishedLegSkip("Yarn", "0.1.0", {})).toMatch(/Yarn.*published/);
+    expect(publishedLegSkip("Bun", "0.1.0", {})).toMatch(/Bun.*published/);
+  });
+
+  it("runs the leg on packed tarballs, whether packed here or given with --tarballs", () => {
+    expect(publishedLegSkip("Yarn", null, {})).toBeUndefined();
+  });
+
+  it("calls both legs through that skip in the consumer check", () => {
+    const check = readFileSync(
+      path.join(REPO, "scripts/release/consumerCheck.mjs"),
+      "utf8",
+    );
+    expect(check).toContain('publishedLegSkip("Yarn", published)');
+    expect(check).toContain('publishedLegSkip("Bun", published)');
   });
 });
 

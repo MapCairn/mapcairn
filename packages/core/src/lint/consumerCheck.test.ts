@@ -16,6 +16,7 @@ import {
   consumerManifest,
   LANDMARKS,
   LOCKED_TOOLS,
+  layerProblems,
   lockedVersion,
   missingLandmarks,
   pnpmSettings,
@@ -174,6 +175,44 @@ describe("stylesheetProblems", () => {
       /dark theme/,
     );
     expect(stylesheetProblems(tokens).join("\n")).toMatch(/component rule/);
+  });
+});
+
+describe("layerProblems", () => {
+  const reset =
+    "@layer reset;@layer reset{button{padding:0;border:0;background:transparent}}";
+  const sdk =
+    "@layer abc;@layer abc{._a{padding:4px;border:1px solid red;background-color:blue}}";
+
+  it("passes a reset layer declared before the primitives' layer", () => {
+    expect(layerProblems(reset + sdk)).toEqual([]);
+  });
+
+  it("fails when the app's reset layer comes after the SDK's", () => {
+    expect(layerProblems(sdk + reset)).toEqual([
+      "the app's reset layer is declared after the primitives' layer",
+    ]);
+  });
+
+  it("fails when the SDK adds no layer, or more than one", () => {
+    expect(layerProblems(reset)).toEqual([
+      "the SDK's stylesheet should add one cascade layer, found 0",
+    ]);
+    expect(layerProblems(reset + sdk + sdk.replaceAll("abc", "def"))).toEqual([
+      "the SDK's stylesheet should add one cascade layer, found 2",
+    ]);
+  });
+
+  it("fails without the app's reset layer in the build", () => {
+    expect(layerProblems(sdk)).toEqual([
+      "the built CSS has no @layer reset block from the app",
+    ]);
+  });
+
+  it("fails when the primitives' layer lacks the rules a reset would clobber", () => {
+    expect(
+      layerProblems(`${reset}@layer abc{._a{color:red}}`).join("\n"),
+    ).toMatch(/holds no padding rule/);
   });
 });
 

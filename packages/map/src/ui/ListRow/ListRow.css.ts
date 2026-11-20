@@ -2,7 +2,7 @@
 // Copyright MapCairn contributors
 import { focusRing, tokens } from "@mapcairn/theme";
 import { style } from "@vanilla-extract/css";
-import { recipe } from "@vanilla-extract/recipes";
+import { primitiveRecipe } from "../primitiveRecipe";
 
 /** The list item. Rows are separated by a hairline, never a border box. */
 export const listRow = style({
@@ -19,7 +19,7 @@ export const listRow = style({
  * Selection adds a tint here, and a check icon in the markup, so it never
  * relies on colour.
  */
-export const row = recipe({
+export const row = primitiveRecipe({
   base: {
     display: "flex",
     alignItems: "center",
