@@ -21,6 +21,7 @@ import {
   forbiddenInShellText,
   isExecutable,
   jobRanges,
+  publishesOnlyDryRuns,
   scanRepository,
   scanSources,
   stripShellComment,
@@ -129,6 +130,11 @@ describe("forbiddenInShellText", () => {
       "approving a deployment",
       "gh api repos/MapCairn/mapcairn/actions/runs/1/pending_deployments -X POST",
       "pending_deployments",
+    ],
+    [
+      "approving a deployment through GraphQL",
+      "gh api graphql -f query='mutation { approveDeployments(input: {}) { clientMutationId } }'",
+      "approveDeployments",
     ],
   ])("finds %s", (_name, line, command) => {
     expect(inShell(line)).toContain(command);
@@ -383,7 +389,7 @@ describe("scanSources", () => {
     expect(scan(".github/workflows/ci.yml", workflow)).toEqual([]);
   });
 
-  it("allows stage and publish in the npm job of release.yml, and nothing else there", () => {
+  it("allows publish in the npm job of release.yml, and nothing else there", () => {
     const workflow = [
       "jobs:",
       "  verify:",
@@ -392,17 +398,89 @@ describe("scanSources", () => {
       "  npm:",
       "    environment: npm",
       "    steps:",
-      "      - run: npm stage publish ./core.tgz --tag latest",
+      "      - run: npm publish ./core.tgz --tag latest --provenance",
       "      - run: npm dist-tag add @mapcairn/core@1.0.0 latest",
+      "      - run: npm stage publish ./core.tgz --tag latest",
       "  github-release:",
       "    steps:",
-      "      - run: npm stage publish ./core.tgz",
+      "      - run: npm publish ./core.tgz",
       "",
     ].join("\n");
     expect(scan(".github/workflows/release.yml", workflow)).toEqual([
       { file: ".github/workflows/release.yml", line: 9, command: "dist-tag" },
-      { file: ".github/workflows/release.yml", line: 12, command: "stage" },
+      { file: ".github/workflows/release.yml", line: 10, command: "stage" },
+      { file: ".github/workflows/release.yml", line: 13, command: "publish" },
     ]);
+  });
+
+  it("allows only a dry run in the rehearse job of release.yml", () => {
+    const workflow = [
+      "jobs:",
+      "  rehearse:",
+      "    steps:",
+      "      - run: npm publish ./core.tgz --provenance --dry-run",
+      "      - run: npm publish ./core.tgz --provenance",
+      "      - run: npm stage publish ./core.tgz --dry-run",
+      "",
+    ].join("\n");
+    expect(scan(".github/workflows/release.yml", workflow)).toEqual([
+      { file: ".github/workflows/release.yml", line: 5, command: "publish" },
+      { file: ".github/workflows/release.yml", line: 6, command: "stage" },
+    ]);
+    expect(scan(".github/workflows/ci.yml", workflow)).toHaveLength(3);
+  });
+
+  it.each([
+    ["an option that only starts with it", "npm publish ./c.tgz --dry-run-not"],
+    ["the option set to false", "npm publish ./c.tgz --dry-run=false"],
+    ["the option set to true", "npm publish ./c.tgz --dry-run=true"],
+    [
+      "the option set again to false",
+      "npm publish ./c.tgz --dry-run --dry-run=false",
+    ],
+    ["the option negated", "npm publish ./c.tgz --dry-run --no-dry-run"],
+    ["it in a comment", "npm publish ./c.tgz # --dry-run"],
+    [
+      "it in another command after a semicolon",
+      "npm publish ./c.tgz; echo --dry-run",
+    ],
+    ["it in another command after &&", "npm publish ./c.tgz && echo --dry-run"],
+    [
+      "it before the publish, in another command",
+      "echo --dry-run && npm publish ./c.tgz",
+    ],
+    ["it before the command word", "npm --dry-run publish ./c.tgz"],
+  ])("does not take %s for a dry run in the rehearse job", (_name, command) => {
+    const workflow = `jobs:\n  rehearse:\n    steps:\n      - run: ${command}\n`;
+    expect(scan(".github/workflows/release.yml", workflow)).toEqual([
+      { file: ".github/workflows/release.yml", line: 4, command: "publish" },
+    ]);
+  });
+
+  it("does not take a dry-run word on an earlier line for the publish that a backslash continues into", () => {
+    const workflow = [
+      "jobs:",
+      "  rehearse:",
+      "    steps:",
+      "      - run: |",
+      "          echo --dry-run && \\",
+      "          npm publish ./core.tgz",
+      "",
+    ].join("\n");
+    expect(scan(".github/workflows/release.yml", workflow)).toEqual([
+      { file: ".github/workflows/release.yml", line: 5, command: "publish" },
+    ]);
+  });
+
+  it("allows a dry run with the usual options and a quoted flag, in a command that is followed by another", () => {
+    const workflow = [
+      "jobs:",
+      "  rehearse:",
+      "    steps:",
+      '      - run: npm publish "$X/c.tgz" --ignore-scripts --tag "$T" --provenance "--dry-run" && echo done',
+      "",
+    ].join("\n");
+    expect(scan(".github/workflows/release.yml", workflow)).toEqual([]);
   });
 
   it("allows nothing in release.yml when it has no npm job", () => {
@@ -609,11 +687,29 @@ describe("what is read beyond scripts", () => {
       "jobs:",
       "  npm:",
       "    steps:",
-      "      - run: npm stage publish ./*.tgz && echo done",
+      "      - run: npm publish ./*.tgz --provenance && echo done",
       "      - run: ls *.tgz",
       "",
     ].join("\n");
     expect(scan(".github/workflows/release.yml", workflow)).toEqual([]);
+  });
+});
+
+describe("publishesOnlyDryRuns", () => {
+  it("is true only when every publish in the text carries the exact word", () => {
+    expect(publishesOnlyDryRuns("npm publish a.tgz --dry-run")).toBe(true);
+    expect(
+      publishesOnlyDryRuns(
+        "npm publish a.tgz --dry-run && npm publish b.tgz --dry-run",
+      ),
+    ).toBe(true);
+    expect(
+      publishesOnlyDryRuns("npm publish a.tgz --dry-run && npm publish b.tgz"),
+    ).toBe(false);
+    expect(publishesOnlyDryRuns("echo hello")).toBe(false);
+    expect(publishesOnlyDryRuns("npm publish a.tgz --dry-run=false")).toBe(
+      false,
+    );
   });
 });
 

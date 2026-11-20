@@ -9,6 +9,8 @@ import {
 } from "../../../../scripts/release/consumerCheck.mjs";
 import {
   auditProblems,
+  distTagReport,
+  parsePackageTags,
   parsePublishedArguments,
   provenanceReport,
   // @ts-expect-error The scripts are dependency-free JavaScript with JSDoc types.
@@ -83,18 +85,26 @@ describe("installFlags", () => {
 });
 
 describe("parsePublishedArguments", () => {
-  it("takes one version", () => {
+  it("takes one version and expects provenance, as a release published from the workflow has it", () => {
     expect(parsePublishedArguments(["0.1.0"])).toEqual({
       version: "0.1.0",
-      requireProvenance: false,
+      requireProvenance: true,
     });
     expect(parsePublishedArguments(["0.1.0-rc.2"])).toEqual({
       version: "0.1.0-rc.2",
+      requireProvenance: true,
+    });
+  });
+
+  it("lets a release that was published by hand say it has none, in either order", () => {
+    expect(parsePublishedArguments(["0.1.0-rc.1", "--no-provenance"])).toEqual({
+      version: "0.1.0-rc.1",
       requireProvenance: false,
     });
-    expect(
-      parsePublishedArguments(["0.1.0-rc.2", "--require-provenance"]),
-    ).toEqual({ version: "0.1.0-rc.2", requireProvenance: true });
+    expect(parsePublishedArguments(["--no-provenance", "0.1.0-rc.1"])).toEqual({
+      version: "0.1.0-rc.1",
+      requireProvenance: false,
+    });
   });
 
   it.each([
@@ -103,6 +113,8 @@ describe("parsePublishedArguments", () => {
     [["0.1.0", "extra"]],
     [["--version=0.1.0"]],
     [["0.1"]],
+    [["0.1.0", "--require-provenance"]],
+    [["--no-provenance"]],
   ])("refuses %j", (argv) => {
     expect(() => parsePublishedArguments(argv)).toThrow(/Usage/);
   });
@@ -187,5 +199,172 @@ describe("provenanceReport", () => {
         false,
       ).problems,
     ).toEqual(["@mapcairn/core is not on the registry"]);
+  });
+});
+
+describe("distTagReport", () => {
+  const all = (answer: unknown) =>
+    Object.fromEntries(
+      ["core", "map", "react", "theme"].map((name) => [
+        `@mapcairn/${name}`,
+        answer,
+      ]),
+    );
+
+  it("expects a prerelease on next, and reports latest without judging it", () => {
+    const report = distTagReport({
+      version: "0.1.0-rc.2",
+      expected: "next",
+      answers: all({
+        tags: { latest: "0.1.0-rc.1", next: "0.1.0-rc.2" },
+        versionCount: 2,
+      }),
+    });
+    expect(report.problems).toEqual([]);
+    expect(report.lines.join("\n")).toContain("next is 0.1.0-rc.2");
+    expect(report.lines.join("\n")).toContain("latest is 0.1.0-rc.1");
+  });
+
+  it("accepts the latest that npm gave a package's first version, and says so", () => {
+    const report = distTagReport({
+      version: "0.1.0-rc.1",
+      expected: "next",
+      answers: all({
+        tags: { latest: "0.1.0-rc.1", next: "0.1.0-rc.1" },
+        versionCount: 1,
+      }),
+    });
+    expect(report.problems).toEqual([]);
+    expect(report.lines.join("\n")).toContain("first version");
+  });
+
+  it("fails a prerelease that took latest over from an earlier version", () => {
+    const report = distTagReport({
+      version: "0.1.0-rc.2",
+      expected: "next",
+      answers: all({
+        tags: { latest: "0.1.0-rc.2", next: "0.1.0-rc.2" },
+        versionCount: 2,
+      }),
+    });
+    expect(report.problems).toHaveLength(4);
+    expect(report.problems[0]).toContain("latest");
+  });
+
+  it("fails when the expected tag does not point at the version", () => {
+    const report = distTagReport({
+      version: "0.1.0-rc.2",
+      expected: "next",
+      answers: all({
+        tags: { latest: "0.1.0-rc.1", next: "0.1.0-rc.1" },
+        versionCount: 2,
+      }),
+    });
+    expect(report.problems[0]).toContain("next is 0.1.0-rc.1, not 0.1.0-rc.2");
+  });
+
+  it("expects a stable release on latest, and an older one on previous", () => {
+    expect(
+      distTagReport({
+        version: "0.1.0",
+        expected: "latest",
+        answers: all({
+          tags: { latest: "0.1.0", next: "0.1.0-rc.2" },
+          versionCount: 4,
+        }),
+      }).problems,
+    ).toEqual([]);
+    expect(
+      distTagReport({
+        version: "0.1.0",
+        expected: "latest",
+        answers: all({
+          tags: { latest: "0.1.0-rc.2" },
+          versionCount: 4,
+        }),
+      }).problems[0],
+    ).toContain("latest is 0.1.0-rc.2, not 0.1.0");
+    expect(
+      distTagReport({
+        version: "0.1.1",
+        expected: "previous",
+        answers: all({
+          tags: { latest: "0.2.0", previous: "0.1.1" },
+          versionCount: 5,
+        }),
+      }).problems,
+    ).toEqual([]);
+  });
+
+  it("fails a package whose tags could not be read", () => {
+    const report = distTagReport({
+      version: "0.1.0",
+      expected: "latest",
+      answers: all(null),
+    });
+    expect(report.problems).toHaveLength(4);
+    expect(report.problems[0]).toContain("could not be read");
+  });
+});
+
+describe("parsePackageTags", () => {
+  const ok = (stdout: string) => ({ status: 0, stdout, stderr: "" });
+  const missing = { status: 1, stdout: "", stderr: "npm error code E404" };
+
+  it("reads where the expected tag and latest point, and how many versions there are", () => {
+    expect(
+      parsePackageTags({
+        expected: "next",
+        expectedResult: ok("0.1.0-rc.2\n"),
+        latestResult: ok("0.1.0-rc.1\n"),
+        versionsResult: ok('["0.1.0-rc.1","0.1.0-rc.2"]'),
+      }),
+    ).toEqual({
+      tags: { latest: "0.1.0-rc.1", next: "0.1.0-rc.2" },
+      versionCount: 2,
+    });
+  });
+
+  it("counts the single version npm prints as a string, and leaves out a tag that is not set", () => {
+    expect(
+      parsePackageTags({
+        expected: "previous",
+        expectedResult: missing,
+        latestResult: ok("0.2.0"),
+        versionsResult: ok('"0.2.0"'),
+      }),
+    ).toEqual({ tags: { latest: "0.2.0" }, versionCount: 1 });
+  });
+
+  it("is null for any other failure, or an answer that is not JSON", () => {
+    const other = {
+      status: 1,
+      stdout: "",
+      stderr: "npm error code ECONNRESET",
+    };
+    for (const input of [
+      {
+        expectedResult: other,
+        latestResult: ok("1.0.0"),
+        versionsResult: ok("[]"),
+      },
+      {
+        expectedResult: ok("1.0.0"),
+        latestResult: other,
+        versionsResult: ok("[]"),
+      },
+      {
+        expectedResult: ok("1.0.0"),
+        latestResult: ok("1.0.0"),
+        versionsResult: other,
+      },
+      {
+        expectedResult: ok("1.0.0"),
+        latestResult: ok("1.0.0"),
+        versionsResult: ok("x"),
+      },
+    ]) {
+      expect(parsePackageTags({ expected: "latest", ...input })).toBeNull();
+    }
   });
 });

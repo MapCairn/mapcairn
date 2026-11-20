@@ -6,7 +6,7 @@
  * recorded digests later. The release workflow packs in `verify`, uploads at
  * once, and passes the digests to the later jobs as a job output, which a
  * step that runs third-party code cannot change. `github-release` and `npm`
- * compare what they download with those digests before they attest or stage,
+ * compare what they download with those digests before they attest or publish,
  * so what was checked is what is released, and an extra tarball cannot ride
  * along.
  *

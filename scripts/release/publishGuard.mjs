@@ -32,8 +32,9 @@
  * substitution, run through a variable that names the program, or run by a
  * program that is not npm or another package manager. It can also flag
  * innocent text (`git commit -m "npm token"`). The guarantee that an agent
- * cannot publish rests on the npm credentials, two-factor approval and the
- * `npm` environment protection; this check, the deny lists and the independent
+ * cannot publish rests on the `npm` environment's required reviewer, its
+ * main-only deployment rule and the trusted publisher npm accepts only from
+ * that workflow and environment; this check, the deny lists and the independent
  * review of every change to an executable file are layers on top (see "Keeping
  * agents from publishing" in plan 0014).
  */
@@ -99,15 +100,32 @@ export const OTHER_PUBLISH_COMMANDS = [
   ["bun", "publish"],
 ];
 
-/** The text the deny lists and the guard both match on for a GitHub deployment approval. */
-export const DEPLOYMENT_APPROVAL_TEXT = "pending_deployments";
+/**
+ * The texts the guard matches on for a GitHub deployment approval: the REST
+ * endpoint and the GraphQL mutation. The deny lists carry both.
+ */
+export const DEPLOYMENT_APPROVAL_TEXTS = [
+  "pending_deployments",
+  "approveDeployments",
+];
 
-/** The only commands the `npm` job of `release.yml` may run. */
-export const NPM_JOB_COMMANDS = new Set(["publish", "stage"]);
+/**
+ * The only command the `npm` and `rehearse` jobs of `release.yml` may run. The workflow
+ * publishes directly through trusted publishing (plan 0014, "Staged or direct
+ * publishing"), so `stage` is forbidden there like everywhere else.
+ */
+export const NPM_JOB_COMMANDS = new Set(["publish"]);
 
 /** The workflow file and the job that may publish. */
 export const RELEASE_WORKFLOW = ".github/workflows/release.yml";
 export const NPM_JOB = "npm";
+
+/**
+ * The job that dry-runs the publishing for a rehearsal. It has no environment
+ * and no OIDC token, so nothing waits for an approval because of it, and it
+ * may run `npm publish` only as a dry run (`publishesOnlyDryRuns`).
+ */
+export const REHEARSE_JOB = "rehearse";
 
 /** Every forbidden name, aliases included. */
 export const FORBIDDEN_NAMES = FORBIDDEN_NPM_COMMANDS.flatMap((command) => [
@@ -360,6 +378,52 @@ export function forbiddenCommandAfterProgram(words) {
   return undefined;
 }
 
+/** What separates the commands of a shell line: a newline, `&&`, `||` and the single-character separators. */
+const SHELL_SEGMENTS = /\r?\n|&&|\|\||[;|&()`]/;
+
+/**
+ * Whether the text publishes, and every publish in it carries the exact word
+ * `--dry-run` after `publish` in its own command (split where the scanner
+ * splits). `--dry-run=...`, `--no-dry-run`, a longer word that starts with
+ * it, the word in another command or before `publish`, and a comment (the
+ * caller strips comments first) do not count.
+ *
+ * @param {string} text One logical line, without comments.
+ * @returns {boolean}
+ */
+export function publishesOnlyDryRuns(text) {
+  let publishes = 0;
+  let dryRuns = 0;
+  const joined = text.replace(/\\\r?\n/g, " ");
+  for (const segment of joined.split(SHELL_SEGMENTS)) {
+    const words = segment.split(WORD_SEPARATORS).filter(Boolean);
+    const cleaned = words.map(unquote);
+    words.forEach((word, index) => {
+      if (!isLauncher(word) && !isLauncher(cleaned[index])) {
+        return;
+      }
+      const after = cleaned.slice(index + 1).filter(Boolean);
+      if (forbiddenCommandAfterProgram(after) !== "publish") {
+        return;
+      }
+      publishes += 1;
+      const at = after.findIndex(
+        (later) =>
+          forbiddenCommandOf(later) === "publish" ||
+          exactForbiddenCommandOf(later) === "publish",
+      );
+      const options = at === -1 ? [] : after.slice(at + 1);
+      const negated = options.some((option) =>
+        /^--(?:no-dry-run|dry-run=)/.test(option),
+      );
+      if (options.includes("--dry-run") && !negated) {
+        dryRuns += 1;
+      }
+    });
+  }
+  return publishes > 0 && publishes === dryRuns;
+}
+
 /**
  * The forbidden commands in text that a shell would run: one or more lines,
  * split at the shell's separators.
@@ -370,7 +434,7 @@ export function forbiddenCommandAfterProgram(words) {
 export function forbiddenInShellText(text) {
   const found = [];
   const joined = text.replace(/\\\r?\n/g, " ");
-  for (const segment of joined.split(/\r?\n|&&|\|\||[;|&()`]/)) {
+  for (const segment of joined.split(SHELL_SEGMENTS)) {
     const words = segment.split(WORD_SEPARATORS).filter(Boolean);
     const cleaned = words.map(unquote);
     words.forEach((word, index) => {
@@ -384,8 +448,10 @@ export function forbiddenInShellText(text) {
         found.push(command);
       }
     });
-    if (segment.includes(DEPLOYMENT_APPROVAL_TEXT)) {
-      found.push(DEPLOYMENT_APPROVAL_TEXT);
+    for (const approvalText of DEPLOYMENT_APPROVAL_TEXTS) {
+      if (segment.includes(approvalText)) {
+        found.push(approvalText);
+      }
     }
   }
   return found;
@@ -1137,23 +1203,38 @@ function findingsInFile(file, text) {
 }
 
 /**
- * Whether a finding in `release.yml` sits in the `npm` job and is a command
- * that job may run.
+ * Whether a finding in `release.yml` is a command the workflow may run: the
+ * `npm` job may publish, and the `rehearse` job may publish with
+ * a `--dry-run` in the same command, as `publishesOnlyDryRuns` reads it.
  *
  * @param {string} file
  * @param {string} text
  * @param {{ command: string, line: number }} finding
  * @returns {boolean}
  */
-function isAllowedInNpmJob(file, text, finding) {
+function isAllowedInPublishJob(file, text, finding) {
   if (file !== RELEASE_WORKFLOW || !NPM_JOB_COMMANDS.has(finding.command)) {
     return false;
   }
-  const range = jobRanges(text).get(NPM_JOB);
+  const ranges = jobRanges(text);
+  const within = (/** @type {string} */ name) => {
+    const range = ranges.get(name);
+    return (
+      range !== undefined &&
+      finding.line >= range.start &&
+      finding.line <= range.end
+    );
+  };
+  if (within(NPM_JOB)) {
+    return true;
+  }
+  const logical = logicalLines(text).find(
+    (entry) => entry.line === finding.line,
+  );
   return (
-    range !== undefined &&
-    finding.line >= range.start &&
-    finding.line <= range.end
+    within(REHEARSE_JOB) &&
+    logical !== undefined &&
+    publishesOnlyDryRuns(logical.text)
   );
 }
 
@@ -1169,7 +1250,8 @@ export function scanSources(sources) {
     .flatMap((source) =>
       findingsInFile(source.path, source.text)
         .filter(
-          (finding) => !isAllowedInNpmJob(source.path, source.text, finding),
+          (finding) =>
+            !isAllowedInPublishJob(source.path, source.text, finding),
         )
         .map((finding) => ({ file: source.path, ...finding })),
     );

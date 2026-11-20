@@ -6,7 +6,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import {
-  DEPLOYMENT_APPROVAL_TEXT,
+  DEPLOYMENT_APPROVAL_TEXTS,
   FORBIDDEN_NAMES,
   FORBIDDEN_NPM_COMMANDS,
   OTHER_PUBLISH_COMMANDS,
@@ -103,13 +103,29 @@ const ALLOWED_COMMANDS = [
   "npm logout",
   "npm view @mapcairn/core version",
   "gh workflow run release.yml -f mode=rehearse",
+  "gh run rerun 123 --failed",
+  "gh run rerun 123",
   "gh pr merge 489 --squash",
   "gh api repos/MapCairn/mapcairn/pulls",
   "npx --no-install vitest run",
   "pnpm install",
 ];
 
-const APPROVAL_COMMAND = `gh api repos/MapCairn/mapcairn/actions/runs/1/${DEPLOYMENT_APPROVAL_TEXT} -X POST`;
+const APPROVAL_COMMAND = `gh api repos/MapCairn/mapcairn/actions/runs/1/${DEPLOYMENT_APPROVAL_TEXTS[0]} -X POST`;
+
+/**
+ * Other ways to approve a deployment or to start the workflow's publish-existing
+ * mode, which publishes. A rehearsal stays allowed (ALLOWED_COMMANDS).
+ */
+const RELEASE_GATE_COMMANDS = [
+  `gh api graphql -f query='mutation { ${DEPLOYMENT_APPROVAL_TEXTS[1]}(input: {}) { clientMutationId } }'`,
+  "gh workflow run release.yml -f version=0.1.0 -f mode=publish-existing",
+  "gh workflow run release.yml --ref main -f mode=publish-existing -f version=0.1.0",
+  "gh api repos/MapCairn/mapcairn/actions/workflows/release.yml/dispatches -f inputs[mode]=publish-existing",
+  "gh api repos/MapCairn/mapcairn/actions/workflows/release.yml/dispatches --input inputs.json",
+  "gh api -X POST repos/MapCairn/mapcairn/actions/runs/1/rerun",
+  "gh api repos/MapCairn/mapcairn/actions/runs/1/rerun-failed-jobs -X POST",
+];
 
 /**
  * Whether a wildcard pattern matches a whole command. `*` matches any text.
@@ -219,6 +235,9 @@ describe("Claude Code, .claude/settings.json", () => {
         }
       }
       expect(listDenies(patterns, APPROVAL_COMMAND, true)).toBe(true);
+      for (const command of RELEASE_GATE_COMMANDS) {
+        expect(listDenies(patterns, command, true), command).toBe(true);
+      }
       for (const words of OTHERS) {
         expect(listDenies(patterns, words.join(" "), true)).toBe(true);
         expect(
@@ -299,6 +318,9 @@ describe("Qwen Code, .qwen/settings.json", () => {
       }
     }
     expect(listDenies(patterns, APPROVAL_COMMAND, false)).toBe(true);
+    for (const command of RELEASE_GATE_COMMANDS) {
+      expect(listDenies(patterns, command, false), command).toBe(true);
+    }
     for (const words of OTHERS) {
       expect(listDenies(patterns, words.join(" "), false)).toBe(true);
       expect(listDenies(patterns, `${words.join(" ")} --tag next`, false)).toBe(
@@ -342,6 +364,9 @@ describe("opencode, opencode.json", () => {
       }
     }
     expect(listDenies(patterns, APPROVAL_COMMAND, false)).toBe(true);
+    for (const command of RELEASE_GATE_COMMANDS) {
+      expect(listDenies(patterns, command, false), command).toBe(true);
+    }
     for (const words of OTHERS) {
       expect(listDenies(patterns, words.join(" "), false)).toBe(true);
       expect(listDenies(patterns, `${words.join(" ")} --tag next`, false)).toBe(
@@ -385,6 +410,9 @@ describe("Cursor command line, .cursor/cli.json", () => {
       expect(cursorDenies(rules, words.join(" "))).toBe(true);
     }
     expect(cursorDenies(rules, APPROVAL_COMMAND)).toBe(true);
+    for (const command of RELEASE_GATE_COMMANDS) {
+      expect(cursorDenies(rules, command), command).toBe(true);
+    }
   });
 
   it("denies a publish started through a pinned npx, another launcher or a workspace runner", () => {

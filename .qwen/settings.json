@@ -263,7 +263,12 @@
       "Bash(yarn npm publish *)",
       "Bash(bun publish)",
       "Bash(bun publish *)",
-      "Bash(gh api *pending_deployments*)"
+      "Bash(gh api *pending_deployments*)",
+      "Bash(gh api *approveDeployments*)",
+      "Bash(gh workflow run *publish-existing*)",
+      "Bash(gh api *publish-existing*)",
+      "Bash(gh api *dispatches*)",
+      "Bash(gh api */rerun*)"
     ]
   }
 }
