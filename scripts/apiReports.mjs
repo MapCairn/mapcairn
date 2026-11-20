@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
 import {
+  copyFileSync,
   existsSync,
   mkdirSync,
   mkdtempSync,
@@ -83,6 +84,13 @@ export async function generateReports(folder) {
           `${declaration} does not exist: run "npm run build:sdk" first.`,
         );
       }
+      // The declaration is read from the scratch folder, outside the package,
+      // so the package's own name (which a rolled-up entry point may import
+      // for the types it shares with the main entry) is external rather than
+      // the main entry's file read in again as a local module.
+      const copied = path.join(scratch, name, `${name}.d.ts`);
+      mkdirSync(path.dirname(copied), { recursive: true });
+      copyFileSync(declaration, copied);
       const reportFolder = path.join(scratch, name, "report");
       const tempFolder = path.join(scratch, name, "temp");
       mkdirSync(reportFolder, { recursive: true });
@@ -92,7 +100,7 @@ export async function generateReports(folder) {
         configObject: {
           projectFolder: folder,
           newlineKind: "lf",
-          mainEntryPointFilePath: declaration,
+          mainEntryPointFilePath: copied,
           compiler: {
             overrideTsconfig: {
               compilerOptions: ROLLUP_COMPILER_OPTIONS,

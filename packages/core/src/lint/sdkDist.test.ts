@@ -327,21 +327,34 @@ describe("@mapcairn/theme createThemeStylesheet", () => {
   });
 });
 
+/** The names a rolled-up declaration file declares at its top level. */
+function declaredNames(source: string): string[] {
+  const pattern =
+    /^(?:export\s+)?declare\s+(?:abstract\s+)?(?:class|interface|type|function|const\s+enum|const|enum|namespace)\s+([A-Za-z_$][\w$]*)/gm;
+  return [...source.matchAll(pattern)].map((match) => match[1] ?? "");
+}
+
 describe("@mapcairn/core contracts.d.ts", () => {
-  it("holds nothing that makes its copy of a declaration differ from the one in index.d.ts", () => {
-    // The two rolled-up files repeat the declarations they share, so a type
-    // is only assignable across them while it is purely structural.
-    const declarations = read("core", "contracts.d.ts");
-    const nominal = [
-      /#private/,
-      /\bprivate\s/,
-      /\bprotected\s/,
-      /\benum\s/,
-      /\bunique symbol\b/,
-    ].filter((pattern) => pattern.test(declarations));
-    expect(
-      nominal.map(String),
-      "contracts.d.ts repeats declarations that index.d.ts also holds, so a private or protected member, an enum or a unique symbol in one would make the two copies unassignable to each other. Keep the contract suites' signatures structural.",
-    ).toEqual([]);
+  it("declares no type that index.d.ts declares, and imports it from the package instead", () => {
+    // A copy of a declaration in each rolled-up file is two types to a host:
+    // a class, a private member or a unique symbol would not be assignable
+    // from one to the other, and API Extractor reports the copies as forgotten
+    // exports.
+    const contracts = read("core", "contracts.d.ts");
+    const shared = new Set(declaredNames(read("core", "index.d.ts")));
+    const repeated = declaredNames(contracts).filter((name) =>
+      shared.has(name),
+    );
+    expect(repeated, "contracts.d.ts declares these itself").toEqual([]);
+    expect(specifiersOf(contracts)).toContain("@mapcairn/core");
+    expect(contracts).not.toContain("mapcairn-main-entry");
+  });
+
+  it("has an API report with no forgotten export, because it shares the main entry's types", () => {
+    const report = readFileSync(
+      path.join(folderOf("core"), "api", "contracts.api.md"),
+      "utf8",
+    );
+    expect(report).not.toContain("ae-forgotten-export");
   });
 });
