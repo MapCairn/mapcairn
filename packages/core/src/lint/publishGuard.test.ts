@@ -383,7 +383,7 @@ describe("scanSources", () => {
     expect(scan(".github/workflows/ci.yml", workflow)).toEqual([]);
   });
 
-  it("allows stage and publish in the npm job of release.yml, and nothing else there", () => {
+  it("allows publish in the npm job of release.yml, and nothing else there", () => {
     const workflow = [
       "jobs:",
       "  verify:",
@@ -392,16 +392,18 @@ describe("scanSources", () => {
       "  npm:",
       "    environment: npm",
       "    steps:",
-      "      - run: npm stage publish ./core.tgz --tag latest",
+      "      - run: npm publish ./core.tgz --tag latest --provenance",
       "      - run: npm dist-tag add @mapcairn/core@1.0.0 latest",
+      "      - run: npm stage publish ./core.tgz --tag latest",
       "  github-release:",
       "    steps:",
-      "      - run: npm stage publish ./core.tgz",
+      "      - run: npm publish ./core.tgz",
       "",
     ].join("\n");
     expect(scan(".github/workflows/release.yml", workflow)).toEqual([
       { file: ".github/workflows/release.yml", line: 9, command: "dist-tag" },
-      { file: ".github/workflows/release.yml", line: 12, command: "stage" },
+      { file: ".github/workflows/release.yml", line: 10, command: "stage" },
+      { file: ".github/workflows/release.yml", line: 13, command: "publish" },
     ]);
   });
 
@@ -609,7 +611,7 @@ describe("what is read beyond scripts", () => {
       "jobs:",
       "  npm:",
       "    steps:",
-      "      - run: npm stage publish ./*.tgz && echo done",
+      "      - run: npm publish ./*.tgz --provenance && echo done",
       "      - run: ls *.tgz",
       "",
     ].join("\n");

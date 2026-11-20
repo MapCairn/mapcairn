@@ -66,6 +66,7 @@ const BYTES_PER_KB = 1000;
  * @property {boolean} signedIn Whether `npm whoami` succeeds here.
  * @property {boolean} tokenInEnvironment Whether an npm token variable is set.
  * @property {{ state: "ok" | "missing" | "unprotected" | "unknown", detail?: string }} environment The `npm` environment on GitHub.
+ * @property {"present" | "none" | "unknown"} reviewers Whether the `npm` environment requires a reviewer to approve a deployment.
  */
 
 /** @param {string} name */
@@ -129,12 +130,19 @@ export function buildReport(facts) {
   }
   const registry = registryLines({ facts, line, blocker });
   environmentLines({ facts, line, blocker });
+  reviewerLines({ facts, line });
   lines.push(...credentialLines({ facts, warnings }));
   line(
     "Trusted publishing",
     `cannot be read without signing in; the maintainer checks it as ${GUIDE} describes`,
   );
-  line("Left for you", leftForYou({ blockers, prepared, registry }));
+  line(
+    "Left for you",
+    [
+      leftForYou({ blockers, prepared, registry }),
+      ...reviewerWarning({ facts, warnings }),
+    ].join(" "),
+  );
   return { lines, blockers, warnings };
 }
 
@@ -335,13 +343,58 @@ function environmentLines({ facts, line, blocker }) {
 /**
  * @param {object} input
  * @param {Facts} input.facts
+ * @param {(label: string, text: string) => void} input.line
+ */
+function reviewerLines({ facts, line }) {
+  if (facts.reviewers === "present") {
+    line(
+      "npm environment reviewers",
+      "a required reviewer approves each deployment.",
+    );
+  } else if (facts.reviewers === "none") {
+    line("npm environment reviewers", "none: nobody approves a deployment.");
+  } else {
+    line(
+      "npm environment reviewers",
+      "could not be checked (no network, no gh, or no permission); check Settings, Environments on GitHub.",
+    );
+  }
+}
+
+/**
+ * The sentence for "Left for you" when nobody has to approve the deployment
+ * of the `npm` job, which is then the only thing between a merge and a publish.
+ *
+ * @param {object} input
+ * @param {Facts} input.facts
+ * @param {string[]} input.warnings Receives the warning.
+ * @returns {string[]} The sentence, or none.
+ */
+function reviewerWarning({ facts, warnings }) {
+  if (facts.reviewers === "present") {
+    return [];
+  }
+  if (facts.reviewers === "unknown") {
+    return [
+      `Could not check whether the npm environment has a required reviewer; check Settings, Environments on GitHub (${GUIDE}).`,
+    ];
+  }
+  const text =
+    "the npm environment has no required reviewer: a merge of a Release pull request publishes without a second approval.";
+  warnings.push(text);
+  return [`Warning: ${text} Add a required reviewer first (${GUIDE}).`];
+}
+
+/**
+ * @param {object} input
+ * @param {Facts} input.facts
  * @param {string[]} input.warnings Receives each warning.
  * @returns {string[]} The report lines for the warnings.
  */
 function credentialLines({ facts, warnings }) {
   /** @type {string[]} */
   const before = [];
-  const advice = `An agent should hold no registry credential (plan 0014, "Keeping agents from publishing"); ${GUIDE} says how to remove it.`;
+  const advice = `It does not weaken the release, whose approval is the npm environment's required reviewer on GitHub and not npm's two-factor; an agent still never uses it (plan 0014, "Keeping agents from publishing"), and ${GUIDE} says how to remove it.`;
   if (facts.signedIn) {
     const text = `npm is signed in on this machine. ${advice}`;
     warnings.push(text);
@@ -373,9 +426,9 @@ function leftForYou({ blockers, prepared, registry }) {
     return "merge the Release pull request, then publish the four tarballs from the GitHub Release by hand, because none is on npm yet.";
   }
   if (registry === "all") {
-    return "merge the Release pull request, then approve the staged packages on npmjs.com.";
+    return "merge the Release pull request, then approve the deployment of the npm environment in GitHub; the workflow publishes the four packages.";
   }
-  return "merge the Release pull request, then check on npmjs.com what was staged.";
+  return "merge the Release pull request, then check on npmjs.com what was published.";
 }
 
 /**
@@ -425,6 +478,32 @@ export function parseEnvironment(environment, policies) {
         state: "unprotected",
         detail: `its branch policies are ${list.map((/** @type {{ name: string }} */ entry) => entry.name).join(", ") || "empty"}`,
       };
+}
+
+/**
+ * Reads whether the `npm` environment requires a reviewer, from the GitHub
+ * API's answer for the environment (its `protection_rules`).
+ *
+ * @param {{ ok: boolean, stdout: string, stderr: string }} environment The answer for the environment.
+ * @returns {Facts["reviewers"]}
+ */
+export function parseReviewers(environment) {
+  if (!environment.ok) {
+    return "unknown";
+  }
+  let rules;
+  try {
+    rules = JSON.parse(environment.stdout).protection_rules ?? [];
+  } catch {
+    return "unknown";
+  }
+  const named = rules.some(
+    (/** @type {{ type?: string, reviewers?: unknown[] }} */ rule) =>
+      rule.type === "required_reviewers" &&
+      Array.isArray(rule.reviewers) &&
+      rule.reviewers.length > 0,
+  );
+  return named ? "present" : "none";
 }
 
 /**
@@ -496,6 +575,11 @@ function readFacts(root) {
     ? null
     : Object.fromEntries(answers);
 
+  const environment = run(
+    "gh",
+    ["api", `repos/${REPOSITORY}/environments/npm`],
+    root,
+  );
   return {
     sdk,
     privatePackages,
@@ -506,7 +590,7 @@ function readFacts(root) {
     tarballs: prepared ? packResults(root) : null,
     registry,
     environment: parseEnvironment(
-      run("gh", ["api", `repos/${REPOSITORY}/environments/npm`], root),
+      environment,
       run(
         "gh",
         [
@@ -516,6 +600,7 @@ function readFacts(root) {
         root,
       ),
     ),
+    reviewers: parseReviewers(environment),
     signedIn: runNpm(["whoami"], { cwd: root }).status === 0,
     tokenInEnvironment: ["NPM_TOKEN", "NODE_AUTH_TOKEN"].some(
       (name) => (process.env[name] ?? "") !== "",

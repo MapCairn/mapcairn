@@ -8,6 +8,8 @@
  *
  *   node scripts/release/verifyRelease.mjs decide
  *   node scripts/release/verifyRelease.mjs tarballs <version> <folder>
+ *   node scripts/release/verifyRelease.mjs package-state <name> <version>
+ *   node scripts/release/verifyRelease.mjs confirm-published <name> <version>
  *
  * `decide` reads these environment variables: `EVENT_NAME` (`push` or
  * `workflow_dispatch`), `MODE` and `VERSION_INPUT` (the dispatch inputs),
@@ -48,6 +50,14 @@ export const SDK_MANIFEST_FILES = SDK_NAMES.map(
 /** The subject of a Release pull request's squash commit. */
 const RELEASE_SUBJECT = /^chore\(release\): v(\S+) \(#([1-9]\d{0,9})\)$/;
 
+/**
+ * How often `confirm-published` reads the registry after an upload, and how
+ * long it waits between reads: the registry can answer not found for a moment
+ * after it accepted a version.
+ */
+export const CONFIRM_ATTEMPTS = 8;
+export const CONFIRM_DELAY_MS = 5000;
+
 /** The modes a dispatched run takes. */
 const MODES = ["rehearse", "publish-existing"];
 
@@ -59,7 +69,7 @@ export class ReleaseRefused extends Error {}
  * @property {boolean} release Whether the later jobs have work.
  * @property {string | null} version
  * @property {boolean} prerelease
- * @property {string} distTag The npm dist-tag the version is staged under.
+ * @property {string} distTag The npm dist-tag the version is published under.
  * @property {string} reason One sentence for the run's log.
  */
 
@@ -78,7 +88,7 @@ function skip(reason) {
 }
 
 /**
- * The dist-tag a version is staged under: `next` for the newest prerelease,
+ * The dist-tag a version is published under: `next` for the newest prerelease,
  * `latest` for a release that is the newest, and `previous` for a version
  * that is older than one already tagged (a prerelease older than any tag, a
  * release older than a release), so an old version never takes `next` or
@@ -334,8 +344,8 @@ export function tarballVersionProblems(version, manifests) {
 }
 
 /**
- * What the registry says about one version of one package, for the staging
- * loop: published (skip it), missing (stage it), or an error (stop).
+ * What the registry says about one version of one package, for the publishing
+ * loop: published (skip it), missing (publish it), or an error (stop).
  *
  * @param {{ status: number | null, stdout: string, stderr: string }} result The result of `npm view <name>@<version> version`.
  * @param {string} version
@@ -356,6 +366,34 @@ export function packageState(result, version) {
     return "missing";
   }
   throw new Error(`Could not ask the registry:\n${result.stderr.trim()}`);
+}
+
+/**
+ * Reads the registry until a version that was just published appears, so a
+ * publish that npm reported as done is never taken on trust. A not-found
+ * answer is read again, up to `CONFIRM_ATTEMPTS` times; any other answer
+ * stops at once.
+ *
+ * @param {object} input
+ * @param {string} input.name An SDK package name.
+ * @param {string} input.version
+ * @param {() => { status: number | null, stdout: string, stderr: string }} input.view Runs `npm view <name>@<version> version`.
+ * @param {(milliseconds: number) => Promise<void>} input.wait Waits between two reads.
+ * @returns {Promise<void>}
+ * @throws {Error} When the version does not appear, or the registry answers anything else.
+ */
+export async function confirmPublished({ name, version, view, wait }) {
+  for (let attempt = 1; attempt <= CONFIRM_ATTEMPTS; attempt += 1) {
+    if (packageState(view(), version) === "published") {
+      return;
+    }
+    if (attempt < CONFIRM_ATTEMPTS) {
+      await wait(CONFIRM_DELAY_MS);
+    }
+  }
+  throw new Error(
+    `${name}@${version} did not appear on the registry after ${CONFIRM_ATTEMPTS} reads. Check npm before you re-run the failed jobs.`,
+  );
 }
 
 /**
@@ -499,7 +537,7 @@ function decideFromEnvironment() {
     onNpm = state.onNpm;
     if (!onNpm) {
       console.log(
-        `::notice::${state.missing.join(", ")} ${state.missing.length === 1 ? "is" : "are"} not on npm yet, so the npm job stages nothing unless this is a rehearsal. The first upload is by hand (docs/guides/releasing.md).`,
+        `::notice::${state.missing.join(", ")} ${state.missing.length === 1 ? "is" : "are"} not on npm yet, so the npm job publishes nothing unless this is a rehearsal. The first upload is by hand (docs/guides/releasing.md).`,
       );
     }
   }
@@ -515,7 +553,7 @@ function decideFromEnvironment() {
 
 /**
  * Prints `published` or `missing` for one package version, and fails on
- * any other answer, so the staging loop never treats an error as "not there".
+ * any other answer, so the publishing loop never treats an error as "not there".
  *
  * @param {string} name An SDK package name.
  * @param {string} version
@@ -541,6 +579,39 @@ function printPackageState(name, version) {
       version,
     ),
   );
+}
+
+/**
+ * Fails unless a package version that was just published is on the registry.
+ *
+ * @param {string} name An SDK package name.
+ * @param {string} version
+ */
+async function confirmFromRegistry(name, version) {
+  if (!SDK_NAMES.includes(name)) {
+    throw new ReleaseRefused(`${JSON.stringify(name)} is not an SDK package.`);
+  }
+  if (parseVersion(version) === null) {
+    throw new ReleaseRefused(`${JSON.stringify(version)} is not a version.`);
+  }
+  await confirmPublished({
+    name,
+    version,
+    view: () => {
+      const result = runNpm(
+        ["view", `${name}@${version}`, "version", ...REGISTRY_READ_FLAGS],
+        { cwd: ROOT },
+      );
+      return {
+        status: result.status,
+        stdout: result.stdout ?? "",
+        stderr: result.stderr ?? "",
+      };
+    },
+    wait: (milliseconds) =>
+      new Promise((resolve) => setTimeout(resolve, milliseconds)),
+  });
+  console.log(`${name}@${version} is on the registry.`);
 }
 
 /** Checks the tarballs in a folder against a version. */
@@ -573,9 +644,11 @@ if (isEntryPoint(import.meta.url)) {
       checkTarballs(rest[0], rest[1]);
     } else if (command === "package-state" && rest.length === 2) {
       printPackageState(rest[0], rest[1]);
+    } else if (command === "confirm-published" && rest.length === 2) {
+      await confirmFromRegistry(rest[0], rest[1]);
     } else {
       console.error(
-        "Usage: node scripts/release/verifyRelease.mjs decide | tarballs <version> <folder> | package-state <name> <version>",
+        "Usage: node scripts/release/verifyRelease.mjs decide | tarballs <version> <folder> | package-state <name> <version> | confirm-published <name> <version>",
       );
       process.exitCode = 2;
     }

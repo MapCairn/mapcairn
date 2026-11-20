@@ -2,6 +2,9 @@
 // Copyright MapCairn contributors
 import { describe, expect, it } from "vitest";
 import {
+  CONFIRM_ATTEMPTS,
+  CONFIRM_DELAY_MS,
+  confirmPublished,
   decideDispatch,
   decidePush,
   distTagFor,
@@ -392,9 +395,102 @@ describe("packageState", () => {
   });
 });
 
+describe("confirmPublished", () => {
+  const found = { status: 0, stdout: "0.1.0\n", stderr: "" };
+  const notFound = { status: 1, stdout: "", stderr: "npm error code E404" };
+
+  it("returns at once when the registry already has the version, and waits for nothing", async () => {
+    const waits: number[] = [];
+    await confirmPublished({
+      name: "@mapcairn/core",
+      version: "0.1.0",
+      view: () => found,
+      wait: async (ms: number) => {
+        waits.push(ms);
+      },
+    });
+    expect(waits).toEqual([]);
+  });
+
+  it("reads again after a not-found answer, because the registry can lag a moment behind the upload", async () => {
+    const answers = [notFound, notFound, found];
+    const waits: number[] = [];
+    await confirmPublished({
+      name: "@mapcairn/core",
+      version: "0.1.0",
+      view: () => answers.shift(),
+      wait: async (ms: number) => {
+        waits.push(ms);
+      },
+    });
+    expect(answers).toEqual([]);
+    expect(waits).toEqual([CONFIRM_DELAY_MS, CONFIRM_DELAY_MS]);
+  });
+
+  it("fails when the version never appears, naming the package and the version", async () => {
+    let reads = 0;
+    await expect(
+      confirmPublished({
+        name: "@mapcairn/core",
+        version: "0.1.0",
+        view: () => {
+          reads += 1;
+          return notFound;
+        },
+        wait: async () => {},
+      }),
+    ).rejects.toThrow(/@mapcairn\/core@0\.1\.0 did not appear/);
+    expect(reads).toBe(CONFIRM_ATTEMPTS);
+  });
+
+  it("does not wait after the last read", async () => {
+    const waits: number[] = [];
+    await expect(
+      confirmPublished({
+        name: "@mapcairn/core",
+        version: "0.1.0",
+        view: () => notFound,
+        wait: async (ms: number) => {
+          waits.push(ms);
+        },
+      }),
+    ).rejects.toThrow();
+    expect(waits).toHaveLength(CONFIRM_ATTEMPTS - 1);
+  });
+
+  it("stops on any other registry error without reading again", async () => {
+    let reads = 0;
+    await expect(
+      confirmPublished({
+        name: "@mapcairn/core",
+        version: "0.1.0",
+        view: () => {
+          reads += 1;
+          return { status: 1, stdout: "", stderr: "npm error code ECONNRESET" };
+        },
+        wait: async () => {},
+      }),
+    ).rejects.toThrow(/ECONNRESET/);
+    expect(reads).toBe(1);
+  });
+});
+
 describe("distTagFor", () => {
   it("puts a prerelease under next", () => {
     expect(distTagFor("0.1.0-rc.2", ["v0.1.0-rc.1"])).toBe("next");
+  });
+
+  it("puts a first prerelease under next, and a prerelease older than a stable release under previous, so latest is never moved by a prerelease", () => {
+    expect(distTagFor("0.1.0-rc.1", [])).toBe("next");
+    expect(distTagFor("0.1.0-rc.3", ["v0.1.0", "v0.1.0-rc.2"])).toBe(
+      "previous",
+    );
+  });
+
+  it("never returns latest for a prerelease", () => {
+    for (const tags of [[], ["v0.1.0-rc.1"], ["v0.0.9"], ["v0.2.0"]]) {
+      expect(distTagFor("0.1.0-rc.2", tags)).not.toBe("latest");
+    }
   });
 
   it("puts a prerelease older than the newest prerelease under previous", () => {

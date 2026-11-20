@@ -83,18 +83,26 @@ describe("installFlags", () => {
 });
 
 describe("parsePublishedArguments", () => {
-  it("takes one version", () => {
+  it("takes one version and expects provenance, as a release published from the workflow has it", () => {
     expect(parsePublishedArguments(["0.1.0"])).toEqual({
       version: "0.1.0",
-      requireProvenance: false,
+      requireProvenance: true,
     });
     expect(parsePublishedArguments(["0.1.0-rc.2"])).toEqual({
       version: "0.1.0-rc.2",
+      requireProvenance: true,
+    });
+  });
+
+  it("lets a release that was published by hand say it has none, in either order", () => {
+    expect(parsePublishedArguments(["0.1.0-rc.1", "--no-provenance"])).toEqual({
+      version: "0.1.0-rc.1",
       requireProvenance: false,
     });
-    expect(
-      parsePublishedArguments(["0.1.0-rc.2", "--require-provenance"]),
-    ).toEqual({ version: "0.1.0-rc.2", requireProvenance: true });
+    expect(parsePublishedArguments(["--no-provenance", "0.1.0-rc.1"])).toEqual({
+      version: "0.1.0-rc.1",
+      requireProvenance: false,
+    });
   });
 
   it.each([
@@ -103,6 +111,8 @@ describe("parsePublishedArguments", () => {
     [["0.1.0", "extra"]],
     [["--version=0.1.0"]],
     [["0.1"]],
+    [["0.1.0", "--require-provenance"]],
+    [["--no-provenance"]],
   ])("refuses %j", (argv) => {
     expect(() => parsePublishedArguments(argv)).toThrow(/Usage/);
   });

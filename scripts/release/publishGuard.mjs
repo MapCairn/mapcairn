@@ -32,8 +32,9 @@
  * substitution, run through a variable that names the program, or run by a
  * program that is not npm or another package manager. It can also flag
  * innocent text (`git commit -m "npm token"`). The guarantee that an agent
- * cannot publish rests on the npm credentials, two-factor approval and the
- * `npm` environment protection; this check, the deny lists and the independent
+ * cannot publish rests on the `npm` environment's required reviewer, its
+ * main-only deployment rule and the trusted publisher npm accepts only from
+ * that workflow and environment; this check, the deny lists and the independent
  * review of every change to an executable file are layers on top (see "Keeping
  * agents from publishing" in plan 0014).
  */
@@ -102,8 +103,12 @@ export const OTHER_PUBLISH_COMMANDS = [
 /** The text the deny lists and the guard both match on for a GitHub deployment approval. */
 export const DEPLOYMENT_APPROVAL_TEXT = "pending_deployments";
 
-/** The only commands the `npm` job of `release.yml` may run. */
-export const NPM_JOB_COMMANDS = new Set(["publish", "stage"]);
+/**
+ * The only command the `npm` job of `release.yml` may run. The workflow
+ * publishes directly through trusted publishing (plan 0014, "Staged or direct
+ * publishing"), so `stage` is forbidden there like everywhere else.
+ */
+export const NPM_JOB_COMMANDS = new Set(["publish"]);
 
 /** The workflow file and the job that may publish. */
 export const RELEASE_WORKFLOW = ".github/workflows/release.yml";

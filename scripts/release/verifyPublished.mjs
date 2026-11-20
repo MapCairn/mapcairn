@@ -7,14 +7,14 @@
  * provenance attestations of what was installed with `npm audit signatures`,
  * and says for each package whether it was published with provenance.
  *
- *   npm run release:verify-published -- <version> [--require-provenance]
+ *   npm run release:verify-published -- <version> [--no-provenance]
  *
- * Without `--require-provenance` a package with no provenance is reported and
- * does not fail the check, which is right for a release candidate that was
- * published by hand. With it, a package without provenance fails the check:
- * use it for every release published from the workflow.
+ * A package without provenance fails the check, because the workflow publishes
+ * through trusted publishing and npm then records provenance. `--no-provenance`
+ * says the version was published another way (the hand-published `0.1.0-rc.1`
+ * has none): a package without provenance is then reported and does not fail.
  *
- * Run it after the maintainer has approved the staged packages. It only
+ * Run it after the workflow's `npm` job has published. It only
  * reads the registry. The four SDK packages are exempted from the repository's
  * seven-day minimum release age for this install, because a version that was
  * published a moment ago would otherwise not install; third-party packages
@@ -32,16 +32,16 @@ import { SDK_NAMES } from "./workspaces.mjs";
 export { auditProblems };
 
 const USAGE =
-  "Usage: npm run release:verify-published -- <version> [--require-provenance], such as 0.1.0 or 0.1.0-rc.2 (no leading v).";
+  "Usage: npm run release:verify-published -- <version> [--no-provenance], such as 0.1.0 or 0.1.0-rc.2 (no leading v). --no-provenance is for a version that was published by hand.";
 
 /**
  * @param {string[]} argv The arguments after the script name.
- * @returns {{ version: string, requireProvenance: boolean }}
+ * @returns {{ version: string, requireProvenance: boolean }} Provenance is required unless `--no-provenance` is given.
  * @throws {Error} When the arguments are not one version and the optional flag.
  */
 export function parsePublishedArguments(argv) {
-  const requireProvenance = argv.includes("--require-provenance");
-  const rest = argv.filter((argument) => argument !== "--require-provenance");
+  const requireProvenance = !argv.includes("--no-provenance");
+  const rest = argv.filter((argument) => argument !== "--no-provenance");
   if (rest.length !== 1 || parseVersion(rest[0]) === null) {
     throw new Error(USAGE);
   }

@@ -6,9 +6,11 @@ name: Release
 # updating the record.
 #
 # A release starts only from a maintainer's action: merging a Release pull
-# request (title `chore(release): v<version>`, label `release`), approving the
-# staged packages on npmjs.com, or starting this workflow by hand. No other
-# merge to main tags, releases or publishes anything.
+# request (title `chore(release): v<version>`, label `release`), or starting
+# this workflow by hand. The `npm` job then publishes the four packages
+# directly through npm trusted publishing (OIDC, no stored token), once a
+# required reviewer of the `npm` environment has approved the deployment. No
+# other merge to main tags, releases or publishes anything.
 #
 # Inputs and pull request text reach scripts through `env`, never through an
 # expression in a shell line, and `scripts/release/verifyRelease.mjs` checks
@@ -21,7 +23,7 @@ name: Release
 # runner's artifact token stays in every job, so the digests, not the
 # permissions, are what protect the release: `github-release` and `npm`
 # compare what they download with the recorded digests before they attest or
-# stage. So what was checked is what is released.
+# publish. So what was checked is what is released.
 #
 # The runner's cache token is limited by `cache-mode: none` below, so no job
 # here can save an Actions cache entry or restore one (issue 515). A cache is
@@ -44,8 +46,8 @@ on:
         type: string
       mode:
         description: >-
-          rehearse runs the checks and a dry run of the staging, and tags and
-          releases nothing. publish-existing stages the tarballs of a GitHub
+          rehearse runs the checks and a dry run of the publishing, and tags and
+          releases nothing. publish-existing publishes the tarballs of a GitHub
           Release that is already tagged (maintainer only).
         required: true
         type: choice
@@ -60,7 +62,7 @@ cache-mode: none
 
 # A dispatched run never overlaps another run of the same version, and a push
 # run is keyed by its commit. The npm job has its own group per version (below),
-# so a push run and a dispatched run never stage one version at once. Nothing
+# so a push run and a dispatched run never publish one version at once. Nothing
 # that has started is cancelled: a half-finished release is worse than a
 # waiting one. GitHub does cancel a job that is still pending in a group when a
 # newer one queues behind it.
@@ -309,11 +311,13 @@ jobs:
           node scripts/release/tarballs.mjs check release "$DIGESTS" "$NOTES_DIGEST"
           node scripts/release/verifyRelease.mjs tarballs "$VERSION" release
 
-      - name: Use an npm that can stage packages
+      - name: Use an npm that supports trusted publishing
         shell: bash
-        # The version installed is the one the repository's packageManager field pins.
+        # Trusted publishing needs npm 11.5.1 or later. The version installed
+        # when the runner's npm is older is the one the repository's
+        # packageManager field pins.
         run: | # zizmor: ignore[adhoc-packages]
-          required=11.15.0
+          required=11.5.1
           current="$(npm --version)"
           if [ "$(printf '%s\n%s\n' "$required" "$current" | sort -V | head -n 1)" != "$required" ]; then
             wanted="$(node -p "require('./package.json').packageManager.replace('npm@', '')")"
@@ -321,22 +325,26 @@ jobs:
           fi
           npm --version
 
-      - name: Say why nothing is staged while the packages are private
+      - name: Say why nothing is published while the packages are private
         if: needs.verify.outputs.private == 'true'
-        run: echo "::notice::An SDK manifest still sets private, so npm would skip it. Nothing is staged; the rc.1 Release pull request removes private."
-      - name: Stage the packages
+        run: echo "::notice::An SDK manifest still sets private, so npm would skip it. Nothing is published; the rc.1 Release pull request removes private."
+      - name: Publish the packages
         if: needs.verify.outputs.private != 'true'
         env:
           VERSION: ${{ needs.verify.outputs.version }}
           DIST_TAG: ${{ needs.verify.outputs.dist-tag }}
           MODE: ${{ inputs.mode }}
         shell: bash
-        # A package whose version is on npm is skipped with a notice, in a
-        # rehearsal too; one that is not found is staged (a dry run in a
-        # rehearsal); any other registry answer stops the job. A package that
-        # is staged but not yet approved is not found by `npm view`, and npm
-        # refuses to stage it again, so staged packages are rejected before the
-        # failed jobs are re-run (docs/guides/releasing.md).
+        # No token and no registry-url: npm exchanges this job's OIDC token
+        # for a short-lived credential, and records provenance. --provenance
+        # is explicit so that a publish that could not get provenance fails
+        # before the upload, which cannot be undone. A package whose version
+        # is on npm is skipped with a notice, in a rehearsal too; one that is
+        # not found is published (a dry run in a rehearsal); any other
+        # registry answer stops the job. After each real publish the registry
+        # is read back, and the job fails if the version does not appear. A
+        # re-run of the failed jobs after a partial publish therefore skips
+        # what is on npm and publishes the rest (docs/guides/releasing.md).
         run: |
           flags=()
           if [ "$MODE" = "rehearse" ]; then
@@ -348,5 +356,9 @@ jobs:
               echo "::notice::@mapcairn/$name@$VERSION is already on npm, so it is skipped."
               continue
             fi
-            npm stage publish "release/mapcairn-$name-$VERSION.tgz" --tag "$DIST_TAG" "${flags[@]}"
+            npm publish "$GITHUB_WORKSPACE/release/mapcairn-$name-$VERSION.tgz" --tag "$DIST_TAG" --provenance "${flags[@]}"
+            if [ "$MODE" = "rehearse" ]; then
+              continue
+            fi
+            node scripts/release/verifyRelease.mjs confirm-published "@mapcairn/$name" "$VERSION"
           done
