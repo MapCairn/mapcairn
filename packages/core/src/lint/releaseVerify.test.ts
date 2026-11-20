@@ -9,6 +9,7 @@ import {
   decideDispatch,
   decidePush,
   distTagFor,
+  internalDependencies,
   packagePublishState,
   packageState,
   privateSdkManifests,
@@ -405,6 +406,22 @@ describe("packagePublishState", () => {
     expect(() => packagePublishState(notFound, "0.1.0", () => outage)).toThrow(
       /ECONNRESET/,
     );
+  });
+});
+
+describe("internalDependencies", () => {
+  it("lists the @mapcairn packages a manifest depends on, in every kind of dependency, once each and sorted", () => {
+    expect(
+      internalDependencies({
+        dependencies: { "@mapcairn/theme": "0.1.0", react: "^19.0.0" },
+        peerDependencies: { "@mapcairn/core": "0.1.0", "react-dom": "^19" },
+        optionalDependencies: { "@mapcairn/theme": "0.1.0" },
+      }),
+    ).toEqual(["@mapcairn/core", "@mapcairn/theme"]);
+  });
+
+  it("is empty for a manifest with no dependencies of that kind", () => {
+    expect(internalDependencies({ name: "@mapcairn/core" })).toEqual([]);
   });
 });
 

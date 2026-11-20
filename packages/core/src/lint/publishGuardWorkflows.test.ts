@@ -480,6 +480,8 @@ function runPublishStep(input: {
   distTag?: string;
   /** Per package, what `package-state` prints: published, missing, new or error. */
   states: Record<string, string>;
+  /** Per package, the internal packages its tarball depends on. */
+  dependencies?: Record<string, string[]>;
   /** Packages whose publish command fails. */
   publishFails?: string[];
   /** Packages whose read-back fails. */
@@ -498,6 +500,11 @@ function runPublishStep(input: {
     mkdirSync(states);
     for (const [name, state] of Object.entries(input.states)) {
       writeFileSync(path.join(states, name), state);
+    }
+    const dependencies = path.join(folder, "deps");
+    mkdirSync(dependencies);
+    for (const [name, deps] of Object.entries(input.dependencies ?? {})) {
+      writeFileSync(path.join(dependencies, name), deps.join("\n"));
     }
     const confirmFails = path.join(folder, "confirm-fails");
     mkdirSync(confirmFails);
@@ -519,6 +526,9 @@ function runPublishStep(input: {
         '    state="$(cat "$FOLDER/states/$short")"',
         '    if [ "$state" = "error" ]; then echo "Could not ask the registry" >&2; exit 1; fi',
         '    echo "$state"',
+        "    ;;",
+        "  dependencies)",
+        '    cat "$FOLDER/deps/$short" 2>/dev/null || true',
         "    ;;",
         "  confirm-published)",
         '    if [ -e "$FOLDER/confirm-fails/$short" ]; then echo "did not appear" >&2; exit 1; fi',
@@ -578,7 +588,10 @@ const ALL_MISSING = {
 
 /** What the loop ran, without the registry reads. */
 function actions(run: StepRun): string[] {
-  return run.calls.filter((call) => !call.includes("package-state"));
+  return run.calls.filter(
+    (call) =>
+      !call.includes("package-state") && !call.includes(" dependencies "),
+  );
 }
 
 describe.skipIf(process.platform === "win32")(
@@ -635,15 +648,13 @@ describe.skipIf(process.platform === "win32")(
       expect(actions(run)).toEqual([]);
     });
 
-    it("stops at a registry answer that is neither found nor not found, before it publishes that package or any after it", () => {
+    it("stops at a registry answer that is neither found nor not found, before it publishes any package, because every state is read first", () => {
       const run = runPublishStep({
         mode: "publish",
         states: { ...ALL_MISSING, react: "error" },
       });
       expect(run.status).not.toBe(0);
-      expect(actions(run).filter((call) => call.startsWith("npm "))).toEqual([
-        `npm publish ${tarball("core")} --ignore-scripts --tag next --provenance`,
-      ]);
+      expect(actions(run)).toEqual([]);
     });
 
     it("stops when a publish fails, and publishes no later package", () => {
@@ -715,14 +726,13 @@ describe.skipIf(process.platform === "win32")(
       }
     });
 
-    it("does not read a new package as a reason to skip the ones after it, and still stops at a registry error", () => {
+    it("still stops at a registry error after a new package, and publishes nothing", () => {
       const run = runPublishStep({
         mode: "publish",
         states: { ...ALL_MISSING, core: "new", react: "error" },
       });
       expect(run.status).not.toBe(0);
       expect(actions(run)).toEqual([]);
-      expect(run.stdout).not.toContain("is not on npm yet");
     });
 
     it("warns about a new package in a rehearsal, dry-runs the rest and does not fail, since nothing is published", () => {
@@ -741,6 +751,80 @@ describe.skipIf(process.platform === "win32")(
         "::warning::@mapcairn/map is not on npm yet",
       );
       expect(run.stdout).toContain("by hand");
+    });
+
+    it("refuses before any publish, naming both packages, when a package that others pin is new and a dependent would be published", () => {
+      const run = runPublishStep({
+        mode: "publish",
+        states: { ...ALL_MISSING, core: "new" },
+        dependencies: {
+          react: ["@mapcairn/core"],
+          theme: [],
+          map: ["@mapcairn/core", "@mapcairn/react", "@mapcairn/theme"],
+        },
+      });
+      expect(run.status).not.toBe(0);
+      expect(actions(run)).toEqual([]);
+      expect(run.stdout).toContain(
+        "::error::@mapcairn/react depends on @mapcairn/core",
+      );
+      expect(run.stdout).toContain(
+        "::error::@mapcairn/map depends on @mapcairn/core",
+      );
+      expect(run.stdout).not.toContain("::error::@mapcairn/theme depends");
+      expect(run.stdout).toContain("by hand");
+    });
+
+    it("publishes the others and then fails for a new leaf package that nothing depends on", () => {
+      const run = runPublishStep({
+        mode: "publish",
+        states: { ...ALL_MISSING, map: "new" },
+        dependencies: {
+          core: [],
+          react: [],
+          theme: ["@mapcairn/core"],
+          map: ["@mapcairn/core", "@mapcairn/react"],
+        },
+      });
+      expect(run.status).not.toBe(0);
+      expect(
+        actions(run)
+          .filter((call) => call.startsWith("npm "))
+          .map((call) => call.split(" ")[2]),
+      ).toEqual([tarball("core"), tarball("react"), tarball("theme")]);
+      expect(run.stdout).toContain("@mapcairn/map is not on npm yet");
+    });
+
+    it("does not refuse when the dependents of a new package are already on npm at this version", () => {
+      const run = runPublishStep({
+        mode: "publish",
+        states: {
+          core: "new",
+          react: "published",
+          theme: "missing",
+          map: "published",
+        },
+        dependencies: {
+          react: ["@mapcairn/core"],
+          theme: [],
+          map: ["@mapcairn/core"],
+        },
+      });
+      expect(run.status).not.toBe(0);
+      expect(
+        actions(run).filter((call) => call.startsWith("npm ")),
+      ).toHaveLength(1);
+      expect(run.stdout).not.toContain("depends on");
+    });
+
+    it("names a new package when it is found, so a later failure of a publish does not leave it unnamed", () => {
+      const run = runPublishStep({
+        mode: "publish",
+        states: { ...ALL_MISSING, core: "new" },
+        publishFails: ["react"],
+      });
+      expect(run.status).not.toBe(0);
+      expect(run.stdout).toContain("@mapcairn/core is not on npm yet");
     });
 
     it("makes a rehearsal a dry run: it adds --dry-run and does not read the registry back", () => {

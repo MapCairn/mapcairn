@@ -345,14 +345,15 @@ function environmentLines({ facts, line, blocker }) {
 }
 
 /**
- * Whether a merge of a Release pull request publishes anything from CI: the
- * `npm` job publishes each package npm already has, so it does once any is there.
+ * Whether a merge of a Release pull request may publish from CI: the `npm`
+ * job publishes each package npm already has, so it does once any is there,
+ * and when the registry could not be read it cannot be ruled out.
  *
  * @param {"unknown" | "none" | "some" | "all"} registry What the registry holds.
  * @returns {boolean}
  */
 function publishes(registry) {
-  return registry === "some" || registry === "all";
+  return registry !== "none";
 }
 
 /**
@@ -371,7 +372,7 @@ function reviewerLines({ facts, registry, line, blocker }) {
   } else if (facts.reviewers === "none" && publishes(registry)) {
     blocker(
       "npm environment reviewers",
-      `no required reviewer, and some packages are already on npm, so a merge of a Release pull request publishes without a second approval. Add a required reviewer to the npm environment first (${GUIDE}, maintainer steps).`,
+      `no required reviewer, and ${registry === "unknown" ? "the registry could not be read" : "some packages are already on npm"}, so a merge of a Release pull request publishes without a second approval. Add a required reviewer to the npm environment first (${GUIDE}, maintainer steps).`,
     );
   } else if (facts.reviewers === "none") {
     line("npm environment reviewers", "none: nobody approves a deployment.");

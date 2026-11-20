@@ -9,6 +9,7 @@
  *   node scripts/release/verifyRelease.mjs decide
  *   node scripts/release/verifyRelease.mjs tarballs <version> <folder>
  *   node scripts/release/verifyRelease.mjs package-state <name> <version>
+ *   node scripts/release/verifyRelease.mjs dependencies <name> <version> <folder>
  *   node scripts/release/verifyRelease.mjs confirm-published <name> <version>
  *
  * `decide` reads these environment variables: `EVENT_NAME` (`push` or
@@ -560,19 +561,49 @@ function readPullRequest(number) {
 }
 
 /**
- * Reads one tarball's `package.json` with the system `tar`.
+ * The MapCairn packages a manifest depends on, in its dependencies, peer
+ * dependencies and optional dependencies, once each and sorted. The publishing
+ * loop uses it to refuse a release in which a package would be published
+ * against a package that npm does not have.
+ *
+ * @param {{ dependencies?: Record<string, string>, peerDependencies?: Record<string, string>, optionalDependencies?: Record<string, string> }} manifest
+ * @returns {string[]}
+ */
+export function internalDependencies(manifest) {
+  const names = [
+    manifest.dependencies,
+    manifest.peerDependencies,
+    manifest.optionalDependencies,
+  ].flatMap((group) => Object.keys(group ?? {}));
+  return [
+    ...new Set(names.filter((name) => name.startsWith("@mapcairn/"))),
+  ].sort();
+}
+
+/**
+ * Reads one tarball's whole `package.json` with the system `tar`.
  *
  * @param {string} file
- * @returns {{ name: string, version: string }}
+ * @returns {Record<string, any>}
  */
-function readTarballManifest(file) {
+function readTarballPackageJson(file) {
   const result = spawnSync("tar", ["-xOzf", file, "package/package.json"], {
     encoding: "utf8",
   });
   if (result.status !== 0) {
     throw new Error(`Could not read package.json from ${file}.`);
   }
-  const manifest = JSON.parse(result.stdout);
+  return JSON.parse(result.stdout);
+}
+
+/**
+ * Reads one tarball's name and version.
+ *
+ * @param {string} file
+ * @returns {{ name: string, version: string }}
+ */
+function readTarballManifest(file) {
+  const manifest = readTarballPackageJson(file);
   return { name: String(manifest.name), version: String(manifest.version) };
 }
 
@@ -692,6 +723,28 @@ async function confirmFromRegistry(name, version) {
   console.log(`${name}@${version} is on the registry.`);
 }
 
+/**
+ * Prints, one per line, the MapCairn packages one release tarball depends on.
+ *
+ * @param {string} name An SDK package name.
+ * @param {string} version
+ * @param {string} folder The folder that holds the release's tarballs.
+ */
+function printDependencies(name, version, folder) {
+  if (!SDK_NAMES.includes(name)) {
+    throw new ReleaseRefused(`${JSON.stringify(name)} is not an SDK package.`);
+  }
+  if (parseVersion(version) === null) {
+    throw new ReleaseRefused(`${JSON.stringify(version)} is not a version.`);
+  }
+  const file = `mapcairn-${name.replace("@mapcairn/", "")}-${version}.tgz`;
+  for (const dependency of internalDependencies(
+    readTarballPackageJson(path.join(folder, file)),
+  )) {
+    console.log(dependency);
+  }
+}
+
 /** Checks the tarballs in a folder against a version. */
 function checkTarballs(version, folder) {
   if (parseVersion(version) === null) {
@@ -722,11 +775,13 @@ if (isEntryPoint(import.meta.url)) {
       checkTarballs(rest[0], rest[1]);
     } else if (command === "package-state" && rest.length === 2) {
       printPackageState(rest[0], rest[1]);
+    } else if (command === "dependencies" && rest.length === 3) {
+      printDependencies(rest[0], rest[1], rest[2]);
     } else if (command === "confirm-published" && rest.length === 2) {
       await confirmFromRegistry(rest[0], rest[1]);
     } else {
       console.error(
-        "Usage: node scripts/release/verifyRelease.mjs decide | tarballs <version> <folder> | package-state <name> <version> | confirm-published <name> <version>",
+        "Usage: node scripts/release/verifyRelease.mjs decide | tarballs <version> <folder> | package-state <name> <version> | dependencies <name> <version> <folder> | confirm-published <name> <version>",
       );
       process.exitCode = 2;
     }

@@ -423,6 +423,12 @@ describe("the reviewer rule when a merge would publish", () => {
     );
   });
 
+  it("blocks when nobody has to approve and the registry could not be read, since a merge may then publish", () => {
+    const { blockers } = report({ reviewers: "none", registry: null });
+    expect(blockers.join("\n")).toContain("no required reviewer");
+    expect(blockers.join("\n")).toContain("could not be read");
+  });
+
   it("does not block while the first publish is by hand, since the npm job publishes nothing", () => {
     expect(report({ reviewers: "none" }).blockers).toEqual([]);
   });
