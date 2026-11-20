@@ -104,7 +104,7 @@ describe.each(BUILT_SDK_PACKAGES)("the README of @mapcairn/%s", (name) => {
       INSTALL_VERBS.forEach((verb, index) => {
         expect(lines[index]).toMatch(
           new RegExp(
-            `^${verb} ${packageName}(@next)?( (@mapcairn/[a-z-]+(@next)?|maplibre-gl))*$`,
+            `^${verb} ${packageName}(@next)?( (@mapcairn/[a-z-]+(@next)?|maplibre-gl|react|react-dom))*$`,
           ),
         );
       });
@@ -330,5 +330,80 @@ describe("the README of @mapcairn/adapter-maplibre", () => {
 
   it("names the stylesheet an outside host imports once", () => {
     expect(readme).toContain("@mapcairn/adapter-maplibre/styles.css");
+  });
+});
+
+/** The install lines in a Markdown text that still name the `next` tag. */
+function installLinesWithNext(markdown: string): string[] {
+  return markdown
+    .split("\n")
+    .filter((line) => /^(npm install|pnpm add|yarn add) .*@next\b/.test(line));
+}
+
+/** True when a version has a prerelease part, such as `0.1.0-rc.3`. */
+function isPrerelease(version: string): boolean {
+  return version.includes("-");
+}
+
+/**
+ * The README files whose install lines still say `@next`, when any of the
+ * versions has no prerelease part. Empty while every version is a prerelease.
+ */
+function readmesNeedingNextRemoved(
+  versions: readonly string[],
+  readmes: Readonly<Record<string, string>>,
+): string[] {
+  if (versions.every(isPrerelease)) {
+    return [];
+  }
+  return Object.entries(readmes)
+    .filter(([, text]) => installLinesWithNext(text).length > 0)
+    .map(([file]) => file);
+}
+
+describe("the `@next` tag in install lines", () => {
+  it("is found in a line that carries it, and not in one that does not", () => {
+    expect(
+      installLinesWithNext("npm install @mapcairn/sdk@next react\nnpm i x"),
+    ).toEqual(["npm install @mapcairn/sdk@next react"]);
+    expect(installLinesWithNext("npm install @mapcairn/sdk react")).toEqual([]);
+  });
+
+  it("is refused once a version has no prerelease part, and allowed before", () => {
+    const readmes = { "README.md": "npm install @mapcairn/sdk@next\n" };
+    expect(readmesNeedingNextRemoved(["0.1.0"], readmes)).toEqual([
+      "README.md",
+    ]);
+    expect(readmesNeedingNextRemoved(["0.1.0-rc.3", "0.1.0"], readmes)).toEqual(
+      ["README.md"],
+    );
+    expect(readmesNeedingNextRemoved(["0.1.0-rc.3"], readmes)).toEqual([]);
+    expect(
+      readmesNeedingNextRemoved(["0.1.0"], { "README.md": "npm install x\n" }),
+    ).toEqual([]);
+  });
+
+  it("holds for the root README and every SDK package README at the current versions", () => {
+    const versions = BUILT_SDK_PACKAGES.map(
+      (name: string) =>
+        (
+          JSON.parse(
+            readFileSync(
+              path.join(REPO, "packages", name, "package.json"),
+              "utf8",
+            ),
+          ) as { readonly version: string }
+        ).version,
+    );
+    const readmes: Record<string, string> = {
+      "README.md": readFileSync(path.join(REPO, "README.md"), "utf8"),
+    };
+    for (const name of BUILT_SDK_PACKAGES as string[]) {
+      readmes[`packages/${name}/README.md`] = readmeOf(name);
+    }
+    expect(
+      readmesNeedingNextRemoved(versions, readmes),
+      "a package is released without a prerelease part: remove @next from these install lines",
+    ).toEqual([]);
   });
 });

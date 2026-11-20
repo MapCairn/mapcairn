@@ -7,12 +7,12 @@ The whole MapCairn SDK from one import: it re-exports `@mapcairn/core`, `@mapcai
 ## Install
 
 ```bash
-npm install @mapcairn/sdk@next
-pnpm add @mapcairn/sdk@next
-yarn add @mapcairn/sdk@next
+npm install @mapcairn/sdk@next react react-dom maplibre-gl
+pnpm add @mapcairn/sdk@next react react-dom maplibre-gl
+yarn add @mapcairn/sdk@next react react-dom maplibre-gl
 ```
 
-React and React DOM 19 are peer dependencies, and your app already has them. `maplibre-gl` (`^6.18.0`) is a required peer too, because the adapter at the subpath needs it: npm and recent pnpm install it for you, and strict pnpm and Yarn ask you to list it, as they do for React. The root of the package never imports the engine, so an app that does not import the subpath has none in its page or its server bundle. The package is ESM only: it has no `main` field and no CommonJS build. A TypeScript project needs `moduleResolution` set to `node16`, `nodenext` or `bundler`; `node10` is not supported. `vitest` is an optional peer, needed only for `@mapcairn/sdk/core/contracts`.
+React and React DOM 19 are peer dependencies, and your app already has them; the install line lists them because strict pnpm and Yarn want peers listed. `maplibre-gl` (`^6.18.0`) is a required peer too, because the adapter at the subpath needs it: npm and recent pnpm install it for you, and strict pnpm and Yarn ask you to list it, as they do for React. The root of the package never imports the engine, so an app that does not import the subpath has none in its page or its server bundle. The package is ESM only: it has no `main` field and no CommonJS build. A TypeScript project needs `moduleResolution` set to `node16`, `nodenext` or `bundler`; `node10` is not supported. `vitest` is an optional peer, needed only for `@mapcairn/sdk/core/contracts`.
 
 ## Usage
 
@@ -23,7 +23,7 @@ import "@mapcairn/sdk/styles.css";
 import { MapChrome, ServicesProvider } from "@mapcairn/sdk";
 ```
 
-For a real map, add the adapter from its subpath. It needs the URL of the engine's worker, which a Vite app gets from `import("maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url")`; the [adapter's README](https://github.com/MapCairn/mapcairn/tree/main/packages/adapter-maplibre) explains it, and [Show a real map](https://github.com/MapCairn/mapcairn/blob/main/docs/guides/extending.md#show-a-real-map) has the steps:
+For a real map, add the adapter from its subpath. It needs the URL of the engine's worker, as the [adapter's README](https://github.com/MapCairn/mapcairn/tree/main/packages/adapter-maplibre) explains. [Show a real map](https://github.com/MapCairn/mapcairn/blob/main/docs/guides/extending.md#show-a-real-map) has the steps and the Vite form:
 
 ```ts
 import { createMapLibreMapAdapter } from "@mapcairn/sdk/adapter-maplibre";

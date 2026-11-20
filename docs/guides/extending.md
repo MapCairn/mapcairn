@@ -38,7 +38,7 @@ The package and its release status are in `packages/adapter-maplibre/README.md`;
 4. Resolve `loadWorkerUrl` to the engine's worker. MapLibre 6 runs a module worker and, inside a bundle, looks for it beside the wrong file, so the map stays blank without this URL. In Vite the URL is the bundler's worker import, `(await import("maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url")).default`, which emits a same-origin file and needs no plugin. With another bundler, emit that file as a static same-origin asset and return its address. A page with a Content Security Policy must allow it in `worker-src` (see [`content-security-policy.md`](content-security-policy.md#worker-src)), and a worker served with a long cache lifetime needs a key in its URL when the policy changes.
 5. Pass `MapView` a basemap. The adapter makes no request until a map mounts, has no default basemap and no origin of its own, so the basemap you pass decides which provider the visitor's browser contacts. The definitions in `@mapcairn/core` name public tile providers.
 
-What is tested: the type-check of the README's block, and a plain Vite build of an app that lists only the umbrella and imports the adapter's stylesheet (`docs/guides/public-api.md`, "The umbrella package"). Other bundlers have not been tried.
+What is tested: a type-check of the README's block against the SDK's source declarations (through the `@mapcairn/source` condition), and, for the packed packages, a plain Vite build of an app that lists only the umbrella and imports the adapter's stylesheet (`docs/guides/public-api.md`, "The umbrella package"). Other bundlers have not been tried.
 
 ### Server and Worker builds that import the adapter
 

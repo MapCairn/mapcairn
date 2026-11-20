@@ -92,6 +92,9 @@ function typeCheckSnippet(repo: string, source: string): string[] {
   }
 }
 
+/** Each compile reads the whole SDK source and the engine's types, which can pass vitest's 5 s default on a loaded machine. */
+const COMPILE_TIMEOUT_MS = 60_000;
+
 /** The example's shipped source files, read as one list of texts. */
 function exampleSources(): string[] {
   return readdirSync(path.join(REPO, EXAMPLE_SOURCE))
@@ -166,21 +169,29 @@ describe("README.md", () => {
     expect(README).toContain("`maplibre-gl` is a required peer");
   });
 
-  it("type-checks a snippet the way an outside app would, and reports a wrong option", () => {
-    expect(
-      typeCheckSnippet(
-        REPO,
-        'import { createMapLibreMapAdapter } from "@mapcairn/sdk/adapter-maplibre";\nexport const adapter = createMapLibreMapAdapter({ workerUrl: "/w.mjs" });\n',
-      ).join("\n"),
-    ).toContain("workerUrl");
-  });
+  it(
+    "type-checks a snippet the way an outside app would, and reports a wrong option",
+    () => {
+      expect(
+        typeCheckSnippet(
+          REPO,
+          'import { createMapLibreMapAdapter } from "@mapcairn/sdk/adapter-maplibre";\nexport const adapter = createMapLibreMapAdapter({ workerUrl: "/w.mjs" });\n',
+        ).join("\n"),
+      ).toContain("workerUrl");
+    },
+    COMPILE_TIMEOUT_MS,
+  );
 
-  it("shows a real-map block that type-checks as an outside app would write it", () => {
-    const real = fencedBlocks(README, "ts").find((block) =>
-      block.includes("@mapcairn/sdk/adapter-maplibre"),
-    );
-    expect(typeCheckSnippet(REPO, real ?? "")).toEqual([]);
-  });
+  it(
+    "shows a real-map block that type-checks as an outside app would write it",
+    () => {
+      const real = fencedBlocks(README, "ts").find((block) =>
+        block.includes("@mapcairn/sdk/adapter-maplibre"),
+      );
+      expect(typeCheckSnippet(REPO, real ?? "")).toEqual([]);
+    },
+    COMPILE_TIMEOUT_MS,
+  );
 
   it("says what the real map asks of a host: the other bundlers, the policy and the privacy default", () => {
     const section = README.slice(README.indexOf("## Embed a map"));

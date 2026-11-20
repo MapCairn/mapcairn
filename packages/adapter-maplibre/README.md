@@ -30,7 +30,7 @@ const createMap = () =>
   });
 ```
 
-In a Vite app the worker URL is the bundler's own import, which emits a same-origin file and needs no plugin: `loadWorkerUrl: async () => (await import("maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url")).default`. Another bundler must serve that file the same way. [Show a real map](https://github.com/MapCairn/mapcairn/blob/main/docs/guides/extending.md#show-a-real-map) has the steps, and the [Content Security Policy guide](https://github.com/MapCairn/mapcairn/blob/main/docs/guides/content-security-policy.md#worker-src) covers `worker-src`.
+A Vite app takes the URL from the bundler's own worker import, and another bundler must serve the file the same way. [Show a real map](https://github.com/MapCairn/mapcairn/blob/main/docs/guides/extending.md#show-a-real-map) has the steps, and the [Content Security Policy guide](https://github.com/MapCairn/mapcairn/blob/main/docs/guides/content-security-policy.md#worker-src) covers `worker-src`.
 
 `createMap` is the adapter factory that goes in the `Services` bundle that `ServicesProvider` supplies to `@mapcairn/map`.
 
