@@ -145,19 +145,21 @@ const hidden = {
 const whenHidden = `${root}[data-hide-bottom="true"] &`;
 
 /**
- * The bottom row's rise above the bottom-centre slot. It is the `translate`
- * property, which the slots' transitions do not list, so it follows the
- * slot's height in the frame the slot changes, while `transform` slides with
- * the sheet.
+ * A bottom slot's rise above the bottom-centre slot, which is zero while the
+ * two share no width. It is the `translate` property, which the slots'
+ * transitions do not list, so it follows the slot's height in the frame the
+ * slot changes, while `transform` slides with the sheet. Each slot has its own,
+ * so one the toolbar cannot reach holds still.
  */
-const raise = `0 ${chromeVar(chromeVars.bottomRaise, "0px")}`;
+const startRaise = `0 ${chromeVar(chromeVars.bottomStartRaise, "0px")}`;
+const endRaise = `0 ${chromeVar(chromeVars.bottomEndRaise, "0px")}`;
 
 /** Scale and coordinates. Rides above the sheet and moves right of the panel. */
 export const bottomStart = style({
   ...bottomBase,
   gridArea: "start",
   justifySelf: "start",
-  translate: raise,
+  translate: startRaise,
   transform: `translate(${shiftX}, ${chromeVar(chromeVars.bottomLift, "0px")})`,
   selectors: {
     [whenHidden]: hidden,
@@ -234,7 +236,7 @@ export const mapKey = style({
   gridColumn: 1,
   justifySelf: "start",
   maxWidth: "100%",
-  translate: `0 calc(${chromeVar(chromeVars.mapKeyLift, "0px")} + ${chromeVar(chromeVars.bottomRaise, "0px")})`,
+  translate: `0 calc(${chromeVar(chromeVars.mapKeyLift, "0px")} + ${chromeVar(chromeVars.mapKeyRaise, "0px")})`,
   transform: `translate(${shiftX}, ${chromeVar(chromeVars.bottomLift, "0px")})`,
   selectors: {
     '[dir="rtl"] &': {
@@ -252,7 +254,7 @@ export const bottomEnd = style({
   ...bottomBase,
   gridArea: "end-bottom",
   justifySelf: "end",
-  translate: raise,
+  translate: endRaise,
   transform: `translateY(${chromeVar(chromeVars.bottomLift, "0px")})`,
   selectors: { [whenHidden]: hidden },
 });
