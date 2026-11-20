@@ -120,6 +120,13 @@ const SIDE_EFFECTS: Readonly<Record<(typeof BUILT_PACKAGES)[number], unknown>> =
     theme: ["**/*.css"],
   };
 
+/**
+ * The repository URL npm's trusted publishing compares with the GitHub
+ * repository the workflow runs in: it must match exactly, in npm's own
+ * normalised form (`git+https`, ending `.git`, the owner's capitalisation).
+ */
+const REPOSITORY_URL = "git+https://github.com/MapCairn/mapcairn.git";
+
 /** Workspaces that depend on the SDK packages, beside the SDK packages. */
 const INTERNAL_CONSUMERS = ["packages/web", "examples/embed"] as const;
 
@@ -132,6 +139,16 @@ interface Manifest {
   readonly files?: readonly string[];
   readonly sideEffects?: boolean | readonly string[];
   readonly publishConfig?: { readonly access?: string };
+  readonly description?: string;
+  readonly license?: string;
+  readonly repository?: {
+    readonly type?: string;
+    readonly url?: string;
+    readonly directory?: string;
+  };
+  readonly homepage?: string;
+  readonly bugs?: { readonly url?: string };
+  readonly keywords?: readonly string[];
   readonly dependencies?: Readonly<Record<string, string>>;
   readonly devDependencies?: Readonly<Record<string, string>>;
   readonly peerDependencies?: Readonly<Record<string, string>>;
@@ -260,6 +277,43 @@ describe("SDK package manifests", () => {
     "@mapcairn/%s stays private until the first release",
     (name) => {
       expect(manifestOf(name)).toHaveProperty("private", true);
+    },
+  );
+
+  it.each(SDK_PACKAGES)(
+    "@mapcairn/%s says what it is and where it lives, for the npm page",
+    (name) => {
+      const manifest = manifestOf(name);
+      expect(manifest.license).toBe("AGPL-3.0-only");
+      expect(manifest.description?.trim().length).toBeGreaterThan(0);
+      expect(manifest.repository).toEqual({
+        type: "git",
+        url: REPOSITORY_URL,
+        directory: `packages/${name}`,
+      });
+      expect(manifest.homepage).toBe(
+        `https://github.com/MapCairn/mapcairn/tree/main/packages/${name}#readme`,
+      );
+      expect(manifest.bugs).toEqual({
+        url: "https://github.com/MapCairn/mapcairn/issues",
+      });
+      expect(manifest.keywords).toContain("mapcairn");
+      expect(manifest.keywords?.length).toBeGreaterThanOrEqual(4);
+      for (const keyword of manifest.keywords ?? []) {
+        expect(keyword).toMatch(/^[a-z0-9]+(?:-[a-z0-9]+)*$/);
+      }
+      expect(new Set(manifest.keywords).size).toBe(manifest.keywords?.length);
+    },
+  );
+
+  it.each(SDK_PACKAGES)(
+    "@mapcairn/%s carries the repository's licence text",
+    (name) => {
+      const licence = readFileSync(
+        path.join(REPO, "packages", name, "LICENSE"),
+        "utf8",
+      );
+      expect(licence).toBe(readFileSync(path.join(REPO, "LICENSE"), "utf8"));
     },
   );
 

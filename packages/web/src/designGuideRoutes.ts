@@ -6,6 +6,12 @@ import { type RouteConfigEntry, route } from "@react-router/dev/routes";
 export const DESIGN_GUIDE_PATH = "design";
 
 /**
+ * The path of the stylesheets the style guide serves for its host themes,
+ * which the browser tests link in to prove a generated theme under the policy.
+ */
+export const DESIGN_HOST_THEME_PATH = "design/host-theme/:name";
+
+/**
  * The build modes that serve the style guide: the Vite dev server and the
  * `--mode e2e` build the browser tests run against.
  */
@@ -20,8 +26,8 @@ export function isDesignGuideEnabled(mode: string | undefined): boolean {
 }
 
 /**
- * The style guide's route entries for a build mode: one route in development
- * and e2e builds, none otherwise.
+ * The style guide's route entries for a build mode: the page and the host
+ * theme stylesheets in development and e2e builds, none otherwise.
  *
  * @remarks `routes.ts` spreads this with `import.meta.env.MODE`, which React
  *   Router's config loader sets from the build's `--mode`. Without the entry
@@ -35,6 +41,9 @@ export function designGuideRoutes(
   mode: string | undefined,
 ): RouteConfigEntry[] {
   return isDesignGuideEnabled(mode)
-    ? [route(DESIGN_GUIDE_PATH, "./routes/design.tsx")]
+    ? [
+        route(DESIGN_GUIDE_PATH, "./routes/design.tsx"),
+        route(DESIGN_HOST_THEME_PATH, "./routes/design.host-theme.ts"),
+      ]
     : [];
 }

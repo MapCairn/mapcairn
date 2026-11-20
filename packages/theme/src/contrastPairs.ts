@@ -126,6 +126,11 @@ export const contrastPairs: readonly ContrastPair[] = [
   opaquePair("accentContrast", "accent", "text"),
   opaquePair("text", "accentTint", "text"),
   opaquePair("accent", "accentTint", "text"),
+  // A selected list row draws its secondary and trailing text on the tint
+  // (`ListRow.css.ts`), and a switch's hover track draws the control edge on it
+  // (`Switch.css.ts`).
+  opaquePair("textMuted", "accentTint", "text"),
+  opaquePair("controlBoundary", "accentTint", "non-text"),
   opaquePair("text", "dangerTint", "text"),
   opaquePair("danger", "dangerTint", "text"),
   {

@@ -1,12 +1,47 @@
 # `@mapcairn/core`
 
-The ports, pure logic and basemap definitions of MapCairn. It has no dependency on another MapCairn package, React, a map engine or a browser global, and it never reads the clock. The only runtime dependencies are `@turf` maths libraries.
+The ports, pure logic and basemap definitions of MapCairn. Use it when you want MapCairn's logic without its interface: to write an adapter for a map engine or a service, to test an app against in-memory fakes, or to use its measurement, formatting and link-parsing helpers. For the interface, install [`@mapcairn/map`](https://github.com/MapCairn/mapcairn/tree/main/packages/map), which builds on it.
 
-See [`ARCHITECTURE.md`](../../ARCHITECTURE.md) for how core fits with the other packages and the dependency rules that `npm run lint` enforces.
+It has no dependency on another MapCairn package, React, a map engine or a browser global, and it never reads the clock. Its runtime dependencies are the `@turf` maths libraries and the GeoJSON types.
 
-## Exports
+**Status:** not published to npm yet. The install commands below work from the first release; until then, use the packages from a clone of the [repository](https://github.com/MapCairn/mapcairn).
 
-Everything is exported from `@mapcairn/core`, apart from the contract suites, which come from `@mapcairn/core/contracts`. The suites import `vitest`, an optional peer dependency: install it only if you run them.
+## Install
+
+```bash
+npm install @mapcairn/core
+pnpm add @mapcairn/core
+yarn add @mapcairn/core
+```
+
+The package is ESM only: it has no `main` field and no CommonJS build. A TypeScript project needs `moduleResolution` set to `node16`, `nodenext` or `bundler`; `node10` is not supported.
+
+## Usage
+
+Write unit tests against fakes, with no adapters and no network:
+
+```ts
+import { createFakeServices } from "@mapcairn/core";
+
+const services = createFakeServices();
+```
+
+`services` is the bundle that `@mapcairn/map` takes. It holds an in-memory fake of every port: search, routing, geolocation, storage, the clipboard, URL state, layers and the map engine. A real app replaces each fake with an adapter, and runs the shared contract suite from `@mapcairn/core/contracts` against it, the same suite the fake passes. The suites import `vitest`, an optional peer dependency: install it only if you run them.
+
+## What it exports
+
+Everything comes from `@mapcairn/core`, apart from the contract suites, which come from `@mapcairn/core/contracts`. In outline:
+
+- **Ports and fakes:** the interfaces an app is built from (`Services`, `MapAdapter`, `SearchProvider`, the settings store and the rest), an in-memory fake of each, and `createFakeServices()`.
+- **Basemaps:** seven basemap definitions and a catalogue a host can extend.
+- **Layers:** the layer definition types, their validator, and static and runtime layer catalogues. A layer is data, so a new one is a new definition.
+- **Measurement and geometry:** zoom, scale, units and formatting, coordinate parsing, line distance and polygon area, and GeoJSON helpers such as buffer, union and simplify.
+- **Drawing and sharing:** the draw tool's state machine, GeoJSON, CSV and WKT import and export, and the shared-link format.
+- **Interface logic:** the surface state machine, sheet snapping, keyboard bindings, announcements, theme resolution and the message catalogue.
+
+## Exports in detail
+
+The Source column names folders under `packages/core/src` in the repository.
 
 | Area                            | Source                                                            | What it holds                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
 | ------------------------------- | ----------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
@@ -25,22 +60,20 @@ Everything is exported from `@mapcairn/core`, apart from the contract suites, wh
 | Messages                        | `src/messages`                                                    | `createMessageCatalogue` and `EN_GB_CATALOGUE` (the message catalogue and the shipped English text). A missing value uses the fallback record's plural rules, with `fallbackLanguage` in the optional fourth argument defaulting to `en-GB`, while substituted numbers and days use `formatLocale(catalogue)` (the active language plus the optional `numberingSystem`) and lists keep the plain active language. `checkMessageCatalogue` checks a host's catalogue against the English one: every key, every English placeholder in every form, plural forms against the language's categories and no value copied from English. `checkDefinitionTexts` lists the `HostText` keys a set of definitions uses and reports those a catalogue's `definitionTexts` lacks or holds blank, or leaves unused. `createLanguageCatalogue` defines the languages a host offers, with a loader for each, passed as the optional `Services.languages`, and `resolveLanguage` chooses the offered language a stored choice or the browser's languages resolve to. `Settings.language` holds the choice, `null` meaning "follow the browser".                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
 | Layers                          | `src/layers`                                                      | `createStaticLayerCatalogue`, which validates a host's layer definitions when the app starts and is ready on the first render, `createRuntimeLayerCatalogue`, which loads them through a `load` function the host writes (on the first subscription, once, with `dispose()` for teardown), `partitionDefinitions`, which sorts untrusted definitions into valid ones and skipped ones with their problems, and `emptyLayerCatalogue`, a catalogue with no layers for a host that supplies none, so the sheet hides its Layers section. `readyLayers` gives the layers of a ready state, and none for any other. A raster tile layer may carry an `identify` block (`IdentifySource`): `identifyUrl` builds the request for a tap (a square of `2 * tolerance + 1` pixels centred on the tap, its `{bbox}` in EPSG:3857 metres) and `decodeIdentify` decodes the answer (GeoJSON, or a JSON list at a path; at most `MAX_IDENTIFIED_FEATURES`), `validateLayerDefinition` checks the block, and `isIdentifiable`, `hasCard` and `cardOf` tell a layer that answers a tap, or has a card, from one that does not. `announceIdentified` words the one message a tap says: how many features were found, which layers did not answer and how many layers were asked. `decodeWith`, which runs a registered decoder and refuses with a `LayerError`, is public for a host that reads a response of its own. `LayerSource.identify` asks the block's service what is at a tap (a required method, so a host's own source must add it: nothing found resolves to an empty list, `identifyRequestUrl` refuses a request that cannot be made, and the fake scripts it apart from `load`; a source that reads from a network sets its own limit on the size of an answer). The `LayerSource` contract suite checks it too, and its `LayerSourceControls` gained `respondToIdentifyWith`, `failIdentifyWith` and `holdIdentify`, which a host running the contract against its own source must supply. `@mapcairn/map`'s `useDataLayers.identifyAt` calls it for a tap. |
 
-`languageDirection` resolves a tag's reading direction, with an optional host override on `LanguageOption`; see the [translation guide](../../docs/guides/translate-the-sdk.md).
+`languageDirection` resolves a tag's reading direction, with an optional host override on `LanguageOption`; see the [translation guide](https://github.com/MapCairn/mapcairn/blob/main/docs/guides/translate-the-sdk.md).
 
 A definition's own words (`DefinitionText`) are a shipped `MessageKey`, a plain string, or a `HostText` (`{ key, text }`) that a host translates through `MessageCatalogue.definitionTexts`, with `text` as the fallback; attribution stays plain. Layer feature templates use plain strings by default; host-keyed templates can be supplied separately through `MessageCatalogue.layerTemplates`. A translation is used only when it preserves the source's field and formatter placeholders; missing entries fall back silently and invalid supplied translations warn before falling back. `ShapeIntervalColour.unit` and `RangeControlDefinition.unit` accept `LayerTemplate`, so TypeScript consumers that read these values resolve them with `resolveLayerTemplate`.
 
 The `spatial` directory name describes generic geographic measurement and carries no dataset assumptions.
 
-## Usage
+## More
 
-Write unit tests against fakes, with no adapters:
+For how core fits with the other packages, and the dependency rules that the repository's lint enforces, read [`ARCHITECTURE.md`](https://github.com/MapCairn/mapcairn/blob/main/ARCHITECTURE.md). To add a port or an adapter, follow "Adding an adapter" there.
 
-```ts
-import { createFakeServices } from "@mapcairn/core";
+## Licence
 
-const services = createFakeServices();
-```
+`@mapcairn/core` is licensed under AGPL-3.0-only, and the [licence text](https://github.com/MapCairn/mapcairn/blob/main/packages/core/LICENSE) comes with the package. If you ship it in a product, or let people use a modified version over a network, you must publish the corresponding source under the same licence. The SDK packages depend only on permissively licensed packages. The [licence section of the repository README](https://github.com/MapCairn/mapcairn#licence) says more, including how to talk about other terms for closed-source use.
 
-Add a new port by following "Adding an adapter" in `ARCHITECTURE.md`: the port here, a fake and a contract suite, then a real adapter in `packages/web`.
+## Contributing and changes
 
-Rendering belongs in `@mapcairn/map`, browser hooks in `@mapcairn/react`, and every adapter in `@mapcairn/web`.
+The source and the issue tracker are in the [repository](https://github.com/MapCairn/mapcairn); file a bug in the [issue tracker](https://github.com/MapCairn/mapcairn/issues). Read [`CONTRIBUTING.md`](https://github.com/MapCairn/mapcairn/blob/main/CONTRIBUTING.md) before you send a pull request. Changes between releases are listed in [`CHANGELOG.md`](https://github.com/MapCairn/mapcairn/blob/main/CHANGELOG.md).

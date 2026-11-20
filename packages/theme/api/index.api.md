@@ -38,6 +38,9 @@ export interface ContrastFinding {
 export function contrastRatio(a: ColourInput, b: ColourInput): number;
 
 // @public
+export function createThemeStylesheet(override: ThemeOverride, options: ThemeStylesheetOptions): ThemeStylesheet;
+
+// @public
 export const focusRing: {
     readonly outline: `var(--${string}) solid var(--${string})`;
     readonly outlineOffset: `var(--${string})`;
@@ -121,6 +124,30 @@ export interface ThemeOverride {
         light?: Partial<ThemeColours>;
         dark?: Partial<ThemeColours>;
     };
+}
+
+// @public
+export type ThemeStylesheet = ThemeStylesheetCreated | ThemeStylesheetRefused;
+
+// @public
+export interface ThemeStylesheetCreated {
+    css: string;
+    findings: ContrastFinding[];
+    ok: true;
+}
+
+// @public
+export interface ThemeStylesheetOptions {
+    scope: string;
+}
+
+// @public
+export interface ThemeStylesheetRefused {
+    css: undefined;
+    findings: ContrastFinding[];
+    invalid: InvalidColour[];
+    invalidScope: boolean;
+    ok: false;
 }
 
 // @public

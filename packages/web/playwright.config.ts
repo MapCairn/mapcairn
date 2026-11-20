@@ -23,7 +23,8 @@ const baseURL = `http://localhost:${port}`;
 // keyboard model and the bottom sheet are where iOS has behaved differently.
 // The layout and accessibility matrices stay on Chromium: they share CSS with
 // WebKit and would more than double the run time.
-const WEBKIT_SPECS = /(basemap|keyboard|sheet|app-shell)\.spec\.ts$/;
+const WEBKIT_SPECS =
+  /(basemap|keyboard|sheet|app-shell|theme-override)\.spec\.ts$/;
 
 // The right-to-left projects run the same subset, with `dir="rtl"` on <html>
 // (see `direction` in e2e/fixtures.ts). The app ships no right-to-left

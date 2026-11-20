@@ -16,16 +16,55 @@ The SDK must also allow commercial use, which reaches its dependencies. `npm run
 
 What an app of your own provides:
 
-- The two compiled stylesheets, imported once at the top of its entry file: `import "@mapcairn/theme/tokens.css";` then `import "@mapcairn/map/styles.css";` (`src/main.tsx`). No bundler plugin is needed, and none is registered in the example's Vite config: any bundler that handles a CSS import works, or the two files can be linked from the page. The packages' source stays in this repository for its own tools, behind the `@mapcairn/source` condition, which an outside app does not turn on: a published package holds `dist` only. The custom property names in `tokens.css` are generated, so a plain stylesheet does not name them; whether they are public API is not decided yet (see [How the CSS ships](../../DESIGN.md#how-the-css-ships)).
+- The two compiled stylesheets, imported once at the top of its entry file: `import "@mapcairn/theme/tokens.css";` then `import "@mapcairn/map/styles.css";` (`src/main.tsx`). No bundler plugin is needed, and none is registered in the example's Vite config: any bundler that handles a CSS import works, or the two files can be linked from the page. The packages' source stays in this repository for its own tools, behind the `@mapcairn/source` condition, which an outside app does not turn on: a published package holds `dist` only. The custom property names in `tokens.css` are generated and are not public API, so a plain stylesheet does not name them; to give the SDK your own colours, see [Theme the SDK with your own colours](#theme-the-sdk-with-your-own-colours) (and [How the CSS ships](../../DESIGN.md#how-the-css-ships)).
 - Its own base styles. The SDK ships no base stylesheet, so a page sets these itself:
   - A height on `html`, `body` and the root element, and no body margin (the browser's 8px margin shows otherwise). The example does this in `src/page.css`.
   - The page's font, text colour and background colour, if it wants the theme's. The example reads them from `tokens` in `@mapcairn/theme` and sets them on the body from JavaScript in `src/main.tsx`. That runs only in the browser, after the script loads, so a server-rendered page shows the browser's default font and colours until then, and the chrome's wrappers inherit them (the default font is a serif).
 
-  Whether the SDK should ship a base stylesheet, or stable alias properties a stylesheet can name, is not decided (see [How the CSS ships](../../DESIGN.md#how-the-css-ships)); the generated token property names are not something to write by hand.
+  Whether the SDK should ship a base stylesheet, or stable alias properties a stylesheet can name, is not decided (see [How the CSS ships](../../DESIGN.md#how-the-css-ships)); the generated token property names are not public and are not something to write by hand: use `createThemeStylesheet` for colours.
 - The IBM Plex Sans Variable font the tokens name, for example from `@fontsource-variable/ibm-plex-sans`. Without it the type falls back to the system font.
 - Its own wording for what the SDK's panels say about a provider. Settings shows a privacy statement and the pin card says what "Look up address" sends and to whom. Both have neutral defaults that name no provider, and a host replaces them with `privacyNote` on `SheetContent` and `lookupNote` on `PinCard` (the reference host's are in `packages/web/src/constants/providerNotes.ts`; the example passes a one-line `privacyNote`). The Directions panel's `note` and credits work the same way. Help has an optional About block, `about` on `SheetContent` (`{ heading, text, link: { href, label }, homeLink?: { href, label } }`), for a host that wants to point to its source or licence; without it Help shows none. `link` opens in a new tab and must be an http or https address; `homeLink`, a host's own page about the site, opens in the same tab and may also be a path on the site (`/`).
 - `ServicesProvider`, `LiveRegionProvider` and `TooltipProvider` around `MapView`, and `FocusRegistryProvider` around `MapChrome`.
 - The services. Fakes are enough to see the interface; a real app writes an adapter for each port it needs. A map needs a `MapAdapter` over MapLibre GL JS with its engine styles: `packages/web/src/adapters/maplibre/MapLibreMapAdapter.ts` and `packages/web/src/adapters/mapEngine.css.ts` are the reference, and `runMapAdapterContract` from `@mapcairn/core/contracts` checks yours against the port.
+
+## Theme the SDK with your own colours
+
+`createThemeStylesheet` in `@mapcairn/theme` makes the stylesheet that gives the SDK's interface your own colours, and refuses a theme that is below WCAG 2.2 AA. It covers the 14 interface colour roles (`surface`, `surfaceRaised`, `text`, `textMuted`, `accent`, `accentTint`, `accentContrast`, `hairline`, `controlBoundary`, `danger`, `dangerTint`, `scrim`, `focusRing`, `focusRingInner`), in light and dark. It does not change the font, the page background, the map overlay colours or the data palette.
+
+1. Put a wrapper with a class or an id that you own around the `MapView` and its chrome. The SDK adds no markup or attribute for this. The scope is matched as a descendant of `:root`, so a class on `<html>` itself does nothing: use the `:root` scope to theme the whole page.
+2. Generate the stylesheet in your build, a script or a route, from the same installed `@mapcairn/theme` that provides `tokens.css`. The custom property names it writes are generated and private, so the two must come from one version:
+
+   ```ts
+   import { createThemeStylesheet } from "@mapcairn/theme";
+
+   const result = createThemeStylesheet(
+     {
+       colour: {
+         light: { accent: "#0b5c3a", accentTint: "#d9efe4" },
+         dark: { accent: "#7fd9aa", accentTint: "#17382a" },
+       },
+     },
+     { scope: ".brand" },
+   );
+   if (!result.ok) {
+     // result.findings holds every pair, with the ones that fail marked
+     // `passes: false`; result.invalid and result.invalidScope say what could
+     // not be used. There is no CSS to serve.
+     throw new Error("The theme is below WCAG 2.2 AA or unusable");
+   }
+   // Write result.css to a file your site serves, such as /brand-theme.css.
+   ```
+
+3. Serve the file from your own origin and link it after the SDK's stylesheets: `<link rel="stylesheet" href="/brand-theme.css">`. It is a plain stylesheet, so a policy with `style-src 'self'` accepts it (see [A content security policy for a host](content-security-policy.md#style-src)), it needs no nonce and it shows no flash.
+
+What to know:
+
+- The scope is `:root`, `#id` or `.class` with an ASCII name. Anything else, including a selector list, is refused. Two maps with different themes are two wrappers, two scopes and two calls.
+- The rules read `data-theme` on `<html>` (`light` or `dark`), or the system's colour scheme when it is not set. A `ThemeSource` of your own must set that attribute, as the one in `examples/embed` does.
+- The theme is skipped in high-contrast (`prefers-contrast: more`) and forced-colours modes, which keep the SDK's own values. The rules use negated media conditions, such as `(not (prefers-contrast: more))`. A browser that does not understand one treats it as false and so skips the theme, which falls back to the SDK's own colours; the project's browser policy is under "Code style" in [`CONTRIBUTING.md`](../../CONTRIBUTING.md).
+- Where the surface is translucent, the stylesheet also sets an opaque surface for browsers without `backdrop-filter` and for reduced transparency, and sets the inner focus ring to it unless you chose one. The check covers those values.
+- A tooltip renders in a portal under `body`, so a `#id` or `.class` scope does not reach it and it keeps the SDK's colours. Use `:root` to theme the whole page, or accept the SDK's tooltip.
+- Each colour must be hex, `rgb()`/`rgba()` or `oklch()`, and is written back as hex. `checkThemeContrast` reports the same findings without producing CSS, for a test of your own.
 
 ## Add a basemap
 

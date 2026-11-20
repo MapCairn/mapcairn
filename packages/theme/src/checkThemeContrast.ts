@@ -210,7 +210,7 @@ function readThemeSections(
   }
 }
 
-function resolveTheme(
+function resolveThemeColours(
   theme: ThemeName,
   proposed: Record<string, unknown> | undefined,
 ): ResolvedTheme {
@@ -284,7 +284,7 @@ export function checkThemeContrast(
     invalid.push(...shape);
     for (const theme of themeNames.filter((name) => !skipped.has(name))) {
       try {
-        const resolved = resolveTheme(theme, proposed[theme]);
+        const resolved = resolveThemeColours(theme, proposed[theme]);
         invalid.push(...resolved.invalid);
         findings.push(...findingsFor(theme, resolved));
       } catch {
