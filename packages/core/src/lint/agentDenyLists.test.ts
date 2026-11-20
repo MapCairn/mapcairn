@@ -266,9 +266,19 @@ describe("Claude Code, .claude/settings.json", () => {
     }
   });
 
-  it("holds only a deny list, never a person's own permissions or an allowance for a release", () => {
+  it("holds only a deny list and the reviewers' write guard, never a person's own permissions or an allowance for a release", () => {
     const settings = readJson(".claude/settings.json");
-    expect(Object.keys(settings)).toEqual(["permissions"]);
+    expect(Object.keys(settings).sort()).toEqual(["hooks", "permissions"]);
+    expect(settings.hooks).toEqual({
+      PreToolUse: [
+        {
+          matcher: "Edit|Write|MultiEdit|NotebookEdit|Bash",
+          hooks: [
+            { type: "command", command: "node scripts/agents/guardWrites.mjs" },
+          ],
+        },
+      ],
+    });
     expect(Object.keys(settings.permissions as object)).toEqual(["deny"]);
     expect(rules.filter((rule) => rule.includes("release.yml"))).toEqual([]);
   });
