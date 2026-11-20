@@ -256,6 +256,60 @@ describe("release.yml", () => {
     expect(npmJobProblems(readFileSync(file, "utf8"))).toEqual([]);
   });
 
+  it("stages the release's own tarballs in the npm job, with a dry run for a rehearsal and the next tag for a prerelease", () => {
+    const job = npmJobLines(readFileSync(file, "utf8")).join("\n");
+    expect(job).toContain(
+      'npm stage publish "release/mapcairn-$name-$VERSION.tgz"',
+    );
+    expect(job).toContain("--dry-run");
+    expect(job).toContain('--tag "$DIST_TAG"');
+    expect(job).toContain("needs.verify.outputs.dist-tag");
+    expect(job).toMatch(
+      /MODE" = "rehearse" \]; then\n\s+flags\+=\(--dry-run\)/,
+    );
+  });
+
+  it("skips a package already on npm with a notice, in a rehearsal too, and stops on any registry error", () => {
+    const job = npmJobLines(readFileSync(file, "utf8")).join("\n");
+    expect(job).toContain(
+      'state="$(node scripts/release/verifyRelease.mjs package-state "@mapcairn/$name" "$VERSION")"',
+    );
+    expect(job).toMatch(
+      /if \[ "\$state" = "published" \]; then\n\s+echo "::notice::[^\n]*"\n\s+continue\n\s+fi/,
+    );
+    expect(job).toContain(
+      "::notice::@mapcairn/$name@$VERSION is already on npm",
+    );
+    expect(job).not.toContain('[ "$MODE" != "rehearse" ]');
+    expect(job).not.toContain("|| true");
+  });
+
+  it("stages nothing while a manifest is private, and says so", () => {
+    const job = npmJobLines(readFileSync(file, "utf8")).join("\n");
+    expect(job).toMatch(
+      /name: Say why nothing is staged[\s\S]*?if: needs\.verify\.outputs\.private == 'true'/,
+    );
+    expect(job).toMatch(
+      /name: Stage the packages\n\s+if: needs\.verify\.outputs\.private != 'true'/,
+    );
+  });
+
+  it("checks the digests before it stages, installs the pinned npm without scripts, and has its own group for the version", () => {
+    const job = npmJobLines(readFileSync(file, "utf8")).join("\n");
+    expect(job).toContain(
+      'tarballs.mjs check release "$DIGESTS" "$NOTES_DIGEST"',
+    );
+    expect(
+      job.indexOf('tarballs.mjs check release "$DIGESTS" "$NOTES_DIGEST"'),
+    ).toBeLessThan(job.indexOf("npm stage publish"));
+    expect(job).toContain(
+      'npm install --global --ignore-scripts "npm@$wanted"',
+    );
+    expect(job).toMatch(
+      /concurrency:\n\s+group: release-npm-\$\{\{ needs\.verify\.outputs\.version \}\}\n\s+cancel-in-progress: false/,
+    );
+  });
+
   it("accepts the plan's job, with a condition folded over several lines or on one", () => {
     expect(npmJobProblems(PLAN_NPM_JOB)).toEqual([]);
     const oneLine = PLAN_NPM_JOB.replace(

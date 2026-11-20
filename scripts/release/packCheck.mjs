@@ -10,7 +10,8 @@
  * tarball, and works on a private package (npm packs one; only `publish`
  * refuses). `consumerCheck.mjs` packs the real tarballs.
  */
-import { existsSync, readFileSync } from "node:fs";
+import { spawnSync } from "node:child_process";
+import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { isEntryPoint } from "../entryPoint.mjs";
@@ -399,34 +400,155 @@ function readIfPresent(file) {
 }
 
 /**
- * Checks every SDK package and prints one line for each.
+ * The files a `tar -tzf` listing names, as paths inside the package: the
+ * `package/` prefix npm adds is dropped, and folders are left out.
+ *
+ * @param {string} listing
+ * @returns {string[]}
+ */
+export function parseTarList(listing) {
+  return listing
+    .split(/\r?\n/)
+    .filter((line) => line.startsWith("package/") && !line.endsWith("/"))
+    .map((line) => line.slice("package/".length));
+}
+
+/**
+ * Finds the one tarball of each package among file names.
+ *
+ * @param {string[]} fileNames
+ * @param {string[]} [folderNames] The package folder names, such as `core`.
+ * @returns {Record<string, string>} Each folder name and its tarball's file name.
+ * @throws {Error} When a package has none or more than one.
+ */
+export function findTarballs(fileNames, folderNames = PACKAGES) {
+  /** @type {Record<string, string>} */
+  const found = {};
+  for (const name of folderNames) {
+    const matches = fileNames.filter((file) =>
+      new RegExp(`^mapcairn-${name}-\\d.*\\.tgz$`).test(file),
+    );
+    if (matches.length === 0) {
+      throw new Error(`There is no tarball for ${name}.`);
+    }
+    if (matches.length > 1) {
+      throw new Error(
+        `There is more than one tarball for ${name}: ${matches.join(", ")}.`,
+      );
+    }
+    found[name] = matches[0];
+  }
+  return found;
+}
+
+/**
+ * Reads one file from inside a tarball with the system `tar`.
+ *
+ * @param {string} tarball
+ * @param {string} file A path inside the package, such as `package.json`.
+ * @returns {string | undefined} Undefined when the tarball has no such file.
+ */
+export function readTarballFile(tarball, file) {
+  const result = spawnSync("tar", ["-xOzf", tarball, `package/${file}`], {
+    encoding: "utf8",
+    maxBuffer: 64 * 1024 * 1024,
+  });
+  return result.status === 0 ? result.stdout : undefined;
+}
+
+/**
+ * Checks the tarballs in a folder, the very files that will be released.
+ *
+ * @param {string} folder Where the four tarballs are.
+ * @param {string} [root] The repository root, for the sources the maps name.
+ * @returns {ReturnType<typeof packResults>}
+ */
+export function packResultsFromTarballs(folder, root = REPO) {
+  const tarballs = findTarballs(readdirSync(folder));
+  return PACKAGES.map((folderName) => {
+    const file = path.join(folder, tarballs[folderName]);
+    const listed = spawnSync("tar", ["-tzf", file], {
+      encoding: "utf8",
+      maxBuffer: 64 * 1024 * 1024,
+    });
+    if (listed.status !== 0) {
+      throw new Error(`Could not list ${file}.`);
+    }
+    const manifest = JSON.parse(readTarballFile(file, "package.json") ?? "{}");
+    const files = parseTarList(listed.stdout);
+    const size = statSync(file).size;
+    return {
+      name: String(manifest.name),
+      files: files.length,
+      size,
+      unpackedSize: 0,
+      problems: checkPackage({
+        manifest,
+        listing: {
+          size,
+          unpackedSize: 0,
+          files: files.map((p) => ({ path: p })),
+        },
+        ceiling: SIZE_CEILINGS[folderName] ?? 0,
+        readFile: (inside) => readTarballFile(file, inside),
+        sourceExists: (source) =>
+          existsSync(path.join(root, "packages", folderName, source)),
+      }),
+    };
+  });
+}
+
+/**
+ * Packs every SDK package as a dry run and checks each one.
  *
  * @param {string} [root] The repository root.
- * @returns {boolean} Whether every package passed.
+ * @returns {Array<{ name: string, files: number, size: number, unpackedSize: number, problems: string[] }>} One entry for each package, in release order; `name` is the package name.
  */
-export function runPackCheck(root = REPO) {
-  let passed = true;
-  for (const name of PACKAGES) {
-    const folder = path.join(root, "packages", name);
+export function packResults(root = REPO) {
+  return PACKAGES.map((folderName) => {
+    const folder = path.join(root, "packages", folderName);
     const manifest = JSON.parse(
       readFileSync(path.join(folder, "package.json"), "utf8"),
     );
     const listing = listPackage(folder);
-    const problems = checkPackage({
-      manifest,
-      listing,
-      ceiling: SIZE_CEILINGS[name] ?? 0,
-      readFile: (file) => readIfPresent(path.join(folder, file)),
-      sourceExists: (source) => existsSync(path.join(folder, source)),
-    });
-    const summary = `${manifest.name}: ${listing.files.length} files, ${listing.size} bytes packed, ${listing.unpackedSize} unpacked`;
-    if (problems.length === 0) {
+    return {
+      name: String(manifest.name),
+      files: listing.files.length,
+      size: listing.size,
+      unpackedSize: listing.unpackedSize,
+      problems: checkPackage({
+        manifest,
+        listing,
+        ceiling: SIZE_CEILINGS[folderName] ?? 0,
+        readFile: (file) => readIfPresent(path.join(folder, file)),
+        sourceExists: (source) => existsSync(path.join(folder, source)),
+      }),
+    };
+  });
+}
+
+/**
+ * Checks every SDK package and prints one line for each.
+ *
+ * @param {string} [root] The repository root.
+ * @param {string | null} [tarballs] A folder of packed tarballs to check instead of a dry run.
+ * @returns {boolean} Whether every package passed.
+ */
+export function runPackCheck(root = REPO, tarballs = null) {
+  let passed = true;
+  const results =
+    tarballs === null
+      ? packResults(root)
+      : packResultsFromTarballs(tarballs, root);
+  for (const result of results) {
+    const summary = `${result.name}: ${result.files} files, ${result.size} bytes packed, ${result.unpackedSize} unpacked`;
+    if (result.problems.length === 0) {
       console.log(`ok   ${summary}`);
       continue;
     }
     passed = false;
     console.error(`FAIL ${summary}`);
-    for (const problem of problems) {
+    for (const problem of result.problems) {
       console.error(`       ${problem}`);
     }
   }
@@ -435,7 +557,9 @@ export function runPackCheck(root = REPO) {
 
 if (isEntryPoint(import.meta.url)) {
   try {
-    process.exitCode = runPackCheck() ? 0 : 1;
+    const flag = process.argv.indexOf("--tarballs");
+    const folder = flag === -1 ? null : process.argv[flag + 1];
+    process.exitCode = runPackCheck(REPO, folder ?? null) ? 0 : 1;
   } catch (error) {
     console.error(error instanceof Error ? error.message : error);
     process.exitCode = 1;

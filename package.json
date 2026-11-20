@@ -37,6 +37,8 @@
     "release:plan": "node scripts/release/plan.mjs",
     "release:apply": "node scripts/release/apply.mjs",
     "release:notes-check": "node scripts/release/notesCheck.mjs",
+    "release:check": "node scripts/release/check.mjs",
+    "release:verify-published": "node scripts/release/verifyPublished.mjs",
     "catalogue:check": "npm run catalogue:check -w @mapcairn/web --",
     "format": "biome format --write .",
     "prepare": "lefthook install --force",

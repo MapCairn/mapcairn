@@ -8,6 +8,10 @@
  *
  *   npm run consumer:check
  *
+ * With `{ published: <version> }` (`verifyPublished.mjs`) it installs that
+ * version of the four packages from the registry instead, exempting only
+ * those four from the minimum release age, and audits the signatures.
+ *
  * Everything happens in a temporary folder outside the repository, which is
  * removed at the end. It installs from the registry, so it needs a network;
  * the repository's `.npmrc` (the seven-day minimum age) is copied there, and
@@ -34,7 +38,8 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { isEntryPoint } from "../entryPoint.mjs";
 import { isolatedEnvironment, runNpm } from "./npm.mjs";
-import { PACKAGES } from "./packCheck.mjs";
+import { findTarballs, PACKAGES } from "./packCheck.mjs";
+import { SDK_NAMES } from "./workspaces.mjs";
 
 const REPO = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
@@ -155,6 +160,45 @@ export function consumerManifest({ tarballs, versions }) {
     dependencies: { ...sdk, ...dependencies },
     devDependencies: { ...types, typescript, vite },
     overrides: sdk,
+  };
+}
+
+/**
+ * npm's options that exempt the four SDK packages, and nothing else, from the
+ * repository's minimum release age, so a version published a moment ago can be
+ * installed to check it. Third-party packages keep the rule.
+ */
+export const RELEASE_AGE_EXCLUSIONS = SDK_NAMES.map(
+  (name) => `--min-release-age-exclude=${name}`,
+);
+
+/**
+ * The npm options for an install: the minimum release age is lifted for the
+ * four SDK packages only when a published version is installed, so every
+ * other install keeps the repository's rule.
+ *
+ * @param {{ published: string | null, extra?: string[] }} input `extra` are options that apply either way.
+ * @returns {string[]}
+ */
+export function installFlags({ published, extra = [] }) {
+  return [...extra, ...(published === null ? [] : RELEASE_AGE_EXCLUSIONS)];
+}
+
+/**
+ * The consumer's `package.json` for the published packages: the exact
+ * version of each SDK package from the registry, and the locked tools. There
+ * is no tarball and no override, so the registry copy is what gets installed.
+ *
+ * @param {{ version: string, versions: Record<string, string> }} input
+ * @returns {Record<string, unknown>}
+ */
+export function publishedManifest({ version, versions }) {
+  const manifest = consumerManifest({ tarballs: {}, versions });
+  const sdk = Object.fromEntries(SDK_NAMES.map((name) => [name, version]));
+  return {
+    ...manifest,
+    dependencies: { ...sdk, ...(manifest.dependencies ?? {}) },
+    overrides: undefined,
   };
 }
 
@@ -459,34 +503,105 @@ function pnpmAvailable(app) {
 }
 
 /**
- * Runs every check and returns one line for each.
+ * What is wrong with the result of `npm audit signatures`. An audit that
+ * checked nothing is a problem too, so an empty install cannot pass it.
  *
+ * @param {{ status: number | null, stdout: string, stderr: string }} result
+ * @returns {string[]}
+ */
+export function auditProblems(result) {
+  if (result.status !== 0) {
+    return [
+      `npm audit signatures failed:\n${result.stdout}${result.stderr}`.trimEnd(),
+    ];
+  }
+  if (
+    !/\d+ packages? ha(?:s|ve) verified registry signatures?/.test(
+      result.stdout,
+    )
+  ) {
+    return ["npm audit signatures verified no registry signatures"];
+  }
+  return [];
+}
+
+/**
+ * Verifies the registry signatures and provenance attestations of what an app
+ * installed.
+ *
+ * @param {string} app The installed app.
+ * @returns {string} The audit's own summary.
+ */
+function auditSignatures(app) {
+  const result = runNpm(["audit", "signatures"], { cwd: app });
+  const problems = auditProblems({
+    status: result.status,
+    stdout: result.stdout ?? "",
+    stderr: result.stderr ?? "",
+  });
+  if (problems.length > 0) {
+    throw new Error(problems.join("\n"));
+  }
+  return `npm audit signatures: ${(result.stdout ?? "").trim().replace(/\s*\n+\s*/g, "; ")}`;
+}
+
+/**
+ * Runs every check and returns one line for each. With `published`, it
+ * installs that version of the four packages from the registry instead of
+ * packing the repository's, skips the pnpm install, and audits the
+ * signatures of what it installed.
+ *
+ * @param {{ published?: string | null, tarballs?: string | null }} [options] `tarballs` is a folder of the four packed tarballs to check, copied so the originals are untouched; without it the packages are packed here.
  * @returns {string[]} What was checked, and what was skipped and why.
  */
-export function runConsumerCheck() {
+export function runConsumerCheck({ published = null, tarballs = null } = {}) {
   const report = [];
   const root = mkdtempSync(path.join(tmpdir(), "mapcairn-consumer-"));
   if (realpathSync(root).startsWith(realpathSync(REPO) + path.sep)) {
     throw new Error("The temporary folder is inside the repository.");
   }
   try {
-    const tarballs = path.join(root, "tarballs");
-    mkdirSync(tarballs);
-    const packed = packTarballs(tarballs);
-    report.push(`packed ${Object.keys(packed).length} tarballs`);
-
     const lock = JSON.parse(
       readFileSync(path.join(REPO, "package-lock.json"), "utf8"),
     );
     const versions = Object.fromEntries(
       LOCKED_TOOLS.map((name) => [name, lockedVersion(lock, name)]),
     );
-    const manifest = consumerManifest({ tarballs: packed, versions });
+    /** @type {Record<string, unknown>} */
+    let manifest;
+    if (published === null) {
+      const copies = path.join(root, "tarballs");
+      mkdirSync(copies);
+      /** @type {Record<string, string>} */
+      let packed;
+      if (tarballs === null) {
+        packed = packTarballs(copies);
+        report.push(`packed ${Object.keys(packed).length} tarballs`);
+      } else {
+        packed = findTarballs(readdirSync(tarballs));
+        for (const file of Object.values(packed)) {
+          copyFileSync(path.join(tarballs, file), path.join(copies, file));
+        }
+        report.push(
+          `using the ${Object.keys(packed).length} tarballs in the release folder`,
+        );
+      }
+      manifest = consumerManifest({ tarballs: packed, versions });
+    } else {
+      manifest = publishedManifest({ version: published, versions });
+    }
 
     const app = path.join(root, "app");
     prepareApp(app, manifest);
-    install(app, []);
-    report.push("npm install: ok");
+    install(app, installFlags({ published }));
+    report.push(
+      published === null
+        ? "npm install: ok"
+        : `npm install of the published ${published}: ok`,
+    );
+    if (published !== null) {
+      report.push(auditSignatures(app));
+    }
 
     const plain = renderPlain(app);
     const missing = missingLandmarks(plain.html, CHROME_LANDMARKS);
@@ -557,7 +672,7 @@ export function runConsumerCheck() {
 
     const legacy = path.join(root, "legacy");
     prepareApp(legacy, manifest);
-    install(legacy, ["--legacy-peer-deps"]);
+    install(legacy, installFlags({ published, extra: ["--legacy-peer-deps"] }));
     const legacyMissing = missingLandmarks(
       renderPlain(legacy).html,
       CHROME_LANDMARKS,
@@ -569,10 +684,19 @@ export function runConsumerCheck() {
     }
     report.push("npm install --legacy-peer-deps and plain Node render: ok");
 
-    if (pnpmAvailable(app)) {
+    if (published !== null) {
+      report.push(
+        "the pnpm strict-peer install is not repeated for the published packages; the pull request's own check did it",
+      );
+    } else if (pnpmAvailable(app)) {
       const strict = path.join(root, "strict");
       prepareApp(strict, manifest);
-      report.push(checkPnpmStrict(strict, manifest.overrides));
+      report.push(
+        checkPnpmStrict(
+          strict,
+          /** @type {Record<string, string>} */ (manifest.overrides),
+        ),
+      );
     } else {
       report.push(pnpmSkipped());
     }
@@ -584,7 +708,11 @@ export function runConsumerCheck() {
 
 if (isEntryPoint(import.meta.url)) {
   try {
-    for (const line of runConsumerCheck()) {
+    const flag = process.argv.indexOf("--tarballs");
+    const folder = flag === -1 ? null : (process.argv[flag + 1] ?? null);
+    for (const line of runConsumerCheck({
+      tarballs: folder === null ? null : path.resolve(folder),
+    })) {
       console.log(line);
     }
   } catch (error) {

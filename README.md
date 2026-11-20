@@ -25,7 +25,7 @@ This repository also holds the playground, a reference site built from the SDK's
 
 The playground in its light and dark themes, with the earthquakes layer on and a distance measured. Map data and tile credits are in [`ATTRIBUTIONS.md`](ATTRIBUTIONS.md).
 
-**Status:** the SDK is usable from this repository, but the packages are not on npm yet. Publishing them is part of the First release milestone in [`ROADMAP.md`](ROADMAP.md).
+**Status:** the SDK is usable from this repository, but the packages are not on npm yet. Publishing them is part of the First release milestone in [`ROADMAP.md`](ROADMAP.md), and [`docs/guides/releasing.md`](docs/guides/releasing.md) describes how a release is made.
 
 ## Try the playground
 
