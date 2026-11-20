@@ -8,7 +8,12 @@ import type {
   MapVectorTiles,
 } from "@mapcairn/core";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { canvasStub, FakeLngLat, FakeMapLibreMap } from "./maplibreTestEngine";
+import {
+  canvasStub,
+  FakeLngLat,
+  FakeMapLibreMap,
+  TEST_ADAPTER_OPTIONS,
+} from "./maplibreTestEngine";
 
 // Characterises what each kind of data layer asks the engine for: the images,
 // the source and the style layers, in order. The same expectations held before
@@ -191,7 +196,7 @@ const POINTS = [
 ];
 
 async function ready(basemap: BasemapDefinition) {
-  const adapter = new MapLibreMapAdapter();
+  const adapter = new MapLibreMapAdapter(TEST_ADAPTER_OPTIONS);
   const host = document.createElement("div");
   document.body.append(host);
   const mounting = adapter.mount(host, {

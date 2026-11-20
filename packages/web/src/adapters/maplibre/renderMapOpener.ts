@@ -55,7 +55,7 @@ function fitOf(
 export class RenderMapOpener {
   constructor(
     private readonly host: RenderMapOpenerHost,
-    private readonly workerCacheKey: string | undefined,
+    private readonly loadWorkerUrl: () => Promise<string>,
   ) {}
 
   async open({
@@ -64,7 +64,7 @@ export class RenderMapOpener {
     view,
   }: RenderMapRequest): Promise<RenderMap> {
     refuseBoxOnGlobe(view, this.host.projection());
-    const maplibre = await loadEngine(this.workerCacheKey);
+    const maplibre = await loadEngine(this.loadWorkerUrl);
     // The adapter can be destroyed while the engine loads.
     const source = this.host.sourceMap();
     if (!source) {

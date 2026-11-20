@@ -7,6 +7,7 @@ import {
   FakeLngLat,
   FakeMapLibreMap,
   simulateFeatureHits,
+  TEST_ADAPTER_OPTIONS,
 } from "./maplibreTestEngine";
 
 // Characterises what the adapter does with its data layers over time: which
@@ -108,7 +109,9 @@ afterEach(() => {
 });
 
 /** A mounted map, with every engine call that changes the style written to one list. */
-async function mountedWithLog(adapter = new MapLibreMapAdapter()) {
+async function mountedWithLog(
+  adapter = new MapLibreMapAdapter(TEST_ADAPTER_OPTIONS),
+) {
   const host = document.createElement("div");
   document.body.append(host);
   const mounting = adapter.mount(host, {

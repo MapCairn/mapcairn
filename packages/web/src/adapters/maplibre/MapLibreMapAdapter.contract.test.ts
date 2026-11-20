@@ -12,6 +12,7 @@ import {
   FakeMapLibreMap,
   rasterBasemap,
   simulateFeatureHits,
+  TEST_ADAPTER_OPTIONS,
   vectorBasemap,
 } from "./maplibreTestEngine";
 
@@ -99,7 +100,7 @@ for (const [name, basemap] of [
     FakeMapLibreMap.styleSourceIds = ["openmaptiles"];
     return {
       // No grace period, so `settle` (one macrotask) sees the worker verdict.
-      adapter: new MapLibreMapAdapter({
+      adapter: new MapLibreMapAdapter(TEST_ADAPTER_OPTIONS, {
         workerFailureGraceMs: 0,
         imageTilesWaitMs: 20,
         tileLayerSlowMs: SLOW_WAIT_MS,
@@ -216,7 +217,7 @@ for (const [name, basemap] of [
         drawnLayers: () => describeDataLayers(latestMap()),
         createFailingMount: () => {
           FakeMapLibreMap.nextConstructError = new FakeGPUInitializationError();
-          return new MapLibreMapAdapter();
+          return new MapLibreMapAdapter(TEST_ADAPTER_OPTIONS);
         },
         failNextBasemap: () => {
           FakeMapLibreMap.nextStyleError = new Error("Style 404");

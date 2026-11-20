@@ -2,8 +2,8 @@
 // Copyright MapCairn contributors
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-/** The adapter module is large, so its first import can outlast the default test timeout. */
-const ADAPTER_IMPORT_TIMEOUT_MS = 30_000;
+/** The engine loader pulls in the engine's stylesheet, so its first import can outlast the default test timeout. */
+const LOADER_IMPORT_TIMEOUT_MS = 30_000;
 
 const setWorkerUrl = vi.fn();
 
@@ -12,48 +12,109 @@ vi.mock("maplibre-gl", () => ({
   setWorkerUrl,
   Map: class {},
 }));
-vi.mock("maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url", () => ({
-  default: "/assets/maplibre-gl-worker-HASH.js",
-}));
 vi.mock("maplibre-gl/dist/maplibre-gl.css", () => ({}));
 
 afterEach(() => {
-  setWorkerUrl.mockClear();
+  setWorkerUrl.mockReset();
   vi.resetModules();
 });
 
 /**
- * A worker script takes its Content Security Policy from its own response
- * headers, and an immutable cached copy keeps the policy of the day it was
- * fetched. A new URL is the only way a changed policy reaches a device that
- * already has the file.
+ * The host knows where it serves the engine's worker from, and how to keep a
+ * cached copy from outliving the policy it was fetched under, so the adapter
+ * only passes on the address it is given.
  */
-describe("MapLibre worker URL", () => {
+describe("the engine's worker URL", () => {
   it(
-    "tells the engine the worker URL with the cache key added",
+    "tells the engine the URL the host's loader resolves to",
     async () => {
-      const { loadEngine } = await import("./MapLibreMapAdapter");
+      const { loadEngine } = await import("./engineLoader");
 
-      await loadEngine("1234abcd");
+      await loadEngine(async () => "/assets/worker.js?v=1234abcd");
 
-      expect(setWorkerUrl).toHaveBeenCalledWith(
-        "/assets/maplibre-gl-worker-HASH.js?v=1234abcd",
+      expect(setWorkerUrl).toHaveBeenCalledExactlyOnceWith(
+        "/assets/worker.js?v=1234abcd",
       );
     },
-    ADAPTER_IMPORT_TIMEOUT_MS,
+    LOADER_IMPORT_TIMEOUT_MS,
   );
 
   it(
-    "leaves the worker URL as it is when no cache key is given",
+    "tells the engine before it hands the engine back, so no map can exist without it",
     async () => {
-      const { loadEngine } = await import("./MapLibreMapAdapter");
+      const { loadEngine } = await import("./engineLoader");
+      const order: string[] = [];
+      setWorkerUrl.mockImplementation(() => {
+        order.push("setWorkerUrl");
+      });
 
-      await loadEngine(undefined);
+      await loadEngine(async () => "/worker.js");
+      order.push("loaded");
 
-      expect(setWorkerUrl).toHaveBeenCalledWith(
-        "/assets/maplibre-gl-worker-HASH.js",
-      );
+      expect(order).toEqual(["setWorkerUrl", "loaded"]);
     },
-    ADAPTER_IMPORT_TIMEOUT_MS,
+    LOADER_IMPORT_TIMEOUT_MS,
+  );
+
+  it(
+    "loads the engine once however many callers ask",
+    async () => {
+      const { loadEngine } = await import("./engineLoader");
+      const loadWorkerUrl = vi.fn(async () => "/worker.js");
+
+      const [first, second] = await Promise.all([
+        loadEngine(loadWorkerUrl),
+        loadEngine(loadWorkerUrl),
+      ]);
+
+      expect(first).toBe(second);
+      expect(loadWorkerUrl).toHaveBeenCalledOnce();
+      expect(setWorkerUrl).toHaveBeenCalledOnce();
+    },
+    LOADER_IMPORT_TIMEOUT_MS,
+  );
+
+  it(
+    "rejects when the loader throws instead of returning a promise, and asks it again next time",
+    async () => {
+      const { loadEngine } = await import("./engineLoader");
+      const loadWorkerUrl = vi
+        .fn<() => Promise<string>>()
+        .mockImplementationOnce(() => {
+          throw new Error("loader threw");
+        })
+        .mockResolvedValueOnce("/worker.js");
+
+      await expect(loadEngine(loadWorkerUrl)).rejects.toThrow("loader threw");
+      expect(setWorkerUrl).not.toHaveBeenCalled();
+
+      await loadEngine(loadWorkerUrl);
+
+      expect(loadWorkerUrl).toHaveBeenCalledTimes(2);
+      expect(setWorkerUrl).toHaveBeenCalledExactlyOnceWith("/worker.js");
+    },
+    LOADER_IMPORT_TIMEOUT_MS,
+  );
+
+  it(
+    "rejects when the loader rejects, sets no URL, and asks the loader again next time",
+    async () => {
+      const { loadEngine } = await import("./engineLoader");
+      const loadWorkerUrl = vi
+        .fn<() => Promise<string>>()
+        .mockRejectedValueOnce(new Error("worker chunk failed"))
+        .mockResolvedValueOnce("/worker.js");
+
+      await expect(loadEngine(loadWorkerUrl)).rejects.toThrow(
+        "worker chunk failed",
+      );
+      expect(setWorkerUrl).not.toHaveBeenCalled();
+
+      await loadEngine(loadWorkerUrl);
+
+      expect(loadWorkerUrl).toHaveBeenCalledTimes(2);
+      expect(setWorkerUrl).toHaveBeenCalledExactlyOnceWith("/worker.js");
+    },
+    LOADER_IMPORT_TIMEOUT_MS,
   );
 });
