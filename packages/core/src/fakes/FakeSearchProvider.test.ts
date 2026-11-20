@@ -19,6 +19,7 @@ runSearchProviderContract("FakeSearchProvider", (): SearchProviderSubject => {
         provider.setReverseResult(results[0] ?? null);
       },
       willFail: (kind) => provider.failWith(kind),
+      respondWithOversizeAnswer: () => provider.failWith("failed"),
       hold: () => {
         provider.holdNext();
       },

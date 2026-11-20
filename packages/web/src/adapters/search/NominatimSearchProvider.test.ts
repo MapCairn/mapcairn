@@ -13,7 +13,29 @@ import { NominatimSearchProvider } from "./NominatimSearchProvider";
 type Script =
   | { kind: "results"; results: readonly SearchResult[] }
   | { kind: "fail"; failure: SearchErrorKind }
-  | { kind: "hold" };
+  | { kind: "hold" }
+  | { kind: "oversize" };
+
+/** A limit small enough that the oversize answer below stays a few hundred bytes. */
+const SMALL_LIMIT = 1024;
+
+/**
+ * A 200 answer whose body streams past `SMALL_LIMIT` with no `Content-Length`,
+ * as a server that does not say how large its answer is.
+ */
+function oversizeResponse(): Response {
+  return jsonResponse([{ pad: "x".repeat(SMALL_LIMIT * 2) }]);
+}
+
+/** A 200 answer whose body stops with an error, or that fires `onRead` first. */
+function brokenBodyResponse(onRead: () => Error): Response {
+  const body = new ReadableStream<Uint8Array>({
+    pull(controller) {
+      controller.error(onRead());
+    },
+  });
+  return new Response(body, { status: 200 });
+}
 
 function toNominatim(result: SearchResult) {
   const secondary = result.secondaryLabel ? `, ${result.secondaryLabel}` : "";
@@ -69,6 +91,9 @@ function scriptedFetch() {
           jsonResponse({}, current.failure === "rate-limited" ? 429 : 500),
         );
       }
+      if (current.kind === "oversize") {
+        return Promise.resolve(oversizeResponse());
+      }
       if (url.pathname.endsWith("/reverse")) {
         const first = current.results[0];
         return Promise.resolve(
@@ -106,12 +131,13 @@ function setup(
 }
 
 runSearchProviderContract("NominatimSearchProvider", () => {
-  const { scripted, provider } = setup();
+  const { scripted, provider } = setup({ maxResponseBytes: SMALL_LIMIT });
   return {
     provider,
     controls: {
       willReturn: (results) => scripted.setScript({ kind: "results", results }),
       willFail: (failure) => scripted.setScript({ kind: "fail", failure }),
+      respondWithOversizeAnswer: () => scripted.setScript({ kind: "oversize" }),
       hold: () => scripted.setScript({ kind: "hold" }),
     },
   };
@@ -324,18 +350,56 @@ describe("NominatimSearchProvider", () => {
 
   it("treats a signal that fires while the body is read as an abort", async () => {
     const controller = new AbortController();
-    const fetchMock = vi.fn().mockResolvedValue({
-      ok: true,
-      status: 200,
-      json: () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      brokenBodyResponse(() => {
         controller.abort();
-        return Promise.reject(new DOMException("aborted", "AbortError"));
-      },
-    });
+        return new DOMException("aborted", "AbortError");
+      }),
+    );
     const provider = new NominatimSearchProvider({ fetch: fetchMock });
     await expect(
       provider.search("x", { signal: controller.signal }),
     ).rejects.toBeInstanceOf(PortAbortError);
+  });
+
+  it("reports failed for a body that stops with an error", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue(brokenBodyResponse(() => new TypeError("reset")));
+    const provider = new NominatimSearchProvider({ fetch: fetchMock });
+    const error = await provider.search("x").catch((e: unknown) => e);
+    expect((error as SearchError).kind).toBe("failed");
+  });
+
+  it("limits a body to 256 KiB unless told otherwise", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue(
+        new Response("[]", { headers: { "content-length": "262145" } }),
+      );
+    const provider = new NominatimSearchProvider({ fetch: fetchMock });
+    const error = await provider.search("x").catch((e: unknown) => e);
+    expect((error as SearchError).kind).toBe("failed");
+    expect((error as SearchError).message).toContain("262144");
+  });
+
+  it("refuses an answer whose Content-Length is over the limit without reading it", async () => {
+    const body = new ReadableStream<Uint8Array>({
+      pull() {
+        throw new Error("The body must not be read.");
+      },
+    });
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(body, {
+        headers: { "content-length": String(SMALL_LIMIT + 1) },
+      }),
+    );
+    const provider = new NominatimSearchProvider({
+      fetch: fetchMock,
+      maxResponseBytes: SMALL_LIMIT,
+    });
+    const error = await provider.search("x").catch((e: unknown) => e);
+    expect((error as SearchError).kind).toBe("failed");
   });
 
   it("starts requests at least a second apart by default, as Nominatim's usage policy requires", async () => {

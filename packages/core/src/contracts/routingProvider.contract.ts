@@ -29,6 +29,13 @@ export interface RoutingProviderControls {
   willFail(kind: ScriptedRoutingFailure): void;
   /** Keeps the next request pending until its signal aborts. */
   hold(): void;
+  /**
+   * Makes every later request read an answer larger than whatever limit the
+   * provider applies to the size of an answer. A provider is free to choose
+   * its limit (the subject can lower it so the answer stays small), and the
+   * suite requires only that the answer is refused.
+   */
+  respondWithOversizeAnswer(): void;
 }
 
 /** One routing provider under test, with its controls. */
@@ -237,6 +244,16 @@ export function runRoutingProviderContract(
         });
       }
 
+      it("refuses an answer larger than the provider's limit as invalid", async () => {
+        const { provider, controls } = create();
+        controls.respondWithOversizeAnswer();
+        expect(
+          await failureKind(
+            provider.route({ stops: [PARIS, MARSEILLE], mode: "walk" }),
+          ),
+        ).toBe("invalid");
+      });
+
       it("rejects as aborted when the signal has already fired", async () => {
         const { provider, controls } = create();
         controls.willReturnRoute(ROUTE);
@@ -354,6 +371,20 @@ export function runRoutingProviderContract(
           ).toBe(kind);
         });
       }
+
+      it("refuses an answer larger than the provider's limit as invalid", async () => {
+        const { provider, controls } = create();
+        controls.respondWithOversizeAnswer();
+        expect(
+          await failureKind(
+            provider.reachableArea({
+              origin: PARIS,
+              minutes: 10,
+              mode: "walk",
+            }),
+          ),
+        ).toBe("invalid");
+      });
 
       it("rejects as aborted when the signal has already fired", async () => {
         const { provider, controls } = create();

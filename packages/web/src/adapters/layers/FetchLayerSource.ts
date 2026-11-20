@@ -20,7 +20,7 @@ import {
   SharedResponseCache,
 } from "@mapcairn/core";
 import { defaultFetch } from "../shared/fetch";
-import { readJsonWithin } from "./readJson";
+import { ResponseBodyError, readJsonWithin } from "../shared/readJson";
 
 /**
  * The most bytes of an identify answer that are read: 1 MiB. A service
@@ -205,7 +205,12 @@ export class FetchLayerSource implements LayerSource {
         cacheControl: response.headers.get("cache-control"),
       };
     } catch (error) {
-      throw signal?.aborted ? new LayerError("aborted") : error;
+      if (signal?.aborted) {
+        throw new LayerError("aborted");
+      }
+      throw error instanceof ResponseBodyError
+        ? new LayerError("invalid", error.message)
+        : error;
     }
   }
 }
