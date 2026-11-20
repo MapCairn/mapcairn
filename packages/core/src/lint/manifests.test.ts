@@ -274,9 +274,9 @@ describe("SDK package manifests", () => {
   );
 
   it.each(BUILT_PACKAGES)(
-    "@mapcairn/%s stays private until the first release",
+    "@mapcairn/%s is public from the first release candidate on",
     (name) => {
-      expect(manifestOf(name)).toHaveProperty("private", true);
+      expect(manifestOf(name)).not.toHaveProperty("private");
     },
   );
 
