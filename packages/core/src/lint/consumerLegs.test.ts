@@ -12,12 +12,16 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
+  BROWSER_TIMEOUT,
   BUN_MINIMUM_RELEASE_AGE,
+  browserLegPlan,
   bunSettings,
   bunSkipped,
   bunVersionProblem,
+  chromiumExecutable,
   corepackCliPath,
   miniflareAvailable,
+  playwrightAvailable,
   publishedLegSkip,
   publishedSkipped,
   WORKER_CONDITIONS,
@@ -182,6 +186,121 @@ describe("workerd availability", () => {
       /^::warning::.*workerd.*miniflare/i,
     );
     expect(workerdSkipped({})).not.toMatch(/^::/);
+  });
+});
+
+describe("browser leg availability", () => {
+  let scratch = "";
+  beforeEach(() => {
+    scratch = mkdtempSync(path.join(tmpdir(), "browser-leg-"));
+  });
+  afterEach(() => {
+    rmSync(scratch, { recursive: true, force: true });
+  });
+
+  it("finds no Chromium where Playwright does not resolve, as in a job that ran no install", () => {
+    expect(chromiumExecutable(tmpdir(), path.join(scratch, "none"))).toBe(
+      undefined,
+    );
+  });
+
+  it("finds no Chromium when Playwright resolves but the browser was never installed", () => {
+    mkdirSync(path.join(scratch, "node_modules", "playwright-core"), {
+      recursive: true,
+    });
+    writeFileSync(
+      path.join(scratch, "node_modules", "playwright-core", "package.json"),
+      JSON.stringify({ name: "playwright-core", main: "index.js" }),
+    );
+    writeFileSync(
+      path.join(scratch, "node_modules", "playwright-core", "index.js"),
+      `exports.chromium = { executablePath: () => ${JSON.stringify(path.join(scratch, "no-chrome"))} };`,
+    );
+    writeFileSync(path.join(scratch, "package.json"), "{}");
+    expect(chromiumExecutable(scratch, path.join(scratch, "none"))).toBe(
+      undefined,
+    );
+  });
+
+  it("finds the browser a remote session preinstalls, as the host's Playwright config does", () => {
+    mkdirSync(path.join(scratch, "node_modules", "playwright-core"), {
+      recursive: true,
+    });
+    writeFileSync(
+      path.join(scratch, "node_modules", "playwright-core", "package.json"),
+      JSON.stringify({ name: "playwright-core", main: "index.js" }),
+    );
+    writeFileSync(
+      path.join(scratch, "node_modules", "playwright-core", "index.js"),
+      "exports.chromium = { executablePath: () => '' };",
+    );
+    writeFileSync(path.join(scratch, "package.json"), "{}");
+    const remote = path.join(scratch, "remote-chromium");
+    writeFileSync(remote, "");
+    expect(chromiumExecutable(scratch, remote)).toBe(remote);
+  });
+
+  it("finds the Playwright this repository installs", () => {
+    expect(playwrightAvailable(REPO)).toBe(true);
+  });
+
+  it("finds no Playwright where none resolves, as in a job that ran no install", () => {
+    expect(playwrightAvailable(scratch)).toBe(false);
+  });
+
+  it("runs the leg when Chromium is there, on any machine", () => {
+    for (const env of [{}, { GITHUB_ACTIONS: "true" }]) {
+      expect(
+        browserLegPlan({ playwright: true, executable: "/x/chrome", env }),
+      ).toEqual({ action: "run" });
+    }
+  });
+
+  it("skips with a warning on a developer's machine when Chromium is missing", () => {
+    const plan = browserLegPlan({
+      playwright: true,
+      executable: undefined,
+      env: {},
+    });
+    expect(plan.action).toBe("skip");
+    expect(plan.line).toMatch(/browser leg was skipped/i);
+    expect(plan.line).toContain("playwright:install");
+    expect(plan.line).not.toMatch(/^::/);
+  });
+
+  it("fails, and does not skip, when GITHUB_ACTIONS is set and the installed Playwright has no Chromium", () => {
+    const plan = browserLegPlan({
+      playwright: true,
+      executable: undefined,
+      env: { GITHUB_ACTIONS: "true" },
+    });
+    expect(plan.action).toBe("fail");
+    expect(plan.message).toMatch(/Chromium/);
+    expect(plan.message).toContain("GITHUB_ACTIONS");
+  });
+
+  it("skips with a warning annotation where no Playwright is installed at all, as the release workflow's check job is, which installs nothing", () => {
+    const plan = browserLegPlan({
+      playwright: false,
+      executable: undefined,
+      env: { GITHUB_ACTIONS: "true" },
+    });
+    expect(plan.action).toBe("skip");
+    expect(plan.line).toMatch(/^::warning::.*browser leg was skipped/);
+  });
+
+  it("treats only the value true as GitHub Actions, as the other legs do", () => {
+    expect(
+      browserLegPlan({
+        playwright: true,
+        executable: undefined,
+        env: { GITHUB_ACTIONS: "false" },
+      }).action,
+    ).toBe("skip");
+  });
+
+  it("cuts the leg off after a bounded time", () => {
+    expect(BROWSER_TIMEOUT).toBeGreaterThan(0);
   });
 });
 

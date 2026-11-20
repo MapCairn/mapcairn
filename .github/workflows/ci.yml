@@ -155,6 +155,11 @@ jobs:
       - name: Check what each tarball holds
         if: steps.changed.outputs.run == 'true'
         run: npm run pack:check
-      - name: Install the tarballs in an app outside the repository and render the chrome
+      # The repository's own Playwright, as the lockfile pins it. The leg that
+      # draws a real map fails, rather than skips, when this browser is missing.
+      - name: Install Chromium for the consumer check's real-map leg
+        if: steps.changed.outputs.run == 'true'
+        run: npx --no-install playwright install --with-deps chromium
+      - name: Install the tarballs in an app outside the repository, render the chrome and draw a real map
         if: steps.changed.outputs.run == 'true'
         run: npm run consumer:check
