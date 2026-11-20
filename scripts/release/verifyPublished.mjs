@@ -7,12 +7,19 @@
  * provenance attestations of what was installed with `npm audit signatures`,
  * and says for each package whether it was published with provenance.
  *
- *   npm run release:verify-published -- <version> [--no-provenance]
+ *   npm run release:verify-published -- <version> [<tarball-folder>] [--no-provenance]
  *
  * A package without provenance fails the check, because the workflow publishes
  * through trusted publishing and npm then records provenance. `--no-provenance`
  * says the version was published another way (the hand-published `0.1.0-rc.1`
  * has none): a package without provenance is then reported and does not fail.
+ *
+ * With the folder of the release's downloaded tarballs (the one
+ * `verifyRelease.mjs tarballs` checks), it also compares each package's
+ * registry `dist.integrity` and `dist.shasum` with the digests of the attested
+ * tarball in that folder, so a version uploaded by hand is shown to be the
+ * attested bytes. Without the folder it says plainly that this was not
+ * compared.
  *
  * Run it after the workflow's `npm` job has published. It only
  * reads the registry. The four SDK packages are exempted from the repository's
@@ -22,6 +29,8 @@
  *
  * It needs a network and Node, and starts no server.
  */
+import { createHash } from "node:crypto";
+import { readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { isEntryPoint } from "../entryPoint.mjs";
@@ -42,20 +51,131 @@ const ROOT = path.resolve(
 );
 
 const USAGE =
-  "Usage: npm run release:verify-published -- <version> [--no-provenance], such as 0.1.0 or 0.1.0-rc.2 (no leading v). --no-provenance is for a version that was published by hand.";
+  "Usage: npm run release:verify-published -- <version> [<tarball-folder>] [--no-provenance], such as 0.1.0 or 0.1.0-rc.2 (no leading v). The folder holds the release's downloaded tarballs, so the registry's digests can be compared with them. --no-provenance is for a version that was published by hand.";
 
 /**
  * @param {string[]} argv The arguments after the script name.
- * @returns {{ version: string, requireProvenance: boolean }} Provenance is required unless `--no-provenance` is given.
- * @throws {Error} When the arguments are not one version and the optional flag.
+ * @returns {{ version: string, requireProvenance: boolean, folder?: string }} Provenance is required unless `--no-provenance` is given; `folder` is the optional folder of the release's tarballs.
+ * @throws {Error} When the arguments are not a version, an optional folder and the optional flag.
  */
 export function parsePublishedArguments(argv) {
   const requireProvenance = !argv.includes("--no-provenance");
   const rest = argv.filter((argument) => argument !== "--no-provenance");
-  if (rest.length !== 1 || parseVersion(rest[0]) === null) {
+  const [version, folder] = rest;
+  if (
+    rest.length < 1 ||
+    rest.length > 2 ||
+    parseVersion(version) === null ||
+    (folder !== undefined && (folder === "" || folder.startsWith("-")))
+  ) {
     throw new Error(USAGE);
   }
-  return { version: rest[0], requireProvenance };
+  return folder === undefined
+    ? { version, requireProvenance }
+    : { version, requireProvenance, folder };
+}
+
+/**
+ * Reads the `dist` of one version from `npm view <name>@<version> dist --json`.
+ *
+ * @param {{ status: number | null, stdout: string, stderr: string }} result
+ * @returns {{ exists: false } | { exists: true, integrity?: string, shasum?: string } | null} Null when the registry gave no usable answer. A missing field stays undefined, so the report can fail on it.
+ */
+export function parseRegistryDist(result) {
+  if (result.status !== 0) {
+    return isNotFound(result.stderr) ? { exists: false } : null;
+  }
+  try {
+    const dist = JSON.parse(result.stdout);
+    if (dist === null || typeof dist !== "object") {
+      return null;
+    }
+    return {
+      exists: true,
+      integrity:
+        typeof dist.integrity === "string" ? dist.integrity : undefined,
+      shasum: typeof dist.shasum === "string" ? dist.shasum : undefined,
+    };
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * The digests npm records for a tarball: `integrity` is the SHA-512 as a
+ * Subresource Integrity string (`sha512-` and base64), `shasum` the SHA-1 in
+ * lower-case hex.
+ *
+ * @param {string} file
+ * @returns {{ integrity: string, shasum: string }}
+ */
+export function tarballDigests(file) {
+  const bytes = readFileSync(file);
+  return {
+    integrity: `sha512-${createHash("sha512").update(bytes).digest("base64")}`,
+    shasum: createHash("sha1").update(bytes).digest("hex"),
+  };
+}
+
+/**
+ * Compares, for each package, the registry's digests of the version with those
+ * of the attested tarball from the release, whoever uploaded it.
+ *
+ * @param {object} input
+ * @param {string} input.version
+ * @param {string | undefined} input.folder The folder of the release's tarballs, undefined when none was given.
+ * @param {Record<string, ReturnType<typeof parseRegistryDist>>} input.answers What the registry said about each package.
+ * @param {string[]} input.files The file names in the folder.
+ * @param {(file: string) => { integrity: string, shasum: string }} input.digestOf The digests of a file in the folder.
+ * @returns {{ lines: string[], problems: string[] }}
+ */
+export function integrityReport({ version, folder, answers, files, digestOf }) {
+  if (folder === undefined) {
+    return {
+      lines: [
+        "The integrity of the registry bytes was not compared with the attested tarballs (no tarball folder was given). Add the folder of the release's tarballs to compare it.",
+      ],
+      problems: [],
+    };
+  }
+  /** @type {string[]} */
+  const lines = [];
+  /** @type {string[]} */
+  const problems = [];
+  for (const name of SDK_NAMES) {
+    const file = `mapcairn-${name.replace("@mapcairn/", "")}-${version}.tgz`;
+    const answer = answers[name] ?? null;
+    if (!files.includes(file)) {
+      problems.push(
+        `${name}: the attested tarball ${file} is not in ${folder}`,
+      );
+    } else if (answer === null) {
+      problems.push(
+        `${name}: the integrity could not be read from the registry`,
+      );
+    } else if (!answer.exists) {
+      problems.push(`${name}@${version} is not on the registry`);
+    } else if (answer.integrity === undefined || answer.shasum === undefined) {
+      problems.push(
+        `${name}: the registry gave no ${answer.integrity === undefined ? "integrity" : "shasum"} for ${version}, so it cannot be compared with the attested tarball`,
+      );
+    } else {
+      const expected = digestOf(file);
+      const sameIntegrity = answer.integrity
+        .split(/\s+/)
+        .includes(expected.integrity);
+      if (sameIntegrity && answer.shasum === expected.shasum) {
+        lines.push(
+          `${name}: the registry's digests match the attested tarball (${expected.integrity})`,
+        );
+      } else {
+        problems.push(
+          `${name}: the registry's integrity ${answer.integrity} (shasum ${answer.shasum}) differs from the attested tarball's ${expected.integrity} (shasum ${expected.shasum}): the upload differs from the attested tarball`,
+        );
+      }
+    }
+  }
+  return { lines, problems };
 }
 
 /**
@@ -219,12 +339,50 @@ function readAnswers(version) {
   );
 }
 
+/**
+ * Runs the install check. If it throws (a package is not on npm yet, say), the
+ * integrity problems found before it are added to the error, so a mismatch is
+ * not hidden behind the install failure.
+ *
+ * @param {string} version
+ * @param {string[]} integrityProblems
+ * @returns {string[]}
+ */
+function installLines(version, integrityProblems) {
+  try {
+    return runConsumerCheck({ published: version });
+  } catch (error) {
+    throw new Error(
+      [
+        error instanceof Error ? error.message : String(error),
+        ...integrityProblems,
+      ].join("\n"),
+    );
+  }
+}
+
 if (isEntryPoint(import.meta.url)) {
   try {
-    const { version, requireProvenance } = parsePublishedArguments(
+    const { version, requireProvenance, folder } = parsePublishedArguments(
       process.argv.slice(2),
     );
-    for (const line of runConsumerCheck({ published: version })) {
+    const tarballFolder =
+      folder === undefined ? undefined : path.resolve(folder);
+    const view = (/** @type {string[]} */ args) =>
+      runNpm(["view", ...args, ...REGISTRY_READ_FLAGS]);
+    const integrity = integrityReport({
+      version,
+      folder: tarballFolder,
+      answers: Object.fromEntries(
+        SDK_NAMES.map((name) => [
+          name,
+          parseRegistryDist(view([`${name}@${version}`, "dist", "--json"])),
+        ]),
+      ),
+      files: tarballFolder === undefined ? [] : readdirSync(tarballFolder),
+      digestOf: (file) => tarballDigests(path.join(tarballFolder ?? "", file)),
+    });
+    for (const line of installLines(version, integrity.problems)) {
       console.log(line);
     }
     const report = provenanceReport(readAnswers(version), requireProvenance);
@@ -232,8 +390,6 @@ if (isEntryPoint(import.meta.url)) {
       version,
       git(["tag", "--list", "v*"], ROOT).stdout.split(/\r?\n/).filter(Boolean),
     );
-    const view = (/** @type {string[]} */ args) =>
-      runNpm(["view", ...args, ...REGISTRY_READ_FLAGS]);
     const tags = distTagReport({
       version,
       expected,
@@ -249,10 +405,14 @@ if (isEntryPoint(import.meta.url)) {
         ]),
       ),
     });
-    for (const line of [...report.lines, ...tags.lines]) {
+    for (const line of [...report.lines, ...tags.lines, ...integrity.lines]) {
       console.log(line);
     }
-    const problems = [...report.problems, ...tags.problems];
+    const problems = [
+      ...report.problems,
+      ...tags.problems,
+      ...integrity.problems,
+    ];
     if (problems.length > 0) {
       throw new Error(problems.join("\n"));
     }

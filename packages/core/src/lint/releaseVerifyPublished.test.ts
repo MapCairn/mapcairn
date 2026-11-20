@@ -1,5 +1,9 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
+import { createHash } from "node:crypto";
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import path from "node:path";
 import { describe, expect, it } from "vitest";
 import {
   installFlags,
@@ -10,9 +14,12 @@ import {
 import {
   auditProblems,
   distTagReport,
+  integrityReport,
   parsePackageTags,
   parsePublishedArguments,
+  parseRegistryDist,
   provenanceReport,
+  tarballDigests,
   // @ts-expect-error The scripts are dependency-free JavaScript with JSDoc types.
 } from "../../../../scripts/release/verifyPublished.mjs";
 import {
@@ -115,13 +122,216 @@ describe("parsePublishedArguments", () => {
   it.each([
     [[]],
     [["v0.1.0"]],
-    [["0.1.0", "extra"]],
+    [["0.1.0", "folder", "extra"]],
+    [["0.1.0", "--folder"]],
     [["--version=0.1.0"]],
     [["0.1"]],
     [["0.1.0", "--require-provenance"]],
     [["--no-provenance"]],
   ])("refuses %j", (argv) => {
     expect(() => parsePublishedArguments(argv)).toThrow(/Usage/);
+  });
+});
+
+describe("parsePublishedArguments with a folder", () => {
+  it("takes an optional folder of the release's tarballs after the version", () => {
+    expect(parsePublishedArguments(["0.1.0-rc.3", "/tmp/tarballs"])).toEqual({
+      version: "0.1.0-rc.3",
+      requireProvenance: true,
+      folder: "/tmp/tarballs",
+    });
+    expect(
+      parsePublishedArguments([
+        "--no-provenance",
+        "0.1.0-rc.3",
+        "/tmp/tarballs",
+      ]),
+    ).toEqual({
+      version: "0.1.0-rc.3",
+      requireProvenance: false,
+      folder: "/tmp/tarballs",
+    });
+  });
+});
+
+describe("parseRegistryDist", () => {
+  it("reads the integrity and shasum of a version", () => {
+    expect(
+      parseRegistryDist({
+        status: 0,
+        stdout: JSON.stringify({ integrity: "sha512-AAA=", shasum: "ab12" }),
+        stderr: "",
+      }),
+    ).toEqual({ exists: true, integrity: "sha512-AAA=", shasum: "ab12" });
+  });
+
+  it("keeps a missing integrity as missing, so the report can fail on it", () => {
+    expect(
+      parseRegistryDist({
+        status: 0,
+        stdout: JSON.stringify({ shasum: "ab12" }),
+        stderr: "",
+      }),
+    ).toEqual({ exists: true, integrity: undefined, shasum: "ab12" });
+  });
+
+  it("says a version npm does not have is not there, and a failed read is unusable", () => {
+    expect(
+      parseRegistryDist({
+        status: 1,
+        stdout: "",
+        stderr: "npm error code E404",
+      }),
+    ).toEqual({ exists: false });
+    expect(
+      parseRegistryDist({ status: 1, stdout: "", stderr: "ETIMEDOUT" }),
+    ).toBeNull();
+    expect(
+      parseRegistryDist({ status: 0, stdout: "not json", stderr: "" }),
+    ).toBeNull();
+    expect(
+      parseRegistryDist({ status: 0, stdout: "null", stderr: "" }),
+    ).toBeNull();
+  });
+});
+
+describe("tarballDigests", () => {
+  it("gives the SHA-512 as an SRI string and the SHA-1 as hex, as npm records them", () => {
+    const folder = mkdtempSync(path.join(tmpdir(), "mapcairn-digests-"));
+    try {
+      const file = path.join(folder, "mapcairn-core-0.1.0.tgz");
+      writeFileSync(file, "abc");
+      expect(tarballDigests(file)).toEqual({
+        integrity: `sha512-${createHash("sha512").update("abc").digest("base64")}`,
+        shasum: "a9993e364706816aba3e25717850c26c9cd0d89d",
+      });
+    } finally {
+      rmSync(folder, { recursive: true });
+    }
+  });
+});
+
+describe("integrityReport", () => {
+  const VERSION = "0.1.0-rc.3";
+  const SHA512 = (letter: string) => `sha512-${letter.repeat(86)}==`;
+  const SHA1 = (letter: string) => letter.repeat(40);
+  const attested = { integrity: SHA512("A"), shasum: SHA1("a") };
+  const files = SDK_PACKAGES.map(
+    (name: string) => `mapcairn-${name}-${VERSION}.tgz`,
+  );
+  const digestOf = () => attested;
+  const matching = Object.fromEntries(
+    SDK_PACKAGES.map((name: string) => [
+      `@mapcairn/${name}`,
+      { exists: true, ...attested },
+    ]),
+  );
+  const run = (overrides: {
+    answers?: Record<string, unknown>;
+    files?: string[];
+    folder?: string | undefined;
+    digestOf?: (file: string) => unknown;
+  }) =>
+    integrityReport({
+      version: VERSION,
+      folder: "folder" in overrides ? overrides.folder : "/tarballs",
+      answers: { ...matching, ...overrides.answers },
+      files: overrides.files ?? files,
+      digestOf: overrides.digestOf ?? digestOf,
+    });
+
+  it("passes when every package's registry digests are those of the attested tarball", () => {
+    const report = run({});
+    expect(report.problems).toEqual([]);
+    expect(report.lines).toHaveLength(SDK_PACKAGES.length);
+    expect(report.lines[0]).toMatch(
+      /@mapcairn\/core.*match the attested tarball/,
+    );
+  });
+
+  it("fails a package whose integrity differs, naming it, both digests and the cause", () => {
+    const report = run({
+      answers: {
+        "@mapcairn/map": { exists: true, ...attested, integrity: SHA512("B") },
+      },
+    });
+    expect(report.problems).toHaveLength(1);
+    const [problem] = report.problems;
+    expect(problem).toContain("@mapcairn/map");
+    expect(problem).toContain(SHA512("B"));
+    expect(problem).toContain(SHA512("A"));
+    expect(problem).toMatch(/differs from the attested tarball/);
+  });
+
+  it("fails a package whose shasum differs even when the integrity matches", () => {
+    const report = run({
+      answers: {
+        "@mapcairn/core": { exists: true, ...attested, shasum: SHA1("b") },
+      },
+    });
+    expect(report.problems).toHaveLength(1);
+    expect(report.problems[0]).toContain(SHA1("b"));
+    expect(report.problems[0]).toContain(SHA1("a"));
+  });
+
+  it("compares the integrity as written, so a hex digest is not read as a match", () => {
+    const report = run({
+      answers: {
+        "@mapcairn/theme": { exists: true, ...attested, integrity: SHA1("a") },
+      },
+    });
+    expect(report.problems[0]).toContain("@mapcairn/theme");
+  });
+
+  it("accepts an integrity that lists several hashes when the sha512 one matches", () => {
+    const report = run({
+      answers: {
+        "@mapcairn/react": {
+          exists: true,
+          ...attested,
+          integrity: `sha256-${"C".repeat(43)}= ${attested.integrity}`,
+        },
+      },
+    });
+    expect(report.problems).toEqual([]);
+  });
+
+  it.each([
+    ["no integrity", { exists: true, shasum: SHA1("a") }],
+    ["no shasum", { exists: true, integrity: SHA512("A") }],
+    ["no usable answer", null],
+    ["the version missing", { exists: false }],
+  ])("fails, and does not pass, on %s from the registry", (_label, answer) => {
+    const report = run({ answers: { "@mapcairn/react": answer } });
+    expect(report.problems).toHaveLength(1);
+    expect(report.problems[0]).toContain("@mapcairn/react");
+    expect(report.lines.join("\n")).not.toContain("@mapcairn/react");
+  });
+
+  it("fails a package whose tarball is not in the folder, and compares the rest", () => {
+    const report = run({
+      files: files.filter((file: string) => !file.includes("-theme-")),
+    });
+    expect(report.problems).toHaveLength(1);
+    expect(report.problems[0]).toContain("@mapcairn/theme");
+    expect(report.problems[0]).toContain(`mapcairn-theme-${VERSION}.tgz`);
+    expect(report.lines).toHaveLength(SDK_PACKAGES.length - 1);
+  });
+
+  it("looks only for the exact tarball name of the version", () => {
+    const report = run({
+      files: files.map((file: string) => file.replace(VERSION, "0.1.0-rc.2")),
+    });
+    expect(report.problems).toHaveLength(SDK_PACKAGES.length);
+  });
+
+  it("says plainly that nothing was compared when no folder is given", () => {
+    const report = run({ folder: undefined });
+    expect(report.problems).toEqual([]);
+    expect(report.lines).toHaveLength(1);
+    expect(report.lines[0]).toMatch(
+      /integrity of the registry bytes was not compared/,
+    );
   });
 });
 
