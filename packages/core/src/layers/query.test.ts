@@ -2,8 +2,8 @@
 // Copyright MapCairn contributors
 import { describe, expect, it } from "vitest";
 import { SAMPLE_FEED_LAYER, SAMPLE_QUERY_LAYER } from "../fakes/layerFixtures";
-import { feedUrl } from "./feed";
-import { nextQueryWindow, queryWindow } from "./query";
+import { feedUrl, feedUrls } from "./feed";
+import { nextQueryWindow, queryBoxes, queryWindow } from "./query";
 
 const NOW = Date.UTC(2026, 10, 9, 8, 30);
 
@@ -49,6 +49,89 @@ describe("queryWindow", () => {
     expect(window.west).toBeLessThanOrEqual(10);
     expect(window.east).toBeGreaterThanOrEqual(10);
     expect(window.north).toBeGreaterThanOrEqual(20);
+  });
+});
+
+describe("queryWindow across the antimeridian", () => {
+  it("gives a view across the line a window across it, as the short box", () => {
+    expect(
+      queryWindow({ west: 178, south: -18, east: 182, north: -16 }),
+    ).toEqual({ west: 177, south: -19, east: 183, north: -15 });
+  });
+
+  it("reads a view reported as -190 to -170 as the one across the line", () => {
+    expect(
+      queryWindow({ west: -182, south: -18, east: -178, north: -16 }),
+    ).toEqual(queryWindow({ west: 178, south: -18, east: 182, north: -16 }));
+  });
+
+  it("stops a view that does not cross the line at it, margin or not", () => {
+    expect(
+      queryWindow({ west: 172, south: -18, east: 180, north: -16 }),
+    ).toEqual({ west: 170, south: -20, east: 180, north: -14 });
+  });
+
+  it("asks for the whole circle of longitude when the window would reach round it", () => {
+    expect(
+      queryWindow({ west: 0, south: 0, east: 359, north: 10 }),
+    ).toMatchObject({ west: -180, east: 180 });
+  });
+
+  it("keeps the window across the line while the view pans or sits on either side of it", () => {
+    const first = nextQueryWindow(null, {
+      west: 178,
+      south: -18,
+      east: 182,
+      north: -16,
+    });
+    const onTheEast = { west: 178.5, south: -17.5, east: 181.5, north: -16.5 };
+    const onTheWest = {
+      west: -181.5,
+      south: -17.5,
+      east: -178.5,
+      north: -16.5,
+    };
+    expect(nextQueryWindow(first, onTheEast)).toBe(first);
+    expect(nextQueryWindow(first, onTheWest)).toBe(first);
+  });
+});
+
+describe("queryWindow at the edges of the world", () => {
+  it("gives the same window for a view that ends on 180 or starts on -180, whatever copy of the world it is reported on", () => {
+    const ends = { west: 170, south: 0, east: 180, north: 4 };
+    const starts = { west: -180, south: 0, east: -170, north: 4 };
+    for (const turns of [-720, -360, 0, 360, 720]) {
+      const shift = (view: typeof ends) => ({
+        ...view,
+        west: view.west + turns,
+        east: view.east + turns,
+      });
+      expect(queryWindow(shift(ends))).toEqual(queryWindow(ends));
+      expect(queryWindow(shift(starts))).toEqual(queryWindow(starts));
+    }
+    expect(queryBoxes(queryWindow(ends))).toHaveLength(1);
+    expect(queryBoxes(queryWindow(starts))).toHaveLength(1);
+  });
+});
+
+describe("queryBoxes", () => {
+  it("gives a window inside the world as it is", () => {
+    const window = { west: 10, south: 0, east: 20, north: 5 };
+    expect(queryBoxes(window)).toEqual([window]);
+  });
+
+  it("splits a window across the line into the part to 180 and the part from -180", () => {
+    expect(
+      queryBoxes({ west: 177, south: -18.5, east: 183, north: -15.5 }),
+    ).toEqual([
+      { west: 177, south: -18.5, east: 180, north: -15.5 },
+      { west: -180, south: -18.5, east: -177, north: -15.5 },
+    ]);
+  });
+
+  it("does not split a window that ends on the line", () => {
+    const window = { west: 170, south: 0, east: 180, north: 5 };
+    expect(queryBoxes(window)).toEqual([window]);
   });
 });
 
@@ -106,6 +189,28 @@ describe("feedUrl for a query layer", () => {
         north: 48.95,
       }),
     ).toBe("https://query.test/items?bbox=2.2,48.8,2.5,48.95&limit=4");
+  });
+
+  it("asks one URL for each side of the antimeridian", () => {
+    const across = { west: 177, south: -18.5, east: 183, north: -15.5 };
+    expect(feedUrls(SAMPLE_QUERY_LAYER, {}, NOW, across)).toEqual([
+      "https://query.test/items?bbox=177,-18.5,180,-15.5&limit=4",
+      "https://query.test/items?bbox=-180,-18.5,-177,-15.5&limit=4",
+    ]);
+    expect(() => feedUrl(SAMPLE_QUERY_LAYER, {}, NOW, across)).toThrow(
+      /antimeridian/,
+    );
+  });
+
+  it("asks a feed layer one URL, whatever the area", () => {
+    expect(
+      feedUrls(SAMPLE_FEED_LAYER, {}, NOW, {
+        west: 177,
+        south: 0,
+        east: 183,
+        north: 1,
+      }),
+    ).toEqual(["https://sample.test/feed/big_day.json"]);
   });
 
   it("needs a window, and a feed layer ignores one", () => {
