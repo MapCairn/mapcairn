@@ -48,6 +48,10 @@ A `feed` source is a URL to a whole GeoJSON file. It suits a small layer of any 
 
 The page keeps every response, a query response as well as a feed, for at least the server's `max-age`. A feed definition may also set `cacheSeconds` (at most 3600), a minimum retention for a provider that sends no `max-age`; when both are present the longer applies. A query definition cannot set it. Nothing is kept beyond the page.
 
+### How much of a response is read
+
+The reference host's source reads at most 4 MiB of a feed, query or detail response, counting bytes as they arrive, and refuses a larger one as `invalid`, so the layer shows its usual error and nothing is parsed. A `Content-Length` over the limit refuses the response before it is read, and the count while reading covers a server that omits or understates the header. 4 MiB is about five times the largest response the reference site documents (the country outlines, about 840 KB decoded). The limit belongs to the source, not to a definition: a host that builds its own `FetchLayerSource` can set `maxResponseBytes` in its options, and it then applies to every layer that source serves, so one large layer raises the limit for all of them. A layer whose response is larger than a few MiB belongs in a `query` source or in tiles, because a response this size is still parsed in the page.
+
 ## Services that speak open standards
 
 A team's own services often speak OGC API Features, WMS or WMTS. The existing layer kinds can request all three, with the definition written by hand: MapCairn never reads a service's capabilities document, so the host copies the layer name, style, format and tile matrix set out of it. The examples use invented hosts under `example.org`. The tests in `packages/core/src/layers/openStandards.test.ts` validate each definition with `validateLayerDefinition`, build the request the engine or the query would send, and compare it to the shape the standard defines. They also fail if a URL, tile size, zoom limit, feature cap or field map shown below stops matching the test.

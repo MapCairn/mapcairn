@@ -20,7 +20,7 @@ import {
   SharedResponseCache,
 } from "@mapcairn/core";
 import { defaultFetch } from "../shared/fetch";
-import { NO_BYTE_LIMIT, readJsonWithin } from "./readJson";
+import { readJsonWithin } from "./readJson";
 
 /**
  * The most bytes of an identify answer that are read: 1 MiB. A service
@@ -30,6 +30,15 @@ import { NO_BYTE_LIMIT, readJsonWithin } from "./readJson";
  * memory whole.
  */
 export const MAX_IDENTIFY_RESPONSE_BYTES = 1024 * 1024;
+
+/**
+ * The most bytes of a feed, query or detail answer a source reads unless its
+ * options say otherwise: 4 MiB. The largest answer the reference site's
+ * definitions document is the country outlines, about 840 KB decoded, so this
+ * is about five times that. An answer past the limit is refused as `invalid`
+ * without being held in memory whole.
+ */
+export const DEFAULT_MAX_RESPONSE_BYTES = 4 * 1024 * 1024;
 
 /** A parsed answer, with the `Cache-Control` it came with. */
 interface FetchedJson {
@@ -48,6 +57,12 @@ export interface FetchLayerSourceOptions {
   readonly decoders?: DecoderRegistry;
   /** The clock for the response cache. Defaults to `Date.now`. */
   readonly now?: () => number;
+  /**
+   * The most bytes of a feed, query or detail answer to read, for every layer
+   * this source serves. Defaults to {@link DEFAULT_MAX_RESPONSE_BYTES}. A host
+   * with one layer that is larger by design raises it for all of them.
+   */
+  readonly maxResponseBytes?: number;
 }
 
 /**
@@ -55,7 +70,10 @@ export interface FetchLayerSourceOptions {
  * template, fetches it, and decodes it with the decoder the definition names.
  * Nothing here knows a provider.
  *
- * @remarks Requests send no cookies and no referrer. Feed responses are kept
+ * @remarks Requests send no cookies and no referrer. A feed, query or detail
+ *   answer is read at most `maxResponseBytes` (default
+ *   {@link DEFAULT_MAX_RESPONSE_BYTES}), the same for every layer, and a larger
+ *   one is refused as `invalid`. Feed responses are kept
  *   in a {@link SharedResponseCache} for their `Cache-Control` `max-age`, and
  *   a request in flight is shared, so several layers split from one feed cost
  *   one request. A detail URL comes from the provider's data, so it is
@@ -72,11 +90,14 @@ export class FetchLayerSource implements LayerSource {
   readonly #fetch: typeof fetch;
   readonly #decoders: DecoderRegistry;
   readonly #cache: SharedResponseCache<unknown>;
+  readonly #maxResponseBytes: number;
 
   constructor(options: FetchLayerSourceOptions = {}) {
     this.#fetch = options.fetch ?? defaultFetch;
     this.#decoders = options.decoders ?? createDecoderRegistry();
     this.#cache = new SharedResponseCache({ now: options.now ?? Date.now });
+    this.#maxResponseBytes =
+      options.maxResponseBytes ?? DEFAULT_MAX_RESPONSE_BYTES;
   }
 
   async load(request: LayerLoadRequest): Promise<readonly LayerFeature[]> {
@@ -128,7 +149,7 @@ export class FetchLayerSource implements LayerSource {
         const { value, cacheControl } = await this.#fetchJson(
           url,
           requestSignal,
-          NO_BYTE_LIMIT,
+          this.#maxResponseBytes,
         );
         return {
           value,

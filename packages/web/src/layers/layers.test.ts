@@ -8,6 +8,7 @@ import {
   decodeDetail,
   decodeFeed,
   defaultControlValues,
+  EN_GB_CATALOGUE,
   FakeMessageCatalogue,
   feedUrl,
   type IdentifiableLayerDefinition,
@@ -26,6 +27,7 @@ import {
   validateLayerDefinition,
 } from "@mapcairn/core";
 import { describe, expect, it, vi } from "vitest";
+import { DEFAULT_MAX_RESPONSE_BYTES } from "../adapters/layers/FetchLayerSource";
 import { buildContentSecurityPolicy } from "../constants/securityHeaders";
 import {
   createHostLayerCatalogue,
@@ -40,6 +42,31 @@ const ATTRIBUTIONS = readFileSync(
   resolve(here, "../../../../ATTRIBUTIONS.md"),
   "utf8",
 );
+
+/**
+ * How many times the largest size a definition documents the source's default
+ * response limit must be, so a feed that grows a little still loads.
+ */
+const RESPONSE_LIMIT_MARGIN = 4;
+
+/**
+ * The largest size, in bytes, an English `dataCost` text states, such as
+ * "about 30 KB, up to 220 KB for a week" (220 KB), in KB, MB or GB, with a
+ * comma or a point in the figure. The text must be a
+ * message key whose English reads that way, so the test fails, rather than
+ * passes, when a cost is worded in a way this does not understand.
+ */
+function largestDocumentedBytes(dataCost: unknown): number {
+  const text = EN_GB_CATALOGUE[dataCost as keyof typeof EN_GB_CATALOGUE];
+  const unitBytes = { KB: 1000, MB: 1_000_000, GB: 1_000_000_000 };
+  const sizes = [...String(text).matchAll(/([\d,.]+) (KB|MB|GB)/g)].map(
+    ([, amount, unit]) =>
+      Number((amount ?? "").replaceAll(",", "")) *
+      unitBytes[unit as keyof typeof unitBytes],
+  );
+  expect(sizes.length, `no size in "${text}"`).toBeGreaterThan(0);
+  return Math.max(...sizes);
+}
 
 /** What the fixture manifest says about one feed layer. */
 interface FixtureEntry {
@@ -305,6 +332,18 @@ describe("the host's layer definitions", () => {
         const raw = fixture((entry as FixtureEntry).file);
         expect(count(() => decodeFeed(definition, raw, LAYER_DECODERS))).toBe(
           entry?.features,
+        );
+      });
+
+      it("has its documented data cost well under the source's default response limit", () => {
+        const largest = Math.max(
+          largestDocumentedBytes(definition.dataCost),
+          definition.detail
+            ? largestDocumentedBytes(definition.detail.dataCost)
+            : 0,
+        );
+        expect(DEFAULT_MAX_RESPONSE_BYTES).toBeGreaterThanOrEqual(
+          RESPONSE_LIMIT_MARGIN * largest,
         );
       });
 
