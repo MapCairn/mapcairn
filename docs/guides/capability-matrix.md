@@ -1,6 +1,6 @@
 # Capability matrix
 
-_Last reviewed: 2026-11-17. Review it whenever a row below changes status, and at least with each yearly review of [`ROADMAP.md`](../../ROADMAP.md)._
+_Last reviewed: 2026-11-20. Review it whenever a row below changes status, and at least with each yearly review of [`ROADMAP.md`](../../ROADMAP.md)._
 
 The project's aim is an SDK with everything a team needs to build an industry-grade GIS application ([`ROADMAP.md`](../../ROADMAP.md), "Direction"). This page lists what such an application needs, as neutral capability areas, and says what MapCairn has, partly has or lacks, with the code or issue that shows it. It is the basis for the order of the SDK work.
 
@@ -163,17 +163,17 @@ The areas were drawn up from the public documentation of commercial and open-sou
 
 ## Embedding and server-rendered pages
 
-| Capability                                                                                        | Status  | Evidence                                                                                                                                                                               | Tracked by         |
-| ------------------------------------------------------------------------------------------------- | ------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------ |
-| React components built from four packages, with an example app that uses only public entry points | has     | `examples/embed`, `docs/guides/extending.md`                                                                                                                                           | none               |
-| The map engine adapter as an optional package                                                     | lacks   | the adapter is in `packages/web`                                                                                                                                                       | [#43], after [#24] |
-| A script and stylesheet with a mount function for pages without React                             | lacks   | none                                                                                                                                                                                   | [#44]              |
-| A guide for serving the bundle from a Windows web server and server-rendered pages                | lacks   | none                                                                                                                                                                                   | [#221]             |
-| The Content Security Policy a host needs                                                          | has     | `docs/guides/content-security-policy.md`, `buildContentSecurityPolicy` in `examples/embed/src/contentSecurityPolicy.ts`                                                                | none (#230 closed) |
-| Making the SDK easy to drop into existing server-rendered applications                            | lacks   | the tracker for the items above                                                                                                                                                        | [#51]              |
-| The interface text and language chosen by the host                                                | partial | A message catalogue and language setting for left-to-right and right-to-left languages; the site offers English and Afrikaans, shows a failed language load with a retry (#280 closed) | [#231]             |
-| An agent that can drive the map through a tool catalogue                                          | partial | the reference host registers a few tools (`packages/web/src/webmcp`); the SDK ships none                                                                                               | [#56]              |
-| Hosts plugging in their own analytics                                                             | lacks   | none                                                                                                                                                                                   | [#75]              |
+| Capability                                                                                        | Status  | Evidence                                                                                                                                                                               | Tracked by          |
+| ------------------------------------------------------------------------------------------------- | ------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------- |
+| React components built from four packages, with an example app that uses only public entry points | has     | `examples/embed`, `docs/guides/extending.md`                                                                                                                                           | none                |
+| The map engine adapter as an optional package                                                     | lacks   | the adapter is in `packages/web`                                                                                                                                                       | [#43], after [#24]  |
+| A script and stylesheet with a mount function for pages without React                             | lacks   | none                                                                                                                                                                                   | [#44]               |
+| A guide for serving the bundle from a Windows web server and server-rendered pages                | partial | `docs/guides/serving-from-iis.md`, checked against Microsoft's documentation and not run on a server; it has no prebuilt bundle or mount function to describe                          | [#221], after [#44] |
+| The Content Security Policy a host needs                                                          | has     | `docs/guides/content-security-policy.md`, `buildContentSecurityPolicy` in `examples/embed/src/contentSecurityPolicy.ts`                                                                | none (#230 closed)  |
+| Making the SDK easy to drop into existing server-rendered applications                            | lacks   | the tracker for the items above                                                                                                                                                        | [#51]               |
+| The interface text and language chosen by the host                                                | partial | A message catalogue and language setting for left-to-right and right-to-left languages; the site offers English and Afrikaans, shows a failed language load with a retry (#280 closed) | [#231]              |
+| An agent that can drive the map through a tool catalogue                                          | partial | the reference host registers a few tools (`packages/web/src/webmcp`); the SDK ships none                                                                                               | [#56]               |
+| Hosts plugging in their own analytics                                                             | lacks   | none                                                                                                                                                                                   | [#75]               |
 
 ## Server-side rendering
 
@@ -226,7 +226,7 @@ This is a proposal, not a promise. It orders the open issues by what unlocks the
 **Next: what makes the SDK usable in another team's stack**
 
 - [#24] then [#43]: the engine adapter in its own package, so a host can embed without copying `packages/web`.
-- [#44], then [#45] and [#221]: a mount function for pages without React, hosts behind a login (which the serving guide's login part needs), and the guide for a Windows web server and server-rendered pages. The Content Security Policy guide is written.
+- [#44], then [#45] and [#221]: a mount function for pages without React, hosts behind a login (which the serving guide's login part needs), and the trial of the guide for a Windows web server and server-rendered pages on a real server. The Content Security Policy guide and a first version of that guide are written.
 - [#220]: host theming with contrast checks, so the chrome can match another team's look.
 - [#192], [#194], [#195], [#193], [#183]: the performance track for large data, from tile archives and a tile budget to clustering and cards for vector features.
 - [#62], [#176], [#71]: the layer controls a person expects (filters, order and opacity, the key over the map).
