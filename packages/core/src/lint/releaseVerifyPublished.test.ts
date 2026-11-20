@@ -1,7 +1,13 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
 import { createHash } from "node:crypto";
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import {
+  mkdtempSync,
+  rmSync,
+  symlinkSync,
+  unlinkSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
@@ -13,6 +19,7 @@ import {
 } from "../../../../scripts/release/consumerCheck.mjs";
 import {
   auditProblems,
+  compareWithTarballs,
   distTagReport,
   integrityReport,
   parsePackageTags,
@@ -124,6 +131,7 @@ describe("parsePublishedArguments", () => {
     [["v0.1.0"]],
     [["0.1.0", "folder", "extra"]],
     [["0.1.0", "--folder"]],
+    [["0.1.0", ""]],
     [["--version=0.1.0"]],
     [["0.1"]],
     [["0.1.0", "--require-provenance"]],
@@ -219,11 +227,16 @@ describe("integrityReport", () => {
   const files = SDK_PACKAGES.map(
     (name: string) => `mapcairn-${name}-${VERSION}.tgz`,
   );
-  const digestOf = () => attested;
+  const letters = "ABCDEFGH";
+  const digestFor = (index: number) => ({
+    integrity: SHA512(letters[index]),
+    shasum: SHA1(letters[index].toLowerCase()),
+  });
+  const digestOf = (file: string) => digestFor(files.indexOf(file));
   const matching = Object.fromEntries(
-    SDK_PACKAGES.map((name: string) => [
+    SDK_PACKAGES.map((name: string, index: number) => [
       `@mapcairn/${name}`,
-      { exists: true, ...attested },
+      { exists: true, ...digestFor(index) },
     ]),
   );
   const run = (overrides: {
@@ -252,14 +265,18 @@ describe("integrityReport", () => {
   it("fails a package whose integrity differs, naming it, both digests and the cause", () => {
     const report = run({
       answers: {
-        "@mapcairn/map": { exists: true, ...attested, integrity: SHA512("B") },
+        "@mapcairn/map": {
+          exists: true,
+          ...digestFor(3),
+          integrity: SHA512("Z"),
+        },
       },
     });
     expect(report.problems).toHaveLength(1);
     const [problem] = report.problems;
     expect(problem).toContain("@mapcairn/map");
-    expect(problem).toContain(SHA512("B"));
-    expect(problem).toContain(SHA512("A"));
+    expect(problem).toContain(SHA512("Z"));
+    expect(problem).toContain(digestFor(3).integrity);
     expect(problem).toMatch(/differs from the attested tarball/);
   });
 
@@ -283,17 +300,28 @@ describe("integrityReport", () => {
     expect(report.problems[0]).toContain("@mapcairn/theme");
   });
 
-  it("accepts an integrity that lists several hashes when the sha512 one matches", () => {
+  it("digests the tarball of each package, not another one", () => {
+    const swapped = run({
+      answers: {
+        "@mapcairn/core": { exists: true, ...digestFor(1) },
+      },
+    });
+    expect(swapped.problems).toHaveLength(1);
+    expect(swapped.problems[0]).toContain("@mapcairn/core");
+  });
+
+  it("fails an integrity that lists more than one sha512 hash, even when one matches", () => {
     const report = run({
       answers: {
         "@mapcairn/react": {
           exists: true,
-          ...attested,
-          integrity: `sha256-${"C".repeat(43)}= ${attested.integrity}`,
+          ...digestFor(1),
+          integrity: `${SHA512("Z")} ${digestFor(1).integrity}`,
         },
       },
     });
-    expect(report.problems).toEqual([]);
+    expect(report.problems).toHaveLength(1);
+    expect(report.problems[0]).toContain("@mapcairn/react");
   });
 
   it.each([
@@ -332,6 +360,109 @@ describe("integrityReport", () => {
     expect(report.lines[0]).toMatch(
       /integrity of the registry bytes was not compared/,
     );
+  });
+});
+
+describe("compareWithTarballs", () => {
+  const VERSION = "0.1.0-rc.3";
+  const fileFor = (name: string) => `mapcairn-${name}-${VERSION}.tgz`;
+  const sha512 = (bytes: string) =>
+    `sha512-${createHash("sha512").update(bytes).digest("base64")}`;
+  const sha1 = (bytes: string) =>
+    createHash("sha1").update(bytes).digest("hex");
+
+  /** A folder of tarballs and a fake registry that holds exactly their bytes. */
+  const setup = () => {
+    const folder = mkdtempSync(path.join(tmpdir(), "mapcairn-compare-"));
+    const bytes: Record<string, string> = {};
+    for (const name of SDK_PACKAGES) {
+      bytes[name] = `tarball bytes of ${name}`;
+      writeFileSync(path.join(folder, fileFor(name)), bytes[name]);
+    }
+    const asked: string[][] = [];
+    const view = (args: string[]) => {
+      asked.push(args);
+      const name = args[0].slice(0, args[0].lastIndexOf("@"));
+      const held = bytes[name.replace("@mapcairn/", "")];
+      return {
+        status: 0,
+        stdout: JSON.stringify({ integrity: sha512(held), shasum: sha1(held) }),
+        stderr: "",
+      };
+    };
+    return { folder, bytes, view, asked };
+  };
+
+  it("passes for real files whose bytes are the registry's, asking for the dist of each exact version", () => {
+    const { folder, view, asked } = setup();
+    try {
+      const report = compareWithTarballs({ version: VERSION, folder, view });
+      expect(report.problems).toEqual([]);
+      expect(report.lines).toHaveLength(SDK_PACKAGES.length);
+      expect(asked).toContainEqual([
+        `@mapcairn/core@${VERSION}`,
+        "dist",
+        "--json",
+      ]);
+    } finally {
+      rmSync(folder, { recursive: true });
+    }
+  });
+
+  it("fails the package whose file differs by one byte, and only that one", () => {
+    const { folder, view } = setup();
+    try {
+      writeFileSync(
+        path.join(folder, fileFor("theme")),
+        "tarball bytes of theme!",
+      );
+      const report = compareWithTarballs({ version: VERSION, folder, view });
+      expect(report.problems).toHaveLength(1);
+      expect(report.problems[0]).toContain("@mapcairn/theme");
+      expect(report.problems[0]).toMatch(/differs from the attested tarball/);
+    } finally {
+      rmSync(folder, { recursive: true });
+    }
+  });
+
+  it("does not follow a symbolic link in place of a tarball", () => {
+    const { folder, view } = setup();
+    try {
+      const target = path.join(folder, fileFor("react"));
+      unlinkSync(path.join(folder, fileFor("map")));
+      symlinkSync(target, path.join(folder, fileFor("map")));
+      const report = compareWithTarballs({ version: VERSION, folder, view });
+      expect(report.problems).toHaveLength(1);
+      expect(report.problems[0]).toContain("@mapcairn/map");
+      expect(report.problems[0]).toMatch(/regular file/);
+    } finally {
+      rmSync(folder, { recursive: true });
+    }
+  });
+
+  it("fails a package whose tarball is not in the folder", () => {
+    const { folder, view } = setup();
+    try {
+      unlinkSync(path.join(folder, fileFor("core")));
+      const report = compareWithTarballs({ version: VERSION, folder, view });
+      expect(report.problems).toHaveLength(1);
+      expect(report.problems[0]).toContain("@mapcairn/core");
+    } finally {
+      rmSync(folder, { recursive: true });
+    }
+  });
+
+  it("reads nothing and says nothing was compared when no folder is given", () => {
+    const view = () => {
+      throw new Error("the registry must not be read");
+    };
+    const report = compareWithTarballs({
+      version: VERSION,
+      folder: undefined,
+      view,
+    });
+    expect(report.problems).toEqual([]);
+    expect(report.lines[0]).toMatch(/was not compared/);
   });
 });
 

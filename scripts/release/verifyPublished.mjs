@@ -30,7 +30,7 @@
  * It needs a network and Node, and starts no server.
  */
 import { createHash } from "node:crypto";
-import { readdirSync, readFileSync } from "node:fs";
+import { lstatSync, readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { isEntryPoint } from "../entryPoint.mjs";
@@ -125,7 +125,7 @@ export function tarballDigests(file) {
  * @param {string} input.version
  * @param {string | undefined} input.folder The folder of the release's tarballs, undefined when none was given.
  * @param {Record<string, ReturnType<typeof parseRegistryDist>>} input.answers What the registry said about each package.
- * @param {string[]} input.files The file names in the folder.
+ * @param {string[]} input.files The names of the regular files in the folder; a symbolic link is not one.
  * @param {(file: string) => { integrity: string, shasum: string }} input.digestOf The digests of a file in the folder.
  * @returns {{ lines: string[], problems: string[] }}
  */
@@ -147,7 +147,7 @@ export function integrityReport({ version, folder, answers, files, digestOf }) {
     const answer = answers[name] ?? null;
     if (!files.includes(file)) {
       problems.push(
-        `${name}: the attested tarball ${file} is not in ${folder}`,
+        `${name}: the attested tarball ${file} is not a regular file in ${folder}`,
       );
     } else if (answer === null) {
       problems.push(
@@ -161,9 +161,11 @@ export function integrityReport({ version, folder, answers, files, digestOf }) {
       );
     } else {
       const expected = digestOf(file);
-      const sameIntegrity = answer.integrity
+      const sha512Hashes = answer.integrity
         .split(/\s+/)
-        .includes(expected.integrity);
+        .filter((hash) => hash.startsWith("sha512-"));
+      const sameIntegrity =
+        sha512Hashes.length === 1 && sha512Hashes[0] === expected.integrity;
       if (sameIntegrity && answer.shasum === expected.shasum) {
         lines.push(
           `${name}: the registry's digests match the attested tarball (${expected.integrity})`,
@@ -340,6 +342,54 @@ function readAnswers(version) {
 }
 
 /**
+ * Reads the registry's `dist` of each package and the tarballs in a folder,
+ * and compares them. Only regular files count (a symbolic link is not
+ * followed), and the registry is read only when a folder is given.
+ *
+ * @param {object} input
+ * @param {string} input.version
+ * @param {string | undefined} input.folder The folder of the release's tarballs, undefined when none was given.
+ * @param {(args: string[]) => { status: number | null, stdout: string, stderr: string }} input.view Runs `npm view` with the arguments.
+ * @param {(folder: string) => string[]} [input.readdir]
+ * @param {(file: string) => { isFile(): boolean }} [input.lstat]
+ * @param {(file: string) => { integrity: string, shasum: string }} [input.digest]
+ * @returns {{ lines: string[], problems: string[] }}
+ */
+export function compareWithTarballs({
+  version,
+  folder,
+  view,
+  readdir = readdirSync,
+  lstat = lstatSync,
+  digest = tarballDigests,
+}) {
+  if (folder === undefined) {
+    return integrityReport({
+      version,
+      folder,
+      answers: {},
+      files: [],
+      digestOf: digest,
+    });
+  }
+  const resolved = path.resolve(folder);
+  return integrityReport({
+    version,
+    folder: resolved,
+    answers: Object.fromEntries(
+      SDK_NAMES.map((name) => [
+        name,
+        parseRegistryDist(view([`${name}@${version}`, "dist", "--json"])),
+      ]),
+    ),
+    files: readdir(resolved).filter((file) =>
+      lstat(path.join(resolved, file)).isFile(),
+    ),
+    digestOf: (file) => digest(path.join(resolved, file)),
+  });
+}
+
+/**
  * Runs the install check. If it throws (a package is not on npm yet, say), the
  * integrity problems found before it are added to the error, so a mismatch is
  * not hidden behind the install failure.
@@ -366,22 +416,9 @@ if (isEntryPoint(import.meta.url)) {
     const { version, requireProvenance, folder } = parsePublishedArguments(
       process.argv.slice(2),
     );
-    const tarballFolder =
-      folder === undefined ? undefined : path.resolve(folder);
     const view = (/** @type {string[]} */ args) =>
       runNpm(["view", ...args, ...REGISTRY_READ_FLAGS]);
-    const integrity = integrityReport({
-      version,
-      folder: tarballFolder,
-      answers: Object.fromEntries(
-        SDK_NAMES.map((name) => [
-          name,
-          parseRegistryDist(view([`${name}@${version}`, "dist", "--json"])),
-        ]),
-      ),
-      files: tarballFolder === undefined ? [] : readdirSync(tarballFolder),
-      digestOf: (file) => tarballDigests(path.join(tarballFolder ?? "", file)),
-    });
+    const integrity = compareWithTarballs({ version, folder, view });
     for (const line of installLines(version, integrity.problems)) {
       console.log(line);
     }
