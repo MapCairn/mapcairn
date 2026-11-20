@@ -1,0 +1,125 @@
+{
+  "id": "sample-points",
+  "name": "Sample points",
+  "description": "Points from a sample feed.",
+  "group": "Samples",
+  "dataCost": "about 30 KB",
+  "attribution": [
+    {
+      "text": "Sample provider",
+      "url": "https://sample.test/"
+    }
+  ],
+  "controls": [
+    {
+      "kind": "segmented",
+      "id": "window",
+      "label": "Period",
+      "options": [
+        {
+          "value": "hour",
+          "label": "Hour"
+        },
+        {
+          "value": "day",
+          "label": "Day"
+        }
+      ],
+      "default": "day"
+    },
+    {
+      "kind": "switch",
+      "id": "small",
+      "label": "Include small values",
+      "default": false,
+      "enabledWhen": {
+        "control": "window",
+        "in": ["day"]
+      }
+    }
+  ],
+  "variables": [
+    {
+      "id": "feed",
+      "from": ["window", "small"],
+      "table": {
+        "hour|false": "all_hour",
+        "hour|true": "all_hour",
+        "day|false": "big_day",
+        "day|true": "all_day"
+      }
+    }
+  ],
+  "source": {
+    "kind": "feed",
+    "url": "https://sample.test/feed/{feed}.json",
+    "decoder": "geojson",
+    "fields": {
+      "id": "id",
+      "title": "properties.title",
+      "value": "properties.value",
+      "time": "properties.time",
+      "kind": "properties.kind",
+      "depth": "geometry.coordinates.2",
+      "url": "properties.url"
+    },
+    "filter": {
+      "field": "kind",
+      "in": ["keep"]
+    }
+  },
+  "style": {
+    "colour": {
+      "kind": "steps",
+      "field": "value",
+      "steps": [
+        {
+          "min": 0,
+          "label": "Below 3",
+          "colour": "ordinal-1"
+        },
+        {
+          "min": 3,
+          "label": "3 to 5",
+          "colour": "ordinal-3"
+        },
+        {
+          "min": 5,
+          "label": "5 and above",
+          "colour": "ordinal-5"
+        }
+      ]
+    },
+    "size": {
+      "field": "value",
+      "stops": [[0, 4], [3, 7], [5, 11]],
+      "labels": ["Below 3", "3 to 5", "5 and above"]
+    }
+  },
+  "card": {
+    "title": "{title}",
+    "lines": ["Value {value|number}", "{depth|km} deep", "{time|relative}"],
+    "link": {
+      "field": "url",
+      "label": "Details at the source"
+    }
+  },
+  "list": {
+    "secondary": "{time|relative}",
+    "sorts": [
+      {
+        "id": "newest",
+        "label": "Newest",
+        "field": "time",
+        "direction": "desc"
+      },
+      {
+        "id": "largest",
+        "label": "Largest",
+        "field": "value",
+        "direction": "desc"
+      }
+    ]
+  },
+  "emptyText": "No sample points right now."
+}

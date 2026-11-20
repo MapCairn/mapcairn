@@ -59,6 +59,12 @@ jobs:
           path: coverage/
           retention-days: 14
       - run: npm run build
+      # The build is up to date here, so this only reads its declarations. It
+      # fails when a package's public API changed and its report under
+      # `packages/*/api` was not updated, and prints the TSDoc warnings
+      # without failing on them.
+      - name: Check the API reports
+        run: npm run api:check -- --verbose
       # The coverage run above comes before the build, so the tests that read
       # the build output skip there. Run them here, against it.
       - run: npx --no-install vitest run packages/web/src/workerBundle.test.ts packages/web/src/deployConfig.test.ts

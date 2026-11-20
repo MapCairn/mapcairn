@@ -1,0 +1,49 @@
+{
+  "id": "sample-flood",
+  "name": "Sample flood depth",
+  "description": "Modelled sample flood depth.",
+  "group": "Imagery",
+  "dataCost": "about 200 KB per screen",
+  "attribution": [
+    {
+      "text": "Sample flood provider"
+    }
+  ],
+  "controls": [
+    {
+      "kind": "segmented",
+      "id": "period",
+      "label": "Return period",
+      "options": [
+        {
+          "value": "20",
+          "label": "1 in 20 years"
+        },
+        {
+          "value": "100",
+          "label": "1 in 100 years"
+        }
+      ],
+      "default": "20"
+    }
+  ],
+  "source": {
+    "kind": "tiles",
+    "tiles": "https://tiles.test/flood/{period}/{z}/{y}/{x}.png",
+    "tileSize": 256,
+    "maxzoom": 12
+  },
+  "identify": {
+    "url": "https://api.test/identify/{period}?bbox={bbox}&width={width}&height={height}&i={x}&j={y}",
+    "decoder": "geojson",
+    "fields": {
+      "id": "id",
+      "title": "properties.name",
+      "depth": "properties.depth"
+    },
+    "card": {
+      "title": "{title}",
+      "lines": ["{depth} m deep"]
+    }
+  }
+}
