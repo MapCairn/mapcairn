@@ -213,7 +213,12 @@ test.describe("a generated host theme", () => {
     });
     await openTooltip(page);
 
-    expect(await textColour(bubble(page))).not.toBe(rgb(SAGE.light.text));
+    // An unscoped heading reads the same text token as the bubble does.
+    const sdkText = await textColour(
+      page.getByTestId("demo-SkipLink").locator("h3"),
+    );
+    expect(sdkText).not.toBe(rgb(SAGE.light.text));
+    expect(await textColour(bubble(page))).toBe(sdkText);
   });
 
   test("is served from the app's own origin, for the policy that blocks inline styles", async ({
@@ -345,6 +350,9 @@ test.describe("a generated host theme accessibility @a11y", () => {
 
       const text = await textColour(bubble(page));
       const surface = await background(bubble(page));
+      // The SDK's own colours also pass, so first prove the bubble is themed.
+      expect(text).toBe(rgb(SAGE[colorScheme].text));
+      expect(surface).toContain(rgb(SAGE[colorScheme].surface).slice(4, -1));
       for (const backdrop of ["#ffffff", "#000000"]) {
         const flattened = compositeOver(surface, backdrop);
         expect(contrastRatio(text, flattened)).toBeGreaterThanOrEqual(4.5);

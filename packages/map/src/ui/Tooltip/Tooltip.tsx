@@ -70,10 +70,13 @@ export interface TooltipProps {
  * The bubble renders in a portal under `body`, outside any element a host
  * scoped a theme to, so it takes the colours its trigger sees (see
  * `inheritColours`). A host's scoped theme therefore reaches it with no
- * markup or option of its own.
+ * markup or option of its own. The colours are read once, when the bubble
+ * opens: a theme or colour scheme change while it is open applies the next
+ * time it opens.
  */
 export function Tooltip({ content, children }: TooltipProps) {
   const { finePointer } = usePreferences();
+  // Radix types a trigger ref as a button, although `asChild` accepts any element.
   const trigger = useRef<HTMLButtonElement>(null);
   const takeTriggerColours = useCallback((bubble: HTMLElement | null) => {
     if (bubble !== null && trigger.current !== null) {

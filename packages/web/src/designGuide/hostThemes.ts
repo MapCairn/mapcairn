@@ -13,7 +13,10 @@ export interface HostTheme {
 /**
  * The host themes served at `/design/host-theme/:name`, so the browser tests
  * load generated stylesheets from the app's own origin under its policy.
- * Scopes with different colours stand in for themed maps on a page; `sage` changes the surface and text, which the tooltip bubble reads.
+ * Scopes with different colours stand in for themed maps on a page.
+ *
+ * `sage` changes only the surface and text, the roles the tooltip bubble
+ * reads, so a test can tell a themed bubble from the SDK's.
  */
 export const HOST_THEMES: Readonly<Record<string, HostTheme>> = {
   green: {
