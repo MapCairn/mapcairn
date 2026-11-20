@@ -2111,6 +2111,38 @@ describe("hardening of the write guard (#534)", () => {
     });
   });
 
+  describe("a quoted word is not a file descriptor", () => {
+    it.each([
+      "if { true '2'<<'EOF' } touch /x\nEOF",
+      "{ true '2'<<'EOF' } always { touch /x }\nEOF",
+      "if { true \"2\"<<'EOF' } touch /x\nEOF",
+      "if { true \\2<<'EOF' } touch /x\nEOF",
+      "if { true '2'>/dev/null } touch /x",
+      "if { true '2'> /dev/null } touch /x",
+      "if { true 2>/dev/null '3'<<'EOF' } touch /x\nEOF",
+    ])("still sees the bare brace after a redirect: %s", (command) => {
+      expect(bash(command).allow).toBe(false);
+    });
+
+    it("reads a quoted digit before a redirect as an operand, not a descriptor", () => {
+      expect(bash("rm '2'>/dev/null").allow).toBe(false);
+      expect(bash("rm '2'> /dev/null").allow).toBe(false);
+      expect(bash("rm \\2>/dev/null").allow).toBe(false);
+      expect(bash("echo '2'>/dev/null").allow).toBe(true);
+    });
+
+    it("still reads an unquoted digit as a descriptor", () => {
+      expect(bash("git status 2>/dev/null").allow).toBe(true);
+      expect(bash("git status 2>&1").allow).toBe(true);
+      expect(bash("rm 2>/dev/null").allow).toBe(true);
+    });
+
+    it("does not carry a quoted flag past a here-document", () => {
+      expect(bash("cat <<'EOF'\nx\nEOF\nrg '}' file").allow).toBe(true);
+      expect(bash("rg '}' file <<'EOF'\nx\nEOF").allow).toBe(true);
+    });
+  });
+
   describe("commands the reviewers use", () => {
     it.each([
       "gh pr diff 534",

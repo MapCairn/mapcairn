@@ -151,11 +151,13 @@ function backslash(lexer) {
     return false;
   }
   const next = peek(lexer, 1);
-  lexer.quoted = true;
   if (next === "\n") {
     lexer.continued = true;
     lexer.index += 2;
-  } else if (ESCAPABLE.test(next)) {
+    return true;
+  }
+  lexer.quoted = true;
+  if (ESCAPABLE.test(next)) {
     append(lexer, next);
     lexer.index += 2;
   } else {
@@ -326,10 +328,12 @@ function redirect(lexer) {
   if (char !== ">" && char !== "<") {
     return false;
   }
-  const isDescriptor = lexer.word !== null && /^\d+$/.test(lexer.word);
+  const isDescriptor =
+    lexer.word !== null && !lexer.quoted && /^\d+$/.test(lexer.word);
   const prefix = isDescriptor ? (lexer.word ?? "") : "";
   if (isDescriptor) {
     lexer.word = null;
+    lexer.quoted = false;
   }
   endWord(lexer);
   const isHeredoc =
