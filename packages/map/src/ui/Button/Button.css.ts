@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
 import { focusRing, tokens } from "@mapcairn/theme";
-import { recipe } from "@vanilla-extract/recipes";
+import { primitiveRecipe } from "../primitiveRecipe";
 
 const notDisabled = ':not([aria-disabled="true"])';
 
@@ -10,7 +10,7 @@ const notDisabled = ':not([aria-disabled="true"])';
  * (transparent unless the variant draws one) so forced colours paints the
  * shape and the variants share one box size.
  */
-export const button = recipe({
+export const button = primitiveRecipe({
   base: {
     display: "inline-flex",
     alignItems: "center",
