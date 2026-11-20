@@ -37,6 +37,7 @@ export type ThemeColours = Pick<
 
 /** A proposed theme: some colour roles, per theme. A role left out keeps its default. */
 export interface ThemeOverride {
+  /** Colour roles to change, per theme. */
   colour?: {
     light?: Partial<ThemeColours>;
     dark?: Partial<ThemeColours>;
@@ -45,6 +46,7 @@ export interface ThemeOverride {
 
 /** The measured contrast of one pair, in one theme, over one backdrop. */
 export interface ContrastFinding {
+  /** The theme the finding is for. */
   theme: ThemeName;
   /** The role drawn: text, an icon, an edge or a ring. */
   foreground: keyof ThemeColours;
@@ -52,6 +54,7 @@ export interface ContrastFinding {
   background: PairBackground;
   /** The map backdrop checked over, or `null` for an opaque background. */
   backdrop: BackdropName | null;
+  /** Whether the foreground is text or a non-text mark. */
   kind: PairKind;
   /** The contrast ratio, unrounded. */
   ratio: number;
@@ -83,6 +86,7 @@ export interface InvalidColour {
   role: string;
   /** The value as the host supplied it. */
   value: unknown;
+  /** Why it could not be checked. */
   reason: InvalidColourReason;
 }
 
@@ -90,7 +94,9 @@ export interface InvalidColour {
 export interface ThemeContrastCheck {
   /** True when nothing is invalid and every finding passes. */
   passes: boolean;
+  /** One finding for each pair, theme and backdrop that could be checked. */
   findings: ContrastFinding[];
+  /** What could not be checked, and why. */
   invalid: InvalidColour[];
 }
 

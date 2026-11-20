@@ -8,10 +8,29 @@
 const blur_2: `var(--${string})`;
 export { blur_2 as blur }
 
+// @public
+export function checkThemeContrast(override: ThemeOverride): ThemeContrastCheck;
+
 // Warning: (ae-forgotten-export) The symbol "ColourInput" needs to be exported by the entry point index.d.ts
 //
 // @public
 export function compositeOver(foreground: ColourInput, backdrop: ColourInput): Rgba;
+
+// @public
+export interface ContrastFinding {
+    // Warning: (ae-forgotten-export) The symbol "BackdropName" needs to be exported by the entry point index.d.ts
+    backdrop: BackdropName | null;
+    // Warning: (ae-forgotten-export) The symbol "PairBackground" needs to be exported by the entry point index.d.ts
+    background: PairBackground;
+    foreground: keyof ThemeColours;
+    // Warning: (ae-forgotten-export) The symbol "PairKind" needs to be exported by the entry point index.d.ts
+    kind: PairKind;
+    passes: boolean;
+    ratio: number;
+    required: number;
+    // Warning: (ae-forgotten-export) The symbol "ThemeName" needs to be exported by the entry point index.d.ts
+    theme: ThemeName;
+}
 
 // @public
 export function contrastRatio(a: ColourInput, b: ColourInput): number;
@@ -22,6 +41,17 @@ export const focusRing: {
     readonly outlineOffset: `var(--${string})`;
     readonly boxShadow: `0 0 0 var(--${string}) var(--${string})`;
 };
+
+// @public
+export interface InvalidColour {
+    reason: InvalidColourReason;
+    role: string;
+    theme: ThemeName | null;
+    value: unknown;
+}
+
+// @public
+export type InvalidColourReason = "unknown-role" | "unparseable" | "out-of-gamut" | "translucent" | "unknown-key" | "malformed" | "unreadable";
 
 // @public
 export const mapOverlayTokens: {
@@ -63,6 +93,26 @@ export const surfaceBlurStyle: {
 
 // @public
 export const surfaceBlurSupported = "(backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))";
+
+// Warning: (ae-forgotten-export) The symbol "ColourRoles" needs to be exported by the entry point index.d.ts
+//
+// @public
+export type ThemeColours = Pick<ColourRoles, "surface" | "surfaceRaised" | "text" | "textMuted" | "accent" | "accentTint" | "accentContrast" | "hairline" | "controlBoundary" | "danger" | "dangerTint" | "scrim" | "focusRing" | "focusRingInner">;
+
+// @public
+export interface ThemeContrastCheck {
+    findings: ContrastFinding[];
+    invalid: InvalidColour[];
+    passes: boolean;
+}
+
+// @public
+export interface ThemeOverride {
+    colour?: {
+        light?: Partial<ThemeColours>;
+        dark?: Partial<ThemeColours>;
+    };
+}
 
 // @public
 export function toHex(colour: Rgba): string;
