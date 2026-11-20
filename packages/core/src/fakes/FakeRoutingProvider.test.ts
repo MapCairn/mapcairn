@@ -25,6 +25,7 @@ runRoutingProviderContract(
         willReturnRoute: (result) => provider.setRoute(result),
         willReturnArea: (result) => provider.setReachableArea(result),
         willFail: (kind) => provider.failWith(kind),
+        respondWithOversizeAnswer: () => provider.failWith("invalid"),
         hold: () => {
           provider.holdNextRoute();
           provider.holdNextReachableArea();

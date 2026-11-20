@@ -13,7 +13,11 @@ import { PhotonSuggestionProvider } from "./PhotonSuggestionProvider";
 type Script =
   | { kind: "results"; results: readonly SearchResult[] }
   | { kind: "fail"; failure: SearchErrorKind }
-  | { kind: "hold" };
+  | { kind: "hold" }
+  | { kind: "oversize" };
+
+/** A limit small enough that the oversize answer below stays a few hundred bytes. */
+const SMALL_LIMIT = 1024;
 
 function toPhoton(result: SearchResult) {
   return {
@@ -68,6 +72,11 @@ function scriptedFetch() {
           );
         });
       }
+      if (current.kind === "oversize") {
+        return Promise.resolve(
+          jsonResponse(collection([{ pad: "x".repeat(SMALL_LIMIT * 2) }])),
+        );
+      }
       if (current.kind === "fail") {
         if (current.failure === "offline") {
           online = false;
@@ -115,12 +124,13 @@ function setup(
 }
 
 runSuggestionProviderContract("PhotonSuggestionProvider", () => {
-  const { scripted, provider } = setup();
+  const { scripted, provider } = setup({ maxResponseBytes: SMALL_LIMIT });
   return {
     provider,
     controls: {
       willReturn: (results) => scripted.setScript({ kind: "results", results }),
       willFail: (failure) => scripted.setScript({ kind: "fail", failure }),
+      respondWithOversizeAnswer: () => scripted.setScript({ kind: "oversize" }),
       hold: () => scripted.setScript({ kind: "hold" }),
     },
   };
@@ -378,16 +388,43 @@ describe("PhotonSuggestionProvider", () => {
       const { scripted, provider } = setup();
       const controller = new AbortController();
       scripted.answerWith(() => {
-        const response = new Response("{}");
-        vi.spyOn(response, "json").mockImplementation(() => {
-          controller.abort();
-          return Promise.reject(new DOMException("aborted", "AbortError"));
+        const body = new ReadableStream<Uint8Array>({
+          pull(stream) {
+            controller.abort();
+            stream.error(new DOMException("aborted", "AbortError"));
+          },
         });
-        return Promise.resolve(response);
+        return Promise.resolve(new Response(body));
       });
       await expect(
         provider.suggest("a", { signal: controller.signal }),
       ).rejects.toBeInstanceOf(PortAbortError);
+    });
+
+    it("has failed when the body stops with an error", async () => {
+      const { scripted, provider } = setup();
+      scripted.answerWith(() => {
+        const body = new ReadableStream<Uint8Array>({
+          pull(stream) {
+            stream.error(new TypeError("reset"));
+          },
+        });
+        return Promise.resolve(new Response(body));
+      });
+      const error = await provider.suggest("a").catch((e: unknown) => e);
+      expect((error as SearchError).kind).toBe("failed");
+    });
+
+    it("limits a body to 256 KiB unless told otherwise", async () => {
+      const { scripted, provider } = setup();
+      scripted.answerWith(() =>
+        Promise.resolve(
+          new Response("{}", { headers: { "content-length": "262145" } }),
+        ),
+      );
+      const error = await provider.suggest("a").catch((e: unknown) => e);
+      expect((error as SearchError).kind).toBe("failed");
+      expect((error as SearchError).message).toContain("262144");
     });
 
     it("treats an AbortError the caller did not cause as a cancellation", async () => {

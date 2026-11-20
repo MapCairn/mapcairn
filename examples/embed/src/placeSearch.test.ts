@@ -24,7 +24,11 @@ import { SAMPLE_PLACES } from "./samplePlaces";
 type Script =
   | { kind: "results"; results: readonly SearchResult[] }
   | { kind: "fail"; failure: SearchErrorKind }
-  | { kind: "hold" };
+  | { kind: "hold" }
+  | { kind: "oversize" };
+
+/** A limit small enough that the oversize answer below stays a few kilobytes. */
+const SMALL_LIMIT = 1024;
 
 /** A result as the example's service would send it. */
 function toItem(result: SearchResult) {
@@ -56,6 +60,11 @@ function scriptedFetch() {
             reject(new DOMException("aborted", "AbortError")),
           );
         });
+      }
+      if (current.kind === "oversize") {
+        return Promise.resolve(
+          jsonResponse({ results: [{ pad: "x".repeat(SMALL_LIMIT * 2) }] }),
+        );
       }
       if (current.kind === "fail") {
         if (current.failure === "offline") {
@@ -93,6 +102,7 @@ function scriptedControls(scripted: ReturnType<typeof scriptedFetch>) {
       scripted.setScript({ kind: "results", results }),
     willFail: (failure: SearchErrorKind) =>
       scripted.setScript({ kind: "fail", failure }),
+    respondWithOversizeAnswer: () => scripted.setScript({ kind: "oversize" }),
     hold: () => scripted.setScript({ kind: "hold" }),
   };
 }
@@ -102,6 +112,7 @@ function setupSearch() {
   const provider = new PlaceSearchProvider({
     fetch: scripted.fetchMock as PlacesFetch,
     isOnline: scripted.isOnline,
+    maxResponseBytes: SMALL_LIMIT,
   });
   return { scripted, provider };
 }
@@ -111,6 +122,7 @@ function setupSuggestions() {
   const provider = new PlaceSuggestionProvider({
     fetch: scripted.fetchMock as PlacesFetch,
     isOnline: scripted.isOnline,
+    maxResponseBytes: SMALL_LIMIT,
   });
   return { scripted, provider };
 }
