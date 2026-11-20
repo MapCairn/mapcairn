@@ -559,20 +559,69 @@ describe("MapChrome layout", () => {
       expect(cssVar(chromeVars.mapKeyRaise)).toBe("0px");
     });
 
-    it("tells the credits popover how far the toolbar's top is above the credits, and how much room that leaves", () => {
-      desktopRow({ left: 529, width: 382 });
-      // The credits rest at the row's bottom (a 44 px slot); the toolbar is 150 px tall.
-      expect(cssVar(chromeVars.bottomEndCentreRise)).toBe(`${150 - 44}px`);
-      // The room above the toolbar's top: from the end stack's bottom (72 + 300) up to it.
-      expect(cssVar(chromeVars.bottomEndCentreRoom)).toBe(
-        `${900 - 12 - 150 - 12 - (72 + 300)}px`,
-      );
-    });
+    describe("the open credits popover", () => {
+      /** A desktop row with the credits popover in bottom-end, drawn at `popover`. */
+      function withPopover(popover: { left: number; width: number } | null) {
+        mount({
+          bottomEnd: (
+            <section
+              data-chrome="attribution-popover"
+              hidden={popover === null}
+            >
+              credits
+            </section>
+          ),
+        });
+        resize(1440, 900);
+        span("bottom-start", 12, 112);
+        span("bottom-end", 1384, 44);
+        place("bottom-centre", 900 - 12 - 150, 150, 465);
+        span("bottom-centre", 177, 465);
+        const element = root().querySelector<HTMLElement>(
+          '[data-chrome="attribution-popover"]',
+        );
+        if (element && popover) {
+          mockRect(element, { ...popover, top: 600, height: 120 });
+        }
+        act(() => {
+          observers.trigger();
+        });
+      }
 
-    it("has no centre rise while nothing is in the bottom-centre slot", () => {
-      mount();
-      resize(1440, 900);
-      expect(cssVar(chromeVars.bottomEndCentreRise)).toBe("0px");
+      it("rises over a toolbar it shares width with, though its button does not, in the observer's callback", () => {
+        // The toolbar spans 177 to 642; the popover starts at 590. The credits
+        // rest at 844 and the toolbar's top is at 738.
+        withPopover({ left: 590, width: 218 });
+        expect(cssVar(chromeVars.bottomEndRaise)).toBe("0px");
+        expect(cssVar(chromeVars.popoverCentreRise)).toBe(
+          `${844 - (900 - 12 - 150)}px`,
+        );
+      });
+
+      it("does not rise over a toolbar it shares no width with", () => {
+        withPopover({ left: 1100, width: 218 });
+        expect(cssVar(chromeVars.popoverCentreRise)).toBe("0px");
+      });
+
+      it("does not rise while it is closed", () => {
+        withPopover(null);
+        expect(cssVar(chromeVars.popoverCentreRise)).toBe("0px");
+      });
+
+      it("measures again when it opens or moves beside the end stack, which resize nothing", async () => {
+        withPopover({ left: 1100, width: 218 });
+        const element = root().querySelector<HTMLElement>(
+          '[data-chrome="attribution-popover"]',
+        );
+        if (!element) {
+          throw new Error("No popover");
+        }
+        mockRect(element, { left: 590, top: 600, width: 218, height: 120 });
+        element.dataset.placement = "beside";
+        await vi.waitFor(() => {
+          expect(cssVar(chromeVars.popoverCentreRise)).toBe("106px");
+        });
+      });
     });
 
     it("hides the tour card under a toolbar that shares its width, and keeps it beside one that does not", () => {

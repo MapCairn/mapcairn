@@ -28,15 +28,11 @@ export const chromeVars = {
    */
   bottomEndRise: "--chrome-bottom-end-rise",
   /**
-   * How far the top of the bottom-centre slot is above the top of the
-   * bottom-end slot (zero or positive): the credits popover rises this far
-   * more, so it clears a toolbar whose width it shares (`data-centre-clear`).
+   * How much further the credits popover rises, over what its `transform` rise
+   * already gives, to clear the bottom-centre slot it shares width with (zero or
+   * positive). It is the `translate` property, written in the observer callback.
    */
-  bottomEndCentreRise: "--chrome-bottom-end-centre-rise",
-  /** The room above the bottom row and the bottom-centre slot, whichever is higher. */
-  bottomEndCentreRoom: "--chrome-bottom-end-centre-room",
-  /** Like {@link chromeVars.bottomEndCentreRoom}, for a popover placed beside the end stack. */
-  bottomEndCentreBesideRoom: "--chrome-bottom-end-centre-beside-room",
+  popoverCentreRise: "--chrome-popover-centre-rise",
   /** Vertical room above the bottom row that stays clear of the end stack. */
   bottomEndRoom: "--chrome-bottom-end-room",
   /**

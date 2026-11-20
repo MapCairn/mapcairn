@@ -21,7 +21,6 @@ import { CONNECTION_SETTLE_MS, TIMER_SLACK_MS } from "./support/timers";
  */
 
 test.use({ reducedMotion: "reduce", fastCredits: true });
-test.setTimeout(180_000);
 
 /** A box in CSS pixels. */
 interface Box {
@@ -193,10 +192,19 @@ interface Walk {
 function checkControl(walk: Walk, name: ControlName): void {
   const before = walk.rest[name];
   const now = walk.after[name];
-  if (!before || !now) {
+  const context = `${name} ${walk.context}`;
+  if (!before) {
     return;
   }
-  const context = `${name} ${walk.context}`;
+  expect
+    .soft(
+      now,
+      `${context}: it is still on screen (none of these states gives it way)`,
+    )
+    .toBeDefined();
+  if (!now) {
+    return;
+  }
   // A surface closer than a gap counts as covering: a control keeps a gap clear.
   const reach = grown(before, CHROME_GAP_PX);
   if (!walk.covering.some((surface) => intersects(reach, surface))) {
@@ -280,18 +288,46 @@ function checkPopover(walk: Walk): void {
   }
 }
 
-for (const size of SIZES) {
-  test(`each bottom-corner control holds still unless a tool that opens would cover it, and then clears it, at ${size.name}`, async ({
-    page,
-    mapPage,
-  }) => {
-    await mockLayerProviders(page);
-    await page.setViewportSize(size);
-    await scriptSearch(page);
-    for (const state of TOOL_STATES) {
-      await test.step(state, async () => {
+/** A viewport of the matrix. */
+interface Size {
+  readonly name: string;
+  readonly width: number;
+  readonly height: number;
+}
+
+/** One state of the chrome. */
+type ToolState = (typeof TOOL_STATES)[number];
+
+/** Larger text, set the way `text-size.spec.ts` sets it. */
+async function setTextSize(page: Page, size: string): Promise<void> {
+  await page.evaluate((value) => {
+    document.documentElement.style.fontSize = value;
+  }, size);
+}
+
+/**
+ * One test for each size and state: the corner controls before and after the
+ * state is entered. `textSize` is applied before the first reading.
+ */
+function defineMatrix(
+  sizes: readonly Size[],
+  states: readonly ToolState[],
+  textSize?: string,
+): void {
+  for (const size of sizes) {
+    for (const state of states) {
+      test(`each bottom-corner control holds still unless it would be covered, and then clears it, with ${state} at ${size.name}`, async ({
+        page,
+        mapPage,
+      }) => {
+        await mockLayerProviders(page);
+        await page.setViewportSize(size);
+        await scriptSearch(page);
         await mapPage.goto(KEYED_LAYERS);
         await collapseCredits(mapPage);
+        if (textSize) {
+          await setTextSize(page, textSize);
+        }
         await expect(mapPage.mapKey).toBeVisible();
         await waitForStableLayout(page);
         const rest = await controlBoxes(page);
@@ -313,8 +349,78 @@ for (const size of SIZES) {
         checkPopover(walk);
       });
     }
-  });
+  }
 }
+
+defineMatrix(SIZES, TOOL_STATES);
+
+/** A phone on its side gets the side panel layout, with little height. */
+const LANDSCAPE_PHONE = { name: "landscape phone", width: 844, height: 390 };
+
+test.describe("landscape phone", () => {
+  defineMatrix(
+    [LANDSCAPE_PHONE],
+    ["measure active", "draw active", "sheet open"],
+  );
+});
+
+test.describe("right to left", () => {
+  test.use({ direction: "rtl" });
+  defineMatrix(
+    [SIZES[1], SIZES[2]],
+    ["measure active", "draw active", "sheet open"],
+  );
+});
+
+test.describe("Afrikaans, whose toolbar words are longer", () => {
+  test.use({ language: "af" });
+  defineMatrix([SIZES[1], SIZES[2]], ["measure active", "draw active"]);
+});
+
+test.describe("200 percent text", () => {
+  defineMatrix([SIZES[1], SIZES[2]], ["measure active", "draw active"], "200%");
+});
+
+test("a live resize with a tool open lifts the corners where the toolbar spans the row and lets them rest where it does not", async ({
+  page,
+  mapPage,
+}) => {
+  await mockLayerProviders(page);
+  await page.setViewportSize({ width: 820, height: 1180 });
+  await mapPage.goto(KEYED_LAYERS);
+  await collapseCredits(mapPage);
+  await mapPage.startMeasuring();
+  await waitForStableLayout(page);
+  const restingBottom = (height: number) => height - CHROME_GAP_PX;
+
+  for (const size of [
+    { width: 390, height: 844 },
+    { width: 1440, height: 900 },
+    { width: 820, height: 1180 },
+  ]) {
+    await page.setViewportSize(size);
+    await waitForStableLayout(page);
+    const credits = await boxOf(page, CONTROLS.credits);
+    const toolbar = await boxOf(page, '[data-chrome="bottom-centre"]');
+    expect(credits, `credits at ${size.width}`).not.toBeNull();
+    expect(toolbar, `toolbar at ${size.width}`).not.toBeNull();
+    if (size.width < 768) {
+      expect(
+        intersects(credits as Box, toolbar as Box),
+        `credits clear the toolbar at ${size.width}`,
+      ).toBe(false);
+      expect(
+        (credits as Box).bottom,
+        `credits are lifted at ${size.width}`,
+      ).toBeLessThan(restingBottom(size.height) - TOLERANCE);
+    } else {
+      expect(
+        Math.abs((credits as Box).bottom - restingBottom(size.height)),
+        `credits rest at ${size.width}`,
+      ).toBeLessThanOrEqual(ROUNDING_PX);
+    }
+  }
+});
 
 test("the credits and the readout sit a gap above a toolbar that spans their width on a phone", async ({
   page,
@@ -403,4 +509,146 @@ test("the credits popover clears a message that arrives while it is open at tabl
     popover && notice && intersects(popover, notice),
     `the popover ${JSON.stringify(popover)} and the notice ${JSON.stringify(notice)} overlap`,
   ).toBe(false);
+});
+
+/** A frame in which the popover and the bottom-centre slot were over each other. */
+interface OverFrame {
+  readonly frame: number;
+  readonly popover: Box;
+  readonly centre: Box;
+}
+
+/**
+ * Records, on every animation frame while `action` runs and for a few frames
+ * after it, whether the credits popover is over the bottom-centre slot. A
+ * sample is also read from a ResizeObserver callback that runs after
+ * `MapChrome`'s own in the same frame, so it is the state the frame is about
+ * to draw.
+ */
+async function overFramesDuring(
+  page: Page,
+  action: () => Promise<void>,
+): Promise<{ frames: number; over: OverFrame[]; withSlot: number }> {
+  await page.evaluate(() => {
+    const state = {
+      running: true,
+      frames: 0,
+      withSlot: 0,
+      over: [] as { frame: number; popover: Box; centre: Box }[],
+    };
+    const channel = new MessageChannel();
+    const read = (selector: string) => {
+      const rect = document.querySelector(selector)?.getBoundingClientRect();
+      return rect && rect.width > 0 && rect.height > 0
+        ? {
+            left: rect.left,
+            top: rect.top,
+            right: rect.right,
+            bottom: rect.bottom,
+          }
+        : null;
+    };
+    const sample = () => {
+      const popover = read('[data-chrome="attribution-popover"]:not([hidden])');
+      const centre = read('[data-chrome="bottom-centre"]');
+      if (!popover || !centre) {
+        return;
+      }
+      state.frames += 1;
+      state.withSlot += 1;
+      const overlap =
+        popover.left < centre.right - 0.5 &&
+        centre.left < popover.right - 0.5 &&
+        popover.top < centre.bottom - 0.5 &&
+        centre.top < popover.bottom - 0.5;
+      if (overlap) {
+        state.over.push({ frame: state.frames, popover, centre });
+      }
+    };
+    const observer = new ResizeObserver(sample);
+    const watched = new Set<Element>();
+    const watch = () => {
+      for (const target of document.querySelectorAll(
+        '[data-chrome="bottom-centre"], [data-chrome="attribution-popover"]',
+      )) {
+        if (!watched.has(target)) {
+          watched.add(target);
+          observer.observe(target);
+        }
+      }
+    };
+    new MutationObserver(watch).observe(document.body, {
+      childList: true,
+      subtree: true,
+    });
+    watch();
+    const heartbeat = () => {
+      sample();
+      if (state.running) {
+        requestAnimationFrame(() => channel.port2.postMessage(null));
+      } else {
+        observer.disconnect();
+      }
+    };
+    channel.port1.onmessage = heartbeat;
+    channel.port2.postMessage(null);
+    (window as unknown as { __over: typeof state }).__over = state;
+  });
+  await action();
+  await page.evaluate(async () => {
+    for (let index = 0; index < 12; index += 1) {
+      await new Promise((resolve) => requestAnimationFrame(resolve));
+    }
+  });
+  return page.evaluate(() => {
+    const state = (
+      window as unknown as {
+        __over: {
+          running: boolean;
+          frames: number;
+          withSlot: number;
+          over: { frame: number; popover: Box; centre: Box }[];
+        };
+      }
+    ).__over;
+    state.running = false;
+    return {
+      frames: state.frames,
+      over: state.over,
+      withSlot: state.withSlot,
+    };
+  });
+}
+
+/*
+ * Real time and real frames: the page clock the other cases install replays its
+ * animation frames in one batch, without the layout observers in between, so
+ * it cannot show what a frame draws. The credits show themselves for their
+ * first five seconds, which is the time a notice is likeliest to arrive.
+ */
+test.describe("with motion allowed", () => {
+  test.use({ reducedMotion: "no-preference", fastCredits: false });
+
+  test("the credits popover is never over a message that arrives while it is open, in any frame, at tablet size", async ({
+    page,
+    context,
+    mapPage,
+  }) => {
+    await page.setViewportSize({ width: 820, height: 1180 });
+    await mapPage.goto("#map=15.00/48.85660/2.35220");
+    await expect(mapPage.creditsRegion).toBeVisible();
+
+    const result = await overFramesDuring(page, async () => {
+      await context.setOffline(true);
+      await expect(page.getByTestId("connection-notice")).toBeVisible({
+        timeout: CONNECTION_SETTLE_MS + TIMER_SLACK_MS * 5,
+      });
+    });
+    // The frames prove something only if the notice was on screen in some, and
+    // the popover was still open beside it.
+    expect(result.withSlot, "frames with the notice on screen").toBeGreaterThan(
+      0,
+    );
+    expect(result.over, "frames with the popover over the notice").toEqual([]);
+  });
 });

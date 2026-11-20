@@ -7,7 +7,7 @@ import {
   DEFAULT_FAKE_VIEW,
   FAKE_VECTOR_BASEMAP,
 } from "@mapcairn/core";
-import { act, fireEvent, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { CHROME_GAP_PX } from "../chromeSpacing";
 import {
@@ -258,98 +258,6 @@ describe("Attribution", () => {
     fireEvent.click(button());
     size.visible = 140;
     expect(open()).toHaveAttribute("data-placement", "above");
-  });
-});
-
-/*
- * The popover rises over the bottom-centre slot (a toolbar or a message) only
- * while it shares width with it: `data-centre-clear` tells the CSS to leave
- * that rise out when the two never overlap horizontally.
- */
-describe("Attribution beside the bottom-centre slot", () => {
-  const POPOVER = { left: 590, top: 300, width: 218, height: 120 };
-
-  let observers: ResizeObserverStub;
-
-  beforeEach(() => {
-    observers = stubResizeObserver();
-  });
-
-  afterEach(() => {
-    vi.unstubAllGlobals();
-  });
-
-  function mount(
-    centre: { left: number; width: number; height: number } | null,
-  ) {
-    const result = renderChrome(
-      <div data-chrome-root>
-        {centre ? <div data-chrome="bottom-centre">toolbar</div> : null}
-        <Attribution basemap={BASEMAP} />
-      </div>,
-      { map: SETTLED },
-    );
-    const slot = result.container.querySelector<HTMLElement>(
-      '[data-chrome="bottom-centre"]',
-    );
-    const region = result.container.querySelector<HTMLElement>(
-      '[data-chrome="attribution-popover"]',
-    );
-    if (slot && centre) {
-      mockRect(slot, { ...centre, top: 800 });
-    }
-    if (region) {
-      mockRect(region, POPOVER);
-    }
-    return { ...result, slot, region };
-  }
-
-  it("is clear when the toolbar is nowhere near the popover", () => {
-    mount({ left: 177, width: 300, height: 150 });
-    expect(open()).toHaveAttribute("data-centre-clear", "true");
-  });
-
-  it("is not clear when the toolbar shares width with the popover", () => {
-    mount({ left: 177, width: 465, height: 150 });
-    expect(open()).not.toHaveAttribute("data-centre-clear");
-  });
-
-  it("is not clear when the toolbar comes closer to the popover than a gap", () => {
-    mount({
-      left: 177,
-      width: POPOVER.left - 177 + CHROME_GAP_PX - 1,
-      height: 150,
-    });
-    expect(open()).not.toHaveAttribute("data-centre-clear");
-  });
-
-  it("is clear when the slot is empty", () => {
-    mount({ left: 177, width: 465, height: 0 });
-    expect(open()).toHaveAttribute("data-centre-clear", "true");
-    expect(observers.active).toBeGreaterThan(0);
-  });
-
-  it("measures again when a slot that shares width appears while the popover is open", async () => {
-    const { container } = mount(null);
-    const region = open();
-    expect(region).toHaveAttribute("data-centre-clear", "true");
-    const chrome = container.querySelector("[data-chrome-root]");
-    const slot = document.createElement("div");
-    slot.dataset.chrome = "bottom-centre";
-    mockRect(slot, { left: 177, width: 465, height: 150, top: 800 });
-    chrome?.append(slot);
-    await waitFor(() => {
-      expect(region).not.toHaveAttribute("data-centre-clear");
-    });
-    slot.remove();
-    await waitFor(() => {
-      expect(region).toHaveAttribute("data-centre-clear", "true");
-    });
-  });
-
-  it("is clear without a slot", () => {
-    mount(null);
-    expect(open()).toHaveAttribute("data-centre-clear", "true");
   });
 });
 

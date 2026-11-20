@@ -124,6 +124,13 @@ interface Measurements {
   readonly bottomStartRaise: number;
   /** The same for the bottom-end slot. */
   readonly bottomEndRaise: number;
+  /**
+   * How much further the open credits popover must rise, over the rise its
+   * `transform` gives it, to clear the bottom-centre slot when it shares width
+   * with that slot (the popover is wider than its button, so it can where the
+   * button does not). Zero or positive, and zero while the popover is closed.
+   */
+  readonly popoverCentreRise: number;
   /** Bottom edge of the tour card's slot, or null while it is empty. */
   readonly tourBottom: number | null;
   /** Bottom edge of the map key's slot before any lift, or null while it is empty. */
@@ -184,6 +191,42 @@ function mapKeyRaiseAbove(
     return startRaise;
   }
   return Math.min(startRaise, centre.top - rowTop);
+}
+
+/**
+ * How much further the open credits popover must rise to clear the
+ * bottom-centre slot, from where `transform` has put it (`popoverRiseNow`
+ * reads that). The popover is read from its own box, so a placement beside the
+ * end stack, which moves it sideways, is counted.
+ */
+function popoverRiseOverCentre(
+  root: HTMLElement,
+  bottomEnd: { readonly top: number } | null,
+  bottomCentre: { readonly top: number } | null,
+  centreSpan: Span | null,
+  endRaise: number,
+): number {
+  const popover = root.querySelector<HTMLElement>(
+    '[data-chrome="attribution-popover"]:not([hidden])',
+  );
+  if (!popover || !bottomEnd || !bottomCentre || centreSpan === null) {
+    return 0;
+  }
+  const rootBox = root.getBoundingClientRect();
+  const popoverBox = popover.getBoundingClientRect();
+  const popoverSpan = {
+    left: popoverBox.left - rootBox.left,
+    width: popoverBox.width,
+  };
+  if (!sharesWidth(centreSpan, popoverSpan, CHROME_GAP_PX)) {
+    return 0;
+  }
+  const rise = Number.parseFloat(
+    root.style.getPropertyValue(chromeVars.bottomEndRise),
+  );
+  const rowRise =
+    popover.dataset.readoutClear === "true" || Number.isNaN(rise) ? 0 : rise;
+  return Math.max(0, bottomEnd.top + endRaise - bottomCentre.top - rowRise);
 }
 
 function measure(
@@ -252,6 +295,13 @@ function measure(
     ),
     bottomStartRaise: centreSharesStart ? raise : 0,
     bottomEndRaise: centreSharesEnd ? raise : 0,
+    popoverCentreRise: popoverRiseOverCentre(
+      root,
+      bottomEnd,
+      bottomCentre,
+      centreSpan,
+      centreSharesEnd ? raise : 0,
+    ),
     tourBottom: tour && tour.height > 0 ? tour.top + tour.height : null,
     mapKeyBottom:
       mapKey && mapKey.height > 0 ? mapKey.top + mapKey.height : null,
@@ -324,29 +374,9 @@ function mapKeyLiftAbove(
  * stops a gap below the end stack. Placed beside the end stack instead, the
  * popover may rise to a gap below the top-start slot.
  */
-function verticalRoom(
-  m: Measurements,
-  lifts: BottomLifts,
-  centreTop: number | null,
-) {
+function verticalRoom(m: Measurements, lifts: BottomLifts) {
   const rowTop = liftedRowTop(m, lifts);
-  // The popover may share width with the bottom-centre slot even where its
-  // button does not, so it also clears that slot's top (`data-centre-clear`).
-  const centreRowTop =
-    centreTop === null ? rowTop : Math.min(rowTop, centreTop);
   return {
-    bottomEndCentreRise:
-      centreTop === null || m.bottomEndTop === null
-        ? 0
-        : Math.max(0, m.bottomEndTop + lifts.end - centreTop),
-    bottomEndCentreRoom: Math.max(
-      0,
-      centreRowTop - CHROME_GAP_PX - m.endStackBottom,
-    ),
-    bottomEndCentreBesideRoom: Math.max(
-      0,
-      centreRowTop - CHROME_GAP_PX - m.topStartBottom,
-    ),
     endStackMaxHeight: computeEndStackMaxHeight({
       viewportHeight: m.height,
       topOffset: m.endStackTop,
@@ -496,6 +526,16 @@ export function MapChrome({
       `${next.bottomEndRaise}px`,
     );
     root.style.setProperty(chromeVars.mapKeyRaise, `${next.mapKeyRaise}px`);
+    root.style.setProperty(
+      chromeVars.popoverCentreRise,
+      `${next.popoverCentreRise}px`,
+    );
+    const popover = root.querySelector<HTMLElement>(
+      '[data-chrome="attribution-popover"]',
+    );
+    if (popover) {
+      observerRef.current.observe(popover);
+    }
     applyMapKeyPlacement(
       root,
       placeMapKey(next, 0, mapKeyTourBottomRef.current),
@@ -543,8 +583,19 @@ export function MapChrome({
     for (const element of slots.current.values()) {
       observer.observe(element);
     }
+    // The credits popover opens, closes and moves beside the end stack by
+    // attribute, with no change of size that the observer above would report.
+    const popoverChanges = new MutationObserver(() => {
+      update();
+    });
+    popoverChanges.observe(root, {
+      subtree: true,
+      attributes: true,
+      attributeFilter: ["hidden", "data-placement", "data-readout-clear"],
+    });
     return () => {
       observer.disconnect();
+      popoverChanges.disconnect();
       observerRef.current = null;
     };
   }, [update]);
@@ -629,9 +680,7 @@ export function MapChrome({
   };
   const keyLift = mapKeyLiftAbove(measurements, lifts, centreTop);
 
-  const room = measurements
-    ? verticalRoom(measurements, lifts, centreTop)
-    : null;
+  const room = measurements ? verticalRoom(measurements, lifts) : null;
   // The tour card does not shrink or scroll, so when the bottom row (lifted
   // above the sheet or a toolbar) comes up to it, it gives way, as it does at
   // the full detent, and returns when there is room. Only vertical edges are
@@ -671,9 +720,6 @@ export function MapChrome({
   const bottomEndRise = room?.bottomEndRise ?? null;
   const bottomEndRoom = room?.bottomEndRoom ?? null;
   const bottomEndBesideRoom = room?.bottomEndBesideRoom ?? null;
-  const centreRise = room?.bottomEndCentreRise ?? 0;
-  const centreRoom = room?.bottomEndCentreRoom ?? 0;
-  const centreBesideRoom = room?.bottomEndCentreBesideRoom ?? 0;
 
   useLayoutEffect(() => {
     const root = rootRef.current;
@@ -696,9 +742,6 @@ export function MapChrome({
     set(chromeVars.endStackWidth, measurements.endStackWidth);
     set(chromeVars.bottomEndRise, bottomEndRise);
     set(chromeVars.bottomEndRoom, bottomEndRoom);
-    set(chromeVars.bottomEndCentreRise, centreRise);
-    set(chromeVars.bottomEndCentreRoom, centreRoom);
-    set(chromeVars.bottomEndCentreBesideRoom, centreBesideRoom);
     set(chromeVars.bottomEndBesideRoom, bottomEndBesideRoom);
     set(chromeVars.bottomLift, sheetOnly.bottomStartTranslateY);
     set(chromeVars.bottomStartX, startLayout.bottomStartTranslateX);
@@ -714,9 +757,6 @@ export function MapChrome({
     bottomEndRise,
     bottomEndRoom,
     bottomEndBesideRoom,
-    centreRise,
-    centreRoom,
-    centreBesideRoom,
     startLayout.bottomStartTranslateX,
     sheetOnly.bottomStartTranslateY,
     update,
