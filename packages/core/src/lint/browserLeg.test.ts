@@ -13,6 +13,7 @@ import {
   contentTypeOf,
   decodePng,
   earlyRequestProblems,
+  engineStyleProblems,
   MAP_BACKGROUND,
   pixelAt,
   requestProblems,
@@ -329,5 +330,49 @@ describe("contentTypeOf", () => {
 
   it("falls back to a type that is never run", () => {
     expect(contentTypeOf("a.bin")).toBe("application/octet-stream");
+  });
+});
+
+describe("engineStyleProblems", () => {
+  const token = "rgb(248, 244, 240)";
+
+  it("accepts a container with the token's colour and hidden controls", () => {
+    expect(
+      engineStyleProblems({ container: token, probe: token, controls: "none" }),
+    ).toEqual([]);
+  });
+
+  it("fails a container that is not the token's colour", () => {
+    expect(
+      engineStyleProblems({
+        container: "rgba(0, 0, 0, 0)",
+        probe: token,
+        controls: "none",
+      }),
+    ).toHaveLength(1);
+  });
+
+  it("fails when the token itself did not resolve, so a missing stylesheet cannot match itself", () => {
+    const transparent = "rgba(0, 0, 0, 0)";
+    expect(
+      engineStyleProblems({
+        container: transparent,
+        probe: transparent,
+        controls: "none",
+      }),
+    ).toHaveLength(1);
+    expect(
+      engineStyleProblems({ container: "", probe: "", controls: "none" }),
+    ).toHaveLength(1);
+  });
+
+  it("fails controls that show", () => {
+    expect(
+      engineStyleProblems({
+        container: token,
+        probe: token,
+        controls: "block",
+      }),
+    ).toHaveLength(1);
   });
 });

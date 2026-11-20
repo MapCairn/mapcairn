@@ -336,6 +336,9 @@ export function pixelAt(image, x, y) {
   ];
 }
 
+/** What an element with no background computes to. */
+const TRANSPARENT = "rgba(0, 0, 0, 0)";
+
 /** How far a channel may differ from the style's colour: the rounding of a drawn frame. */
 const CHANNEL_TOLERANCE = 2;
 
@@ -406,4 +409,32 @@ export function staticFile(root, requestPath) {
     decoded.endsWith("/") ? `${decoded}index.html` : decoded,
   );
   return target.startsWith(`${root}${path.sep}`) ? target : undefined;
+}
+
+/**
+ * The problems with how the engine's container and controls are styled. The
+ * probe is an element the page gives the map background token, so the token
+ * stylesheet must have resolved to a colour: a page with no stylesheet gives a
+ * transparent probe and a transparent container, which must not pass for equal.
+ *
+ * @param {{ container: string | null, probe: string | null, controls: string | null }} computed Computed values.
+ * @returns {string[]}
+ */
+export function engineStyleProblems({ container, probe, controls }) {
+  const problems = [];
+  if (!probe || probe === TRANSPARENT) {
+    problems.push(
+      `the map background token did not resolve to a colour (${probe || "empty"}), so the token stylesheet did not reach the page`,
+    );
+  } else if (container !== probe) {
+    problems.push(
+      `the engine container's background is ${container}, not the map background token (${probe}), so the engine styles did not reach the page`,
+    );
+  }
+  if (controls !== "none") {
+    problems.push(
+      `the engine's control container shows (display ${controls}), so the engine styles did not reach the page`,
+    );
+  }
+  return problems;
 }

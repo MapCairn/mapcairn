@@ -30,6 +30,7 @@ import {
   contentTypeOf,
   decodePng,
   earlyRequestProblems,
+  engineStyleProblems,
   MAP_BACKGROUND,
   pixelAt,
   requestProblems,
@@ -182,19 +183,35 @@ export async function drawRealMap(folder, executablePath) {
     await page.getByRole("button", { name: "Draw the map" }).click();
 
     const host = page.locator("[data-map-host]");
-    await page.waitForFunction(
-      () => {
-        const region = document.querySelector("[data-map-host]");
-        return (
-          region !== null &&
-          (region.getAttribute("data-state") === "error" ||
-            (region.getAttribute("aria-busy") === "false" &&
-              region.querySelector("canvas.maplibregl-canvas") !== null))
-        );
-      },
-      undefined,
-      { timeout: DRAW_TIMEOUT },
-    );
+    try {
+      await page.waitForFunction(
+        () => {
+          const region = document.querySelector("[data-map-host]");
+          return (
+            region !== null &&
+            (region.getAttribute("data-state") === "error" ||
+              (region.getAttribute("aria-busy") === "false" &&
+                region.querySelector("canvas.maplibregl-canvas") !== null))
+          );
+        },
+        undefined,
+        { timeout: DRAW_TIMEOUT },
+      );
+    } catch (error) {
+      const reported = await page.evaluate(() => window.__violations);
+      throw new Error(
+        [
+          `the map neither loaded nor reported an error within ${DRAW_TIMEOUT / 1000} s`,
+          ...violationProblems({
+            violations: reported,
+            consoleErrors,
+            pageErrors,
+          }),
+          `requests: ${requests.join(", ")}`,
+          error instanceof Error ? error.message : String(error),
+        ].join("\n"),
+      );
+    }
 
     /** @type {string[]} */
     const problems = [];
@@ -220,15 +237,8 @@ export async function drawRealMap(folder, executablePath) {
         violations: window.__violations,
       };
     });
-    if (!failed && styles.container !== styles.probe) {
-      problems.push(
-        `the engine container's background is ${styles.container}, not the map background token (${styles.probe}), so the engine styles did not reach the page`,
-      );
-    }
-    if (!failed && styles.controls !== "none") {
-      problems.push(
-        `the engine's control container shows (display ${styles.controls}), so the engine styles did not reach the page`,
-      );
+    if (!failed) {
+      problems.push(...engineStyleProblems(styles));
     }
 
     problems.push(
