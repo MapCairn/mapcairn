@@ -36,23 +36,24 @@ Read the diff for these, each with `path:line` and the deletion or the simplific
 - Dead code, an export nothing imports, a parameter always passed the same value, a branch no input reaches.
 - A flag argument, a configuration key nobody reads, an option with one caller.
 - A document that restates the code, repeats another document, or describes something not built.
-- A test that repeats another test's assertions with different data and no different outcome. Say what it duplicates; the author decides. Never propose removing the only test of a behaviour.
+- A test that repeats another test's assertions with different data and no different outcome. Say what it duplicates and where the remaining coverage lives; the author decides.
 - Net lines: added minus removed, and for each large file whether the size is the work or the repetition.
 
-Count each proposal's saving in lines or files, so the author can weigh it. Check it before you propose it: grep for users of what you would delete, and read the test that covers it.
+Give each proposal's saving in lines or files, as information for the author; it is not a ranking. Check it before you propose it: grep for users of what you would delete, and read the test that covers it.
 
 ## 3. What you never propose
 
 These are fixed points, and a smaller change is not worth losing one:
 
-- Tests that prove a behaviour, accessibility (semantics, keyboard, focus, contrast), privacy and the Content-Security-Policy, the licence, names and portability checks, or any review step.
+- The only test of a behaviour, and any accessibility (semantics, keyboard, focus, contrast), privacy, security, licence, names or portability check, including the Content-Security-Policy, or any review step. A duplicate test may be reported, with what it duplicates and where the remaining coverage lives.
+- Duplication that `AGENTS.md`, `ARCHITECTURE.md` or a check requires: generated copies, the `PRIVACY.md` and privacy page pair, committed deny lists, API reports, and documents the definition of done requires.
 - The licence and legal terms, public commitments (`PRIVACY.md`, `SECURITY.md`) and a provider's terms.
 - Error handling at a boundary where input is untrusted.
 
-A check that is slow or awkward is a reason to make it faster or clearer, not to drop it. When you are unsure whether something is a fixed point, say so and leave it in.
+A check that is slow or awkward is a reason to make it faster or clearer, not to drop it. A proposal never overrides `AGENTS.md`. When you are unsure whether something is a fixed point or required, report the question, not a cut.
 
 ## 4. Report
 
-Order the proposals by lines saved, largest first, each as `path:line - what could go. Saves: N lines or files. Fix: delete, merge or simplify, and what stays`. Add a short "kept" list of things you questioned and found necessary, with the reason, so the author sees what was checked. If you propose nothing, say what you searched for and did not find. Do not pad: a proposal you cannot back with a path is not one.
+Order the proposals by risk: a safe removal, such as dead code nothing uses, comes above a duplicated test, and a question above a cut. Each is `path:line - what could go. Saves: N lines or files. Fix: delete, merge or simplify, and what stays`. Add a short "kept" list of things you questioned and found necessary, with the reason, so the author sees what was checked. If you propose nothing, say what you searched for and did not find. Do not pad: a proposal you cannot back with a path is not one.
 
 The author decides. A deletion that is its own change goes under **Issues to file**.
