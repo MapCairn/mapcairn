@@ -62,7 +62,9 @@ export interface LayerLoadRequest {
   readonly definition: LayerDefinition;
   /**
    * The box of the map a query layer asks for (see `queryWindow`). Required
-   * for a query layer and ignored for any other.
+   * for a query layer and ignored for any other. A box across the
+   * antimeridian has `east` past 180, and the source asks for each side of
+   * the line (see `feedUrls`).
    */
   readonly area?: Bounds;
   /** Every control's value, already resolved (see `resolveControlValues`). */

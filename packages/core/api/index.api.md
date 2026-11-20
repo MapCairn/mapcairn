@@ -671,6 +671,9 @@ export function decodeDetail(definition: LayerDefinition, raw: unknown, decoders
 export function decodeFeed(definition: LayerDefinition, raw: unknown, decoders: DecoderRegistry): LayerFeature[];
 
 // @public
+export function decodeFeeds(definition: LayerDefinition, raws: readonly unknown[], decoders: DecoderRegistry): LayerFeature[];
+
+// @public
 export function decodeIdentify(definition: IdentifiableLayerDefinition, raw: unknown, decoders: DecoderRegistry, at: IdentifyTarget): LayerFeature[];
 
 // @public
@@ -1699,6 +1702,9 @@ export interface FeedSource {
 
 // @public
 export function feedUrl(definition: LayerDefinition, controls: ControlValues, now: number, area?: Bounds): string;
+
+// @public
+export function feedUrls(definition: LayerDefinition, controls: ControlValues, now: number, area?: Bounds): string[];
 
 // @public
 export function feetToMetres(feet: number): number;
@@ -3313,6 +3319,9 @@ export interface QueryArea {
     // (undocumented)
     readonly type: "Polygon";
 }
+
+// @public
+export function queryBoxes(window: Bounds): Bounds[];
 
 // @public
 export type QueryLayerDefinition = (FeedLayerDefinition | HeatmapLayerDefinition) & {

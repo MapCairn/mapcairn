@@ -4,7 +4,7 @@ import {
   type Bounds,
   type ControlValues,
   type FeedLayerDefinition,
-  feedUrl,
+  feedUrls,
   type HeatmapLayerDefinition,
   isQueryLayer,
   type LayerDefinition,
@@ -96,14 +96,14 @@ export function wantedLoads(inputs: LoadInputs): WantedLoad[] {
     const controls = inputs.controls[id] ?? {};
     const retries = inputs.retries[id] ?? 0;
     if (!isQueryLayer(definition)) {
-      const key = `${feedUrl(definition, controls, now)}#${retries}`;
+      const key = `${feedUrls(definition, controls, now).join(" ")}#${retries}`;
       return [{ id, definition, key, controls }];
     }
     if (!view || isTooFarOut(definition, view)) {
       return [];
     }
     const area = nextQueryWindow(windows.get(id) ?? null, view.area);
-    const key = `${feedUrl(definition, controls, now, area)}#${retries}`;
+    const key = `${feedUrls(definition, controls, now, area).join(" ")}#${retries}`;
     return [{ id, definition, key, controls, area }];
   });
 }

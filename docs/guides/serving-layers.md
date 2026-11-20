@@ -36,6 +36,7 @@ A `vector-tiles` source names a `{z}`, `{x}`, `{y}` template, the zoom window of
 
 A `query` source is a GeoJSON endpoint that takes a box and a limit. The definition's URL must use `{west}`, `{south}`, `{east}` and `{north}`, in decimal degrees, and may use `{limit}`, which is `maxFeatures` plus one so the response shows whether more exist. `maxFeatures` is 1 to 5000, and `minzoom` keeps the layer from asking while the view is too wide for the features to mean anything.
 
+- A view across the antimeridian is asked for in two requests, one for each side of the line, because the box is kept within -180 to 180. Both carry the same limit and the layer keeps the first `maxFeatures` of the joined answers, so a service sees the second request as an ordinary box beside the first. A feature the service returns in both is kept once, by its `id`.
 - The layer asks again only when the view leaves the area last asked for (a window larger than the view, snapped to a grid) or zooms in far enough that a much smaller area would do. There is one request in flight per layer, so small pans send nothing and a layer that is turned off sends nothing more.
 - Answer the box and the limit. Put `{limit}` in the URL and honour it, so the server never builds a response bigger than `maxFeatures` plus one. The guarantee holds only if the URL uses `{limit}`, which is optional; without it the server decides how much to send, and the client draws no more than `maxFeatures` of it.
 - Return features in a stable order. When more than `maxFeatures` come back the client keeps the first ones, so an unstable order makes features appear and vanish between requests.
@@ -104,7 +105,7 @@ For a view over Cape Town the request is `.../items?f=json&bbox=18.2,-34.1,18.7,
 What does not work:
 
 - **Paging.** A `next` link is not followed. The layer keeps the first `maxFeatures` of one response and says to zoom in. A service that caps `limit` below `maxFeatures + 1` may send a shorter page, and the layer then cannot tell that more exist, or may refuse the request (a strict service can answer HTTP 400 for a `limit` above its declared maximum). Set `maxFeatures` at least one below the service's maximum `limit`.
-- **The antimeridian and the poles.** The box is kept within -180 to 180 and -85 to 85 degrees, so it never wraps the antimeridian, though the standard allows it to.
+- **The antimeridian and the poles.** The box is kept within -180 to 180 and -85 to 85 degrees, so it never wraps the antimeridian, though the standard allows it to. A view across the line is asked for as two boxes instead (see above), so the service needs no wrapping box.
 - **Other coordinate systems.** Geometry in a `crs` other than CRS84 is not requested. A feature with any position beyond 180 or 90 degrees is skipped whole.
 - **Format.** The request sets no `Accept` header. The recipe's `f=json` is not part of OGC API Features Part 1, which negotiates the format on `Accept`; some servers use it as a convention. Remove it if the service rejects unknown parameters. A service that answers HTML or another format by default and has no such parameter cannot be used without a proxy. The answer must be JSON.
 

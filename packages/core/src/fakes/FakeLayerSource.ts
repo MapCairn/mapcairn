@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
-import { detailUrl, feedUrl } from "../layers/feed";
+import { detailUrl, feedUrls } from "../layers/feed";
 import { identifyRequestUrl } from "../layers/identify";
 import { LayerError } from "../ports/errors";
 import type {
@@ -128,10 +128,9 @@ export class FakeLayerSource implements LayerSource {
 
   async load(request: LayerLoadRequest): Promise<readonly LayerFeature[]> {
     const { definition, controls, now, signal, area } = request;
-    this.requests.push({
-      ...request,
-      url: feedUrl(definition, controls, now, area),
-    });
+    for (const url of feedUrls(definition, controls, now, area)) {
+      this.requests.push({ ...request, url });
+    }
     await this.#wait(signal, this.#held);
     this.#refuseOversize("feed", definition.id);
     const outcome = this.#outcomes.get(definition.id);

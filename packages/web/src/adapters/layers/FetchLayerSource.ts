@@ -4,10 +4,10 @@ import {
   createDecoderRegistry,
   type DecoderRegistry,
   decodeDetail,
-  decodeFeed,
+  decodeFeeds,
   decodeIdentify,
   detailUrl,
-  feedUrl,
+  feedUrls,
   identifyRequestUrl,
   type LayerDetailRequest,
   LayerError,
@@ -106,12 +106,12 @@ export class FetchLayerSource implements LayerSource {
       loadsFeatures(definition) && definition.source.kind === "feed"
         ? (definition.source.cacheSeconds ?? 0)
         : 0;
-    const raw = await this.#get(
-      feedUrl(definition, controls, now, area),
-      signal,
-      cacheSeconds,
+    const raws = await Promise.all(
+      feedUrls(definition, controls, now, area).map((url) =>
+        this.#get(url, signal, cacheSeconds),
+      ),
     );
-    return decodeFeed(definition, raw, this.#decoders);
+    return decodeFeeds(definition, raws, this.#decoders);
   }
 
   async loadDetail(

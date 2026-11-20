@@ -12,6 +12,7 @@ import {
   loadsFeatures,
 } from "./definition";
 import { matchesFilter } from "./filter";
+import { queryBoxes } from "./query";
 import { fillUrlTemplate } from "./template";
 
 const GEOMETRIES: Readonly<
@@ -53,9 +54,62 @@ export function decodeFeed(
   if (features.length === 0) {
     throw new LayerError("empty");
   }
-  return definition.source.kind === "query"
+  return capQuery(definition, features);
+}
+
+/** A query layer's features cut to one more than its `maxFeatures`; any other layer's, whole. */
+function capQuery(
+  definition: LayerDefinition,
+  features: LayerFeature[],
+): LayerFeature[] {
+  return loadsFeatures(definition) && definition.source.kind === "query"
     ? features.slice(0, definition.source.maxFeatures + 1)
     : features;
+}
+
+/** What decoding one of several responses gives: its features, or none when it held none. */
+function decodeOrNothing(
+  definition: LayerDefinition,
+  raw: unknown,
+  decoders: DecoderRegistry,
+): LayerFeature[] {
+  try {
+    return decodeFeed(definition, raw, decoders);
+  } catch (error) {
+    if (error instanceof LayerError && error.kind === "empty") {
+      return [];
+    }
+    throw error;
+  }
+}
+
+/**
+ * Decodes the responses to the requests `feedUrls` lists, as `decodeFeed`
+ * does for one, and joins them. A feature that more than one response holds
+ * (one on the antimeridian can be in the box on each side) is kept once, by
+ * its id, in the order the responses came, and a query layer's cap applies to
+ * the whole.
+ *
+ * @throws `LayerError` `invalid` when any response cannot be decoded, and
+ *   `empty` when no feature is left in any of them.
+ */
+export function decodeFeeds(
+  definition: LayerDefinition,
+  raws: readonly unknown[],
+  decoders: DecoderRegistry,
+): LayerFeature[] {
+  const [only, ...others] = raws;
+  if (others.length === 0) {
+    return decodeFeed(definition, only, decoders);
+  }
+  const seen = new Set<string>();
+  const features = raws
+    .flatMap((raw) => decodeOrNothing(definition, raw, decoders))
+    .filter((feature) => !seen.has(feature.id) && seen.add(feature.id));
+  if (features.length === 0) {
+    throw new LayerError("empty");
+  }
+  return capQuery(definition, features);
 }
 
 /**
@@ -87,6 +141,9 @@ export function decodeDetail(
  * The URL for a feed or query layer's controls. Missing or invalid values use
  * their defaults. A query layer needs the `area` of the map it asks for
  * (see `queryWindow`), which fills its box and its limit.
+ *
+ * @throws when the `area` crosses the antimeridian, which takes two
+ *   requests: use `feedUrls`.
  */
 export function feedUrl(
   definition: LayerDefinition,
@@ -94,25 +151,46 @@ export function feedUrl(
   now: number,
   area?: Bounds,
 ): string {
+  const [url, ...more] = feedUrls(definition, controls, now, area);
+  if (more.length > 0) {
+    throw new Error(`The area for ${definition.id} crosses the antimeridian.`);
+  }
+  return url as string;
+}
+
+/**
+ * The URLs to ask for a feed or query layer's controls: one, except for a
+ * query layer whose `area` crosses the antimeridian, which gets one for each
+ * side of the line (`queryBoxes`), because a provider takes a box inside
+ * -180 to 180. Join the answers with `decodeFeeds`.
+ */
+export function feedUrls(
+  definition: LayerDefinition,
+  controls: ControlValues,
+  now: number,
+  area?: Bounds,
+): string[] {
   if (!loadsFeatures(definition)) {
     throw new Error(`${definition.id} is not a feed layer.`);
   }
   const values = resolveControlValues(definition, controls, now);
   const { source } = definition;
   if (source.kind === "feed") {
-    return fillUrlTemplate(source.url, templateValues(definition, values));
+    return [fillUrlTemplate(source.url, templateValues(definition, values))];
   }
   if (!area) {
     throw new Error(`${definition.id} is a query layer and needs an area.`);
   }
-  return fillUrlTemplate(source.url, {
-    ...templateValues(definition, values),
-    west: String(area.west),
-    south: String(area.south),
-    east: String(area.east),
-    north: String(area.north),
-    limit: String(source.maxFeatures + 1),
-  });
+  return queryBoxes(area).map((box) =>
+    fillUrlTemplate(source.url, {
+      ...templateValues(definition, values),
+      west: String(box.west),
+      south: String(box.south),
+      east: String(box.east),
+      north: String(box.north),
+      limit: String(source.maxFeatures + 1),
+    }),
+  );
 }
 
 /**
