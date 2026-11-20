@@ -47,7 +47,11 @@ const popoverStep = tokens.space.xs;
  * slot above it.
  */
 function roomAboveStep(
-  room: typeof chromeVars.bottomEndRoom | typeof chromeVars.bottomEndBesideRoom,
+  room: (typeof chromeVars)[
+    | "bottomEndRoom"
+    | "bottomEndBesideRoom"
+    | "bottomEndCentreRoom"
+    | "bottomEndCentreBesideRoom"],
 ): string {
   return `calc(${chromeVar(room, "100vh")} - ${popoverStep})`;
 }
@@ -77,13 +81,13 @@ export const popover = style({
   ...surfaceBlurStyle,
   position: "absolute",
   insetBlockEnd: `calc(100% + ${popoverStep})`,
-  transform: `translateY(calc(-1 * ${chromeVar(chromeVars.bottomEndRise, "0px")}))`,
+  transform: `translateY(calc(-1 * max(${chromeVar(chromeVars.bottomEndRise, "0px")}, ${chromeVar(chromeVars.bottomEndCentreRise, "0px")})))`,
   insetInlineEnd: 0,
   zIndex: zLayer("chromeRaised"),
   boxSizing: "border-box",
   width: "max-content",
   maxWidth: `calc(${chromeVar(chromeVars.width, "100vw")} - 2 * ${tokens.space.inset})`,
-  maxHeight: roomAboveStep(chromeVars.bottomEndRoom),
+  maxHeight: roomAboveStep(chromeVars.bottomEndCentreRoom),
   overflowY: "auto",
   overscrollBehavior: "contain",
   margin: 0,
@@ -101,6 +105,13 @@ export const popover = style({
     "&[hidden]": { display: "none" },
     "&:focus-visible": focusRing,
     '&[data-readout-clear="true"]': {
+      transform: `translateY(calc(-1 * ${chromeVar(chromeVars.bottomEndCentreRise, "0px")}))`,
+    },
+    '&[data-centre-clear="true"]': {
+      transform: `translateY(calc(-1 * ${chromeVar(chromeVars.bottomEndRise, "0px")}))`,
+      maxHeight: roomAboveStep(chromeVars.bottomEndRoom),
+    },
+    '&[data-readout-clear="true"][data-centre-clear="true"]': {
       transform: "none",
     },
     // The rise follows the readout's height, which changes as the cursor
@@ -120,6 +131,9 @@ export const popover = style({
     '&[data-placement="beside"]': {
       insetInlineEnd: besideOffset,
       maxWidth: `calc(${chromeVar(chromeVars.width, "100vw")} - 2 * ${tokens.space.inset} - ${besideOffset} - ${chromeVar(chromeVars.bottomStartX, "0px")})`,
+      maxHeight: roomAboveStep(chromeVars.bottomEndCentreBesideRoom),
+    },
+    '&[data-placement="beside"][data-centre-clear="true"]': {
       maxHeight: roomAboveStep(chromeVars.bottomEndBesideRoom),
     },
   },

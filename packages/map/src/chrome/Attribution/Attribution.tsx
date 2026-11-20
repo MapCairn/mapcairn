@@ -22,6 +22,7 @@ import { useMap } from "../../host";
 import { useMessages, usePreferences } from "../../services";
 import { IconButton } from "../../ui";
 import { CHROME_GAP_PX } from "../chromeSpacing";
+import { sharesWidth } from "../MapChrome/sharesWidth";
 import * as styles from "./Attribution.css";
 
 /**
@@ -68,6 +69,75 @@ function useClearOfReadout(
   open: boolean,
   placement: Placement,
 ): boolean {
+  return useClearOfSlot(
+    regionRef,
+    open,
+    placement,
+    "bottom-start",
+    clearsReadout,
+  );
+}
+
+/** Whether the popover starts a gap after the readout's end edge. */
+function clearsReadout(
+  slot: Edges,
+  region: Edges,
+  direction: "ltr" | "rtl",
+): boolean {
+  return clearsInlineEnd(slot, region, CHROME_GAP_PX, direction);
+}
+
+/** Whether the popover shares no width with the bottom-centre slot, or the slot is empty. */
+function clearsCentre(slot: Edges, region: Edges): boolean {
+  return (
+    slot.height === 0 ||
+    !sharesWidth(
+      { left: slot.left, width: slot.right - slot.left },
+      { left: region.left, width: region.right - region.left },
+      CHROME_GAP_PX,
+    )
+  );
+}
+
+/**
+ * Whether the open credits popover shares no width with the bottom-centre
+ * slot (the toolbars, toasts and banners), so it need not rise over that
+ * slot's top. True when the slot is empty. Measured as
+ * {@link useClearOfReadout} is, and again when the slot slides sideways.
+ */
+function useClearOfCentre(
+  regionRef: RefObject<HTMLElement | null>,
+  open: boolean,
+  placement: Placement,
+): boolean {
+  return useClearOfSlot(
+    regionRef,
+    open,
+    placement,
+    "bottom-centre",
+    clearsCentre,
+  );
+}
+
+/** The edges of a box, as a `DOMRect` gives them. */
+interface Edges {
+  readonly left: number;
+  readonly right: number;
+  readonly height: number;
+}
+
+/**
+ * Whether the open popover is clear of one of the chrome's slots, by the
+ * rule `isClear` applies to the slot's box and the popover's. True when the
+ * chrome has no such slot.
+ */
+function useClearOfSlot(
+  regionRef: RefObject<HTMLElement | null>,
+  open: boolean,
+  placement: Placement,
+  slotName: string,
+  isClear: (slot: Edges, region: Edges, direction: "ltr" | "rtl") => boolean,
+): boolean {
   const [clear, setClear] = useState(false);
   // biome-ignore lint/correctness/useExhaustiveDependencies: the placement moves the popover sideways, which is what is measured.
   useLayoutEffect(() => {
@@ -77,15 +147,13 @@ function useClearOfReadout(
     }
     const chrome = region.closest("[data-chrome-root]");
     const readout =
-      chrome?.querySelector<HTMLElement>('[data-chrome="bottom-start"]') ??
-      null;
+      chrome?.querySelector<HTMLElement>(`[data-chrome="${slotName}"]`) ?? null;
     const measure = () => {
       setClear(
         readout === null ||
-          clearsInlineEnd(
+          isClear(
             readout.getBoundingClientRect(),
             region.getBoundingClientRect(),
-            CHROME_GAP_PX,
             getComputedStyle(region).direction === "rtl" ? "rtl" : "ltr",
           ),
       );
@@ -110,7 +178,7 @@ function useClearOfReadout(
       readout?.removeEventListener("transitionend", onTransitionEnd);
       observer?.disconnect();
     };
-  }, [open, placement, regionRef]);
+  }, [open, placement, regionRef, slotName, isClear]);
   return clear;
 }
 
@@ -199,6 +267,7 @@ export function Attribution({
   const rootRef = useRef<HTMLDivElement>(null);
   const regionRef = useRef<HTMLElement>(null);
   const clearOfReadout = useClearOfReadout(regionRef, open, placement);
+  const clearOfCentre = useClearOfCentre(regionRef, open, placement);
   // With reduced motion the offset is never given a transition: even a
   // near-zero one shows the old position for a frame or two before the new one.
   const settled = useSettled(open && !reducedMotion);
@@ -379,6 +448,7 @@ export function Attribution({
         data-chrome="attribution-popover"
         data-placement={placement}
         data-readout-clear={clearOfReadout ? "true" : undefined}
+        data-centre-clear={clearOfCentre ? "true" : undefined}
         data-settled={settled ? "true" : undefined}
         data-closing={fading ? "true" : undefined}
         className={styles.popover}

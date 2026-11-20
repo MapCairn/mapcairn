@@ -559,6 +559,39 @@ describe("MapChrome layout", () => {
       expect(cssVar(chromeVars.mapKeyRaise)).toBe("0px");
     });
 
+    it("tells the credits popover how far the toolbar's top is above the credits, and how much room that leaves", () => {
+      desktopRow({ left: 529, width: 382 });
+      // The credits rest at the row's bottom (a 44 px slot); the toolbar is 150 px tall.
+      expect(cssVar(chromeVars.bottomEndCentreRise)).toBe(`${150 - 44}px`);
+      // The room above the toolbar's top: from the end stack's bottom (72 + 300) up to it.
+      expect(cssVar(chromeVars.bottomEndCentreRoom)).toBe(
+        `${900 - 12 - 150 - 12 - (72 + 300)}px`,
+      );
+    });
+
+    it("has no centre rise while nothing is in the bottom-centre slot", () => {
+      mount();
+      resize(1440, 900);
+      expect(cssVar(chromeVars.bottomEndCentreRise)).toBe("0px");
+    });
+
+    it("hides the tour card under a toolbar that shares its width, and keeps it beside one that does not", () => {
+      mount({ tour: <div>tour</div> });
+      resize(844, 390, 247);
+      span("tour", 450, 320);
+      place("bottom-centre", 390 - 12 - 158, 158, 382);
+      span("bottom-centre", 231, 382);
+      act(() => {
+        observers.trigger();
+      });
+      expect(slot("tour")).toHaveAttribute("data-crowded", "true");
+      span("bottom-centre", 12, 200);
+      act(() => {
+        observers.trigger();
+      });
+      expect(slot("tour")).toHaveAttribute("data-crowded", "false");
+    });
+
     it("counts a toolbar closer than a gap as sharing its width", () => {
       desktopRow({ left: 1384 - 12 - 100 + 1, width: 100 });
       expect(cssVar(chromeVars.bottomEndRaise)).toBe(`${-(150 + 12)}px`);

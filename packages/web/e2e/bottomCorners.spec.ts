@@ -33,6 +33,12 @@ interface Box {
 /** The tolerance, in px, for two positions to count as the same. */
 const TOLERANCE = 0.5;
 
+/**
+ * The tolerance, in px, for a control to count as not having moved: the chrome
+ * measures whole pixels (`offsetTop`) where a box can be fractional.
+ */
+const ROUNDING_PX = 1;
+
 /** Six layers on, so the map key is as wide as it gets and wider than the readout. */
 const KEYED_LAYERS =
   "#layers=earthquakes,volcano-alerts,fire-alerts,drought-alerts,flood-alerts,cyclones&map=15.00/48.85660/2.35220";
@@ -123,8 +129,18 @@ async function obstructions(page: Page): Promise<Box[]> {
 /** Whether two boxes are in the same place, to within a sub-pixel of rounding. */
 function sameBox(a: Box, b: Box): boolean {
   return (["left", "top", "right", "bottom"] as const).every(
-    (edge) => Math.abs(a[edge] - b[edge]) <= TOLERANCE,
+    (edge) => Math.abs(a[edge] - b[edge]) <= ROUNDING_PX,
   );
+}
+
+/** A box grown by `by` on every side. */
+function grown(box: Box, by: number): Box {
+  return {
+    left: box.left - by,
+    top: box.top - by,
+    right: box.right + by,
+    bottom: box.bottom + by,
+  };
 }
 
 function intersects(a: Box, b: Box): boolean {
@@ -180,7 +196,9 @@ function checkControl(walk: Walk, name: ControlName): void {
     return;
   }
   const context = `${name} ${walk.context}`;
-  if (!walk.covering.some((surface) => intersects(before, surface))) {
+  // A surface closer than a gap counts as covering: a control keeps a gap clear.
+  const reach = grown(before, CHROME_GAP_PX);
+  if (!walk.covering.some((surface) => intersects(reach, surface))) {
     expect
       .soft(
         sameBox(now, before),
@@ -214,15 +232,26 @@ function checkPopover(walk: Walk): void {
   const context = `popover ${walk.context}`;
   const buttonMoved =
     rest.credits && after.credits
-      ? Math.abs(rest.credits.top - after.credits.top) > TOLERANCE
+      ? Math.abs(rest.credits.top - after.credits.top) > ROUNDING_PX
       : false;
-  if (!buttonMoved) {
+  // The readout moves along when the side panel opens, and can then come
+  // under a popover that had it clear.
+  const crowds = [after.readout, ...walk.covering].filter(
+    (box): box is Box => box !== undefined,
+  );
+  const crowded = crowds.some((box) => intersects(walk.restPopover, box));
+  if (!buttonMoved && !crowded) {
     expect
       .soft(
         sameBox(popover, walk.restPopover),
         `${context} holds still (${JSON.stringify(walk.restPopover)} then ${JSON.stringify(popover)})`,
       )
       .toBe(true);
+  }
+  for (const box of crowds) {
+    expect
+      .soft(intersects(popover, box), `${context} clears what is beside it`)
+      .toBe(false);
   }
   expect
     .soft(
@@ -238,9 +267,14 @@ function checkPopover(walk: Walk): void {
     expect
       .soft(space, `${context} stays above its button`)
       .toBeGreaterThanOrEqual(0);
+    // Next to its button, or, where it shares width with the readout or a
+    // toolbar, a step above the top of that, the least that clears it.
+    const nextTo = [after.credits, ...crowds].some(
+      (box) => Math.abs(box.top - popover.bottom) <= 2 * CHROME_GAP_PX,
+    );
     expect
-      .soft(space, `${context} stays next to its button`)
-      .toBeLessThanOrEqual(2 * CHROME_GAP_PX);
+      .soft(nextTo, `${context} stays next to its button or what it clears`)
+      .toBe(true);
   }
 }
 

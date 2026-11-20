@@ -262,6 +262,80 @@ describe("Attribution", () => {
 });
 
 /*
+ * The popover rises over the bottom-centre slot (a toolbar or a message) only
+ * while it shares width with it: `data-centre-clear` tells the CSS to leave
+ * that rise out when the two never overlap horizontally.
+ */
+describe("Attribution beside the bottom-centre slot", () => {
+  const POPOVER = { left: 590, top: 300, width: 218, height: 120 };
+
+  let observers: ResizeObserverStub;
+
+  beforeEach(() => {
+    observers = stubResizeObserver();
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  function mount(
+    centre: { left: number; width: number; height: number } | null,
+  ) {
+    const result = renderChrome(
+      <div data-chrome-root>
+        {centre ? <div data-chrome="bottom-centre">toolbar</div> : null}
+        <Attribution basemap={BASEMAP} />
+      </div>,
+      { map: SETTLED },
+    );
+    const slot = result.container.querySelector<HTMLElement>(
+      '[data-chrome="bottom-centre"]',
+    );
+    const region = result.container.querySelector<HTMLElement>(
+      '[data-chrome="attribution-popover"]',
+    );
+    if (slot && centre) {
+      mockRect(slot, { ...centre, top: 800 });
+    }
+    if (region) {
+      mockRect(region, POPOVER);
+    }
+    return { ...result, slot, region };
+  }
+
+  it("is clear when the toolbar is nowhere near the popover", () => {
+    mount({ left: 177, width: 300, height: 150 });
+    expect(open()).toHaveAttribute("data-centre-clear", "true");
+  });
+
+  it("is not clear when the toolbar shares width with the popover", () => {
+    mount({ left: 177, width: 465, height: 150 });
+    expect(open()).not.toHaveAttribute("data-centre-clear");
+  });
+
+  it("is not clear when the toolbar comes closer to the popover than a gap", () => {
+    mount({
+      left: 177,
+      width: POPOVER.left - 177 + CHROME_GAP_PX - 1,
+      height: 150,
+    });
+    expect(open()).not.toHaveAttribute("data-centre-clear");
+  });
+
+  it("is clear when the slot is empty", () => {
+    mount({ left: 177, width: 465, height: 0 });
+    expect(open()).toHaveAttribute("data-centre-clear", "true");
+    expect(observers.active).toBeGreaterThan(0);
+  });
+
+  it("is clear without a slot", () => {
+    mount(null);
+    expect(open()).toHaveAttribute("data-centre-clear", "true");
+  });
+});
+
+/*
  * The popover rises over the whole bottom row only while it shares width with
  * the readout in bottom-start: `data-readout-clear` tells the CSS to drop the
  * rise once the two never overlap horizontally.

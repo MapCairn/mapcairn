@@ -105,6 +105,8 @@ interface Measurements {
   readonly centreSharesStart: boolean;
   /** Whether the bottom-centre slot shares width with the bottom-end slot. */
   readonly centreSharesEnd: boolean;
+  /** Whether the bottom-centre slot shares width with the tour card's slot. */
+  readonly centreSharesTour: boolean;
   /** Whether the bottom-centre slot shares width with the map key's slot. */
   readonly centreSharesKey: boolean;
   /**
@@ -222,6 +224,7 @@ function measure(
   const centreSharesStart = sharesWithCentre(bottomStart, startShiftX);
   const centreSharesEnd = sharesWithCentre(bottomEnd, 0);
   const centreSharesKey = sharesWithCentre(mapKey, startShiftX);
+  const centreSharesTour = sharesWithCentre(tour, 0);
   const raise = bottomCentre ? -(bottomCentre.height + bottomInset) : 0;
   return {
     width,
@@ -240,6 +243,7 @@ function measure(
     centreSharesStart,
     centreSharesEnd,
     centreSharesKey,
+    centreSharesTour,
     mapKeyRaise: mapKeyRaiseAbove(
       bottomCentre,
       centreSharesKey,
@@ -276,6 +280,43 @@ function liftedRowTop(m: Measurements, lifts: BottomLifts): number {
 }
 
 /**
+ * Whether the tour card has to give way: the bottom row (lifted above the
+ * sheet or a toolbar) comes up to it, or a bottom-centre slot it shares width
+ * with does.
+ */
+function isTourCrowded(
+  m: Measurements | null,
+  lifts: BottomLifts,
+  centreTop: number | null,
+): boolean {
+  if (m === null || m.tourBottom === null) {
+    return false;
+  }
+  const centreEdge =
+    m.centreSharesTour && centreTop !== null
+      ? centreTop
+      : Number.POSITIVE_INFINITY;
+  return (
+    m.tourBottom + CHROME_GAP_PX > Math.min(liftedRowTop(m, lifts), centreEdge)
+  );
+}
+
+/**
+ * How far the map key is lifted for the key's placement: with the bottom-start
+ * slot, and further where the key, which can be wider than the readout,
+ * shares width with the bottom-centre slot and has to clear its top.
+ */
+function mapKeyLiftAbove(
+  m: Measurements | null,
+  lifts: BottomLifts,
+  centreTop: number | null,
+): number {
+  return m?.centreSharesKey && centreTop !== null
+    ? Math.min(lifts.start, centreTop - m.bottomRowTop)
+    : lifts.start;
+}
+
+/**
  * Vertical room between the end stack and the bottom row, once each bottom
  * slot has been lifted. The end stack stops a gap above that row, and the
  * credits popover, which grows up from bottom-end and rises over the whole row
@@ -283,9 +324,29 @@ function liftedRowTop(m: Measurements, lifts: BottomLifts): number {
  * stops a gap below the end stack. Placed beside the end stack instead, the
  * popover may rise to a gap below the top-start slot.
  */
-function verticalRoom(m: Measurements, lifts: BottomLifts) {
+function verticalRoom(
+  m: Measurements,
+  lifts: BottomLifts,
+  centreTop: number | null,
+) {
   const rowTop = liftedRowTop(m, lifts);
+  // The popover may share width with the bottom-centre slot even where its
+  // button does not, so it also clears that slot's top (`data-centre-clear`).
+  const centreRowTop =
+    centreTop === null ? rowTop : Math.min(rowTop, centreTop);
   return {
+    bottomEndCentreRise:
+      centreTop === null || m.bottomEndTop === null
+        ? 0
+        : Math.max(0, m.bottomEndTop + lifts.end - centreTop),
+    bottomEndCentreRoom: Math.max(
+      0,
+      centreRowTop - CHROME_GAP_PX - m.endStackBottom,
+    ),
+    bottomEndCentreBesideRoom: Math.max(
+      0,
+      centreRowTop - CHROME_GAP_PX - m.topStartBottom,
+    ),
     endStackMaxHeight: computeEndStackMaxHeight({
       viewportHeight: m.height,
       topOffset: m.endStackTop,
@@ -566,21 +627,17 @@ export function MapChrome({
     start: startLayout.bottomStartTranslateY,
     end: endLayout.bottomEndTranslateY,
   };
-  // The key can be wider than the readout, so a toolbar can reach it alone.
-  const keyLift =
-    measurements?.centreSharesKey && centreTop !== null
-      ? Math.min(lifts.start, centreTop - measurements.bottomRowTop)
-      : lifts.start;
+  const keyLift = mapKeyLiftAbove(measurements, lifts, centreTop);
 
-  const room = measurements ? verticalRoom(measurements, lifts) : null;
+  const room = measurements
+    ? verticalRoom(measurements, lifts, centreTop)
+    : null;
   // The tour card does not shrink or scroll, so when the bottom row (lifted
   // above the sheet or a toolbar) comes up to it, it gives way, as it does at
   // the full detent, and returns when there is room. Only vertical edges are
   // compared: in the panel layout the row can sit beside the card, so the card
   // may hide where it would have fitted, which is accepted for the simpler rule.
-  const tourCrowded =
-    measurements?.tourBottom != null &&
-    measurements.tourBottom + CHROME_GAP_PX > liftedRowTop(measurements, lifts);
+  const tourCrowded = isTourCrowded(measurements, lifts, centreTop);
   const tourHidden = modal || tourCrowded;
   const keyTourEdge = keyTourBottom(tourHidden, measurements);
   // The measuring observer reads the tour edge this render decided on. A card
@@ -614,6 +671,9 @@ export function MapChrome({
   const bottomEndRise = room?.bottomEndRise ?? null;
   const bottomEndRoom = room?.bottomEndRoom ?? null;
   const bottomEndBesideRoom = room?.bottomEndBesideRoom ?? null;
+  const centreRise = room?.bottomEndCentreRise ?? 0;
+  const centreRoom = room?.bottomEndCentreRoom ?? 0;
+  const centreBesideRoom = room?.bottomEndCentreBesideRoom ?? 0;
 
   useLayoutEffect(() => {
     const root = rootRef.current;
@@ -636,6 +696,9 @@ export function MapChrome({
     set(chromeVars.endStackWidth, measurements.endStackWidth);
     set(chromeVars.bottomEndRise, bottomEndRise);
     set(chromeVars.bottomEndRoom, bottomEndRoom);
+    set(chromeVars.bottomEndCentreRise, centreRise);
+    set(chromeVars.bottomEndCentreRoom, centreRoom);
+    set(chromeVars.bottomEndCentreBesideRoom, centreBesideRoom);
     set(chromeVars.bottomEndBesideRoom, bottomEndBesideRoom);
     set(chromeVars.bottomLift, sheetOnly.bottomStartTranslateY);
     set(chromeVars.bottomStartX, startLayout.bottomStartTranslateX);
@@ -651,6 +714,9 @@ export function MapChrome({
     bottomEndRise,
     bottomEndRoom,
     bottomEndBesideRoom,
+    centreRise,
+    centreRoom,
+    centreBesideRoom,
     startLayout.bottomStartTranslateX,
     sheetOnly.bottomStartTranslateY,
     update,
