@@ -11,6 +11,7 @@ import {
   enterState,
   waitForStableLayout,
 } from "./support/states";
+import { CONNECTION_SETTLE_MS, TIMER_SLACK_MS } from "./support/timers";
 
 /*
  * The bottom-corner controls (the credits button and its popover, the scale
@@ -239,7 +240,8 @@ function checkPopover(walk: Walk): void {
   const crowds = [after.readout, ...walk.covering].filter(
     (box): box is Box => box !== undefined,
   );
-  const crowded = crowds.some((box) => intersects(walk.restPopover, box));
+  const reach = grown(walk.restPopover, CHROME_GAP_PX);
+  const crowded = crowds.some((box) => intersects(reach, box));
   if (!buttonMoved && !crowded) {
     expect
       .soft(
@@ -368,4 +370,37 @@ test.describe("tour card", () => {
       expect(before && after && sameBox(before, after), name).toBe(true);
     }
   });
+});
+
+test("the credits popover clears a message that arrives while it is open at tablet size", async ({
+  page,
+  context,
+  mapPage,
+}) => {
+  await page.setViewportSize({ width: 820, height: 1180 });
+  await mapPage.goto("#map=15.00/48.85660/2.35220");
+  await collapseCredits(mapPage);
+  await mapPage.creditsButton.click();
+  await expect(mapPage.creditsRegion).toBeVisible();
+
+  await context.setOffline(true);
+  await page.waitForFunction(() => navigator.onLine === false);
+  await page.clock.runFor(CONNECTION_SETTLE_MS + TIMER_SLACK_MS);
+  await expect(page.getByTestId("connection-notice")).toBeVisible();
+  await waitForStableLayout(page);
+
+  const popover = await boxOf(page, '[data-chrome="attribution-popover"]');
+  const notice = await boxOf(page, '[data-chrome="bottom-centre"]');
+  expect(popover).not.toBeNull();
+  expect(notice).not.toBeNull();
+  // The case proves something only if the notice comes within a gap of the
+  // popover's width: without that the two could not overlap either way.
+  expect(
+    (notice?.right ?? 0) + CHROME_GAP_PX,
+    "the notice reaches the popover's width",
+  ).toBeGreaterThan(popover?.left ?? Number.POSITIVE_INFINITY);
+  expect(
+    popover && notice && intersects(popover, notice),
+    `the popover ${JSON.stringify(popover)} and the notice ${JSON.stringify(notice)} overlap`,
+  ).toBe(false);
 });

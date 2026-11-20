@@ -139,6 +139,7 @@ function useClearOfSlot(
   isClear: (slot: Edges, region: Edges, direction: "ltr" | "rtl") => boolean,
 ): boolean {
   const [clear, setClear] = useState(false);
+  const readout = useChromeSlot(regionRef, open, slotName);
   // biome-ignore lint/correctness/useExhaustiveDependencies: the placement moves the popover sideways, which is what is measured.
   useLayoutEffect(() => {
     const region = regionRef.current;
@@ -146,8 +147,6 @@ function useClearOfSlot(
       return;
     }
     const chrome = region.closest("[data-chrome-root]");
-    const readout =
-      chrome?.querySelector<HTMLElement>(`[data-chrome="${slotName}"]`) ?? null;
     const measure = () => {
       setClear(
         readout === null ||
@@ -178,8 +177,37 @@ function useClearOfSlot(
       readout?.removeEventListener("transitionend", onTransitionEnd);
       observer?.disconnect();
     };
-  }, [open, placement, regionRef, slotName, isClear]);
+  }, [open, placement, regionRef, readout, isClear]);
   return clear;
+}
+
+/**
+ * The chrome slot called `slotName`, or null while the chrome has none. A
+ * slot comes and goes with what a host puts in it (a toast, a notice), so the
+ * chrome's children are watched while `open`.
+ */
+function useChromeSlot(
+  regionRef: RefObject<HTMLElement | null>,
+  open: boolean,
+  slotName: string,
+): HTMLElement | null {
+  const [slot, setSlot] = useState<HTMLElement | null>(null);
+  useLayoutEffect(() => {
+    const chrome = regionRef.current?.closest("[data-chrome-root]");
+    if (!open || !chrome) {
+      return;
+    }
+    const find = () => {
+      setSlot(chrome.querySelector<HTMLElement>(`[data-chrome="${slotName}"]`));
+    };
+    find();
+    const watcher = new MutationObserver(find);
+    watcher.observe(chrome, { childList: true });
+    return () => {
+      watcher.disconnect();
+    };
+  }, [open, regionRef, slotName]);
+  return slot;
 }
 
 /**

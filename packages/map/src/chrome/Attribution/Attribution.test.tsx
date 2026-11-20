@@ -7,7 +7,7 @@ import {
   DEFAULT_FAKE_VIEW,
   FAKE_VECTOR_BASEMAP,
 } from "@mapcairn/core";
-import { act, fireEvent, screen } from "@testing-library/react";
+import { act, fireEvent, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { CHROME_GAP_PX } from "../chromeSpacing";
 import {
@@ -327,6 +327,24 @@ describe("Attribution beside the bottom-centre slot", () => {
     mount({ left: 177, width: 465, height: 0 });
     expect(open()).toHaveAttribute("data-centre-clear", "true");
     expect(observers.active).toBeGreaterThan(0);
+  });
+
+  it("measures again when a slot that shares width appears while the popover is open", async () => {
+    const { container } = mount(null);
+    const region = open();
+    expect(region).toHaveAttribute("data-centre-clear", "true");
+    const chrome = container.querySelector("[data-chrome-root]");
+    const slot = document.createElement("div");
+    slot.dataset.chrome = "bottom-centre";
+    mockRect(slot, { left: 177, width: 465, height: 150, top: 800 });
+    chrome?.append(slot);
+    await waitFor(() => {
+      expect(region).not.toHaveAttribute("data-centre-clear");
+    });
+    slot.remove();
+    await waitFor(() => {
+      expect(region).toHaveAttribute("data-centre-clear", "true");
+    });
   });
 
   it("is clear without a slot", () => {
