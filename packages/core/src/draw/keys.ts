@@ -12,10 +12,18 @@ import {
 /** The parts of a keyboard event the draw shortcuts read. */
 export type DrawKeyEvent = MapKeyEvent;
 
-/** Screen pixels a selected vertex moves for one arrow key press. */
+/**
+ * Screen pixels a selected vertex moves for one arrow key press.
+ *
+ * @internal
+ */
 export const DRAW_NUDGE_PX = 8;
 
-/** Screen pixels a selected vertex moves for Shift with an arrow key. */
+/**
+ * Screen pixels a selected vertex moves for Shift with an arrow key.
+ *
+ * @internal
+ */
 export const DRAW_NUDGE_PX_LARGE = 32;
 
 /**

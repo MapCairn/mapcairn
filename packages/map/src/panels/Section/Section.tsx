@@ -6,7 +6,11 @@ import { heading, section, subheading } from "./Section.css";
 /** A heading level. The sheet title is an h2, so its sections start at 3. */
 export type HeadingLevel = 2 | 3 | 4 | 5 | 6;
 
-/** The level one below `level`, stopping at 6. */
+/**
+ * The level one below `level`, stopping at 6.
+ *
+ * @internal
+ */
 export function nextHeadingLevel(level: HeadingLevel): HeadingLevel {
   return level === 6 ? 6 : ((level + 1) as HeadingLevel);
 }

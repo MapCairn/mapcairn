@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
 import { message } from "../messages/formatMessage";
-import type { Message, MessageCatalogue, MessageKey } from "../ports/messages";
+import type { Message, MessageCatalogue } from "../ports/messages";
 import type { UnitSystem } from "../ports/settings";
 import {
   metresToFeet,
@@ -28,12 +28,27 @@ export interface MeasurementReading<Unit extends string> {
 }
 
 /** The message key that names a distance unit in words, with the count it takes. */
+export type DistanceUnitMessageKey =
+  | "units.metre"
+  | "units.kilometre"
+  | "units.foot"
+  | "units.mile";
+
+/** The message key that names an area unit in words, with the count it takes. */
+export type AreaUnitMessageKey =
+  | "units.squareMetre"
+  | "units.hectare"
+  | "units.squareKilometre"
+  | "units.squareFoot"
+  | "units.acre"
+  | "units.squareMile";
+
 const DISTANCE_UNIT_KEY = {
   m: "units.metre",
   km: "units.kilometre",
   ft: "units.foot",
   mi: "units.mile",
-} as const satisfies Readonly<Record<DistanceUnit, MessageKey>>;
+} as const satisfies Readonly<Record<DistanceUnit, DistanceUnitMessageKey>>;
 
 const AREA_UNIT_KEY = {
   m2: "units.squareMetre",
@@ -42,7 +57,7 @@ const AREA_UNIT_KEY = {
   ft2: "units.squareFoot",
   ac: "units.acre",
   mi2: "units.squareMile",
-} as const satisfies Readonly<Record<AreaUnit, MessageKey>>;
+} as const satisfies Readonly<Record<AreaUnit, AreaUnitMessageKey>>;
 
 const FEET_PER_TENTH_OF_A_MILE = 528;
 const SQUARE_FEET_PER_TENTH_OF_AN_ACRE = 4356;
@@ -157,7 +172,7 @@ export function formatArea(
 export function describeDistanceReading(
   value: number,
   unit: DistanceUnit,
-): Message<(typeof DISTANCE_UNIT_KEY)[DistanceUnit]> {
+): Message<DistanceUnitMessageKey> {
   return message(DISTANCE_UNIT_KEY[unit], { count: value });
 }
 
@@ -169,7 +184,7 @@ export function describeDistanceReading(
 export function describeDistance(
   metres: number,
   units: UnitSystem,
-): Message<(typeof DISTANCE_UNIT_KEY)[DistanceUnit]> {
+): Message<DistanceUnitMessageKey> {
   const { value, unit } = readDistance(metres, units);
   return describeDistanceReading(value, unit);
 }
@@ -182,7 +197,7 @@ export function describeDistance(
 export function describeArea(
   squareMetres: number,
   units: UnitSystem,
-): Message<(typeof AREA_UNIT_KEY)[AreaUnit]> {
+): Message<AreaUnitMessageKey> {
   const { value, unit } = readArea(squareMetres, units);
   return message(AREA_UNIT_KEY[unit], { count: value });
 }

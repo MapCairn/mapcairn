@@ -14,6 +14,8 @@ export type HandlePointer = "mouse" | "touch";
 /**
  * How far, in CSS pixels, a pointer may wander after pressing a handle and
  * still count as a tap rather than a drag. A finger is allowed more.
+ *
+ * @internal
  */
 export const HANDLE_CLICK_TOLERANCE_PX: Readonly<
   Record<HandlePointer, number>

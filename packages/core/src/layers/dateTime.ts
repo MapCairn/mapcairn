@@ -11,7 +11,11 @@ import type { DateTimeBound, DateTimeControlDefinition } from "./definition";
  */
 
 const MINUTE_MS = 60_000;
-/** Minutes in a day: a control's step must divide it. */
+/**
+ * Minutes in a day: a control's step must divide it.
+ *
+ * @internal
+ */
 export const MINUTES_PER_DAY = 1440;
 /**
  * The furthest back a relative bound may reach, about a hundred years in

@@ -15,6 +15,8 @@ const SLOT = /⁨?\{(\w+)\}⁩?/;
  * Get `text` from the catalogue by passing each slot's own placeholder as its
  * parameter, for example `t("tools.directions.leg", { distance: "{distance}" })`.
  * A name with no entry in `slots` is left as written.
+ *
+ * @internal
  */
 export function fillSlots(
   text: string,

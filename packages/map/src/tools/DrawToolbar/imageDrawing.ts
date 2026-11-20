@@ -12,6 +12,8 @@ import { parseColour, toHex, tokenValues } from "@mapcairn/theme";
  * the light theme (the basemap never follows the theme, so the image does not
  * either). Undefined when there is nothing to draw, so the image is the map
  * alone.
+ *
+ * @internal
  */
 export function drawingForImage(
   shapes: readonly DrawShape[],

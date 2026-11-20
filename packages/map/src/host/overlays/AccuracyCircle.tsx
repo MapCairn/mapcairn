@@ -5,7 +5,11 @@ import { useMap } from "../MapContext";
 import { roundPixel, screenRadiusForMetres, usePlacement } from "./geometry";
 import * as styles from "./overlays.css";
 
-/** The smallest radius drawn, so a very precise fix still shows a circle. */
+/**
+ * The smallest radius drawn, so a very precise fix still shows a circle.
+ *
+ * @internal
+ */
 export const MIN_ACCURACY_RADIUS_PX = 8;
 
 /** Props for {@link AccuracyCircle}. */

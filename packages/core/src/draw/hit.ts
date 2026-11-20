@@ -11,10 +11,18 @@ import type { MapEditHandleKind } from "../ports/map";
 import { shapeRing } from "./shape";
 import type { DrawShape } from "./types";
 
-/** Reach, in CSS pixels, of a handle for a mouse or pen. */
+/**
+ * Reach, in CSS pixels, of a handle for a mouse or pen.
+ *
+ * @internal
+ */
 export const HANDLE_HIT_RADIUS_MOUSE_PX = 12;
 
-/** Reach, in CSS pixels, of a handle for a finger: a 44 px target. */
+/**
+ * Reach, in CSS pixels, of a handle for a finger: a 44 px target.
+ *
+ * @internal
+ */
 export const HANDLE_HIT_RADIUS_TOUCH_PX = 22;
 
 /** A handle that has been placed on the screen. */

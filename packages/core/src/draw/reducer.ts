@@ -6,11 +6,15 @@ import { distanceMetres } from "./geo";
 import { MAX_CIRCLE_RADIUS_METRES, shapeLabel, validateShape } from "./shape";
 import type { DrawIssue, DrawKind, DrawSelection, DrawShape } from "./types";
 
-/** How many undo steps are kept. Older ones are dropped. */
+/**
+ * How many undo steps are kept. Older ones are dropped.
+ *
+ * @internal
+ */
 export const DRAW_HISTORY_LIMIT = 100;
 
 /** The shortest radius a circle can be given by a tap, in metres. */
-export const MIN_CIRCLE_RADIUS_METRES = 0.5;
+const MIN_CIRCLE_RADIUS_METRES = 0.5;
 
 /**
  * What the last action did, for the interface to announce. Every action that
@@ -62,7 +66,7 @@ export interface DrawShapeInput {
 }
 
 /** One undo step: the shapes and the selection as they were. */
-interface HistoryEntry {
+export interface DrawHistoryEntry {
   readonly shapes: readonly DrawShape[];
   readonly selection: DrawSelection | null;
 }
@@ -77,8 +81,8 @@ export interface DrawState {
   /** The kind of shape the next tap starts. */
   readonly mode: DrawKind;
   readonly selection: DrawSelection | null;
-  readonly past: readonly HistoryEntry[];
-  readonly future: readonly HistoryEntry[];
+  readonly past: readonly DrawHistoryEntry[];
+  readonly future: readonly DrawHistoryEntry[];
   /**
    * The key of the last coalescing edit. An edit with the same key joins the
    * undo step of the one before, so a drag, or a run of arrow key presses, is
@@ -744,7 +748,7 @@ function reduceDraw(
  * called "Veelhoek 1" rather than "Polygon 1". Pure, as {@link drawReducer}.
  */
 export function createDrawReducer(
-  labels?: Labeller,
+  labels?: Pick<MessageCatalogue, "t">,
 ): (state: DrawState, action: DrawAction) => DrawState {
   return (state, action) => reduceDraw(state, action, labels);
 }

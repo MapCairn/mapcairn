@@ -17,7 +17,11 @@ import { useAnnounce } from "../../ui/LiveRegion";
 /** What is being measured. */
 export type MeasureMode = "distance" | "area";
 
-/** How long the points must stay still before the total is announced. */
+/**
+ * How long the points must stay still before the total is announced.
+ *
+ * @internal
+ */
 export const MEASURE_ANNOUNCE_DELAY_MS = 800;
 
 /** What {@link useMeasure} returns. */

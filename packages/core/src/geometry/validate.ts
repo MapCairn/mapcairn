@@ -6,6 +6,8 @@ import { GeometryError } from "./errors";
 /**
  * How deep a `GeometryCollection` may nest inside another. GeoJSON discourages
  * nesting at all; the limit keeps hostile input from exhausting the stack.
+ *
+ * @internal
  */
 export const MAX_COLLECTION_DEPTH = 16;
 
