@@ -11,6 +11,11 @@ import {
 import { createRequire } from "node:module";
 import path from "node:path";
 import { isEntryPoint } from "./entryPoint.mjs";
+import {
+  MAIN_ENTRY,
+  nameMainEntry,
+  shareMainDeclarations,
+} from "./shareDeclarations.mjs";
 
 /** The export condition that points a build tool at source. */
 export const SOURCE_CONDITION = "@mapcairn/source";
@@ -259,8 +264,28 @@ export async function buildPackage(folder) {
     writeFileSync(path.join(dist, `${stylesheet}.css.d.ts`), "export {};\n");
   }
   emitDeclarations(folder);
-  for (const [name, source] of Object.entries(entries)) {
+  const declarationOf = (/** @type {string} */ source) =>
+    path
+      .join(dist, DECLARATION_FOLDER, source.replace(/^\.\/src\//, ""))
+      .replace(/\.tsx?$/, ".d.ts");
+  // The main entry rolls up first, so the others can import its types from the
+  // package by name instead of repeating them.
+  const ordered = Object.entries(entries).sort(
+    ([a], [b]) => Number(b === MAIN_ENTRY) - Number(a === MAIN_ENTRY),
+  );
+  for (const [name, source] of ordered) {
+    const main = entries[MAIN_ENTRY];
+    if (name !== MAIN_ENTRY && main !== undefined) {
+      shareMainDeclarations(
+        path.join(dist, DECLARATION_FOLDER),
+        declarationOf(main),
+        declarationOf(source),
+      );
+    }
     await rollUpDeclarations(folder, name, source, manifestPath);
+    if (name !== MAIN_ENTRY) {
+      nameMainEntry(path.join(dist, `${name}.d.ts`), manifest.name);
+    }
   }
   rmSync(path.join(dist, DECLARATION_FOLDER), { recursive: true, force: true });
   // The stamp is empty, so two builds of the same sources pack to the same

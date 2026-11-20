@@ -4,8 +4,51 @@
 
 ```ts
 
-// Warning: (ae-forgotten-export) The symbol "ClipboardResult" needs to be exported by the entry point contracts.d.ts
-//
+import type { BasemapDefinition } from '@mapcairn/core';
+import type { ClipboardPort } from '@mapcairn/core';
+import type { ClipboardResult } from '@mapcairn/core';
+import type { DevicePreferences } from '@mapcairn/core';
+import type { DevicePreferencesValue } from '@mapcairn/core';
+import type { DrawnLayer } from '@mapcairn/core';
+import type { FeatureQuery } from '@mapcairn/core';
+import { FeatureQueryErrorKind } from '@mapcairn/core';
+import type { FeatureRef } from '@mapcairn/core';
+import type { FeatureSelection } from '@mapcairn/core';
+import type { FeedLayerDefinition } from '@mapcairn/core';
+import type { FileOpener } from '@mapcairn/core';
+import { FileOpenErrorKind } from '@mapcairn/core';
+import type { FileSaver } from '@mapcairn/core';
+import type { FileSaveResult } from '@mapcairn/core';
+import type { IdentifiableLayerDefinition } from '@mapcairn/core';
+import type { LatLng } from '@mapcairn/core';
+import type { LayerCatalogue } from '@mapcairn/core';
+import type { LayerDefinition } from '@mapcairn/core';
+import type { LayerSource } from '@mapcairn/core';
+import { LocationErrorKind } from '@mapcairn/core';
+import type { LocationFix } from '@mapcairn/core';
+import type { LocationProvider } from '@mapcairn/core';
+import type { MapAdapter } from '@mapcairn/core';
+import type { MapHostElement } from '@mapcairn/core';
+import type { MessageCatalogue } from '@mapcairn/core';
+import type { MessageKey } from '@mapcairn/core';
+import type { OpenedFile } from '@mapcairn/core';
+import type { QueryArea } from '@mapcairn/core';
+import type { ReachableAreaResult } from '@mapcairn/core';
+import type { ResolvedTheme } from '@mapcairn/core';
+import type { RouteResult } from '@mapcairn/core';
+import { RoutingErrorKind } from '@mapcairn/core';
+import type { RoutingProvider } from '@mapcairn/core';
+import type { SavedFile } from '@mapcairn/core';
+import { SearchErrorKind } from '@mapcairn/core';
+import type { SearchProvider } from '@mapcairn/core';
+import type { SearchResult } from '@mapcairn/core';
+import type { SelectionHit } from '@mapcairn/core';
+import type { Services } from '@mapcairn/core';
+import type { SettingsStore } from '@mapcairn/core';
+import type { SuggestionProvider } from '@mapcairn/core';
+import type { ThemeSource } from '@mapcairn/core';
+import type { UrlState } from '@mapcairn/core';
+
 // @public
 export type ClipboardContractFailure = Extract<ClipboardResult, {
     ok: false;
@@ -20,26 +63,18 @@ export interface ClipboardControls {
 
 // @public
 export interface ClipboardSubject {
-    // Warning: (ae-forgotten-export) The symbol "ClipboardPort" needs to be exported by the entry point contracts.d.ts
-    //
     // (undocumented)
     readonly clipboard: ClipboardPort;
     // (undocumented)
     readonly controls: ClipboardControls;
 }
 
-// Warning: (ae-forgotten-export) The symbol "QueryArea" needs to be exported by the entry point contracts.d.ts
-//
 // @public
 export const CONTRACT_AREA: QueryArea;
 
-// Warning: (ae-forgotten-export) The symbol "IdentifiableLayerDefinition" needs to be exported by the entry point contracts.d.ts
-//
 // @public
 export const CONTRACT_IDENTIFY_LAYER: IdentifiableLayerDefinition;
 
-// Warning: (ae-forgotten-export) The symbol "FeedLayerDefinition" needs to be exported by the entry point contracts.d.ts
-//
 // @public
 export const CONTRACT_LAYER: FeedLayerDefinition;
 
@@ -66,7 +101,6 @@ export const DATA_SERVICE_NAMES: readonly ["basemaps", "languages"];
 
 // @public
 export interface DevicePreferencesControls {
-    // Warning: (ae-forgotten-export) The symbol "DevicePreferencesValue" needs to be exported by the entry point contracts.d.ts
     set(patch: Partial<DevicePreferencesValue>): void;
 }
 
@@ -74,8 +108,6 @@ export interface DevicePreferencesControls {
 export interface DevicePreferencesSubject {
     // (undocumented)
     readonly controls: DevicePreferencesControls;
-    // Warning: (ae-forgotten-export) The symbol "DevicePreferences" needs to be exported by the entry point contracts.d.ts
-    //
     // (undocumented)
     readonly preferences: DevicePreferences;
 }
@@ -84,7 +116,6 @@ export interface DevicePreferencesSubject {
 export interface FeatureQueryControls {
     failWith(kind: ScriptedFeatureQueryFailure): void;
     hold(): () => void;
-    // Warning: (ae-forgotten-export) The symbol "SelectionHit" needs to be exported by the entry point contracts.d.ts
     respondWith(hits: readonly SelectionHit[]): void;
 }
 
@@ -92,15 +123,12 @@ export interface FeatureQueryControls {
 export interface FeatureQuerySubject {
     // (undocumented)
     readonly controls: FeatureQueryControls;
-    // Warning: (ae-forgotten-export) The symbol "FeatureQuery" needs to be exported by the entry point contracts.d.ts
-    //
     // (undocumented)
     readonly query: FeatureQuery;
 }
 
 // @public
 export interface FeatureSelectionControls {
-    // Warning: (ae-forgotten-export) The symbol "FeatureRef" needs to be exported by the entry point contracts.d.ts
     replaceExternally?(refs: readonly FeatureRef[]): void;
 }
 
@@ -108,8 +136,6 @@ export interface FeatureSelectionControls {
 export interface FeatureSelectionSubject {
     // (undocumented)
     readonly controls: FeatureSelectionControls;
-    // Warning: (ae-forgotten-export) The symbol "FeatureSelection" needs to be exported by the entry point contracts.d.ts
-    //
     // (undocumented)
     readonly selection: FeatureSelection;
 }
@@ -122,9 +148,7 @@ export interface FeatureSelectionSubjectOptions {
 // @public
 export interface FileOpenerControls {
     cancel(): void;
-    // Warning: (ae-forgotten-export) The symbol "OpenedFile" needs to be exported by the entry point contracts.d.ts
     choose(file: OpenedFile): void;
-    // Warning: (ae-forgotten-export) The symbol "FileOpenErrorKind" needs to be exported by the entry point contracts.d.ts
     willFail(kind: Extract<FileOpenErrorKind, "unsupported" | "unreadable">): void;
 }
 
@@ -132,14 +156,10 @@ export interface FileOpenerControls {
 export interface FileOpenerSubject {
     // (undocumented)
     readonly controls: FileOpenerControls;
-    // Warning: (ae-forgotten-export) The symbol "FileOpener" needs to be exported by the entry point contracts.d.ts
-    //
     // (undocumented)
     readonly opener: FileOpener;
 }
 
-// Warning: (ae-forgotten-export) The symbol "FileSaveResult" needs to be exported by the entry point contracts.d.ts
-//
 // @public
 export type FileSaverContractFailure = Extract<FileSaveResult, {
     ok: false;
@@ -147,7 +167,6 @@ export type FileSaverContractFailure = Extract<FileSaveResult, {
 
 // @public
 export interface FileSaverControls {
-    // Warning: (ae-forgotten-export) The symbol "SavedFile" needs to be exported by the entry point contracts.d.ts
     saved(): readonly SavedFile[];
     willFail(reason: FileSaverContractFailure): void;
     willSucceed(): void;
@@ -157,8 +176,6 @@ export interface FileSaverControls {
 export interface FileSaverSubject {
     // (undocumented)
     readonly controls: FileSaverControls;
-    // Warning: (ae-forgotten-export) The symbol "FileSaver" needs to be exported by the entry point contracts.d.ts
-    //
     // (undocumented)
     readonly files: FileSaver;
 }
@@ -168,15 +185,12 @@ export const HOST_SUPPLIED_PORT_NAMES: readonly ["featureQuery", "selection"];
 
 // @public
 export interface LayerCatalogueControls {
-    // Warning: (ae-forgotten-export) The symbol "LayerDefinition" needs to be exported by the entry point contracts.d.ts
     readonly layers: readonly LayerDefinition[];
     settle(): Promise<void>;
 }
 
 // @public
 export interface LayerCatalogueSubject {
-    // Warning: (ae-forgotten-export) The symbol "LayerCatalogue" needs to be exported by the entry point contracts.d.ts
-    //
     // (undocumented)
     readonly catalogue: LayerCatalogue;
     // (undocumented)
@@ -198,8 +212,6 @@ export interface LayerSourceControls {
 export interface LayerSourceSubject {
     // (undocumented)
     readonly controls: LayerSourceControls;
-    // Warning: (ae-forgotten-export) The symbol "LayerSource" needs to be exported by the entry point contracts.d.ts
-    //
     // (undocumented)
     readonly source: LayerSource;
 }
@@ -209,9 +221,7 @@ export interface LocationProviderControls {
     emitError(kind: LocationErrorKind): void;
     emitFix(fix: LocationFix): void;
     hold(): void;
-    // Warning: (ae-forgotten-export) The symbol "LocationErrorKind" needs to be exported by the entry point contracts.d.ts
     willFail(kind: LocationErrorKind): void;
-    // Warning: (ae-forgotten-export) The symbol "LocationFix" needs to be exported by the entry point contracts.d.ts
     willFix(fix: LocationFix): void;
 }
 
@@ -219,23 +229,17 @@ export interface LocationProviderControls {
 export interface LocationProviderSubject {
     // (undocumented)
     readonly controls: LocationProviderControls;
-    // Warning: (ae-forgotten-export) The symbol "LocationProvider" needs to be exported by the entry point contracts.d.ts
-    //
     // (undocumented)
     readonly provider: LocationProvider;
 }
 
 // @public
 export interface MapAdapterControls {
-    // Warning: (ae-forgotten-export) The symbol "BasemapDefinition" needs to be exported by the entry point contracts.d.ts
     readonly basemap: BasemapDefinition;
-    // Warning: (ae-forgotten-export) The symbol "MapAdapter" needs to be exported by the entry point contracts.d.ts
     createFailingMount?(): MapAdapter;
-    // Warning: (ae-forgotten-export) The symbol "DrawnLayer" needs to be exported by the entry point contracts.d.ts
     drawnLayers(): readonly DrawnLayer[];
     failNextBasemap?(): void;
     failNextImage?(): void;
-    // Warning: (ae-forgotten-export) The symbol "MapHostElement" needs to be exported by the entry point contracts.d.ts
     readonly host: MapHostElement;
     readonly hostSize: {
         readonly width: number;
@@ -246,7 +250,6 @@ export interface MapAdapterControls {
     pointerUp(latlng: LatLng, pointer?: "mouse" | "touch"): void;
     settle(): Promise<void>;
     simulateBasemapUnavailable(): void;
-    // Warning: (ae-forgotten-export) The symbol "LatLng" needs to be exported by the entry point contracts.d.ts
     simulateClick(latlng: LatLng): void;
     simulateFatalError(): void;
     simulateFeatureHits(hits: readonly {
@@ -273,13 +276,11 @@ export interface MapAdapterSubject {
 
 // @public
 export interface MessageCatalogueFixture {
-    // Warning: (ae-forgotten-export) The symbol "MessageCatalogue" needs to be exported by the entry point contracts.d.ts
     readonly create: () => MessageCatalogue;
     readonly createIsolating: (language: string, options: {
         readonly direction?: "ltr" | "rtl";
         readonly isolateParameters?: boolean;
     }) => MessageCatalogue;
-    // Warning: (ae-forgotten-export) The symbol "MessageKey" needs to be exported by the entry point contracts.d.ts
     readonly createMissingKey: (key: MessageKey) => MessageCatalogue;
     readonly createWith: (language: string, values: Partial<Record<MessageKey, string>>, numberingSystem?: string) => MessageCatalogue;
 }
@@ -333,7 +334,6 @@ export interface PortContractRunners {
 
 // @public
 export interface PortEntry<K extends PortName> {
-    // Warning: (ae-forgotten-export) The symbol "Services" needs to be exported by the entry point contracts.d.ts
     readonly createFake: () => NonNullable<Services[K]>;
     readonly runContract: PortContractRunners[K];
 }
@@ -346,18 +346,14 @@ export type PortRegistry = {
     readonly [K in PortName]: PortEntry<K>;
 };
 
-// Warning: (ae-forgotten-export) The symbol "AssertNever" needs to be exported by the entry point contracts.d.ts
-//
 // @public
-export type PortsAreExhaustive = AssertNever<Exclude<keyof Services, PortName | (typeof DATA_SERVICE_NAMES)[number]>>;
+export type PortsAreExhaustive<Missing extends never = Exclude<keyof Services, PortName | (typeof DATA_SERVICE_NAMES)[number]>> = Missing;
 
 // @public
 export interface RoutingProviderControls {
     hold(): void;
     willFail(kind: ScriptedRoutingFailure): void;
-    // Warning: (ae-forgotten-export) The symbol "ReachableAreaResult" needs to be exported by the entry point contracts.d.ts
     willReturnArea(result: ReachableAreaResult): void;
-    // Warning: (ae-forgotten-export) The symbol "RouteResult" needs to be exported by the entry point contracts.d.ts
     willReturnRoute(result: RouteResult): void;
 }
 
@@ -365,8 +361,6 @@ export interface RoutingProviderControls {
 export interface RoutingProviderSubject {
     // (undocumented)
     readonly controls: RoutingProviderControls;
-    // Warning: (ae-forgotten-export) The symbol "RoutingProvider" needs to be exported by the entry point contracts.d.ts
-    //
     // (undocumented)
     readonly provider: RoutingProvider;
 }
@@ -422,22 +416,16 @@ export function runThemeSourceContract(name: string, create: () => ThemeSourceSu
 // @public
 export function runUrlStateContract(name: string, create: () => UrlStateSubject): void;
 
-// Warning: (ae-forgotten-export) The symbol "FeatureQueryErrorKind" needs to be exported by the entry point contracts.d.ts
-//
 // @public
 export type ScriptedFeatureQueryFailure = Exclude<FeatureQueryErrorKind, "aborted">;
 
-// Warning: (ae-forgotten-export) The symbol "RoutingErrorKind" needs to be exported by the entry point contracts.d.ts
-//
 // @public
 export type ScriptedRoutingFailure = Exclude<RoutingErrorKind, "aborted" | "invalid">;
 
 // @public
 export interface SearchProviderControls {
     hold(): void;
-    // Warning: (ae-forgotten-export) The symbol "SearchErrorKind" needs to be exported by the entry point contracts.d.ts
     willFail(kind: SearchErrorKind): void;
-    // Warning: (ae-forgotten-export) The symbol "SearchResult" needs to be exported by the entry point contracts.d.ts
     willReturn(results: readonly SearchResult[]): void;
 }
 
@@ -445,15 +433,12 @@ export interface SearchProviderControls {
 export interface SearchProviderSubject {
     // (undocumented)
     readonly controls: SearchProviderControls;
-    // Warning: (ae-forgotten-export) The symbol "SearchProvider" needs to be exported by the entry point contracts.d.ts
-    //
     // (undocumented)
     readonly provider: SearchProvider;
 }
 
 // @public
 export interface SettingsStoreControls {
-    // Warning: (ae-forgotten-export) The symbol "SettingsStore" needs to be exported by the entry point contracts.d.ts
     createBlocked?(): SettingsStore;
 }
 
@@ -475,8 +460,6 @@ export interface SuggestionProviderControls {
 export interface SuggestionProviderSubject {
     // (undocumented)
     readonly controls: SuggestionProviderControls;
-    // Warning: (ae-forgotten-export) The symbol "SuggestionProvider" needs to be exported by the entry point contracts.d.ts
-    //
     // (undocumented)
     readonly provider: SuggestionProvider;
 }
@@ -484,7 +467,6 @@ export interface SuggestionProviderSubject {
 // @public
 export interface ThemeSourceControls {
     applied(): ResolvedTheme | null;
-    // Warning: (ae-forgotten-export) The symbol "ResolvedTheme" needs to be exported by the entry point contracts.d.ts
     setSystemTheme(theme: ResolvedTheme): void;
 }
 
@@ -492,8 +474,6 @@ export interface ThemeSourceControls {
 export interface ThemeSourceSubject {
     // (undocumented)
     readonly controls: ThemeSourceControls;
-    // Warning: (ae-forgotten-export) The symbol "ThemeSource" needs to be exported by the entry point contracts.d.ts
-    //
     // (undocumented)
     readonly source: ThemeSource;
 }
@@ -507,7 +487,6 @@ export interface UrlStateControls {
 export interface UrlStateSubject {
     // (undocumented)
     readonly controls: UrlStateControls;
-    // Warning: (ae-forgotten-export) The symbol "UrlState" needs to be exported by the entry point contracts.d.ts
     readonly url: UrlState;
 }
 

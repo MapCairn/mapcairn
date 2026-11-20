@@ -98,15 +98,16 @@ export const DATA_SERVICE_NAMES = [
   "languages",
 ] as const satisfies readonly (keyof Services)[];
 
-type AssertNever<T extends never> = T;
-
 /**
  * Fails to compile when a `Services` key is neither in {@link PORT_NAMES} nor
  * in {@link DATA_SERVICE_NAMES}.
  */
-export type PortsAreExhaustive = AssertNever<
-  Exclude<keyof Services, PortName | (typeof DATA_SERVICE_NAMES)[number]>
->;
+export type PortsAreExhaustive<
+  Missing extends never = Exclude<
+    keyof Services,
+    PortName | (typeof DATA_SERVICE_NAMES)[number]
+  >,
+> = Missing;
 
 /** The contract runner for each port, with its exact subject type. */
 export interface PortContractRunners {

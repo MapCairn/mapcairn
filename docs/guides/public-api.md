@@ -73,7 +73,9 @@ The maintainer has adopted this tag policy. Without a tag, every export in a rep
 
 Without a tag an export is public. A light sweep of the four packages before `0.1.0` (see the export audit issue) hid the names that nothing outside their own file used and tagged the clearly internal ones `@internal`: pixel and timing constants, engine layer ids, and the helpers that build engine input in `map`. It is not an export-by-export audit: anything plausibly part of the supported surface stays public and untagged, and the rest of the review happens as the API evolves under the report check. A new tag appears in the report diff, which is how a reviewer sees that an export was narrowed. A name that a guide or a host's tests use stays public even when a sibling is tagged `@internal` (for example `MIN_SUGGEST_LENGTH` is public while `MIN_SEARCH_LENGTH` is `@internal`).
 
-Two kinds of `ae-forgotten-export` warning remain, both in `core`. The `contracts` entry point names types that only the main entry exports (the rollup of `contracts` carries its own non-exported copies of them), and `MessageParams` names the unexported `MessageParamOverrides`. Neither stops a host from calling the API; the first needs a decision on how the `contracts` entry shares its types with the main entry.
+One `ae-forgotten-export` warning remains, in `core`: `MessageParams` names the unexported `MessageParamOverrides`. It does not stop a host from calling the API.
+
+The `contracts` entry point shares its types with the main entry. Its declarations import every type the main entry exports from `@mapcairn/core`, so a host that names a type from both entries gets one declaration, and the `contracts` report has no forgotten export. `scripts/shareDeclarations.mjs` does this while the package builds (`ARCHITECTURE.md`, "Building the SDK packages"), and a test in `packages/core/src/lint/sdkDist.test.ts` fails if `contracts.d.ts` declares a name that `index.d.ts` declares. A name only `contracts` uses stays declared there and must be exported or not exposed.
 
 ### What produces the reports
 
