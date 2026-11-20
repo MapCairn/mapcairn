@@ -62,6 +62,7 @@ Tell the agent the issue and the skill, in your own words. For example:
 - "Open the pull request and follow the `land-pr` skill. Do not merge."
 - "Review pull request 130 with the `fresh-eyes-reviewer` role."
 - "Look at the running app and follow the `visual-check` skill."
+- "Check the documents in pull request 130 against the code and follow the `review-docs` skill."
 - "Write the Playwright tests for issue 123 and follow the `playwright-tests` skill."
 - "Shape issue 123 and follow the `shape-work` skill. Do not post on GitHub."
 
@@ -80,6 +81,8 @@ When the project's `main` moves under an open pull request, merge it into the br
 Three skills come before an issue is picked up. `shape-work` turns an idea or a vague issue into a problem, the people it serves, checkable acceptance criteria and ranked issue bodies. `design-solution` weighs the options against `ARCHITECTURE.md` and records the choice in the issue or the plan, in a short decision record; when the plan is deleted, a decision that still governs the code moves into `ARCHITECTURE.md`, `DESIGN.md` or a guide. `design-ux` writes the flows, the states and the copy for anything a person sees or does. Their output goes to `create-issue`, `plan-change` and `split-plan`, and after the code `review-ui` and `visual-check` check it. None of them posts on GitHub unless the person asks.
 
 Two read-only agents review a design without having written it. `architecture-reviewer` runs the review in `design-solution` section 5 on a plan, design notes or a pull request, which is the non-author check `plan-change` asks for before a plan merges. In Claude Code it runs `opus`, the most capable tier, because `AGENTS.md` gives that tier to a design that decides a public API. `ux-reviewer` runs `design-ux` against an issue, plan or pull request and reports the missing states, routes and copy; it runs `sonnet`.
+
+The `review-docs` skill checks that a document is true, which the lint cannot: each named command, file, export, token, route, setting and number is read against the code, nothing in `docs/plans/` is described as built, and documents that mirror each other, such as `PRIVACY.md` and the privacy page, agree. It starts with `node scripts/agents/docs-refs.mjs <files>`, which lists a file, folder, link or `npm run` script a document names that does not exist. It has no agent of its own: the implementer runs it on its own documents, and a reviewer such as `fresh-eyes-reviewer` follows it for a pull request that changes any.
 
 ## The priority list
 
