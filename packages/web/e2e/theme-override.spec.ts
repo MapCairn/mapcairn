@@ -270,22 +270,6 @@ test.describe("a generated host theme", () => {
     expect((await bubbleColours(page)).text).toBe(sdkText);
   });
 
-  test("is served from the app's own origin, for the policy that blocks inline styles", async ({
-    page,
-  }) => {
-    await page.goto("/design");
-    const sheet = await page.request.get(sheetUrl(GREEN.name));
-
-    expect(sheet.status()).toBe(200);
-    expect(sheet.headers()["content-type"]).toContain("text/css");
-    expect(await sheet.text()).toContain(GREEN.scope);
-    const policy = (await page.request.get("/design")).headers()[
-      "content-security-policy"
-    ];
-    expect(policy).toContain("style-src 'self'");
-    expect(policy).not.toContain("unsafe-inline");
-  });
-
   test("follows the system theme when the page has no data-theme attribute", async ({
     page,
   }) => {

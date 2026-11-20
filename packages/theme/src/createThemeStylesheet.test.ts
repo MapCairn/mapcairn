@@ -117,7 +117,7 @@ describe("createThemeStylesheet", () => {
     );
   });
 
-  it("emits a rule for each theme context, under the high-contrast guards", () => {
+  it("writes each theme's values into its own context, under the high-contrast guards", () => {
     const { css } = passed(createThemeStylesheet(brand, { scope: ".brand" }));
     const rules = readRules(css).filter(
       (rule) => !rule.conditions.some((c) => c.startsWith("@supports")),
@@ -127,17 +127,31 @@ describe("createThemeStylesheet", () => {
     expect(
       rules
         .filter((rule) => accent in rule.declarations)
-        .map(({ selector, conditions }) => ({ selector, conditions })),
+        .map(({ selector, conditions, declarations }) => ({
+          selector,
+          conditions,
+          accent: declarations[accent],
+        })),
     ).toEqual([
-      { selector: ':root[data-theme="light"] .brand', conditions: [guarded()] },
+      {
+        selector: ':root[data-theme="light"] .brand',
+        conditions: [guarded()],
+        accent: "#0b5c3a",
+      },
       {
         selector: ":root:not([data-theme]) .brand",
         conditions: [guarded("(not (prefers-color-scheme: dark))")],
+        accent: "#0b5c3a",
       },
-      { selector: ':root[data-theme="dark"] .brand', conditions: [guarded()] },
+      {
+        selector: ':root[data-theme="dark"] .brand',
+        conditions: [guarded()],
+        accent: "#7fd9aa",
+      },
       {
         selector: ":root:not([data-theme]) .brand",
         conditions: [guarded("(prefers-color-scheme: dark)")],
+        accent: "#7fd9aa",
       },
     ]);
   });
@@ -155,32 +169,6 @@ describe("createThemeStylesheet", () => {
         rule.selector,
       ).toBe(true);
     }
-  });
-
-  it("writes each theme's values into its own contexts", () => {
-    const { css } = passed(createThemeStylesheet(brand, { scope: ".brand" }));
-    const rules = readRules(css);
-    const accent = nameOf(tokens.color.accent);
-    const valueIn = (selector: string, query?: string): string | undefined =>
-      rules.find(
-        (rule) =>
-          rule.selector === selector &&
-          rule.conditions.length === 1 &&
-          (query === undefined || rule.conditions[0]?.startsWith(query)) &&
-          accent in rule.declarations,
-      )?.declarations[accent];
-
-    expect(valueIn(':root[data-theme="light"] .brand')).toBe("#0b5c3a");
-    expect(valueIn(':root[data-theme="dark"] .brand')).toBe("#7fd9aa");
-    expect(
-      valueIn(":root:not([data-theme]) .brand", "@media (not (prefers-color"),
-    ).toBe("#0b5c3a");
-    expect(
-      valueIn(
-        ":root:not([data-theme]) .brand",
-        "@media (prefers-color-scheme: dark)",
-      ),
-    ).toBe("#7fd9aa");
   });
 
   it("does not let a role set for one theme reach the other", () => {
