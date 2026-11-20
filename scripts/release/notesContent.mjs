@@ -11,10 +11,10 @@
 
 /**
  * A relative path or an anchor (`#heading`): no scheme (so no colon), no
- * `//` or backslash that a browser reads as another host, no control or white
+ * leading `//` or backslash that a browser reads as another host, no control or white
  * space character, and no character that decodes into one of these.
  */
-const RELATIVE_PATH = /^(?![\\/]{2})[^\p{Cc}\p{Cf}\s:&\\<>"'`]+$/u;
+const RELATIVE_PATH = /^(?!\/\/)[^\p{Cc}\p{Cf}\s:&\\<>"'`]+$/u;
 /** The path of this repository on GitHub, compared in lower case. */
 const REPOSITORY_PATH = "/mapcairn/mapcairn";
 /** A path segment that is a dot segment, or looks like one to a server. */

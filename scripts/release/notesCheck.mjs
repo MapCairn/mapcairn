@@ -206,7 +206,12 @@ function subheadingFindings({ level, title }, line, inVersion) {
 function headingFindings(text) {
   /** @type {Finding[]} */
   const findings = [];
-  const { sections } = parseChangelog(text);
+  const sectionAt = new Map(
+    parseChangelog(text).sections.map((section) => [
+      section.headingLine,
+      section,
+    ]),
+  );
   const seen = new Set();
   let inVersion = false;
   let titles = 0;
@@ -225,10 +230,13 @@ function headingFindings(text) {
       }
     } else if (line.heading.level === 2) {
       inVersion = true;
-      const section = sections.find(
-        (candidate) => candidate.headingLine === line.number,
+      findings.push(
+        ...versionHeadingFindings(
+          sectionAt.get(line.number),
+          line.number,
+          seen,
+        ),
       );
-      findings.push(...versionHeadingFindings(section, line.number, seen));
     } else {
       findings.push(
         ...subheadingFindings(line.heading, line.number, inVersion),

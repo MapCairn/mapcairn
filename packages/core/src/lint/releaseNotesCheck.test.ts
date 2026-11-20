@@ -1047,6 +1047,15 @@ describe("published text", () => {
       expect(seconds(`${HEAD}${lines}`)).toBeLessThan(BOUND_MS);
     });
 
+    it("stays fast on many version headings, ATX and underlined", () => {
+      expect(
+        seconds(`${HEAD}${"## 0.1.0 (2026-12-01)\n".repeat(200_000)}`),
+      ).toBeLessThan(BOUND_MS);
+      expect(seconds(`${HEAD}${"x\n-\n".repeat(100_000)}`)).toBeLessThan(
+        BOUND_MS,
+      );
+    });
+
     it.each([
       ["a", "a", ""],
       ["www.", ".", "a"],
