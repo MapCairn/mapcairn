@@ -3,6 +3,23 @@
   "version": "0.0.0",
   "description": "Typed vanilla-extract contract for MapCairn's design tokens",
   "license": "AGPL-3.0-only",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/MapCairn/mapcairn.git",
+    "directory": "packages/theme"
+  },
+  "homepage": "https://github.com/MapCairn/mapcairn/tree/main/packages/theme#readme",
+  "bugs": {
+    "url": "https://github.com/MapCairn/mapcairn/issues"
+  },
+  "keywords": [
+    "mapcairn",
+    "design-tokens",
+    "vanilla-extract",
+    "theme",
+    "css",
+    "accessibility"
+  ],
   "private": true,
   "publishConfig": {
     "access": "public"

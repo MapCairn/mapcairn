@@ -3,6 +3,23 @@
   "version": "0.0.0",
   "description": "Domain-agnostic ports, pure logic and basemap definitions for MapCairn",
   "license": "AGPL-3.0-only",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/MapCairn/mapcairn.git",
+    "directory": "packages/core"
+  },
+  "homepage": "https://github.com/MapCairn/mapcairn/tree/main/packages/core#readme",
+  "bugs": {
+    "url": "https://github.com/MapCairn/mapcairn/issues"
+  },
+  "keywords": [
+    "mapcairn",
+    "map",
+    "gis",
+    "geojson",
+    "open-data",
+    "sdk"
+  ],
   "private": true,
   "publishConfig": {
     "access": "public"

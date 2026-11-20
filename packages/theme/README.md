@@ -1,8 +1,39 @@
 # `@mapcairn/theme`
 
-MapCairn's design tokens, built with [vanilla-extract](https://vanilla-extract.style/). It has no dependency on another MapCairn package, a map engine or React. [`DESIGN.md`](../../DESIGN.md) describes the system and the rules for using it.
+MapCairn's design tokens: typed references to CSS custom properties for colour, space, type, radius, shadow, motion and layering, with a light and a dark theme. Use it to style your own components so they match MapCairn's interface, or to check the contrast of a theme of your own. It is built with [vanilla-extract](https://vanilla-extract.style/) and has no dependency on another MapCairn package, a map engine or React.
 
-## Exports
+**Status:** not published to npm yet. The install commands below work from the first release; until then, use the packages from a clone of the [repository](https://github.com/MapCairn/mapcairn).
+
+## Install
+
+```bash
+npm install @mapcairn/theme
+pnpm add @mapcairn/theme
+yarn add @mapcairn/theme
+```
+
+The package is ESM only: it has no `main` field and no CommonJS build. A TypeScript project needs `moduleResolution` set to `node16`, `nodenext` or `bundler`; `node10` is not supported.
+
+## Usage
+
+Import the token stylesheet once, in your entry module. It defines the custom properties for both themes. The `@mapcairn/map` components also need `@mapcairn/map/styles.css`, shown in the [`@mapcairn/map` README](https://github.com/MapCairn/mapcairn/tree/main/packages/map#set-up).
+
+```ts
+import "@mapcairn/theme/tokens.css";
+import { tokens } from "@mapcairn/theme";
+
+Object.assign(document.body.style, {
+  fontFamily: tokens.type.family,
+  fontSize: tokens.type.body.size,
+  lineHeight: tokens.type.body.lineHeight,
+  color: tokens.color.text,
+  backgroundColor: tokens.color.pageBackground,
+});
+```
+
+Each value in `tokens` is a string of the form `var(--…)`, so it works in any style object. The package needs no vanilla-extract plugin: `dist` holds plain JavaScript and the compiled `tokens.css`. The generated custom property names are private and can change in any release, so use `tokens` and never write the names into a stylesheet of your own. [How the CSS ships](https://github.com/MapCairn/mapcairn/blob/main/DESIGN.md#how-the-css-ships) says what is and is not settled.
+
+## What it exports
 
 | Export                                                          | Purpose                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
 | --------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -14,25 +45,14 @@ MapCairn's design tokens, built with [vanilla-extract](https://vanilla-extract.s
 | `createThemeStylesheet(override, { scope })`                    | Turns a colour override into a stylesheet scoped to a selector the host owns (`:root`, `#id` or `.class`), or refuses. A theme below WCAG 2.2 AA, an unusable colour or an unusable scope returns `{ ok: false, css: undefined, findings, invalid, invalidScope }` and no CSS. Otherwise it returns `{ ok: true, css, findings }`: serve `css` as a same-origin file and link it after the SDK's stylesheets. The rules are written inside `(not (prefers-contrast: more))` and `(not (forced-colors: active))`, so high-contrast and forced-colours users keep the SDK's values, and it adds an opaque surface for browsers without `backdrop-filter` and for reduced transparency. Colours only; page, map and data roles are not overridable. The scope is matched as a descendant of `:root`, so a class on `<html>` does nothing (use `:root`). The custom property names it writes are generated and private, and match the SDK's stylesheet only for the same installed version of this package. Types: `ThemeStylesheet`, `ThemeStylesheetCreated`, `ThemeStylesheetRefused`, `ThemeStylesheetOptions`. |
 | `tokenValues`                                                   | The raw values (colour roles for both themes, spacing, radii, type scale, motion, z layers). Used by tests and the contrast checks, not by components.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
 
-The token set and the contrast checks live in `src/tokens.css.ts`, `src/tokenValues.ts` and `src/contrast.ts`. The contrast tests compute every text and boundary pairing over the worst-case map backdrops in both themes.
+In the repository, the token set and the contrast checks live in `src/tokens.css.ts`, `src/tokenValues.ts` and `src/contrast.ts`. The contrast tests compute every text and boundary pairing over the worst-case map backdrops in both themes.
 
-```ts
-// Button.css.ts
-import { focusRing, tokens } from "@mapcairn/theme";
-import { style } from "@vanilla-extract/css";
+[`DESIGN.md`](https://github.com/MapCairn/mapcairn/blob/main/DESIGN.md) describes the design system and the rules for using it.
 
-export const button = style({
-  backgroundColor: tokens.color.surfaceRaised,
-  borderRadius: tokens.radius.control,
-  ":focus-visible": focusRing,
-});
-```
+## Licence
 
-## Using it in a host app
+`@mapcairn/theme` is licensed under AGPL-3.0-only, and the [licence text](https://github.com/MapCairn/mapcairn/blob/main/packages/theme/LICENSE) comes with the package. If you ship it in a product, or let people use a modified version over a network, you must publish the corresponding source under the same licence. The SDK packages depend only on permissively licensed packages. The [licence section of the repository README](https://github.com/MapCairn/mapcairn#licence) says more, including how to talk about other terms for closed-source use.
 
-`npm run build:sdk` builds this package to `dist`: JavaScript, declarations and the compiled `tokens.css`. The source stays in this repository, behind the `@mapcairn/source` export condition, which this repository's Vite configs and `tsconfig.base.json` turn on; the published package holds `dist` only. A host that resolves that condition registers `vanillaExtractPlugin()` from `@vanilla-extract/vite-plugin` in its Vite config; an app that uses `dist` needs no plugin. The JavaScript is side-effect free (`sideEffects` names only `.css` files), so from source the token stylesheet reaches the page only through an import that is used, as `packages/web/src/global.css.ts` does with `tokens` and `focusRing`. A consumer of `dist` gets the tokens only by importing `@mapcairn/theme/tokens.css`.
+## Contributing and changes
 
-## What doesn't belong here
-
-- App-specific values, copy or storage keys.
-- Raw colour, size or z-index literals outside `tokens.css.ts` and `tokenValues.ts`. The harmony scanner enforces this.
+The source and the issue tracker are in the [repository](https://github.com/MapCairn/mapcairn); file a bug in the [issue tracker](https://github.com/MapCairn/mapcairn/issues). Read [`CONTRIBUTING.md`](https://github.com/MapCairn/mapcairn/blob/main/CONTRIBUTING.md) before you send a pull request. Changes between releases are listed in [`CHANGELOG.md`](https://github.com/MapCairn/mapcairn/blob/main/CHANGELOG.md).

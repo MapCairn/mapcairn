@@ -121,6 +121,72 @@ export function exportTargetsOf(manifest) {
 export const EXPECTED_LICENCE = "AGPL-3.0-only";
 
 /**
+ * The repository URL every SDK package declares. npm's trusted publishing
+ * compares it with the GitHub repository the release workflow runs in and
+ * refuses a publish when they differ, so it is npm's normalised form with the
+ * owner's capitalisation.
+ */
+export const EXPECTED_REPOSITORY_URL =
+  "git+https://github.com/MapCairn/mapcairn.git";
+
+/** Where the issues of every SDK package are filed. */
+export const EXPECTED_BUGS_URL = "https://github.com/MapCairn/mapcairn/issues";
+
+/**
+ * What is missing or wrong in the fields the npm page shows beside the
+ * README: a repository with the package's own directory, a homepage, the
+ * issue tracker, keywords and a description.
+ *
+ * @param {Record<string, any>} manifest The package manifest.
+ * @returns {string[]}
+ */
+export function metadataProblems(manifest) {
+  /** @type {string[]} */
+  const problems = [];
+  const directory = `packages/${String(manifest.name).replace(/^@[^/]+\//, "")}`;
+  const repository = manifest.repository;
+  if (typeof repository !== "object" || repository === null) {
+    problems.push(
+      `repository: must be an object with type, url and directory, found ${JSON.stringify(repository)}`,
+    );
+  } else {
+    if (repository.url !== EXPECTED_REPOSITORY_URL) {
+      problems.push(
+        `repository.url: must be "${EXPECTED_REPOSITORY_URL}", found ${JSON.stringify(repository.url)}`,
+      );
+    }
+    if (repository.directory !== directory) {
+      problems.push(
+        `repository.directory: must be "${directory}", found ${JSON.stringify(repository.directory)}`,
+      );
+    }
+  }
+  if (typeof manifest.homepage !== "string" || manifest.homepage === "") {
+    problems.push("homepage: must be set");
+  }
+  if (manifest.bugs?.url !== EXPECTED_BUGS_URL) {
+    problems.push(
+      `bugs.url: must be "${EXPECTED_BUGS_URL}", found ${JSON.stringify(manifest.bugs?.url)}`,
+    );
+  }
+  const { keywords } = manifest;
+  if (
+    !Array.isArray(keywords) ||
+    keywords.length === 0 ||
+    !keywords.every((word) => typeof word === "string" && word !== "")
+  ) {
+    problems.push("keywords: must be a non-empty list of words");
+  }
+  if (
+    typeof manifest.description !== "string" ||
+    manifest.description.trim() === ""
+  ) {
+    problems.push("description: must be set");
+  }
+  return problems;
+}
+
+/**
  * The map of a module compiled from a `*.css.ts` file. The plugin that
  * compiles it records no source, so an empty list is what the build writes.
  */
@@ -300,6 +366,7 @@ export function checkPackage({
       `license: must be "${EXPECTED_LICENCE}", found ${JSON.stringify(manifest.license)}`,
     );
   }
+  problems.push(...metadataProblems(manifest));
   if ("main" in manifest) {
     problems.push("main: the packages are ESM only and set no main field");
   }
