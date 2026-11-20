@@ -135,6 +135,7 @@ describe("formatDigests and parseDigests", () => {
     for (const text of [
       "",
       "abc",
+      "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa:a.tgz:extra",
       "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
       "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa:a.tgz,",
       "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA:a.tgz",
@@ -205,13 +206,28 @@ describe("checkFolder", () => {
     ]);
   });
 
-  it("does not look for notes when no digest is given", () => {
+  it("treats an empty notes digest as: there must be no notes file", () => {
     const folder = temporaryFolder();
     writeFileSync(path.join(folder, "a.tgz"), "one");
     const digests = formatDigests([
       { name: "a.tgz", digest: sha256Of(path.join(folder, "a.tgz")) },
     ]);
     expect(checkFolder(folder, digests, "")).toEqual([]);
+    writeFileSync(path.join(folder, "notes.md"), "smuggled");
+    expect(checkFolder(folder, digests, "")).toEqual([
+      "notes.md is present, but no notes were recorded",
+    ]);
+  });
+
+  it("refuses an empty notes digest when the notes are required, so a release cannot be created from unchecked notes", () => {
+    const folder = temporaryFolder();
+    writeFileSync(path.join(folder, "a.tgz"), "one");
+    const digests = formatDigests([
+      { name: "a.tgz", digest: sha256Of(path.join(folder, "a.tgz")) },
+    ]);
+    expect(checkFolder(folder, digests, "", { requireNotes: true })).toEqual([
+      "no notes digest was recorded, and the release needs its notes",
+    ]);
   });
 });
 

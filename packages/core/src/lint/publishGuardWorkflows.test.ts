@@ -274,7 +274,9 @@ describe("release.yml", () => {
     expect(job).toContain(
       'state="$(node scripts/release/verifyRelease.mjs package-state "@mapcairn/$name" "$VERSION")"',
     );
-    expect(job).toContain('if [ "$state" = "published" ]; then');
+    expect(job).toMatch(
+      /if \[ "\$state" = "published" \]; then\n\s+echo "::notice::[^\n]*"\n\s+continue\n\s+fi/,
+    );
     expect(job).toContain(
       "::notice::@mapcairn/$name@$VERSION is already on npm",
     );
@@ -294,12 +296,12 @@ describe("release.yml", () => {
 
   it("checks the digests before it stages, installs the pinned npm without scripts, and has its own group for the version", () => {
     const job = npmJobLines(readFileSync(file, "utf8")).join("\n");
-    expect(
-      job.indexOf('tarballs.mjs check release "$DIGESTS"'),
-    ).toBeGreaterThan(-1);
-    expect(job.indexOf('tarballs.mjs check release "$DIGESTS"')).toBeLessThan(
-      job.indexOf("npm stage publish"),
+    expect(job).toContain(
+      'tarballs.mjs check release "$DIGESTS" "$NOTES_DIGEST"',
     );
+    expect(
+      job.indexOf('tarballs.mjs check release "$DIGESTS" "$NOTES_DIGEST"'),
+    ).toBeLessThan(job.indexOf("npm stage publish"));
     expect(job).toContain(
       'npm install --global --ignore-scripts "npm@$wanted"',
     );

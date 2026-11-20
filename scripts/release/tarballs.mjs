@@ -13,6 +13,7 @@
  *   node scripts/release/tarballs.mjs pack <folder>
  *   node scripts/release/tarballs.mjs record <folder>
  *   node scripts/release/tarballs.mjs check <folder> <digests> [<notes-digest>]
+ *   node scripts/release/tarballs.mjs check-release <folder> <digests> <notes-digest>
  *
  * `record` writes the job outputs `digests` and `notes-digest` (the latter
  * empty when the folder has no `notes.md`).
@@ -141,16 +142,30 @@ export function digestProblems(expected, actual) {
  *
  * @param {string} folder
  * @param {string} digests What `formatDigests` wrote.
- * @param {string} notesDigest The notes digest, or an empty string for none.
+ * @param {string} notesDigest The notes digest. An empty string means no notes were recorded, so the folder must hold none.
+ * @param {{ requireNotes?: boolean }} [options] `requireNotes` makes an empty notes digest a problem, for the job that creates the Release from the notes.
  * @returns {string[]} The problems, none when the folder is as recorded.
  */
-export function checkFolder(folder, digests, notesDigest) {
+export function checkFolder(
+  folder,
+  digests,
+  notesDigest,
+  { requireNotes = false } = {},
+) {
   const actual = readdirSync(folder)
     .filter((file) => file.endsWith(".tgz"))
     .map((name) => ({ name, digest: sha256Of(path.join(folder, name)) }));
   const problems = digestProblems(parseDigests(digests), actual);
-  if (notesDigest !== "") {
-    const notes = path.join(folder, NOTES_FILE);
+  const notes = path.join(folder, NOTES_FILE);
+  if (notesDigest === "") {
+    if (requireNotes) {
+      problems.push(
+        "no notes digest was recorded, and the release needs its notes",
+      );
+    } else if (existsSync(notes)) {
+      problems.push(`${NOTES_FILE} is present, but no notes were recorded`);
+    }
+  } else {
     if (!existsSync(notes)) {
       problems.push(`${NOTES_FILE} is missing`);
     } else if (sha256Of(notes) !== notesDigest) {
@@ -211,8 +226,14 @@ if (isEntryPoint(import.meta.url)) {
       packAll(path.resolve(folder));
     } else if (command === "record" && folder !== undefined) {
       record(path.resolve(folder));
-    } else if (command === "check" && folder !== undefined && digests) {
-      const problems = checkFolder(path.resolve(folder), digests, notesDigest);
+    } else if (
+      (command === "check" || command === "check-release") &&
+      folder !== undefined &&
+      digests
+    ) {
+      const problems = checkFolder(path.resolve(folder), digests, notesDigest, {
+        requireNotes: command === "check-release",
+      });
       for (const problem of problems) {
         console.error(problem);
       }
@@ -222,7 +243,7 @@ if (isEntryPoint(import.meta.url)) {
       console.log("The files are the ones that were packed.");
     } else {
       console.error(
-        "Usage: node scripts/release/tarballs.mjs pack|record <folder> | check <folder> <digests> [<notes-digest>]",
+        "Usage: node scripts/release/tarballs.mjs pack|record <folder> | check <folder> <digests> [<notes-digest>] | check-release <folder> <digests> <notes-digest>",
       );
       process.exitCode = 2;
     }

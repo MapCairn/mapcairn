@@ -15,11 +15,13 @@ name: Release
 # the version input against a pattern before anything else uses it.
 #
 # The tarballs are packed once, in `verify`, and uploaded at once. Their
-# SHA-256 digests leave `verify` as a job output. The `check` job, which runs
-# third-party code (the throwaway consumer installs from the registry), holds
-# no permission and only reads a copy of the artifact; `github-release` and
-# `npm` compare what they download with the recorded digests before they
-# attest or stage. So what was checked is what is released.
+# SHA-256 digests leave `verify` as a job output. The `check` job runs
+# third-party code (the throwaway consumer installs from the registry). It has
+# no GITHUB_TOKEN permission and only reads a copy of the artifact, but the
+# runner's artifact and cache token stays in every job, so the digests, not the
+# permissions, are what protect the release: `github-release` and `npm`
+# compare what they download with the recorded digests before they attest or
+# stage. So what was checked is what is released.
 on:
   push:
     branches: [main]
@@ -155,8 +157,10 @@ jobs:
       && needs.verify.outputs.release == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 20
-    # No permission at all: this job runs third-party code, so it holds no
-    # token, and it only reads a copy of the artifact.
+    # No GITHUB_TOKEN permission: this job runs third-party code and only
+    # reads a copy of the artifact. The runner's artifact and cache token
+    # remains, so the recorded digests, not these permissions, protect the
+    # release.
     permissions: {}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -219,7 +223,7 @@ jobs:
           NOTES_DIGEST: ${{ needs.verify.outputs.notes-digest }}
           VERSION: ${{ needs.verify.outputs.version }}
         run: |
-          node scripts/release/tarballs.mjs check release "$DIGESTS" "$NOTES_DIGEST"
+          node scripts/release/tarballs.mjs check-release release "$DIGESTS" "$NOTES_DIGEST"
           node scripts/release/verifyRelease.mjs tarballs "$VERSION" release
       - name: Attest the tarballs
         uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
@@ -288,9 +292,10 @@ jobs:
       - name: Check the files are the ones that were packed, and are exactly the four tarballs
         env:
           DIGESTS: ${{ needs.verify.outputs.digests }}
+          NOTES_DIGEST: ${{ needs.verify.outputs.notes-digest }}
           VERSION: ${{ needs.verify.outputs.version }}
         run: |
-          node scripts/release/tarballs.mjs check release "$DIGESTS"
+          node scripts/release/tarballs.mjs check release "$DIGESTS" "$NOTES_DIGEST"
           node scripts/release/verifyRelease.mjs tarballs "$VERSION" release
 
       - name: Use an npm that can stage packages

@@ -223,7 +223,9 @@ describe("release.yml", () => {
       ["npm", "package-state"],
     ] as const) {
       const lines = job(name).join("\n");
-      const check = lines.indexOf('tarballs.mjs check release "$DIGESTS"');
+      const check = lines.search(
+        /tarballs\.mjs check(?:-release)? release "\$DIGESTS"/,
+      );
       expect(check, name).toBeGreaterThan(-1);
       expect(
         lines.indexOf('verifyRelease.mjs tarballs "$VERSION" release'),
@@ -233,12 +235,36 @@ describe("release.yml", () => {
       expect(lines).toContain("DIGESTS: ${{ needs.verify.outputs.digests }}");
     }
     expect(job("github-release").join("\n")).toContain(
-      'tarballs.mjs check release "$DIGESTS" "$NOTES_DIGEST"',
+      'tarballs.mjs check-release release "$DIGESTS" "$NOTES_DIGEST"',
     );
+    for (const name of ["check", "github-release", "npm"]) {
+      expect(job(name).join("\n"), name).toContain(
+        "NOTES_DIGEST: ${{ needs.verify.outputs.notes-digest }}",
+      );
+    }
     expect(job("github-release").join("\n")).toContain(
       "needs.check.result == 'success'",
     );
     expect(job("npm").join("\n")).toContain("needs.check.result == 'success'");
+  });
+
+  it("writes the release notes before it records their digest, and the digest step runs for every release", () => {
+    const verify = job("verify").join("\n");
+    expect(verify.indexOf("name: Write the release notes")).toBeGreaterThan(-1);
+    expect(verify.indexOf("name: Write the release notes")).toBeLessThan(
+      verify.indexOf("tarballs.mjs record release"),
+    );
+    expect(verify).toMatch(
+      /name: Record the digests[\s\S]*?id: record\n\s+if: steps\.decide\.outputs\.release == 'true'/,
+    );
+  });
+
+  it("downloads the artifact by its name in every job that uses it", () => {
+    for (const name of ["check", "github-release", "npm"]) {
+      expect(job(name).join("\n"), name).toMatch(
+        /actions\/download-artifact@[0-9a-f]{40}\s*\n\s+with:\n\s+name: release-files\n\s+path: release/,
+      );
+    }
   });
 
   it("checks the version and name of the tarballs it downloads for publish-existing", () => {

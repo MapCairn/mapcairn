@@ -405,6 +405,10 @@ describe("distTagFor", () => {
     expect(distTagFor("0.1.0-rc.3", ["v0.1.0-rc.2"])).toBe("next");
   });
 
+  it("keeps latest for a release when only a newer prerelease is tagged", () => {
+    expect(distTagFor("0.1.0", ["v0.2.0-rc.1"])).toBe("latest");
+  });
+
   it("puts the newest stable release under latest", () => {
     expect(distTagFor("0.2.0", ["v0.1.0", "v0.1.1-rc.1"])).toBe("latest");
     expect(distTagFor("0.1.0", [])).toBe("latest");
