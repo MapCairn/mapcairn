@@ -163,8 +163,8 @@ Decided on 2026-11-20, by the maintainer in the design record on #538:
 - The acceptance criterion is "renders the map chrome on the SDK's fakes" until a MapLibre adapter ships as a package.
 - Follow-ups are #539, #540 and #541, and the adapter package (#43). An adapter package joins the umbrella through the same drift test: its entry point is mirrored as a subpath, and a collision gets a tie-break. Whether the umbrella depends on an engine at all is decided in #43, since it would add `maplibre-gl` to a package that today has no runtime dependency of its own.
 
-Open:
+Decided on 2026-11-20, on the three questions that were open:
 
-1. **Hold the unscoped `mapcairn` name?** Cost to build: a first publish of a placeholder, the maintainer's step; cost to keep: one more name to maintain and a second package that must follow the set. Benefit: it blocks squatting and gives the shorter command. Recommendation: do not hold it now (YAGNI); revisit if the name is wanted for the product page.
-2. **When slice 1 lands.** Recommendation: after the `rc.2` Release pull request merges, which removes the version-skew constraint. If `rc.2` is delayed, land it earlier with `sdk` kept out of the equal-versions test.
-3. **Whether `./core/contracts` belongs on the umbrella.** It is test code with an optional `vitest` peer. Recommendation: keep it on its own subpath, since a host that writes an adapter needs it and the cost is one export line, the same as the other subpaths.
+1. **The unscoped `mapcairn` name is not held now.** The cost is a placeholder publish and a second package to keep in step; revisit if the name is wanted for the product page.
+2. **Slice 1 lands after the `rc.2` Release pull request merges**, which removes the version-skew constraint. If `rc.2` is delayed, it lands earlier with `sdk` kept out of the equal-versions test.
+3. **`./core/contracts` stays on the umbrella as its own subpath.** It is test code with an optional `vitest` peer; a host that writes an adapter needs it, and the cost is one export line.
