@@ -95,7 +95,7 @@ const sdkDependencies = (range: string) => ({
   "@mapcairn/theme": range,
 });
 
-/** A repository shaped like this one: four SDK packages, a host and an example. */
+/** A repository shaped like this one: five SDK packages, a host and an example. */
 function repository(
   options: { versions?: Record<string, string>; changelog?: string } = {},
 ): string {
@@ -258,6 +258,7 @@ describe("workspaces", () => {
       "packages/core/package.json",
       "packages/map/package.json",
       "packages/react/package.json",
+      "packages/sdk/package.json",
       "packages/theme/package.json",
       "packages/web/package.json",
       "examples/embed/package.json",
@@ -299,7 +300,7 @@ describe("workspaces", () => {
 });
 
 describe("applyRelease", () => {
-  it("sets the four versions and every internal range in all six workspaces", () => {
+  it("sets the five versions and every internal range in all seven workspaces", () => {
     const root = repository();
     const { tools, calls } = fakeTools();
     const result = applyRelease({
@@ -317,6 +318,7 @@ describe("applyRelease", () => {
       "packages/core/package.json",
       "packages/map/package.json",
       "packages/react/package.json",
+      "packages/sdk/package.json",
       "packages/theme/package.json",
       "packages/web/package.json",
       "examples/embed/package.json",
@@ -416,7 +418,13 @@ describe("applyRelease", () => {
 
   it("refuses a version that is not newer, an invalid one and an earlier prerelease", () => {
     const root = repository({
-      versions: { core: "0.2.0", map: "0.2.0", react: "0.2.0", theme: "0.2.0" },
+      versions: {
+        core: "0.2.0",
+        map: "0.2.0",
+        react: "0.2.0",
+        sdk: "0.2.0",
+        theme: "0.2.0",
+      },
     });
     const { tools } = fakeTools();
     for (const version of ["0.2.0", "0.1.9", "0.2.0-rc.3"]) {
@@ -432,7 +440,7 @@ describe("applyRelease", () => {
     ).toThrow(ReleaseError);
   });
 
-  it("refuses when the four versions differ", () => {
+  it("refuses when the five versions differ", () => {
     const root = repository({ versions: { theme: "0.0.1" } });
     expect(() =>
       applyRelease({
@@ -753,6 +761,18 @@ describe("applyRelease with the real npm", () => {
       "packages/theme/package.json",
       manifest("@mapcairn/theme", "0.0.0"),
     );
+    write(
+      root,
+      "packages/sdk/package.json",
+      manifest("@mapcairn/sdk", "0.0.0", {
+        dependencies: {
+          "@mapcairn/core": "0.0.0",
+          "@mapcairn/map": "0.0.0",
+          "@mapcairn/react": "0.0.0",
+          "@mapcairn/theme": "0.0.0",
+        },
+      }),
+    );
     write(root, "CHANGELOG.md", CHANGELOG);
     write(root, ".gitignore", "node_modules\n");
     expect(npm(["install", "--ignore-scripts"], root).ok).toBe(true);
@@ -765,6 +785,10 @@ describe("applyRelease with the real npm", () => {
     const lock = JSON.parse(read(root, "package-lock.json"));
     expect(lock.packages["packages/core"].version).toBe("0.1.0");
     expect(lock.packages["packages/map"].dependencies["@mapcairn/core"]).toBe(
+      "^0.1.0",
+    );
+    expect(lock.packages["packages/sdk"].version).toBe("0.1.0");
+    expect(lock.packages["packages/sdk"].dependencies["@mapcairn/theme"]).toBe(
       "^0.1.0",
     );
     expect(npm(["ci", "--ignore-scripts"], root).ok).toBe(true);

@@ -103,6 +103,42 @@ const BUILT_ENTRY_POINTS: Readonly<
       default: "./dist/tokens.css",
     },
   },
+  sdk: {
+    ".": {
+      [SOURCE_CONDITION]: "./src/index.ts",
+      types: "./dist/index.d.ts",
+      default: "./dist/index.js",
+    },
+    "./core": {
+      [SOURCE_CONDITION]: "./src/core.ts",
+      types: "./dist/core.d.ts",
+      default: "./dist/core.js",
+    },
+    "./core/contracts": {
+      [SOURCE_CONDITION]: "./src/coreContracts.ts",
+      types: "./dist/coreContracts.d.ts",
+      default: "./dist/coreContracts.js",
+    },
+    "./map": {
+      [SOURCE_CONDITION]: "./src/map.ts",
+      types: "./dist/map.d.ts",
+      default: "./dist/map.js",
+    },
+    "./react": {
+      [SOURCE_CONDITION]: "./src/react.ts",
+      types: "./dist/react.d.ts",
+      default: "./dist/react.js",
+    },
+    "./theme": {
+      [SOURCE_CONDITION]: "./src/theme.ts",
+      types: "./dist/theme.d.ts",
+      default: "./dist/theme.js",
+    },
+    "./styles.css": {
+      types: "./dist/styles.css.d.ts",
+      default: "./dist/styles.css",
+    },
+  },
 };
 
 /**
@@ -117,6 +153,7 @@ const SIDE_EFFECTS: Readonly<Record<string, unknown>> = {
   map: ["**/*.css", "**/*.css.ts"],
   react: false,
   theme: ["**/*.css"],
+  sdk: ["**/*.css"],
 };
 
 /**
@@ -339,7 +376,7 @@ describe("SDK package manifests", () => {
     }
   });
 
-  it("keeps the four SDK versions equal", () => {
+  it("keeps the SDK package versions equal", () => {
     const versions = SDK_PACKAGES.map((name) => manifestOf(name).version);
     expect(new Set(versions).size).toBe(1);
     expect(versions[0]).toMatch(/^\d+\.\d+\.\d+/);

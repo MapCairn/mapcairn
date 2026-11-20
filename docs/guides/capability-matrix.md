@@ -209,7 +209,7 @@ The areas were drawn up from the public documentation of commercial and open-sou
 | ---------------------------------------------------------------- | ------ | ------------------------------------------ | ---------- |
 | Ports with fakes and shared contract suites, and coverage floors | has    | `packages/core/src/contracts`, `AGENTS.md` | none       |
 | An example app and guides                                        | has    | `examples/embed`, `docs/guides`            | none       |
-| Packages published with generated API documentation              | lacks  | the four packages are not yet published    | [#1]       |
+| Packages published with generated API documentation              | lacks  | the packages are not yet published         | [#1]       |
 | A documentation site                                             | lacks  | none                                       | [#199]     |
 | Component documentation for consumers                            | lacks  | none                                       | [#174]     |
 

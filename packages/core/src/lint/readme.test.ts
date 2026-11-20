@@ -6,6 +6,7 @@ import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import {
   fencedBlocks,
+  isUsedByExample,
   namedImports,
   relativeLinks,
   tagAttributes,
@@ -14,7 +15,8 @@ import {
 /**
  * Keeps `README.md` true to the repository: its embedding example must use
  * only what `examples/embed` uses, imported from the same public entry
- * points, with the same components and props, and every relative link must
+ * points (or from `@mapcairn/sdk`, which re-exports them), with the same
+ * components and props, and every relative link must
  * name a file or directory that exists. `examples/embed` is type-checked and
  * built against the SDK's public entry points on every pull request, so an
  * import it makes is one an outside app can make. The README also names no
@@ -52,16 +54,34 @@ describe("README.md", () => {
     const missing = imports
       .filter(
         ({ specifier, imported }) =>
-          !exampleImports.some(
-            (known) =>
-              known.specifier === specifier && known.imported === imported,
-          ),
+          !isUsedByExample(exampleImports, specifier, imported),
       )
       .map(({ specifier, imported }) => `${imported} from ${specifier}`);
     expect(missing).toEqual([]);
   });
 
-  it("imports the two stylesheets as examples/embed does", () => {
+  it("shows the umbrella's install and import before the example, using only names the example imports", () => {
+    const install = fencedBlocks(README, "bash").filter((block) =>
+      block.includes("@mapcairn/sdk"),
+    );
+    expect(install).toEqual(["npm install @mapcairn/sdk@next\n"]);
+    const [short = ""] = fencedBlocks(README, "ts");
+    expect(README.indexOf(short)).toBeLessThan(README.indexOf(snippet));
+    expect(
+      [...short.matchAll(/^import\s+"([^"]+\.css)";/gm)].map((m) => m[1]),
+    ).toEqual(["@mapcairn/sdk/styles.css"]);
+    const imports = namedImports(short);
+    expect(imports.length).toBeGreaterThan(0);
+    expect(
+      imports.filter(
+        ({ specifier, imported }) =>
+          specifier !== "@mapcairn/sdk" ||
+          !isUsedByExample(exampleImports, specifier, imported),
+      ),
+    ).toEqual([]);
+  });
+
+  it("imports the stylesheets as examples/embed does, or the one that stands for both", () => {
     const stylesheets = [
       ...snippet.matchAll(/^import\s+"([^"]+\.css)";/gm),
     ].map((match) => match[1]);
@@ -69,12 +89,13 @@ describe("README.md", () => {
       path.join(REPO, EXAMPLE_SOURCE, "main.tsx"),
       "utf8",
     );
-    expect(stylesheets).toEqual([
-      "@mapcairn/theme/tokens.css",
-      "@mapcairn/map/styles.css",
-    ]);
-    for (const stylesheet of stylesheets) {
-      expect(main).toContain(`import "${stylesheet}";`);
+    const umbrella = ["@mapcairn/sdk/styles.css"];
+    const packages = ["@mapcairn/theme/tokens.css", "@mapcairn/map/styles.css"];
+    expect([umbrella, packages]).toContainEqual(stylesheets);
+    if (stylesheets.join() === packages.join()) {
+      for (const stylesheet of stylesheets) {
+        expect(main).toContain(`import "${stylesheet}";`);
+      }
     }
   });
 

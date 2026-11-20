@@ -156,7 +156,7 @@ describe("the repeatable build comparison", () => {
     read(".github/workflows/repeatable-build.yml"),
   );
 
-  it("removes the four dist folders before the second build, or it compares a build with itself", () => {
+  it("removes every dist folder before the second build, or it compares a build with itself", () => {
     const rebuild = workflow.slice(workflow.indexOf("Second build from clean"));
     for (const name of ["core", "react", "theme", "map"]) {
       expect(rebuild.slice(0, rebuild.indexOf("Hash the second"))).toContain(

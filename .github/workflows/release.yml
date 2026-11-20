@@ -7,14 +7,14 @@ name: Release
 # validates the version; the name is display only.
 run-name: Release ${{ inputs.mode || 'publish' }} ${{ inputs.version || github.sha }}
 
-# Releases the four SDK packages (plan 0014, docs/guides/releasing.md). One
+# Releases the SDK packages (plan 0014, docs/guides/releasing.md). One
 # workflow, four jobs, and one environment (`npm`). npm's trusted-publisher
 # record names this file and that environment, so neither is renamed without
 # updating the record.
 #
 # A release starts only from a maintainer's action: merging a Release pull
 # request (title `chore(release): v<version>`, label `release`), or starting
-# this workflow by hand. The `npm` job then publishes the four packages
+# this workflow by hand. The `npm` job then publishes the packages
 # directly through npm trusted publishing (OIDC, no stored token), once a
 # required reviewer of the `npm` environment has approved the deployment. No
 # other merge to main tags, releases or publishes anything.
@@ -143,7 +143,7 @@ jobs:
       - name: Build the packages
         if: steps.decide.outputs.release == 'true' && inputs.mode != 'publish-existing'
         run: npm run build:sdk
-      - name: Pack the four tarballs once
+      - name: Pack the tarballs once
         if: steps.decide.outputs.release == 'true' && inputs.mode != 'publish-existing'
         run: node scripts/release/tarballs.mjs pack release
       - name: Check the release notes
@@ -236,7 +236,7 @@ jobs:
         with:
           name: release-files
           path: release
-      - name: Check the files are the ones that were packed, and are exactly the four tarballs
+      - name: Check the files are the ones that were packed, and are exactly the expected tarballs
         env:
           DIGESTS: ${{ needs.verify.outputs.digests }}
           NOTES_DIGEST: ${{ needs.verify.outputs.notes-digest }}
@@ -302,7 +302,7 @@ jobs:
         with:
           name: release-files
           path: release
-      - name: Check the files are the ones that were packed, and hold the four tarballs of this version
+      - name: Check the files are the ones that were packed, and hold the tarballs of this version
         env:
           DIGESTS: ${{ needs.verify.outputs.digests }}
           NOTES_DIGEST: ${{ needs.verify.outputs.notes-digest }}
@@ -342,7 +342,7 @@ jobs:
         # here (no token), so this proves the tarball, the tag and the version
         # rules, and nothing about trusted publishing.
         run: |
-          for name in core react theme map; do
+          for name in core react theme map sdk; do
             state="$(node scripts/release/verifyRelease.mjs package-state "@mapcairn/$name" "$VERSION")"
             if [ "$state" = "published" ]; then
               echo "::notice::@mapcairn/$name@$VERSION is already on npm, so it is skipped."
@@ -372,9 +372,10 @@ jobs:
       group: release-npm-${{ needs.verify.outputs.version }}
       cancel-in-progress: false
     runs-on: ubuntu-latest
-    # Four packages, each waiting up to about 10 minutes for the registry
-    # after its publish (CONFIRM_DELAYS_MS in verifyRelease.mjs), plus setup.
-    timeout-minutes: 60
+    # Every package waits up to about 10 minutes for the registry after its
+    # publish (CONFIRM_DELAYS_MS in verifyRelease.mjs), five packages in a row,
+    # plus setup.
+    timeout-minutes: 75
     permissions:
       id-token: write # trusted publishing: npm exchanges this run's OIDC token for a short-lived credential, so no secret is stored
       contents: read # check out the repository
@@ -391,7 +392,7 @@ jobs:
         with:
           name: release-files
           path: release
-      - name: Check the files are the ones that were packed, and hold the four tarballs of this version
+      - name: Check the files are the ones that were packed, and hold the tarballs of this version
         env:
           DIGESTS: ${{ needs.verify.outputs.digests }}
           NOTES_DIGEST: ${{ needs.verify.outputs.notes-digest }}
@@ -444,7 +445,7 @@ jobs:
         run: |
           first_uploads=()
           to_publish=()
-          for name in core react theme map; do
+          for name in core react theme map sdk; do
             state="$(node scripts/release/verifyRelease.mjs package-state "@mapcairn/$name" "$VERSION")"
             if [ "$state" = "published" ]; then
               echo "::notice::@mapcairn/$name@$VERSION is already on npm, so it is skipped."

@@ -7,9 +7,9 @@
  *   node scripts/sdkLicences.mjs
  *   node scripts/sdkLicences.mjs --root <dir>   read a different checkout (the tests do)
  *
- * The SDK packages (`core`, `map`, `react`, `theme`) must not carry anything
+ * The SDK packages (`core`, `map`, `react`, `theme` and `sdk`) must not carry anything
  * that needs a licence agreement of its own. This walks the production
- * dependencies of those four packages, direct and transitive, through
+ * dependencies of those packages, direct and transitive, through
  * `package-lock.json`, and fails when a package's licence is not on the
  * reviewed list in `scripts/sdkLicences.allowlist.json`. It reads two kinds of
  * file in the checkout and makes no network request: each SDK package's

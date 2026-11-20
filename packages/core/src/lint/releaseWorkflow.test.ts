@@ -13,6 +13,10 @@ import {
   CONFIRM_DELAYS_MS,
   // @ts-expect-error The scripts are dependency-free JavaScript with JSDoc types.
 } from "../../../../scripts/release/verifyRelease.mjs";
+import {
+  SDK_PACKAGES,
+  // @ts-expect-error The scripts are dependency-free JavaScript with JSDoc types.
+} from "../../../../scripts/sdkPackages.mjs";
 
 const REPO = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
@@ -57,7 +61,7 @@ function permissionsOf(name: string): string[] {
 }
 
 describe("release.yml", () => {
-  it("gives the npm job room to wait out the registry for each of the four packages", () => {
+  it("gives the npm job room to wait out the registry for each SDK package", () => {
     const line = job("npm").find((entry) =>
       /^ {4}timeout-minutes:/.test(entry),
     );
@@ -66,7 +70,9 @@ describe("release.yml", () => {
       CONFIRM_DELAYS_MS.reduce((sum: number, ms: number) => sum + ms, 0) /
       60_000;
     const setupMinutes = 10;
-    expect(minutes).toBeGreaterThanOrEqual(4 * waitMinutes + setupMinutes);
+    expect(minutes).toBeGreaterThanOrEqual(
+      SDK_PACKAGES.length * waitMinutes + setupMinutes,
+    );
   });
 
   it("has the jobs the trusted publisher record and the plan name, and a check job between verify and the release", () => {
@@ -241,7 +247,7 @@ describe("release.yml", () => {
     expect(check).not.toContain("upload-artifact");
   });
 
-  it("compares what github-release and npm download with the recorded digests, and with exactly the four tarballs, before attesting or publishing", () => {
+  it("compares what github-release and npm download with the recorded digests, and with exactly the expected tarballs, before attesting or publishing", () => {
     for (const [name, after] of [
       ["github-release", "attest-build-provenance"],
       ["rehearse", "package-state"],

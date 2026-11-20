@@ -98,7 +98,7 @@ jobs:
       # provenance attestation of those that have one.
       - run: npm audit signatures
 
-  # Packs the four SDK packages and proves the tarballs hold only what they
+  # Packs the SDK packages and proves the tarballs hold only what they
   # should and work in an app outside this repository (`npm run pack:check` and
   # `npm run consumer:check`, plan 0014 step 6). It is not a required check: it
   # installs from the registry, so a registry outage must not block a merge.
@@ -138,7 +138,7 @@ jobs:
             exit 0
           fi
           changed="$(git diff --name-only "origin/$BASE_REF...HEAD")"
-          if grep -Eq '^(packages/(core|map|react|theme)/|scripts/(release/|buildPackage\.mjs|buildSdk\.mjs|entryPoint\.mjs)|package(-lock)?\.json|tsconfig\.base\.json|\.npmrc|\.github/workflows/ci\.yml)' <<<"$changed"; then
+          if grep -Eq '^(packages/(core|map|react|theme|sdk)/|scripts/(release/|buildPackage\.mjs|buildSdk\.mjs|entryPoint\.mjs)|package(-lock)?\.json|tsconfig\.base\.json|\.npmrc|\.github/workflows/ci\.yml)' <<<"$changed"; then
             echo "run=true" >> "$GITHUB_OUTPUT"
           else
             echo "run=false" >> "$GITHUB_OUTPUT"

@@ -1,0 +1,7 @@
+{
+  "name": "mapcairn-throwaway-consumer-mixed",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Replaced by consumerCheck.mjs, which adds the dependencies. Not a workspace."
+}

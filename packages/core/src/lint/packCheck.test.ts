@@ -8,6 +8,10 @@ import {
   SIZE_CEILINGS,
   // @ts-expect-error The scripts are dependency-free JavaScript with JSDoc types.
 } from "../../../../scripts/release/packCheck.mjs";
+import {
+  SDK_PACKAGES,
+  // @ts-expect-error The scripts are dependency-free JavaScript with JSDoc types.
+} from "../../../../scripts/sdkPackages.mjs";
 
 /** A manifest as the SDK packages have it, with one stylesheet. */
 function manifest(overrides: Record<string, unknown> = {}) {
@@ -405,12 +409,7 @@ describe("files the build did not make", () => {
 
 describe("SIZE_CEILINGS", () => {
   it("has one for each SDK package", () => {
-    expect(Object.keys(SIZE_CEILINGS).sort()).toEqual([
-      "core",
-      "map",
-      "react",
-      "theme",
-    ]);
+    expect(Object.keys(SIZE_CEILINGS).sort()).toEqual([...SDK_PACKAGES].sort());
     for (const ceiling of Object.values(SIZE_CEILINGS)) {
       expect(ceiling).toBeGreaterThan(0);
     }

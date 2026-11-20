@@ -1,16 +1,21 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
 /**
- * Proves the four packed tarballs work for an app outside this repository:
- * they install, a plain Vite build resolves them and both stylesheets with no
+ * Proves the packed tarballs work for an app outside this repository: they
+ * install, a plain Vite build resolves them and both stylesheets with no
  * vanilla-extract plugin, TypeScript resolves their types under `bundler`,
- * `node16` and `nodenext`, and the map chrome renders on a server.
+ * `node16` and `nodenext`, and the map chrome renders on a server. It does so
+ * for an app that lists the four packages the umbrella re-exports, and again
+ * for an app that lists only the umbrella (`@mapcairn/sdk`), with its
+ * declaration-merging case and a strict pnpm install, and for an app that
+ * lists the umbrella and some of the four at one version, which must render
+ * with one copy of each.
  *
  *   npm run consumer:check
  *
  * With `{ published: <version> }` (`verifyPublished.mjs`) it installs that
- * version of the four packages from the registry instead, exempting only
- * those four from the minimum release age, and audits the signatures.
+ * version of the packages from the registry instead, exempting only the SDK
+ * packages from the minimum release age, and audits the signatures.
  *
  * Everything happens in a temporary folder outside the repository, which is
  * removed at the end. It installs from the registry, so it needs a network;
@@ -25,6 +30,7 @@ import { spawnSync } from "node:child_process";
 import {
   copyFileSync,
   cpSync,
+  existsSync,
   mkdirSync,
   mkdtempSync,
   readdirSync,
@@ -37,6 +43,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { isEntryPoint } from "../entryPoint.mjs";
+import { SDK_PACKAGES, UMBRELLA_PACKAGE } from "../sdkPackages.mjs";
 import {
   bunSettings,
   bunSkipped,
@@ -63,7 +70,10 @@ const REPO = path.resolve(
 const MAX_OUTPUT = 64 * 1024 * 1024;
 const FIXTURE = path.join(REPO, "scripts", "release", "consumer");
 
-/** What the fixture needs from the registry besides the four tarballs. */
+/** The folder of the files the app that mixes the umbrella with direct dependencies adds. */
+const MIXED_FIXTURE = path.join(REPO, "scripts", "release", "consumer-mixed");
+
+/** What the fixture needs from the registry besides the SDK tarballs. */
 export const LOCKED_TOOLS = [
   "react",
   "react-dom",
@@ -149,16 +159,33 @@ export function lockedVersion(lock, name) {
  * `overrides` entry for each SDK package, so a package that depends on
  * another one (none is on the registry yet) takes the tarball.
  *
- * @param {{ tarballs: Record<string, string>, versions: Record<string, string> }} input
+ * @param {{ tarballs: Record<string, string>, versions: Record<string, string>, direct?: string[] }} input
  *   `tarballs` maps `core` to the tarball's file name in `../tarballs`.
+ *   `direct` names the packages the app lists as dependencies, by folder name;
+ *   without it every package with a tarball is listed. Every package is
+ *   overridden either way.
  * @returns {Record<string, unknown>}
  */
-export function consumerManifest({ tarballs, versions }) {
+export function consumerManifest({ tarballs, versions, direct }) {
   /** @type {Record<string, string>} */
   const sdk = {};
   for (const [name, file] of Object.entries(tarballs)) {
     sdk[`@mapcairn/${name}`] = `file:../tarballs/${file}`;
   }
+  for (const name of direct ?? []) {
+    if (!(`@mapcairn/${name}` in sdk)) {
+      throw new Error(
+        `There is no tarball for ${name}, so the app cannot list it.`,
+      );
+    }
+  }
+  const listed = Object.fromEntries(
+    Object.entries(sdk).filter(
+      ([name]) =>
+        direct === undefined ||
+        direct.includes(name.slice("@mapcairn/".length)),
+    ),
+  );
   const { typescript, vite, ...runtime } = versions;
   const types = Object.fromEntries(
     Object.entries(runtime).filter(([name]) => name.startsWith("@types/")),
@@ -171,7 +198,7 @@ export function consumerManifest({ tarballs, versions }) {
     version: "0.0.0",
     private: true,
     type: "module",
-    dependencies: { ...sdk, ...dependencies },
+    dependencies: { ...listed, ...dependencies },
     devDependencies: { ...types, typescript, vite },
     overrides: sdk,
   };
@@ -203,12 +230,19 @@ export function installFlags({ published, extra = [] }) {
  * version of each SDK package from the registry, and the locked tools. There
  * is no tarball and no override, so the registry copy is what gets installed.
  *
- * @param {{ version: string, versions: Record<string, string> }} input
+ * @param {{ version: string, versions: Record<string, string>, direct?: string[] }} input
+ *   `direct` names the packages the app lists, by folder name; without it every SDK package.
  * @returns {Record<string, unknown>}
  */
-export function publishedManifest({ version, versions }) {
+export function publishedManifest({ version, versions, direct }) {
   const manifest = consumerManifest({ tarballs: {}, versions });
-  const sdk = Object.fromEntries(SDK_NAMES.map((name) => [name, version]));
+  const sdk = Object.fromEntries(
+    SDK_NAMES.filter(
+      (name) =>
+        direct === undefined ||
+        direct.includes(name.slice("@mapcairn/".length)),
+    ).map((name) => [name, version]),
+  );
   return {
     ...manifest,
     dependencies: { ...sdk, ...(manifest.dependencies ?? {}) },
@@ -227,6 +261,35 @@ export function missingLandmarks(html, landmarks = LANDMARKS) {
   return landmarks
     .filter(({ pattern }) => !pattern.test(html))
     .map(({ name }) => name);
+}
+
+/**
+ * The app's source as an app that lists only the umbrella would write it:
+ * every import of the other SDK packages names the umbrella, the contracts
+ * entry point is its subpath, the two stylesheets are the one it ships, and a
+ * declaration merged into `core` is merged into the umbrella.
+ *
+ * @param {string} source The text of a `.ts`, `.tsx` or `.mjs` file of the app.
+ * @returns {string}
+ */
+export function umbrellaSource(source) {
+  const others = SDK_PACKAGES.filter((name) => name !== UMBRELLA_PACKAGE).join(
+    "|",
+  );
+  return source
+    .replace(/^import "@mapcairn\/map\/styles\.css";\n/gm, "")
+    .replace(
+      /"@mapcairn\/theme\/tokens\.css"/g,
+      `"@mapcairn/${UMBRELLA_PACKAGE}/styles.css"`,
+    )
+    .replace(
+      /"@mapcairn\/core\/contracts"/g,
+      `"@mapcairn/${UMBRELLA_PACKAGE}/core/contracts"`,
+    )
+    .replace(
+      new RegExp(`"@mapcairn/(?:${others})"`, "g"),
+      `"@mapcairn/${UMBRELLA_PACKAGE}"`,
+    );
 }
 
 /**
@@ -385,7 +448,7 @@ function runNode(label, args, cwd, timeout) {
   return result.stdout;
 }
 
-/** Packs the four packages into `destination` and names each tarball. */
+/** Packs the SDK packages into `destination` and names each tarball. */
 function packTarballs(destination) {
   /** @type {Record<string, string>} */
   const tarballs = {};
@@ -404,13 +467,22 @@ function packTarballs(destination) {
 
 /**
  * Copies the fixture to `app`, with the manifest and the repository's
- * `.npmrc` (so the same minimum release age applies there).
+ * `.npmrc` (so the same minimum release age applies there). With `umbrella`
+ * the app's source imports the umbrella alone (`umbrellaSource`).
  */
-function prepareApp(app, manifest) {
+function prepareApp(app, manifest, { umbrella = false } = {}) {
   cpSync(FIXTURE, app, {
     recursive: true,
     filter: (source) => !source.split(path.sep).includes("node_modules"),
   });
+  if (umbrella) {
+    for (const file of readdirSync(app, { recursive: true }).map(String)) {
+      if (/\.(?:tsx?|mjs)$/.test(file)) {
+        const target = path.join(app, file);
+        writeFileSync(target, umbrellaSource(readFileSync(target, "utf8")));
+      }
+    }
+  }
   writeFileSync(
     path.join(app, "package.json"),
     `${JSON.stringify(manifest, null, 2)}\n`,
@@ -726,6 +798,212 @@ function auditSignatures(app) {
 }
 
 /**
+ * Everything an installed app is checked for once: a plain Node render, the
+ * types under each resolution, the Vite builds and their stylesheets, the
+ * server bundle and the Worker on workerd.
+ *
+ * @param {string} app The installed app.
+ * @param {string} [prefix] Put before each line of the report, to say which app it was.
+ * @returns {string[]} One line for each check.
+ */
+function checkApp(app, prefix = "") {
+  /** @type {string[]} */
+  const lines = [];
+  const plain = renderPlain(app);
+  const missing = missingLandmarks(plain.html, CHROME_LANDMARKS);
+  if (missing.length > 0) {
+    throw new Error(
+      `Plain Node render lacks: ${missing.join(", ")}\n${plain.html.slice(0, EXCERPT)}`,
+    );
+  }
+  lines.push("plain Node render of the chrome (no bundler): ok");
+
+  const tsc = path.join(app, "node_modules", "typescript", "bin", "tsc");
+  for (const { name, flags } of TYPE_CHECKS) {
+    runNode(`tsc (${name})`, [tsc, "-p", "tsconfig.json", ...flags], app);
+    lines.push(`tsc moduleResolution ${name}: ok`);
+  }
+
+  const vite = path.join(app, "node_modules", "vite", "bin", "vite.js");
+  runNode(
+    "vite build (client)",
+    [vite, "build", "--outDir", "dist/client"],
+    app,
+  );
+  runNode(
+    "vite build (server)",
+    [vite, "build", "--ssr", "src/entryServer.tsx", "--outDir", "dist/server"],
+    app,
+  );
+  const cssProblems = stylesheetProblems(
+    builtCss(path.join(app, "dist", "client")),
+  );
+  if (cssProblems.length > 0) {
+    throw new Error(cssProblems.join("\n"));
+  }
+  const clientCss = builtCss(path.join(app, "dist", "client"));
+  const layering = layerProblems(clientCss);
+  if (layering.length > 0) {
+    throw new Error(layering.join("\n"));
+  }
+  lines.push(
+    "vite build with no plugins, both stylesheets built in: ok",
+    "the SDK's primitives sit in one layer, ranked above an app reset layer declared first: ok",
+  );
+
+  const bundled = runNode(
+    "render the built server bundle",
+    [
+      "--input-type=module",
+      "--eval",
+      'const { render } = await import("./dist/server/entryServer.js"); process.stdout.write(JSON.stringify(render()));',
+    ],
+    app,
+  );
+  const rendered = JSON.parse(bundled);
+  const absent = missingLandmarks(rendered.html);
+  if (absent.length > 0) {
+    throw new Error(
+      `The server bundle's page lacks: ${absent.join(", ")}\n${rendered.html.slice(0, EXCERPT)}`,
+    );
+  }
+  lines.push("server render of the chrome from the bundle: ok");
+
+  lines.push(checkWorkerd(app));
+  return lines.map((line) => `${prefix}${line}`);
+}
+
+/**
+ * The manifest of an app that lists the given packages, from the tarballs or
+ * from the registry.
+ *
+ * @param {{ packed: Record<string, string>, published: string | null, versions: Record<string, string>, direct: string[] }} input
+ * @returns {Record<string, unknown>}
+ */
+function manifestListing({ packed, published, versions, direct }) {
+  return published === null
+    ? consumerManifest({ tarballs: packed, versions, direct })
+    : publishedManifest({ version: published, versions, direct });
+}
+
+/**
+ * The checks for an app that lists only the umbrella: the four packages come
+ * in through it alone, so this is what a reader of the README does. Its source
+ * imports the umbrella (`umbrellaSource`), and the declaration merged into the
+ * app's types is merged through it. It also installs with pnpm as strictly as
+ * pnpm goes, where nothing but the umbrella is reachable from the app.
+ *
+ * @param {{ root: string, packed: Record<string, string>, published: string | null, versions: Record<string, string> }} input
+ * @returns {string[]} One line for each check.
+ */
+function checkUmbrella({ root, packed, published, versions }) {
+  const prefix = `umbrella only (@mapcairn/${UMBRELLA_PACKAGE}): `;
+  const manifest = manifestListing({
+    packed,
+    published,
+    versions,
+    direct: [UMBRELLA_PACKAGE],
+  });
+  const app = path.join(root, "umbrella");
+  prepareApp(app, manifest, { umbrella: true });
+  install(app, installFlags({ published }));
+  const lines = [`${prefix}npm install: ok`, ...checkApp(app, prefix)];
+  if (published !== null) {
+    return [
+      ...lines,
+      `${prefix}the pnpm strict-peer install is not repeated for the published packages`,
+    ];
+  }
+  if (!pnpmAvailable(app)) {
+    return [...lines, pnpmSkipped()];
+  }
+  const strict = path.join(root, "umbrella-strict");
+  prepareApp(strict, manifest, { umbrella: true });
+  return [
+    ...lines,
+    `${prefix}${checkPnpmStrict(strict, /** @type {Record<string, string>} */ (manifest.overrides))}`,
+  ];
+}
+
+/**
+ * The check for an app that lists the umbrella and also `core` and `map`
+ * directly, at the umbrella's version, as the documents tell a host that
+ * merges a declaration. It must install one copy of each package, so the
+ * umbrella's `MapChrome` is the one from `@mapcairn/map` and a provider from
+ * one renders a component from the other, and a service merged into `core`
+ * must be visible through the umbrella's types.
+ *
+ * @param {{ root: string, packed: Record<string, string>, published: string | null, versions: Record<string, string> }} input
+ * @returns {string[]} One line for each check.
+ */
+function checkMixed({ root, packed, published, versions }) {
+  const prefix = `umbrella with core and map listed too: `;
+  const app = path.join(root, "mixed");
+  mkdirSync(path.join(app, "src"), { recursive: true });
+  cpSync(MIXED_FIXTURE, app, { recursive: true });
+  copyFileSync(
+    path.join(FIXTURE, "src", "merging.ts"),
+    path.join(app, "src", "merging.ts"),
+  );
+  copyFileSync(
+    path.join(FIXTURE, "tsconfig.json"),
+    path.join(app, "tsconfig.json"),
+  );
+  const manifest = manifestListing({
+    packed,
+    published,
+    versions,
+    direct: [UMBRELLA_PACKAGE, "core", "map"],
+  });
+  writeFileSync(
+    path.join(app, "package.json"),
+    `${JSON.stringify(manifest, null, 2)}\n`,
+  );
+  copyFileSync(path.join(REPO, ".npmrc"), path.join(app, ".npmrc"));
+  install(app, installFlags({ published }));
+  const nested = path.join(
+    app,
+    "node_modules",
+    "@mapcairn",
+    UMBRELLA_PACKAGE,
+    "node_modules",
+  );
+  if (existsSync(nested)) {
+    throw new Error(
+      `The umbrella installed its own copies of ${readdirSync(nested).join(", ")}, so a host gets two of each.`,
+    );
+  }
+  const answer = JSON.parse(runNode("mixed render", ["mixed.mjs"], app));
+  const absent = missingLandmarks(answer.html, CHROME_LANDMARKS);
+  if (absent.length > 0) {
+    throw new Error(`The mixed render lacks: ${absent.join(", ")}`);
+  }
+  if (!(answer.sameChrome && answer.sameServices)) {
+    throw new Error(
+      "The umbrella and the package it re-exports are two copies, not one.",
+    );
+  }
+  const tsc = path.join(app, "node_modules", "typescript", "bin", "tsc");
+  runNode(
+    "tsc (mixed)",
+    [
+      tsc,
+      "-p",
+      "tsconfig.json",
+      "--module",
+      "esnext",
+      "--moduleResolution",
+      "bundler",
+    ],
+    app,
+  );
+  return [
+    `${prefix}one copy of each package, and a render across the two: ok`,
+    `${prefix}a service merged into core is visible through the umbrella's types: ok`,
+  ];
+}
+
+/**
  * Runs every check and returns one line for each. With `published`, it
  * installs that version of the four packages from the registry instead of
  * packing the repository's, skips the pnpm install, and audits the
@@ -751,11 +1029,11 @@ export function runConsumerCheck({ published = null, tarballs = null } = {}) {
     );
     /** @type {Record<string, unknown>} */
     let manifest;
+    /** @type {Record<string, string>} */
+    let packed = {};
     if (published === null) {
       const copies = path.join(root, "tarballs");
       mkdirSync(copies);
-      /** @type {Record<string, string>} */
-      let packed;
       if (tarballs === null) {
         packed = packTarballs(copies);
         report.push(`packed ${Object.keys(packed).length} tarballs`);
@@ -785,74 +1063,7 @@ export function runConsumerCheck({ published = null, tarballs = null } = {}) {
       report.push(auditSignatures(app));
     }
 
-    const plain = renderPlain(app);
-    const missing = missingLandmarks(plain.html, CHROME_LANDMARKS);
-    if (missing.length > 0) {
-      throw new Error(
-        `Plain Node render lacks: ${missing.join(", ")}\n${plain.html.slice(0, EXCERPT)}`,
-      );
-    }
-    report.push("plain Node render of the chrome (no bundler): ok");
-
-    const tsc = path.join(app, "node_modules", "typescript", "bin", "tsc");
-    for (const { name, flags } of TYPE_CHECKS) {
-      runNode(`tsc (${name})`, [tsc, "-p", "tsconfig.json", ...flags], app);
-      report.push(`tsc moduleResolution ${name}: ok`);
-    }
-
-    const vite = path.join(app, "node_modules", "vite", "bin", "vite.js");
-    runNode(
-      "vite build (client)",
-      [vite, "build", "--outDir", "dist/client"],
-      app,
-    );
-    runNode(
-      "vite build (server)",
-      [
-        vite,
-        "build",
-        "--ssr",
-        "src/entryServer.tsx",
-        "--outDir",
-        "dist/server",
-      ],
-      app,
-    );
-    const cssProblems = stylesheetProblems(
-      builtCss(path.join(app, "dist", "client")),
-    );
-    if (cssProblems.length > 0) {
-      throw new Error(cssProblems.join("\n"));
-    }
-    const clientCss = builtCss(path.join(app, "dist", "client"));
-    const layering = layerProblems(clientCss);
-    if (layering.length > 0) {
-      throw new Error(layering.join("\n"));
-    }
-    report.push(
-      "vite build with no plugins, both stylesheets built in: ok",
-      "the SDK's primitives sit in one layer, ranked above an app reset layer declared first: ok",
-    );
-
-    const bundled = runNode(
-      "render the built server bundle",
-      [
-        "--input-type=module",
-        "--eval",
-        'const { render } = await import("./dist/server/entryServer.js"); process.stdout.write(JSON.stringify(render()));',
-      ],
-      app,
-    );
-    const rendered = JSON.parse(bundled);
-    const absent = missingLandmarks(rendered.html);
-    if (absent.length > 0) {
-      throw new Error(
-        `The server bundle's page lacks: ${absent.join(", ")}\n${rendered.html.slice(0, EXCERPT)}`,
-      );
-    }
-    report.push("server render of the chrome from the bundle: ok");
-
-    report.push(checkWorkerd(app));
+    report.push(...checkApp(app));
 
     const legacy = path.join(root, "legacy");
     prepareApp(legacy, manifest);
@@ -894,6 +1105,11 @@ export function runConsumerCheck({ published = null, tarballs = null } = {}) {
     const bun = path.join(root, "bun");
     prepareApp(bun, manifest);
     report.push(publishedLegSkip("Bun", published) ?? checkBun(bun));
+
+    report.push(
+      ...checkUmbrella({ root, packed, published, versions }),
+      ...checkMixed({ root, packed, published, versions }),
+    );
   } finally {
     rmSync(root, { recursive: true, force: true });
   }

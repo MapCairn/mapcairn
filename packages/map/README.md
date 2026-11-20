@@ -6,6 +6,8 @@ It never imports a map engine, an adapter or a browser service. Everything it ne
 
 **Status:** a release candidate, for early adopters. The API is still settling, so a breaking change can land before `0.1.0`; the [changelog](https://github.com/MapCairn/mapcairn/blob/main/CHANGELOG.md) lists each one. Until `0.1.0`, add `@next` to every package name in the install commands below.
 
+If you would rather install and import the whole SDK once, [`@mapcairn/sdk`](https://github.com/MapCairn/mapcairn/tree/main/packages/sdk) re-exports this package with the others.
+
 ## Install
 
 ```bash

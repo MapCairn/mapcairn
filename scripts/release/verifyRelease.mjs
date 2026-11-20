@@ -45,7 +45,7 @@ const ROOT = path.resolve(
   "..",
 );
 
-/** The manifests of the four SDK packages, which a release changes together. */
+/** The manifests of the SDK packages, which a release changes together. */
 export const SDK_MANIFEST_FILES = SDK_NAMES.map(
   (name) => `packages/${name.replace("@mapcairn/", "")}/package.json`,
 );
@@ -61,7 +61,7 @@ const RELEASE_SUBJECT = /^chore\(release\): v(\S+) \(#([1-9]\d{0,9})\)$/;
  * up to a ceiling of `CONFIRM_MAX_DELAY_MS` on each wait, until the waits add
  * up to `CONFIRM_WINDOW_MS`. There is one read before the first wait and one
  * after the last, so the reads number one more than the delays. The release
- * workflow's `npm` job timeout must leave room for four packages at this
+ * workflow's `npm` job timeout must leave room for every SDK package at this
  * window (`releaseWorkflow.test.ts` checks it).
  */
 export const CONFIRM_MAX_DELAY_MS = 60_000;
@@ -325,7 +325,7 @@ export function tarballVersionProblems(version, manifests) {
   const counts = new Map();
   for (const [file, manifest] of Object.entries(manifests)) {
     if (!SDK_NAMES.includes(manifest.name)) {
-      problems.push(`${file} is not one of the four SDK packages`);
+      problems.push(`${file} is not one of the SDK packages`);
       continue;
     }
     counts.set(manifest.name, (counts.get(manifest.name) ?? 0) + 1);
@@ -763,7 +763,7 @@ function checkTarballs(version, folder) {
   if (problems.length > 0) {
     throw new ReleaseRefused("The tarballs are not the release.");
   }
-  console.log(`All four tarballs hold version ${version}.`);
+  console.log(`All the tarballs hold version ${version}.`);
 }
 
 if (isEntryPoint(import.meta.url)) {

@@ -125,7 +125,7 @@ The project has one maintainer, so the maintainer's own pull requests are checke
 
 Report suspected vulnerabilities privately through [`SECURITY.md`](SECURITY.md). MapCairn is licensed under [AGPL-3.0](LICENSE), and its author may agree other licence terms by arrangement.
 
-A dependency of an SDK package (`core`, `map`, `react`, `theme`) must allow commercial use. `npm run lint` checks the licence of every production dependency of those four packages against the permissive list in `scripts/sdkLicences.allowlist.json`, and fails on a different or missing one. Do not edit that file to get a change through: say in the pull request which package it is and why, and the maintainer decides.
+A dependency of an SDK package (`core`, `map`, `react`, `theme`, `sdk`) must allow commercial use. `npm run lint` checks the licence of every production dependency of those packages against the permissive list in `scripts/sdkLicences.allowlist.json`, and fails on a different or missing one. Do not edit that file to get a change through: say in the pull request which package it is and why, and the maintainer decides.
 
 ### Contributor licence agreement
 

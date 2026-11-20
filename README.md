@@ -14,7 +14,7 @@
 
 **MapCairn is an open-source React SDK for maps that serve the public.** It is for teams building public-interest map applications, such as open data and hazard maps, who would rather spend their time on the data than on the interface around it. MapCairn supplies that interface on top of MapLibre GL JS: search, measuring and drawing tools, a layers panel and a design system, built to be accessible and private. Open data layers are written as data, and every service the map talks to sits behind a small interface, so it can be replaced or faked in a test.
 
-This repository also holds the playground, a reference site built from the SDK's four packages.
+This repository also holds the playground, a reference site built from the SDK's packages.
 
 <p>
   <picture>
@@ -29,7 +29,7 @@ The playground in its light and dark themes, with the earthquakes layer on and a
 
 ## Try the playground
 
-The playground at [mapcairn.timothybrits.co.za/map](https://mapcairn.timothybrits.co.za/map) is a complete map built from the SDK's four packages, and it is where the SDK is shown working and where its browser tests run. Search for a place, measure a distance or draw a shape, turn on an open data layer such as earthquakes or rainfall, switch the interface between English and Afrikaans in Settings, and open Help to find the About block that links back here. The recording below searches for a place, turns on the earthquakes layer for the past week, measures a distance and opens the map credits.
+The playground at [mapcairn.timothybrits.co.za/map](https://mapcairn.timothybrits.co.za/map) is a complete map built from the SDK's packages, and it is where the SDK is shown working and where its browser tests run. Search for a place, measure a distance or draw a shape, turn on an open data layer such as earthquakes or rainfall, switch the interface between English and Afrikaans in Settings, and open Help to find the About block that links back here. The recording below searches for a place, turns on the earthquakes layer for the past week, measures a distance and opens the map credits.
 
 <p>
   <picture>
@@ -40,7 +40,20 @@ The playground at [mapcairn.timothybrits.co.za/map](https://mapcairn.timothybrit
 
 ## Embed a map
 
-This is a whole app. It mounts the map with the SDK's interface around it and a search box at the top:
+One package holds the whole SDK, with one install, one stylesheet and one import:
+
+```bash
+npm install @mapcairn/sdk@next
+```
+
+```ts
+import "@mapcairn/sdk/styles.css";
+import { MapChrome, ServicesProvider } from "@mapcairn/sdk";
+```
+
+The packages are not on npm yet (see Status above), so the install works once they are. `@mapcairn/sdk` re-exports `core`, `map`, `react` and `theme`, and its stylesheet is the two the packages ship, in order. An app that wants less installs the packages it needs: `core` has no React or browser dependency, and `theme` installs without the interface. [`packages/sdk/README.md`](packages/sdk/README.md) lists the entry points and says how to keep one copy of a package when you also list it directly.
+
+This is a whole app. It mounts the map with the SDK's interface around it and a search box at the top, written against the four packages, which is what the playground and `examples/embed` use. Every name in it comes from `@mapcairn/sdk` too, so with the umbrella you change the imports and drop the second stylesheet:
 
 ```tsx
 import "@mapcairn/theme/tokens.css";
@@ -109,9 +122,9 @@ function Chrome({ background }: { readonly background: ReactNode }) {
 
 `createFakeServices()` runs the interface on the SDK's in-memory fakes, so it requests nothing and draws no map tiles. A real map swaps in a `MapAdapter` over MapLibre GL JS: the playground's adapter is the reference today, and it is not yet shipped as a package of its own.
 
-[`examples/embed`](examples/embed/README.md) is the full version of this app, with the end stack of controls, the sheet, the measure tool, layers and a search provider of its own, and a test in `packages/core/src/lint/readme.test.ts` fails if this snippet uses an import, a component or a prop that the example does not. [`docs/guides/extending.md`](docs/guides/extending.md) lists what an app provides around it (the two stylesheet imports, base styles and the font). The snippet sets no page styles: the SDK ships no base stylesheet today, so an app gives the page a height, removes the body margin and sets its own font and colours (the example does it in `examples/embed/src/main.tsx` and `page.css`). Whether the SDK should ship base styles or stable alias properties for theming is not decided.
+[`examples/embed`](examples/embed/README.md) is the full version of this app, written against the four packages directly, with the end stack of controls, the sheet, the measure tool, layers and a search provider of its own, and a test in `packages/core/src/lint/readme.test.ts` fails if this snippet uses an import, a component or a prop that the example does not (an import from `@mapcairn/sdk` counts as the package it re-exports). [`docs/guides/extending.md`](docs/guides/extending.md) lists what an app provides around it (the stylesheet import, base styles and the font). The snippet sets no page styles: the SDK ships no base stylesheet today, so an app gives the page a height, removes the body margin and sets its own font and colours (the example does it in `examples/embed/src/main.tsx` and `page.css`). Whether the SDK should ship base styles or stable alias properties for theming is not decided.
 
-The SDK does not depend on the playground's framework. The playground is a server-rendered React 19 app on React Router, Vite and Cloudflare Workers, but the SDK packages import neither React Router nor MapLibre, the two that use React (`map` and `react`) take it as a peer, and `examples/embed` is a plain Vite and React app. The SDK's styles are compiled to two plain stylesheets, so it needs no vanilla-extract plugin and should render in any React 19 app whose bundler handles a CSS import, though no other framework has been tried here. There is no prebuilt bundle for pages without React yet. [`docs/guides/serving-from-iis.md`](docs/guides/serving-from-iis.md) covers serving a build you make yourself from IIS and a server-rendered page; it was checked against Microsoft's documentation and not run on a Windows server.
+The SDK does not depend on the playground's framework. The playground is a server-rendered React 19 app on React Router, Vite and Cloudflare Workers, but the SDK packages import neither React Router nor MapLibre, the two that use React (`map` and `react`) take it as a peer, and `examples/embed` is a plain Vite and React app. The SDK's styles are compiled to plain stylesheets, so it needs no vanilla-extract plugin and should render in any React 19 app whose bundler handles a CSS import, though no other framework has been tried here. There is no prebuilt bundle for pages without React yet. [`docs/guides/serving-from-iis.md`](docs/guides/serving-from-iis.md) covers serving a build you make yourself from IIS and a server-rendered page; it was checked against Microsoft's documentation and not run on a Windows server.
 
 ## What the SDK adds to a map renderer
 
@@ -195,9 +208,9 @@ npm run dev
 
 ## How it is checked
 
-- **The playground** is built from the four packages and is what the browser tests run against, on desktop and mobile Chromium, with the basemap, keyboard, sheet and app-shell tests also on iPhone WebKit and in a right-to-left layout.
+- **The playground** is built from the SDK packages and is what the browser tests run against, on desktop and mobile Chromium, with the basemap, keyboard, sheet and app-shell tests also on iPhone WebKit and in a right-to-left layout.
 - **The example app** imports the SDK by package name only. It is type-checked, built and tested on every pull request, so a missing export or build step fails CI.
-- **Coverage floors:** `npm run test:coverage` fails below 95% of statements, branches, functions and lines across the four SDK packages.
+- **Coverage floors:** `npm run test:coverage` fails below 95% of statements, branches, functions and lines across the SDK packages.
 - **Contract suites:** each port has one suite, run against its fake and, where the playground has one, its real adapter, so they cannot drift apart.
 - **Accessibility:** automated axe checks for WCAG 2.0 A and AA and WCAG 2.1 and 2.2 AA run in the required `e2e` check on every pull request.
 - **Security and licences:** CodeQL, a secret scan, OpenSSF Scorecard, and a lint check that every production dependency of an SDK package has a permissive licence.
@@ -206,6 +219,7 @@ npm run dev
 
 | Package                                       | Provides                                                                                                      |
 | --------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
+| [`@mapcairn/sdk`](packages/sdk/README.md)     | The four packages below from one install and one import, with one stylesheet. It holds no code of its own     |
 | [`@mapcairn/core`](packages/core/README.md)   | The port interfaces, pure logic, basemap definitions, fakes and contract suites. No React, no browser globals |
 | [`@mapcairn/map`](packages/map/README.md)     | The map interface: chrome, sheet and panels, tools, `MapView` and the services provider                       |
 | [`@mapcairn/react`](packages/react/README.md) | Generic React hooks                                                                                           |

@@ -60,18 +60,19 @@ describe("publishedManifest", () => {
 });
 
 describe("RELEASE_AGE_EXCLUSIONS", () => {
-  it("exempts the four SDK packages from the minimum release age and nothing else", () => {
+  it("exempts the SDK packages from the minimum release age and nothing else", () => {
     expect(RELEASE_AGE_EXCLUSIONS).toEqual([
       "--min-release-age-exclude=@mapcairn/core",
       "--min-release-age-exclude=@mapcairn/react",
       "--min-release-age-exclude=@mapcairn/theme",
       "--min-release-age-exclude=@mapcairn/map",
+      "--min-release-age-exclude=@mapcairn/sdk",
     ]);
   });
 });
 
 describe("installFlags", () => {
-  it("exempts the four packages from the release age only when installing a published version", () => {
+  it("exempts the SDK packages from the release age only when installing a published version", () => {
     expect(installFlags({ published: null })).toEqual([]);
     expect(installFlags({ published: "0.1.0" })).toEqual(
       RELEASE_AGE_EXCLUSIONS,
@@ -161,6 +162,7 @@ describe("provenanceReport", () => {
     "@mapcairn/react",
     "@mapcairn/theme",
     "@mapcairn/map",
+    "@mapcairn/sdk",
   ];
   const answers = (provenance: boolean | null) =>
     Object.fromEntries(
@@ -187,7 +189,7 @@ describe("provenanceReport", () => {
 
   it("fails every package without provenance when it is required", () => {
     const report = provenanceReport(answers(false), true);
-    expect(report.problems).toHaveLength(4);
+    expect(report.problems).toHaveLength(SDK_PACKAGES.length);
     expect(report.problems[0]).toMatch(/@mapcairn\/core has no provenance/);
   });
 
@@ -196,7 +198,9 @@ describe("provenanceReport", () => {
   });
 
   it("fails, required or not, on a package the registry did not answer for or does not have", () => {
-    expect(provenanceReport(answers(null), false).problems).toHaveLength(4);
+    expect(provenanceReport(answers(null), false).problems).toHaveLength(
+      SDK_PACKAGES.length,
+    );
     expect(
       provenanceReport(
         { ...answers(true), "@mapcairn/core": { exists: false } },
@@ -248,7 +252,7 @@ describe("distTagReport", () => {
         versionCount: 2,
       }),
     });
-    expect(report.problems).toHaveLength(4);
+    expect(report.problems).toHaveLength(SDK_PACKAGES.length);
     expect(report.problems[0]).toContain("latest");
   });
 
@@ -303,7 +307,7 @@ describe("distTagReport", () => {
       expected: "latest",
       answers: all(null),
     });
-    expect(report.problems).toHaveLength(4);
+    expect(report.problems).toHaveLength(SDK_PACKAGES.length);
     expect(report.problems[0]).toContain("could not be read");
   });
 });

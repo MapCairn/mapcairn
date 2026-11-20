@@ -161,7 +161,7 @@ describe("checkChangelog", () => {
       }
     });
 
-    it("lets only the four SDK package names stand outside a code span", () => {
+    it("lets only the SDK package names stand outside a code span", () => {
       for (const bad of [
         "thanks @MapCairn/maintainers",
         "see @mapcairn/other",
@@ -176,6 +176,7 @@ describe("checkChangelog", () => {
         "see `@MapCairn/maintainers`",
         "import from @mapcairn/theme/tokens.css",
         "@mapcairn/react and @mapcairn/core.",
+        "import from @mapcairn/sdk/styles.css",
       ]) {
         expect(messages(edited("The scale bar", good))).toEqual([]);
       }
@@ -290,6 +291,8 @@ describe("checkChangelog", () => {
         "@mapcairn/theme",
         "theme",
         "`core`",
+        "`@mapcairn/sdk`",
+        "sdk",
       ]) {
         expect(messages(edited("`@mapcairn/theme`", form))).toEqual([]);
       }
