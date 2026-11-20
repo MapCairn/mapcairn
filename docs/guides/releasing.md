@@ -117,6 +117,15 @@ The `release` skill is the procedure: plan, notes, apply, check, rehearse, open 
 
 The four manifests had `"private": true` until the `rc.1` Release pull request, which removed it and changed each package README's `**Status:**` line in the same pull request. The umbrella's manifest was private until it joined the release set, in the pull request that registered it in `scripts/sdkPackages.mjs`. From `rc.1` on, `npm run release:check` reports a `private` flag on an SDK package as a blocker.
 
+## When a release gets a release candidate
+
+A release candidate is published under `next` (`npm run release:plan -- --pre rc`), so people can use it before `latest` moves.
+
+- A major version gets at least one candidate. The changelog lists every breaking change, and `latest` moves only after someone other than the author has used the candidate.
+- A minor release gets one when it changes the shape of the public API or the release pipeline itself. Otherwise it does not need one.
+- A patch release never needs one.
+- A problem in a candidate is fixed by a new candidate. A published version is never replaced, because npm never lets a version number be used again.
+
 ## The public API
 
 What counts as the public API, and which changes are breaking, is in `docs/guides/public-api.md`. The release notes and the choice of version follow it.

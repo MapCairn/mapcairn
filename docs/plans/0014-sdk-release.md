@@ -52,7 +52,7 @@ Each SDK manifest gets `version`, `exports` with a source condition, `types`, `f
 "sideEffects": ["**/*.css"]
 ```
 
-- Until the first release the four versions are `0.0.0` ("unreleased"); the first release sets `0.1.0-rc.1`.
+- Until the first release the four versions are `0.0.0` ("unreleased"); the first release sets `0.1.0-rc.1`. Which later releases get a candidate is in `docs/guides/releasing.md` ("When a release gets a release candidate").
 - Internal dependencies are `^<version>` for a release and the exact version for a prerelease (`AGENTS.md` pins prereleases exactly, and `^0.1.0` does not match `0.1.0-rc.1`). Only the release script changes them, in all six workspaces that use them.
 - `"private": true` stays on the four packages until the first Release pull request. It is the last guard against an accidental publish; while it is set, `npm publish --dry-run` skips the packages, so the workflow's dry run proves the publish only from step 12.
 - The tarballs hold `dist` only (`files` is `["dist", "!dist/.built"]`), chosen in step 6 on 2026-11-20 and open to the review of that pull request. The first plan shipped `src` so declaration maps and the source condition would resolve, but the build writes no declaration maps, each `.js.map` embeds its source in `sourcesContent`, and `src` was 180 of core's 459 packed files and 208 of map's 521. The condition is custom (`@mapcairn/source`), never `development`, which bundlers turn on for consumers in development and which would hand them `.css.ts` files; it still names `src` files, which only this repository has, and a consumer never turns it on.

@@ -26,7 +26,7 @@ description: "Prepare a release of the five MapCairn SDK packages (core, map, re
 
 ## 1. Plan
 
-`npm run release:plan` (add `-- --pre rc` for a release candidate) prints JSON: the version and why, each merged pull request, the API report changes with a likely-breaking flag, the contributors to thank, and the things only a person can check. If the version is `null` there is nothing to release: stop and say so. Check the version against the guide's rules, say which you chose and why, and read the API changes and `reviewByHand` for what no script sees (a removed message key, a changed stored format). The first release is `0.1.0-rc.1`; a candidate is followed by the next candidate or the release.
+`npm run release:plan` (add `-- --pre rc` for a release candidate) prints JSON: the version and why, each merged pull request, the API report changes with a likely-breaking flag, the contributors to thank, and the things only a person can check. If the version is `null` there is nothing to release: stop and say so. Check the version against the guide's rules, say which you chose and why, and read the API changes and `reviewByHand` for what no script sees (a removed message key, a changed stored format). The first release is `0.1.0-rc.1`; a candidate is followed by the next candidate or the release. Pass `--pre rc` when the guide's "When a release gets a release candidate" says the release needs one (a major version always; a minor release that changes the shape of the public API or the release pipeline), never for a patch release, and fix a problem in a candidate with a new candidate.
 
 ## 2. Write the notes
 
