@@ -98,7 +98,7 @@ jobs:
   # should and work in an app outside this repository (`npm run pack:check` and
   # `npm run consumer:check`, plan 0014 step 6). It is not a required check: it
   # installs from the registry, so a registry outage must not block a merge.
-  # The release workflow's verify job will require it. `paths` filters a whole
+  # The release workflow's verify job requires it. `paths` filters a whole
   # workflow, not a job, so the first step decides whether the rest run.
   sdk-packages:
     name: SDK packages

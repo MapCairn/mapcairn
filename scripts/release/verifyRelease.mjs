@@ -24,7 +24,7 @@ import { appendFileSync, readdirSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { isEntryPoint } from "../entryPoint.mjs";
-import { runNpm } from "./npm.mjs";
+import { isNotFound, REGISTRY_READ_FLAGS, runNpm } from "./npm.mjs";
 import { isPrerelease, parseVersion } from "./semver.mjs";
 import { git, REPOSITORY, run } from "./tools.mjs";
 import { SDK_NAMES } from "./workspaces.mjs";
@@ -201,7 +201,7 @@ export function readRegistryState(view) {
     if (result.status === 0) {
       continue;
     }
-    if (/E404|404 Not Found/.test(result.stderr)) {
+    if (isNotFound(result.stderr)) {
       missing.push(name);
       continue;
     }
@@ -390,7 +390,9 @@ function decideFromEnvironment() {
   let onNpm = false;
   if (decision.release) {
     const state = readRegistryState((name) => {
-      const result = runNpm(["view", name, "version"], { cwd: ROOT });
+      const result = runNpm(["view", name, "version", ...REGISTRY_READ_FLAGS], {
+        cwd: ROOT,
+      });
       return {
         status: result.status,
         stdout: result.stdout ?? "",

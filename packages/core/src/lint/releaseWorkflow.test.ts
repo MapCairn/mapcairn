@@ -190,6 +190,10 @@ describe("release.yml", () => {
     expect(lines).toContain(
       "--signer-workflow MapCairn/mapcairn/.github/workflows/release.yml",
     );
+    expect(lines).toContain("--source-ref refs/heads/main");
+    expect(lines).toContain("--deny-self-hosted-runners");
+    expect(lines).toContain("--source-digest");
+    expect(lines).toContain("git merge-base --is-ancestor");
   });
 
   it("reads the changelog for the release notes only on a push", () => {

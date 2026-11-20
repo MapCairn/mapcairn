@@ -8,6 +8,10 @@
  *
  *   npm run consumer:check
  *
+ * With `{ published: <version> }` (`verifyPublished.mjs`) it installs that
+ * version of the four packages from the registry instead, exempting only
+ * those four from the minimum release age, and audits the signatures.
+ *
  * Everything happens in a temporary folder outside the repository, which is
  * removed at the end. It installs from the registry, so it needs a network;
  * the repository's `.npmrc` (the seven-day minimum age) is copied there, and

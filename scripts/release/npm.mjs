@@ -70,3 +70,20 @@ export function runNpm(args, options = {}) {
     ...options,
   });
 }
+
+/**
+ * Option for reading the registry: the repository's seven-day minimum release
+ * age hides a version published a moment ago from `npm view`, which a release
+ * check must see. A read installs nothing, so the rule for installs is intact.
+ */
+export const REGISTRY_READ_FLAGS = ["--min-release-age=0"];
+
+/**
+ * Whether npm's error output says the registry does not have the package.
+ *
+ * @param {string} stderr
+ * @returns {boolean}
+ */
+export function isNotFound(stderr) {
+  return /E404|404 Not Found/.test(stderr);
+}

@@ -95,8 +95,10 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         shell: bash
         run: |
+          commit="$(git rev-parse "v$VERSION^{commit}")"
+          git merge-base --is-ancestor "$commit" HEAD
           for tarball in release/*.tgz; do
-            gh attestation verify "$tarball" --repo MapCairn/mapcairn --signer-workflow MapCairn/mapcairn/.github/workflows/release.yml
+            gh attestation verify "$tarball" --repo MapCairn/mapcairn --signer-workflow MapCairn/mapcairn/.github/workflows/release.yml --source-ref refs/heads/main --source-digest "$commit" --deny-self-hosted-runners
           done
           node scripts/release/verifyRelease.mjs tarballs "$VERSION" release
 
@@ -237,7 +239,7 @@ jobs:
             flags+=(--dry-run)
           fi
           for name in core react theme map; do
-            found="$(npm view "@mapcairn/$name@$VERSION" version 2>/dev/null || true)"
+            found="$(npm view "@mapcairn/$name@$VERSION" version --min-release-age=0 2>/dev/null || true)"
             if [ "$found" = "$VERSION" ]; then
               echo "@mapcairn/$name@$VERSION is already on npm, so it is skipped."
               continue

@@ -24,7 +24,7 @@ import {
   isShallowClone,
   subjectsSincePreviousTag,
 } from "./notesCheck.mjs";
-import { runNpm } from "./npm.mjs";
+import { isNotFound, REGISTRY_READ_FLAGS, runNpm } from "./npm.mjs";
 import { packResults } from "./packCheck.mjs";
 import { git } from "./tools.mjs";
 import {
@@ -353,7 +353,7 @@ function leftForYou({ blockers, prepared, registry }) {
  */
 export function parseRegistryAnswer(result) {
   if (result.status !== 0) {
-    return /E404|404 Not Found/.test(result.stderr) ? { exists: false } : null;
+    return isNotFound(result.stderr) ? { exists: false } : null;
   }
   try {
     const data = JSON.parse(result.stdout);
@@ -405,7 +405,9 @@ function readFacts(root) {
 
   const answers = SDK_NAMES.map((name) => [
     name,
-    parseRegistryAnswer(runNpm(["view", name, "--json"], { cwd: root })),
+    parseRegistryAnswer(
+      runNpm(["view", name, "--json", ...REGISTRY_READ_FLAGS], { cwd: root }),
+    ),
   ]);
   const registry = answers.some(([, answer]) => answer === null)
     ? null
