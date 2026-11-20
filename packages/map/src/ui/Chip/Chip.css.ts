@@ -2,14 +2,14 @@
 // Copyright MapCairn contributors
 import { focusRing, tokens } from "@mapcairn/theme";
 import { style } from "@vanilla-extract/css";
-import { recipe } from "@vanilla-extract/recipes";
+import { primitiveRecipe } from "../primitiveRecipe";
 
 /**
  * A small pill for filters and tags. Selection changes the fill, the border
  * and the leading icon (a check), so it never relies on colour. An actionable
  * chip is 44 px tall so it is a proper target.
  */
-export const chip = recipe({
+export const chip = primitiveRecipe({
   base: {
     display: "inline-flex",
     alignItems: "center",
