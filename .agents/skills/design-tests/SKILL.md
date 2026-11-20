@@ -7,7 +7,7 @@ description: "Design the tests for a MapCairn issue or plan before the code: whi
 
 Test design for MapCairn. `pick-up-issue` starts with a failing test and `plan-change` has a "Tests" section; this skill decides what goes in them. Its output is a test plan for the issue or plan. `review-tests` checks the tests after they are written, and `playwright-tests` writes the browser ones.
 
-Example: an issue adds a contrast check with a 4.5:1 pass condition. A plan that says "test a passing and a failing theme" would pass with the condition loosened to 4.0:1, as happened on #463. This skill asks for a pair on each side of every threshold (4.54:1 passes, 4.48:1 fails), so the loosened code fails a test.
+Example: #463 added a contrast check with a 4.5:1 pass condition, tested with a passing and a failing theme. No case sat near the threshold: changing `>=` to `>` broke no test, and loosening 4.5 to 4.0 was caught only because one failing colour happened to measure between the two. This skill asks for a pair on each side of every threshold (4.54:1 passes, 4.48:1 fails), so a moved threshold fails a test on purpose.
 
 ## Inputs
 
@@ -37,7 +37,7 @@ Use the lowest level that can fail for the right reason, and one browser case pe
 | Browser      | Layout, Tab order across the page, real focus, the map engine, network failures, mirrored and translated runs | Playwright in `packages/web/e2e`, written with `playwright-tests`                                                                                                                              |
 | Build output | Bundles, packed tarballs, generated files, CSP hashes, scripts in `scripts/`                                  | A test that reads the output (`packages/core/src/lint`, `packages/web/src/workerBundle.test.ts`) and skips with `describe.skipIf` when there is no build                                       |
 
-jsdom has no layout, no real focus order across the page and no map canvas, so a claim about where something sits, what Tab reaches or what the map draws is a browser test. A browser test that only checks a pure result is a unit test in the wrong place.
+The component tests run in happy-dom, which has no layout, no real focus order across the page and no map canvas, so a claim about where something sits, what Tab reaches or what the map draws is a browser test. A browser test that only checks a pure result is a unit test in the wrong place.
 
 A build-output test runs in CI only where a step runs it. Before a test depends on CI or on a file another step writes, read the job in `.github/workflows/` and check the order: on #481 a rule keyed on `CI` failed the build job, because the coverage run, where `CI` is already set, comes before the build. Name the step that runs the test in the plan.
 

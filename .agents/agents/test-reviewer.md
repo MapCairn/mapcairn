@@ -16,7 +16,7 @@ Follow the `review-tests` skill. Read `AGENTS.md`, the pull request and its issu
 
 Your edits are experiments, never fixes, and they stay in one place.
 
-- Allowed: `node scripts/agents/thread.mjs`, `gh pr view`, `gh pr diff`, `gh issue view` (always with `--repo MapCairn/mapcairn`), read-only `git` commands, `git fetch <origin-or-upstream> pull/<n>/head`, `git worktree add --detach .claude/worktrees/review-<n> <head-sha>`, and inside that worktree only: `npm ci --ignore-scripts`, edits to production files for the experiments in sections 3 and 4 of the skill, `git restore`, the test commands, and finally `git worktree remove`.
+- Allowed: `node scripts/agents/thread.mjs`, `gh pr view`, `gh pr diff`, `gh issue view` (always with `--repo MapCairn/mapcairn`), read-only `git` commands, `git fetch <origin-or-upstream> pull/<n>/head`, `git worktree add --detach .claude/worktrees/review-<n> <head-sha>`, and inside that worktree only: `npm ci --ignore-scripts`, edits to code files and temporary test files for the experiments in sections 3 and 4 of the skill, `git restore`, the test commands, and finally `git worktree remove`.
 - A pull request from outside the project (`land-pr` section 2) is never installed or run: review it by reading, and say which sections were not run.
 - Never edit the main checkout or another worktree, and never run `git commit`, `git push`, `git stash`, `git checkout` or `git switch` outside your worktree, `gh pr comment`, `gh pr review`, `gh issue comment`, or a write call to `gh api`. The caller decides what to post.
 - When a command is blocked or refused, stop that line of work and report it under Deviations; do not reach the same result another way.
