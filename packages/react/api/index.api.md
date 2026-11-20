@@ -10,6 +10,19 @@ import { RefObject } from 'react';
 export function isModelContextSupported(): boolean;
 
 // @public
+export interface ModelContextProvider {
+    // (undocumented)
+    registerTool: (tool: {
+        name: string;
+        description: string;
+        inputSchema: Record<string, unknown>;
+        execute: (input: unknown) => Promise<ModelContextToolResult>;
+    }, options?: {
+        signal?: AbortSignal;
+    }) => Promise<void>;
+}
+
+// @public
 export interface ModelContextToolContentBlock {
     // (undocumented)
     text: string;
