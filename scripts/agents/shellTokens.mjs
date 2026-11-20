@@ -33,6 +33,9 @@
  *   command substitution, which the shell would run.
  * @property {boolean} glued Whether a backtick command substitution touches
  *   the text around it, so it can build a word such as a program name.
+ * @property {boolean} ansi Whether `$'` or `$"` appears outside quotes: bash and
+ *   zsh read `\'` inside `$'...'`, so the end of the quoted text is not where
+ *   this lexer would put it.
  * @property {boolean} inBacktick Whether the lexer is between two backticks.
  */
 
@@ -149,6 +152,22 @@ function backslash(lexer) {
     lexer.index += 1;
   }
   return true;
+}
+
+/**
+ * Notes `$'` and `$"` and reads nothing, so the quote is read as usual.
+ *
+ * @param {Lexer} lexer
+ * @returns {false}
+ */
+function ansiQuote(lexer) {
+  if (
+    peek(lexer) === "$" &&
+    (peek(lexer, 1) === "'" || peek(lexer, 1) === '"')
+  ) {
+    lexer.ansi = true;
+  }
+  return false;
 }
 
 /** @param {Lexer} lexer */
@@ -312,6 +331,7 @@ const READERS = [
   blank,
   comment,
   backslash,
+  ansiQuote,
   singleQuote,
   doubleQuote,
   ampersandRedirect,
@@ -323,7 +343,7 @@ const READERS = [
  * Splits a shell command into statements of words and redirections.
  *
  * @param {string} command
- * @returns {{ statements: Token[][], unterminated: boolean, expands: boolean, glued: boolean }}
+ * @returns {{ statements: Token[][], unterminated: boolean, expands: boolean, glued: boolean, ansi: boolean }}
  *   `unterminated` is true when a here-document has no closing line, so the
  *   text after it cannot be told apart from its body. `expands` is true when
  *   an unquoted here-document body holds a command substitution. `glued` is
@@ -341,6 +361,7 @@ export function tokenize(command) {
     unterminated: false,
     expands: false,
     glued: false,
+    ansi: false,
     inBacktick: false,
   };
   while (lexer.index < lexer.text.length) {
@@ -355,5 +376,6 @@ export function tokenize(command) {
     unterminated: lexer.unterminated || lexer.pending.length > 0,
     expands: lexer.expands,
     glued: lexer.glued,
+    ansi: lexer.ansi,
   };
 }

@@ -125,6 +125,8 @@ const UNREADABLE = [
   "unbuffer",
   "rlwrap",
   "coproc",
+  "fish",
+  "always",
   "repeat",
   "select",
   "foreach",
@@ -164,7 +166,6 @@ const SHELLS = [
   "zsh",
   "dash",
   "ksh",
-  "fish",
   "csh",
   "tcsh",
   "mksh",
@@ -211,7 +212,7 @@ const LESS_NAMES = [
  * path, pagers and editors, and the loader and startup-file variables.
  */
 const RISKY_VARIABLE = new RegExp(
-  `^(?:GIT_\\w*|HOME|XDG_\\w*|PATH|PAGER|EDITOR|VISUAL|LESS(?:${LESS_NAMES})?|LD_\\w*|DYLD_\\w*|GH_\\w*|BROWSER|NODE_OPTIONS|NODE_PATH|NPM_CONFIG_\\w*|PYTHON(?:STARTUP|PATH|HOME)|PERL5(?:OPT|LIB)|RUBY(?:OPT|LIB)|ZDOTDIR|SHELLOPTS|BASHOPTS|PROMPT_COMMAND|IFS|CDPATH|PS4|BASH_ENV|ENV|SSH_\\w*)${ASSIGNMENT}`,
+  `^(?:GIT_\\w*|HOME|XDG_\\w*|PATH|PAGER|EDITOR|VISUAL|LESS(?:${LESS_NAMES})?|LD_\\w*|DYLD_\\w*|GH_\\w*|BROWSER|BASH_FUNC_\\w*|NODE_OPTIONS|NODE_PATH|NPM_CONFIG_\\w*|PYTHON(?:STARTUP|PATH|HOME)|PERL5(?:OPT|LIB)|RUBY(?:OPT|LIB)|ZDOTDIR|SHELLOPTS|BASHOPTS|PROMPT_COMMAND|IFS|CDPATH|PS4|BASH_ENV|ENV|SSH_\\w*)${ASSIGNMENT}`,
   "i",
 );
 
@@ -571,9 +572,6 @@ function readShellOptions(args) {
  * @returns {string | undefined}
  */
 function checkShell(program, args, walk) {
-  if (program === "fish" && !(args.length === 2 && args[0] === "-c")) {
-    return "fish is read only as -c and one command string, because its options (-C, --init-command) run commands the guard cannot read";
-  }
   const { command, operand, reason } = readShellOptions(args);
   if (reason !== undefined) {
     return reason;
@@ -598,6 +596,52 @@ function checkSet(args) {
 }
 
 /**
+ * Decides on `shopt`: `-o` works on the options of `set`, so it can turn on
+ * keyword mode, and `keyword` names it.
+ *
+ * @param {string[]} args
+ * @returns {string | undefined}
+ */
+function checkShopt(args) {
+  return args.some((arg) => /^-[a-zA-Z]*o/.test(arg) || arg === "keyword")
+    ? "shopt -o and keyword mode pass assignments in a command's words to it as variables, so a reviewer may not use them"
+    : undefined;
+}
+
+/**
+ * Decides on `unset`: dropping a `GH_*` variable (the limited token) lets `gh`
+ * fall back to a stored login, and a subscript is evaluated as arithmetic.
+ *
+ * @param {string[]} args
+ * @returns {string | undefined}
+ */
+function checkUnset(args) {
+  const names = args
+    .filter((arg) => !arg.startsWith("-"))
+    .map((arg) => arg.replaceAll("\\", ""));
+  return names.some((name) => /^GH_/i.test(name) || name.includes("["))
+    ? "unset of a GH_* variable or of a name with a subscript is not allowed, because it drops the limited GitHub token or runs arithmetic"
+    : undefined;
+}
+
+/**
+ * Decides on `export -n`, which removes a variable from the environment, for
+ * the `GH_*` names `gh` reads.
+ *
+ * @param {string[]} args
+ * @returns {string | undefined}
+ */
+function checkExport(args) {
+  const removes = args.some((arg) => /^-[a-zA-Z]*n/.test(arg));
+  const names = args
+    .filter((arg) => !arg.startsWith("-"))
+    .map((arg) => arg.replaceAll("\\", ""));
+  return removes && names.some((name) => /^GH_/i.test(name))
+    ? "export -n of a GH_* variable drops the limited GitHub token, so a reviewer may not use it"
+    : undefined;
+}
+
+/**
  * The checks by program name, each given the words after the program.
  *
  * @type {Map<string, (args: string[], walk: Walk, program: string) => string | undefined>}
@@ -614,6 +658,9 @@ const PROGRAMS = new Map([
   ["gawk", (args) => awkProblem(args)],
   ["find", (args) => checkFind(args)],
   ["set", (args) => checkSet(args)],
+  ["shopt", (args) => checkShopt(args)],
+  ["unset", (args) => checkUnset(args)],
+  ["export", (args) => checkExport(args)],
   ["dd", (args, walk, program) => checkFileCommand(program, args, walk)],
 ]);
 
@@ -652,6 +699,18 @@ function isEnvSetting(word) {
 }
 
 /**
+ * Whether the name of an `env` setting is a plain identifier, as a shell
+ * assignment is. Any other name (`BASH_FUNC_git%%`, `X.Y`, a backslash) is not
+ * one the guard can check against the risky variables.
+ *
+ * @param {string} word
+ * @returns {boolean}
+ */
+function hasPlainName(word) {
+  return isAssignment(word);
+}
+
+/**
  * What a wrapper leaves: where the wrapped command starts, the assignments it
  * collected, or why it cannot be read.
  *
@@ -687,6 +746,13 @@ function envWrapper(words, at) {
   const assignments = [];
   let next = at;
   while (isEnvSetting(words[next] ?? "")) {
+    if (!hasPlainName(words[next] ?? "")) {
+      return {
+        next,
+        assignments,
+        reason: `env with the setting ${words[next]}, whose name is not a plain identifier, cannot be read`,
+      };
+    }
     assignments.push(words[next] ?? "");
     next += 1;
   }
@@ -847,15 +913,21 @@ function builtProgramProblem(word, platform) {
 const UNSAFE_SUBSCRIPT = /^[A-Za-z_][A-Za-z0-9_]*\[(?![0-9]+\])/;
 
 /**
- * Why a `[[ ... ]]` cannot be read: in zsh a command may follow `]]` as a
- * short form of `if`, so `]]` must be the last word.
+ * Why a statement may hold a command the guard does not read. In zsh a command
+ * may follow `]]` or a closing brace as a short form of `if`, and `always`
+ * follows a block, so the first `]]` must be the last word and a `}` may not be
+ * followed by more words.
  *
  * @param {string[]} words
  * @returns {string | undefined}
  */
-function testBracketProblem(words) {
-  return words[0] === "[[" && words[words.length - 1] !== "]]"
-    ? "[[ is allowed only when ]] is its last word, because zsh runs a command written after it"
+function hiddenCommandProblem(words) {
+  const last = words.length - 1;
+  if (words[0] === "[[" && words.indexOf("]]") !== last) {
+    return "[[ is allowed only when its first ]] is its last word, because zsh runs a command written after it";
+  }
+  return words.indexOf("}") !== -1 && words.indexOf("}") !== last
+    ? "a } that is followed by more words can end a block that runs a command the guard does not read"
     : undefined;
 }
 
@@ -873,14 +945,17 @@ function checkStatement(tokens, walk) {
   }
   const { rest, reason, assignments } = unwrap(redirects.words);
   const assigned = ASSIGNERS.has(programName(rest[0] ?? ""))
-    ? [...assignments, ...rest.slice(1)]
+    ? [
+        ...assignments,
+        ...rest.slice(1).map((text) => text.replaceAll("\\", "")),
+      ]
     : assignments;
   const risky = assigned.find((text) => RISKY_VARIABLE.test(text));
   if (risky !== undefined) {
     return `the variable ${risky.split("=")[0]} changes what a command runs or which files it reads (git's repository, the home folder, the search path, a pager, the loader), so a reviewer may not set it`;
   }
   const subscript = ASSIGNERS.has(programName(rest[0] ?? ""))
-    ? rest.slice(1).find((text) => UNSAFE_SUBSCRIPT.test(text))
+    ? assigned.find((text) => UNSAFE_SUBSCRIPT.test(text))
     : undefined;
   if (subscript !== undefined) {
     return `${subscript} has a subscript that is not a number, which the shell evaluates as arithmetic and can run a command`;
@@ -889,7 +964,7 @@ function checkStatement(tokens, walk) {
   const program = programName(word);
   return (
     reason ??
-    testBracketProblem(rest) ??
+    hiddenCommandProblem(rest) ??
     builtProgramProblem(word, walk.context.platform) ??
     PROGRAMS.get(program)?.(rest.slice(1), walk, program)
   );
@@ -909,12 +984,15 @@ export function checkCommand(command, walk) {
   if (command.length > MAX_COMMAND_LENGTH) {
     return `the command is too long to check (over ${MAX_COMMAND_LENGTH} characters)`;
   }
-  const { statements, unterminated, expands, glued } = tokenize(command);
+  const { statements, unterminated, expands, glued, ansi } = tokenize(command);
   if (unterminated) {
     return "a here-document is never closed, so what follows it cannot be told from its body";
   }
   if (expands) {
     return "an unquoted here-document body holds a command substitution, which the shell runs; quote the delimiter ('EOF')";
+  }
+  if (ansi) {
+    return "$'...' and $\"...\" quoting is not read by the guard, because the shell ends it at a different quote; use plain quotes";
   }
   if (glued) {
     return "a backtick command substitution is joined to a word, which can build a program name the guard cannot read";

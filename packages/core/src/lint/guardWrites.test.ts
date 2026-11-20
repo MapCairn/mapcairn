@@ -1359,8 +1359,7 @@ describe("hardening from the second review", () => {
     expect(bash(command).allow).toBe(false);
   });
 
-  it("reads the command in the other shells", () => {
-    expect(bash("fish -c 'git status'").allow).toBe(true);
+  it("reads the command in the other shells that the guard supports", () => {
     expect(bash("ash -c 'git status'").allow).toBe(true);
   });
 
@@ -1732,7 +1731,6 @@ describe("hardening of the write guard (#534)", () => {
       "bash --rcfile=/x -c 'git status'",
       "bash --init-file /x -c 'git status'",
       "bash --init-file=/x -c 'git status'",
-      "fish -C 'rm x' -c 'git status'",
       "bash --unknown -c 'git status'",
       "bash -euo pipefail -c 'git status'",
     ])("refuses an option the guard cannot read: %s", (command) => {
@@ -1783,8 +1781,18 @@ describe("hardening of the write guard (#534)", () => {
       expect(bash(command).allow).toBe(false);
     });
 
+    it.each([
+      `env 'BASH_FUNC_git%%=() { touch /x; }' bash -c 'git status'`,
+      "env GH\\_PAGER=x gh pr diff 1",
+      "env PA\\TH=/x git status",
+      "env X.Y=1 git status",
+      "env BASH_FUNC_git=x git status",
+    ])("refuses an env setting that is not a plain name: %s", (command) => {
+      expect(bash(command).allow).toBe(false);
+    });
+
     it("still reads env options and plain settings", () => {
-      expect(bash("env X.Y=1 git status").allow).toBe(true);
+      expect(bash("env CI=1 NODE_ENV=test git status").allow).toBe(true);
       expect(bash("env CI=1 git status").allow).toBe(true);
       expect(bash("env -u X git status").allow).toBe(false);
     });
@@ -1792,10 +1800,14 @@ describe("hardening of the write guard (#534)", () => {
     it.each([
       "repeat 2 git push",
       "repeat 1 touch /x",
-      "select x in a; do git push; done",
-      "foreach x (a b) git push",
-      "function f { git push; }",
-      "function f { touch /x }; f",
+      "select x in a touch /x",
+      "foreach x touch /x",
+      "function f touch /x",
+      "function f { touch /x }",
+      "if [[ -n x ]] touch /x ]]",
+      "if { true } touch /x",
+      "{ true } always { touch /x }",
+      "if { true } touch /x }",
       "if [[ -n x ]] git push",
       "if [[ -n x ]] touch /x",
       "[[ -n x ]] touch /x",
@@ -1871,17 +1883,88 @@ describe("hardening of the write guard (#534)", () => {
     });
 
     it.each([
+      "fish -c 'git status'",
       "fish -c 'true' -C 'touch /x'",
-      "fish -c true -C 'touch /x'",
-      "fish -c 'git status' name",
+      `fish -c "echo 'a\\\\' '; touch /x; echo 'b'"`,
       "fish --init-command=x -c true",
-      "fish -c true --command=x",
-    ])("reads fish only as exactly -c and a string: %s", (command) => {
+    ])("refuses fish, whose quoting differs from bash: %s", (command) => {
+      const decision = bash(command);
+      expect(decision.allow).toBe(false);
+      expect(decision.reason).toMatch(/fish/);
+    });
+
+    it.each([
+      "echo $'\\' '; touch /x; #'",
+      "echo $'a'",
+      "echo a$'b'",
+      'echo $"a"',
+      "printf $'\\n'",
+    ])(
+      "refuses ANSI-C and locale quoting, which the guard cannot read: %s",
+      (command) => {
+        const decision = bash(command);
+        expect(decision.allow).toBe(false);
+        expect(decision.reason).toMatch(/\$'/);
+      },
+    );
+
+    it.each([
+      "echo '$'",
+      'echo "$HOME"',
+      "echo 'a$' b",
+      'echo "cost: $"',
+      "printf '%s\\n' x",
+      "echo \\$'x'",
+    ])("allows a dollar that is not ANSI-C quoting: %s", (command) => {
+      expect(bash(command).allow).toBe(true);
+    });
+
+    it.each([
+      "export PA\\TH=/scratch",
+      "export GH\\_PAGER=x",
+      "b='x[$(touch /y)]'; declare a\\[b]=1",
+      "declare a\\[b]=1",
+      "local NODE\\_OPTIONS=x",
+    ])(
+      "strips backslashes before it reads an assigning builtin: %s",
+      (command) => {
+        const decision = bash(command);
+        expect(decision.allow).toBe(false);
+        expect(decision.reason).toMatch(/variable|subscript/);
+      },
+    );
+
+    it.each([
+      "bash -c 'shopt -so keyword; git diff'",
+      "shopt -o keyword",
+      "shopt -s keyword",
+      "shopt -oq keyword",
+      "shopt -so",
+    ])("refuses keyword mode through shopt: %s", (command) => {
       expect(bash(command).allow).toBe(false);
     });
 
-    it("allows fish -c with one string", () => {
-      expect(bash("fish -c 'git status'").allow).toBe(true);
+    it("allows shopt options that are not keyword mode", () => {
+      expect(bash("shopt -s extglob").allow).toBe(true);
+      expect(bash("shopt extglob").allow).toBe(true);
+    });
+
+    it.each([
+      "unset GH_TOKEN; gh pr view 1",
+      "unset GH_TOKEN",
+      "unset -v GH_HOST",
+      "unset GH\\_TOKEN",
+      "unset 'a[$(touch /y)]'",
+      "unset a[0]",
+      "export -n GH_TOKEN",
+      "export -n GH_TOKEN=x",
+    ])("refuses to unset what gh reads, or a subscript: %s", (command) => {
+      expect(bash(command).allow).toBe(false);
+    });
+
+    it("allows unset of an ordinary name", () => {
+      expect(bash("unset FOO").allow).toBe(true);
+      expect(bash("export FOO=1").allow).toBe(true);
     });
   });
 
