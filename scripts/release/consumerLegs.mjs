@@ -44,6 +44,17 @@ export const INSTALL_TIMEOUT = 5 * 60 * 1000;
 /** How long the Worker run on workerd may take before it is cut off, in ms. */
 export const WORKERD_TIMEOUT = 2 * 60 * 1000;
 
+/** How long the browser leg may take before it is cut off, in ms. */
+export const BROWSER_TIMEOUT = 3 * 60 * 1000;
+
+/**
+ * Where a Claude Code remote session preinstalls its Chromium. The reference
+ * host's Playwright config (`packages/web/playwright.config.ts`) takes the
+ * same file when it is there, because that session cannot download the
+ * revision this repository's Playwright expects.
+ */
+export const REMOTE_SESSION_CHROMIUM = "/opt/pw-browsers/chromium";
+
 /** Seven days, in the seconds Bun counts a release age in. */
 export const BUN_MINIMUM_RELEASE_AGE = 7 * 24 * 60 * 60;
 
@@ -182,6 +193,83 @@ export function miniflareAvailable(root) {
   } catch {
     return false;
   }
+}
+
+/**
+ * The Chromium the browser leg launches: the remote session's preinstalled
+ * one, or the one this repository's Playwright installs. Playwright comes from
+ * the repository's installed dependencies, as Miniflare does for the workerd
+ * leg, and nothing is installed for the leg.
+ *
+ * @param {string} root The repository root.
+ * @param {string} [remote] The remote session's Chromium.
+ * @returns {string | undefined} The binary, or undefined when Playwright does
+ *   not resolve or its browser has not been installed (`npm run
+ *   playwright:install -w @mapcairn/web`).
+ */
+export function chromiumExecutable(root, remote = REMOTE_SESSION_CHROMIUM) {
+  try {
+    const playwright = createRequire(path.join(root, "package.json"))(
+      "playwright-core",
+    );
+    if (existsSync(remote)) {
+      return remote;
+    }
+    const installed = playwright.chromium.executablePath();
+    return existsSync(installed) ? installed : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+/**
+ * Whether Playwright resolves from a repository root.
+ *
+ * @param {string} root The repository root.
+ * @returns {boolean}
+ */
+export function playwrightAvailable(root) {
+  try {
+    createRequire(path.join(root, "package.json")).resolve("playwright-core");
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * What the browser leg does. With Chromium it runs. Without it, a developer's
+ * machine skips with a message, as the workerd leg does without Miniflare.
+ * GitHub Actions fails when the repository's dependencies are installed (so
+ * Playwright is there) and its Chromium is not: a job that was meant to draw a
+ * real map must not pass by skipping the drawing. Where Playwright is not
+ * installed at all, as in the release workflow's `check` job, which installs
+ * nothing, the leg skips with a warning annotation even there, because that
+ * job could never draw it and a red `check` would block every release.
+ *
+ * @param {{ playwright: boolean, executable: string | undefined, env?: NodeJS.ProcessEnv }} input
+ * @returns {{ action: "run" } | { action: "skip", line: string } | { action: "fail", message: string }}
+ */
+export function browserLegPlan({ playwright, executable, env = process.env }) {
+  if (executable !== undefined) {
+    return { action: "run" };
+  }
+  if (playwright && env.GITHUB_ACTIONS === "true") {
+    return {
+      action: "fail",
+      message:
+        "The browser leg cannot run: Chromium for Playwright is not installed. It fails instead of skipping when GITHUB_ACTIONS is set, so a job cannot pass without drawing the map. Install it with `npx --no-install playwright install --with-deps chromium` after `npm ci`.",
+    };
+  }
+  return {
+    action: "skip",
+    line: skipLine(
+      playwright
+        ? "the browser leg was skipped: Chromium for Playwright is not installed here (run npm run playwright:install -w @mapcairn/web)"
+        : "the browser leg was skipped: Playwright is not installed here (run npm ci, then npm run playwright:install -w @mapcairn/web)",
+      env,
+    ),
+  };
 }
 
 /**

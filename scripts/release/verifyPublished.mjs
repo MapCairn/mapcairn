@@ -27,7 +27,9 @@
  * published a moment ago would otherwise not install; third-party packages
  * keep the rule.
  *
- * It needs a network and Node, and starts no server.
+ * It needs a network and Node. Through the consumer check it also starts one
+ * static server on 127.0.0.1 and the repository's Chromium for the real-map
+ * leg, which skips with a message where Chromium is not installed.
  */
 import { createHash } from "node:crypto";
 import { lstatSync, readdirSync, readFileSync } from "node:fs";

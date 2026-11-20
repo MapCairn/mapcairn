@@ -42,7 +42,7 @@ The release commit and the pull request title are `chore(release): v<version>`. 
 
 ## 4. Check
 
-`npm run lint`, `npm run typecheck`, `npm run test:coverage` and `npm run build`, then `npm run release:check`. It reads only public data, changes nothing and ends with "Left for you". A blocker is something to fix before the pull request opens. Warnings about an npm session or token on this machine go in the pull request as they are.
+`npm run lint`, `npm run typecheck`, `npm run test:coverage` and `npm run build`, then `npm run consumer:check` on a machine with Chromium (`npm run playwright:install -w @mapcairn/web` installs the repository's own), then `npm run release:check`. The consumer check's last leg draws a real map in that Chromium from an app that installs only `@mapcairn/sdk`; it skips with a warning when Chromium is missing, so read the output for the line that starts `umbrella only (@mapcairn/sdk): real map in Chromium` and for no skip warning, and report the result. The release workflow's `check` job installs nothing and so never draws the map, and the CI `SDK packages` job that does is not a required check, so this run is the only guaranteed one before a release. `release:check` reads only public data, changes nothing and ends with "Left for you". A blocker is something to fix before the pull request opens. Warnings about an npm session or token on this machine go in the pull request as they are.
 
 ## 5. Rehearse
 
@@ -55,6 +55,7 @@ Follow `land-pr`. The description holds: the notes as they will appear; the `rel
 - [ ] CI is green on the head commit.
 - [ ] The notes are read, and every breaking change has Before and After.
 - [ ] The tarball contents and sizes are as expected.
+- [ ] `npm run consumer:check` ran with Chromium and its real-map leg drew a map (not skipped), on the head commit's tarballs.
 - [ ] Nothing unexpected in the API report changes.
 - [ ] Then: merge, and approve the deployment of the `npm` environment in GitHub (the first publish of a version by hand is in the guide).
 - [ ] If the release adds a package npm does not have (`npm run release:check` lists it as not on npm yet): the `npm` job is red until that package has been uploaded by hand from its attested tarball and the failed jobs are re-run (the package's Publishing access set to require two-factor authentication and disallow tokens; the trusted publisher, environment `npm`, workflow `release.yml`, allowed action `npm publish`, is linked later, when the next Release pull request is ready), and when another package in the release pins it, the job refuses to publish that dependent until the upload is done. List the steps of "Adding a package to the release set" in `docs/guides/releasing.md` in the pull request, with the umbrella last and any package it pins before it (in `0.1.0-rc.3` both the adapter and the umbrella are new: download all six tarballs, upload the adapter first, then the umbrella, set the two-factor, no-tokens setting on each, re-run the failed jobs, and link each trusted publisher only when the next Release pull request is ready; steps 4 to 6 of the guide fall within the run artifact's 14 days).

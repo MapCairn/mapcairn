@@ -39,6 +39,15 @@ describe("the SDK packages job in ci.yml", () => {
     expect(job).toContain("run: npm run consumer:check");
   });
 
+  it("installs the repository's own Chromium before the consumer check, which fails without it", () => {
+    const install = job.indexOf(
+      "run: npx --no-install playwright install --with-deps chromium",
+    );
+    expect(install).toBeGreaterThan(-1);
+    expect(install).toBeLessThan(job.indexOf("run: npm run consumer:check"));
+    expect(job.indexOf("run: npm ci --ignore-scripts")).toBeLessThan(install);
+  });
+
   it("is the last job, so the text above is all of it, and no other job needs it", () => {
     const workflow = withoutComments(read(".github/workflows/ci.yml"));
     expect(workflow).not.toMatch(/needs:\s*\[?sdk-packages/);

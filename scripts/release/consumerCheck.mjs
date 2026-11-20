@@ -25,8 +25,10 @@
  * the versions of third-party tools come from the root lockfile, which this
  * repository has already installed and tested.
  *
- * It starts no server: the page is rendered by calling the built render
- * function in Node.
+ * The umbrella app also draws a real map in a browser (`checkRealMap`): the
+ * one leg that starts a server, a static one on 127.0.0.1, and the repository's
+ * Playwright Chromium. The other legs start none: the page is rendered by
+ * calling the built render function in Node.
  */
 import { spawnSync } from "node:child_process";
 import {
@@ -50,13 +52,18 @@ import {
   SUBPATH_ONLY_PACKAGES,
   UMBRELLA_PACKAGE,
 } from "../sdkPackages.mjs";
+import { BROWSER_STYLE_URL } from "./browserLeg.mjs";
 import {
+  BROWSER_TIMEOUT,
+  browserLegPlan,
   bunSettings,
   bunSkipped,
   bunVersionProblem,
+  chromiumExecutable,
   corepackCliPath,
   INSTALL_TIMEOUT,
   miniflareAvailable,
+  playwrightAvailable,
   publishedLegSkip,
   WORKERD_TIMEOUT,
   workerdSkipped,
@@ -78,6 +85,14 @@ const FIXTURE = path.join(REPO, "scripts", "release", "consumer");
 
 /** The folder of the files the app that mixes the umbrella with direct dependencies adds. */
 const MIXED_FIXTURE = path.join(REPO, "scripts", "release", "consumer-mixed");
+
+/** The folder of the page that draws a real map in a browser, which the umbrella app builds. */
+const BROWSER_FIXTURE = path.join(
+  REPO,
+  "scripts",
+  "release",
+  "consumer-browser",
+);
 
 /** What the fixture needs from the registry besides the SDK tarballs. */
 export const LOCKED_TOOLS = [
@@ -1074,6 +1089,60 @@ function checkEngineFreeRoot(app, prefix) {
 }
 
 /**
+ * Draws a real map in a browser from an app that lists only the umbrella
+ * (`consumer-browser/`): it imports the interface from `@mapcairn/sdk` and the
+ * adapter from its subpath, takes the worker from Vite's `?worker&url`, builds
+ * with plain Vite, and is served under the strict policy and driven in the
+ * repository's Playwright Chromium by `browserRun.mjs` (the style is mocked
+ * and every other origin refused). Without Chromium it skips with a warning,
+ * and fails on GitHub Actions where Playwright is installed (`browserLegPlan`).
+ *
+ * @param {string} app The installed umbrella app.
+ * @param {string} prefix Put before each line of the report.
+ * @returns {string[]} One line for each check.
+ */
+function checkRealMap(app, prefix) {
+  const executable = chromiumExecutable(REPO);
+  const plan = browserLegPlan({
+    playwright: playwrightAvailable(REPO),
+    executable,
+  });
+  if (plan.action === "fail") {
+    throw new Error(plan.message);
+  }
+  if (plan.action === "skip") {
+    return [`${prefix}${plan.line}`];
+  }
+  const page = path.join(app, "browser");
+  cpSync(BROWSER_FIXTURE, page, { recursive: true });
+  writeFileSync(
+    path.join(page, ".env.production"),
+    `VITE_STYLE_URL=${BROWSER_STYLE_URL}\n`,
+  );
+  const tsc = path.join(app, "node_modules", "typescript", "bin", "tsc");
+  runNode("tsc (browser page)", [tsc, "-p", "browser/tsconfig.json"], app);
+  const vite = path.join(app, "node_modules", "vite", "bin", "vite.js");
+  runNode(
+    "vite build (browser page)",
+    [vite, "build", "browser", "--outDir", "../dist/browser", "--emptyOutDir"],
+    app,
+  );
+  const lines = JSON.parse(
+    runNode(
+      "draw the map in Chromium",
+      [
+        path.join(REPO, "scripts", "release", "browserRun.mjs"),
+        path.join(app, "dist", "browser"),
+        String(executable),
+      ],
+      app,
+      BROWSER_TIMEOUT,
+    ),
+  );
+  return lines.map((line) => `${prefix}real map in Chromium, ${line}`);
+}
+
+/**
  * The manifest of an app that lists the given packages, from the tarballs or
  * from the registry.
  *
@@ -1114,6 +1183,7 @@ function checkUmbrella({ root, packed, published, versions }) {
     `${prefix}npm install: ok`,
     ...checkApp(app, prefix, { engineStyles: true }),
     ...checkEngineFreeRoot(app, prefix),
+    ...checkRealMap(app, prefix),
   ];
   if (published !== null) {
     return [
