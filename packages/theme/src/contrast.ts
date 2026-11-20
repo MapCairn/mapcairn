@@ -18,29 +18,142 @@ export interface Rgba {
 /** A colour as the token files write it, or one already parsed. */
 export type ColourInput = string | Rgba;
 
-const HEX_RE = /^#([0-9a-f]{3,4}|[0-9a-f]{6}|[0-9a-f]{8})$/i;
-// Padding inside the brackets is dropped by `splitArguments`, so the capture
-// takes everything up to the closing bracket. A lazy group between two `\s*`
-// runs backtracks quadratically on a long run of spaces.
-const RGB_RE = /^rgba?\(([^)]*)\)$/i;
-const OKLCH_RE = /^oklch\(([^)]*)\)$/i;
+const HEX_RE = /^#(?:[0-9a-f]{3,4}|[0-9a-f]{6}|[0-9a-f]{8})$/i;
+// The brackets hold anything but a closing bracket, which `readArguments`
+// then splits in linear time. A lazy group between two `\s*` runs backtracks
+// quadratically on a long run of spaces.
+const RGB_RE = /^rgba?\([^)]*\)$/i;
+const OKLCH_RE = /^oklch\([^)]*\)$/i;
 
-/**
- * Parses a CSS alpha value written as a number (`0.5`) or a percentage
- * (`50%`), defaulting to opaque when it is absent.
- */
-function parseAlpha(value: string | undefined): number {
-  if (value === undefined || value === "") {
-    return 1;
-  }
-  return value.endsWith("%")
-    ? Number.parseFloat(value) / 100
-    : Number.parseFloat(value);
+const NUMBER_RE = /^[+-]?(?:\d+\.?\d*|\.\d+)(?:e[+-]?\d+)?$/i;
+/** `oklch()` chroma that a percentage of 100 stands for, per CSS Color 4. */
+const OKLCH_CHROMA_AT_100_PERCENT = 0.4;
+const MAX_CHANNEL = 255;
+
+function cannotParse(colour: string): Error {
+  return new Error(`Cannot parse colour: ${colour}`);
 }
 
-/** Splits the inside of a functional colour on commas, spaces and `/`. */
-function splitArguments(inner: string): string[] {
-  return inner.split(/[\s,/]+/).filter((part) => part !== "");
+/** Reads a finite CSS number, or `undefined` when the text is not one. */
+function readNumber(text: string): number | undefined {
+  if (!NUMBER_RE.test(text)) {
+    return undefined;
+  }
+  const value = Number.parseFloat(text);
+  return Number.isFinite(value) ? value : undefined;
+}
+
+/**
+ * Reads a number or a percentage as a fraction of `percentBasis`, then clamps
+ * it to `[min, max]` the way CSS does for out-of-range colour components.
+ * Returns `undefined` for anything else, including keywords such as `none`.
+ */
+function readComponent(
+  text: string,
+  percentBasis: number,
+  min: number,
+  max: number,
+): number | undefined {
+  const isPercent = text.endsWith("%");
+  const value = readNumber(isPercent ? text.slice(0, -1) : text);
+  if (value === undefined) {
+    return undefined;
+  }
+  const scaled = isPercent ? (value / 100) * percentBasis : value;
+  return Math.min(max, Math.max(min, scaled));
+}
+
+/** Reads an optional alpha: a number or percentage, clamped to 0 to 1. */
+function readAlpha(text: string | undefined): number | undefined {
+  return text === undefined ? 1 : readComponent(text, 1, 0, 1);
+}
+
+/** Reads a hue in degrees, with or without the `deg` unit. Other units are not supported. */
+function readHue(text: string): number | undefined {
+  return readNumber(
+    text.toLowerCase().endsWith("deg") ? text.slice(0, -3) : text,
+  );
+}
+
+/** The arguments of a functional colour, tokenised. */
+interface ColourArguments {
+  components: [string, string, string];
+  alpha: string | undefined;
+  /** Whether the commas syntax was used. */
+  legacy: boolean;
+}
+
+function isToken(text: string): boolean {
+  return text !== "" && !/\s/.test(text);
+}
+
+/** `r, g, b` or `r, g, b, alpha`: exactly the right commas, no slash. */
+function readLegacyArguments(text: string): ColourArguments | undefined {
+  const parts = text.split(",").map((part) => part.trim());
+  const [first, second, third, alpha] = parts;
+  if (
+    (parts.length !== 3 && parts.length !== 4) ||
+    first === undefined ||
+    second === undefined ||
+    third === undefined ||
+    !parts.every(isToken)
+  ) {
+    return undefined;
+  }
+  return { components: [first, second, third], alpha, legacy: true };
+}
+
+/** `a b c` or `a b c / alpha`: spaces, and the slash only before the last argument. */
+function readModernArguments(text: string): ColourArguments | undefined {
+  const slash = text.indexOf("/");
+  const alphaText = slash < 0 ? undefined : text.slice(slash + 1).trim();
+  const [first, second, third, ...surplus] = (
+    slash < 0 ? text : text.slice(0, slash)
+  )
+    .trim()
+    .split(/\s+/);
+  if (
+    alphaText?.includes("/") ||
+    surplus.length > 0 ||
+    first === undefined ||
+    second === undefined ||
+    third === undefined ||
+    !isToken(first) ||
+    !isToken(second) ||
+    !isToken(third) ||
+    (alphaText !== undefined && !isToken(alphaText))
+  ) {
+    return undefined;
+  }
+  return {
+    components: [first, second, third],
+    alpha: alphaText,
+    legacy: false,
+  };
+}
+
+/**
+ * Tokenises the inside of a functional colour the way CSS does: the commas
+ * syntax (only where `allowLegacy`) has exactly three or four comma-separated
+ * values and no slash; the spaces syntax has three values and an optional
+ * `/ alpha` as the last argument only. Empty arguments are refused.
+ */
+function readArguments(
+  inner: string,
+  allowLegacy: boolean,
+): ColourArguments | undefined {
+  const text = inner.trim();
+  if (!text.includes(",")) {
+    return readModernArguments(text);
+  }
+  return allowLegacy && !text.includes("/")
+    ? readLegacyArguments(text)
+    : undefined;
+}
+
+/** The text between the brackets of a matched functional colour. */
+function insideBrackets(text: string): string {
+  return text.slice(text.indexOf("(") + 1, -1);
 }
 
 /** Converts a gamma-encoded sRGB channel (0 to 1) to linear light. */
@@ -79,29 +192,32 @@ function oklchToLinearSrgb(
   ];
 }
 
-/** Reads the `L C H [/ alpha]` arguments of an `oklch()` colour. */
+/** Reads the `L C H [/ alpha]` arguments of text already matched as `oklch()`. */
 function readOklch(colour: string): {
   lightness: number;
   chroma: number;
   hue: number;
   alpha: number;
 } {
-  const match = OKLCH_RE.exec(colour.trim());
-  if (!match) {
-    throw new Error(`Cannot parse colour: ${colour}`);
+  const text = colour.trim();
+  const args = readArguments(insideBrackets(text), false);
+  if (args === undefined) {
+    throw cannotParse(colour);
   }
-  const [rawL, rawC, rawH, rawAlpha] = splitArguments(match[1] ?? "");
-  if (rawL === undefined || rawC === undefined || rawH === undefined) {
-    throw new Error(`Cannot parse colour: ${colour}`);
+  const [rawL, rawC, rawH] = args.components;
+  const lightness = readComponent(rawL, 1, 0, 1);
+  const chroma = readComponent(rawC, OKLCH_CHROMA_AT_100_PERCENT, 0, Infinity);
+  const hue = readHue(rawH);
+  const alpha = readAlpha(args.alpha);
+  if (
+    lightness === undefined ||
+    chroma === undefined ||
+    hue === undefined ||
+    alpha === undefined
+  ) {
+    throw cannotParse(colour);
   }
-  return {
-    lightness: rawL.endsWith("%")
-      ? Number.parseFloat(rawL) / 100
-      : Number.parseFloat(rawL),
-    chroma: Number.parseFloat(rawC),
-    hue: Number.parseFloat(rawH),
-    alpha: parseAlpha(rawAlpha),
-  };
+  return { lightness, chroma, hue, alpha };
 }
 
 /**
@@ -123,7 +239,10 @@ export function isInSrgbGamut(colour: string): boolean {
 
 /**
  * Parses a hex, `rgb()`/`rgba()` or `oklch()` colour to gamma-encoded sRGB.
- * OKLCH colours that fall outside the gamut are clipped per channel; use
+ * Numbers and percentages are read strictly: each component must be a finite
+ * number or percentage, the argument count must be right, and an `oklch()`
+ * hue may be plain or in degrees (other angle units are refused). Components
+ * outside their range are clamped as CSS does. OKLCH colours that fall outside the gamut are clipped per channel; use
  * {@link isInSrgbGamut} to keep tokens from relying on that.
  * @throws When the string is not in a supported syntax.
  */
@@ -132,9 +251,8 @@ export function parseColour(colour: string): Rgba {
   if (text.toLowerCase() === "transparent") {
     return { r: 0, g: 0, b: 0, a: 0 };
   }
-  const hex = HEX_RE.exec(text);
-  if (hex) {
-    let digits = hex[1] ?? "";
+  if (HEX_RE.test(text)) {
+    let digits = text.slice(1);
     if (digits.length <= 4) {
       digits = [...digits].map((digit) => digit + digit).join("");
     }
@@ -148,18 +266,28 @@ export function parseColour(colour: string): Rgba {
     };
   }
 
-  const rgb = RGB_RE.exec(text);
-  if (rgb) {
-    const [r, g, b, alpha] = splitArguments(rgb[1] ?? "");
-    if (r === undefined || g === undefined || b === undefined) {
-      throw new Error(`Cannot parse colour: ${colour}`);
+  if (RGB_RE.test(text)) {
+    const args = readArguments(insideBrackets(text), true);
+    if (args === undefined) {
+      throw cannotParse(colour);
     }
-    return {
-      r: Number.parseFloat(r),
-      g: Number.parseFloat(g),
-      b: Number.parseFloat(b),
-      a: parseAlpha(alpha),
-    };
+    const percents = args.components.filter((part) => part.endsWith("%"));
+    if (args.legacy && percents.length % 3 !== 0) {
+      throw cannotParse(colour);
+    }
+    const [r, g, b] = args.components.map((part) =>
+      readComponent(part, MAX_CHANNEL, 0, MAX_CHANNEL),
+    );
+    const a = readAlpha(args.alpha);
+    if (
+      r === undefined ||
+      g === undefined ||
+      b === undefined ||
+      a === undefined
+    ) {
+      throw cannotParse(colour);
+    }
+    return { r, g, b, a };
   }
 
   if (OKLCH_RE.test(text)) {

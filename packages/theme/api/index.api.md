@@ -5,13 +5,34 @@
 ```ts
 
 // @public
+export type BackdropName = "white" | "black" | "lightMap" | "defaultBasemap";
+
+// @public
 const blur_2: `var(--${string})`;
 export { blur_2 as blur }
+
+// @public
+export function checkThemeContrast(override: ThemeOverride): ThemeContrastCheck;
 
 // Warning: (ae-forgotten-export) The symbol "ColourInput" needs to be exported by the entry point index.d.ts
 //
 // @public
 export function compositeOver(foreground: ColourInput, backdrop: ColourInput): Rgba;
+
+// @public
+export type ContrastBackground = ThemeColourRole | "pageBackground" | "mapHalo" | "map";
+
+// @public
+export interface ContrastFinding {
+    backdrop: BackdropName | null;
+    background: ContrastBackground;
+    foreground: ThemeColourRole;
+    kind: PairKind;
+    passes: boolean;
+    ratio: number;
+    required: number;
+    theme: ThemeName;
+}
 
 // @public
 export function contrastRatio(a: ColourInput, b: ColourInput): number;
@@ -22,6 +43,17 @@ export const focusRing: {
     readonly outlineOffset: `var(--${string})`;
     readonly boxShadow: `0 0 0 var(--${string}) var(--${string})`;
 };
+
+// @public
+export interface InvalidColour {
+    reason: InvalidColourReason;
+    role: string;
+    theme: ThemeName | null;
+    value: unknown;
+}
+
+// @public
+export type InvalidColourReason = "unknown-role" | "unparseable" | "out-of-gamut" | "translucent" | "unknown-key" | "malformed" | "unreadable";
 
 // @public
 export const mapOverlayTokens: {
@@ -38,6 +70,9 @@ export const mapOverlayTokens: {
     readonly tileErrorBackground: `var(--${string})`;
     readonly tileErrorText: `var(--${string})`;
 };
+
+// @public
+export type PairKind = "text" | "non-text";
 
 // @public
 export function parseColour(colour: string): Rgba;
@@ -63,6 +98,30 @@ export const surfaceBlurStyle: {
 
 // @public
 export const surfaceBlurSupported = "(backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))";
+
+// @public
+export type ThemeColourRole = "surface" | "surfaceRaised" | "text" | "textMuted" | "accent" | "accentTint" | "accentContrast" | "hairline" | "controlBoundary" | "danger" | "dangerTint" | "scrim" | "focusRing" | "focusRingInner";
+
+// @public
+export type ThemeColours = Record<ThemeColourRole, string>;
+
+// @public
+export interface ThemeContrastCheck {
+    findings: ContrastFinding[];
+    invalid: InvalidColour[];
+    passes: boolean;
+}
+
+// @public
+export type ThemeName = "light" | "dark";
+
+// @public
+export interface ThemeOverride {
+    colour?: {
+        light?: Partial<ThemeColours>;
+        dark?: Partial<ThemeColours>;
+    };
+}
 
 // @public
 export function toHex(colour: Rgba): string;
