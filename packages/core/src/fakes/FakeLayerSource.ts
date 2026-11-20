@@ -40,8 +40,13 @@ export type RecordedLayerRequest<T> = T & { readonly url: string };
  * `hold` does not hold an identify, and `holdIdentify` does not hold a load.
  * `identifyRequests` records what was asked, with the URL the real source
  * would have requested. A tap that cannot be turned into an `https` URL is
- * refused with `invalid` and not recorded, as a real source refuses it. The
- * fake applies no limit to the size of an answer. A second `holdIdentify` for
+ * refused with `invalid` and not recorded, as a real source refuses it.
+ *
+ * `setOversizeAnswer` makes the provider's answer to a load or to a detail
+ * load larger than the source's limit, so the fake refuses it with `invalid`
+ * as a real source does; the other kind of answer is not affected, so
+ * features can load while their detail is refused. The fake applies no limit
+ * to an identify answer. A second `holdIdentify` for
  * a layer replaces the first, and releasing the first leaves the second in
  * place.
  */
@@ -53,6 +58,7 @@ export class FakeLayerSource implements LayerSource {
   readonly #outcomes = new Map<string, Outcome>();
   readonly #identified = new Map<string, Outcome>();
   readonly #details = new Map<string, readonly LayerFeature[]>();
+  readonly #oversize = new Set<string>();
   readonly #heldIdentifies = new Map<string, Promise<void>>();
   #held: Promise<void> | null = null;
 
@@ -74,6 +80,15 @@ export class FakeLayerSource implements LayerSource {
   /** Makes `identify` for a layer reject with a `LayerError` of this kind. */
   failIdentify(layerId: string, error: "network" | "invalid"): void {
     this.#identified.set(layerId, { kind: "failure", error });
+  }
+
+  /**
+   * Makes the answer `load` (`"feed"`) or `loadDetail` (`"detail"`)
+   * reads for a layer larger than the source's limit, so it rejects with
+   * `invalid`.
+   */
+  setOversizeAnswer(layerId: string, kind: "feed" | "detail"): void {
+    this.#oversize.add(`${kind}:${layerId}`);
   }
 
   /** Makes `loadDetail` for a layer return these shapes. */
@@ -118,6 +133,7 @@ export class FakeLayerSource implements LayerSource {
       url: feedUrl(definition, controls, now, area),
     });
     await this.#wait(signal, this.#held);
+    this.#refuseOversize("feed", definition.id);
     const outcome = this.#outcomes.get(definition.id);
     if (outcome?.kind === "failure") {
       throw new LayerError(outcome.error);
@@ -137,6 +153,7 @@ export class FakeLayerSource implements LayerSource {
     }
     this.detailRequests.push({ ...request, url });
     await this.#wait(request.signal, this.#held);
+    this.#refuseOversize("detail", request.definition.id);
     const shapes = this.#details.get(request.definition.id) ?? [];
     if (shapes.length === 0) {
       throw new LayerError("empty");
@@ -158,6 +175,12 @@ export class FakeLayerSource implements LayerSource {
       throw new LayerError(outcome.error);
     }
     return outcome?.features ?? [];
+  }
+
+  #refuseOversize(kind: "feed" | "detail", layerId: string): void {
+    if (this.#oversize.has(`${kind}:${layerId}`)) {
+      throw new LayerError("invalid", "The response is too large.");
+    }
   }
 
   async #wait(

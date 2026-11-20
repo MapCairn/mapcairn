@@ -111,6 +111,14 @@ export interface LayerSourceControls {
     from: readonly [number, number],
     to: readonly [number, number],
   ): void;
+  /**
+   * Makes the next load of {@link CONTRACT_LAYER} (`"feed"`), or the next
+   * detail load (`"detail"`), read an answer larger than whatever limit the
+   * source applies to the size of an answer. A source is free to choose its
+   * limit (the subject can lower it so the answer stays small), and the
+   * suite requires only that the answer is refused.
+   */
+  respondWithOversizeAnswer(kind: "feed" | "detail"): void;
   /** Makes the next loads fail the way a source fails for that kind. */
   failWith(kind: "network" | "invalid"): void;
   /** Makes the next loads wait until the returned function is called. */
@@ -259,6 +267,39 @@ export function runLayerSourceContract(
         }),
       );
       expect(error.kind).toBe("invalid");
+    });
+
+    describe("the size of an answer", () => {
+      const detailRequest = {
+        definition: CONTRACT_LAYER,
+        feature: feature("https://contract.test/area?id=a"),
+      };
+
+      it("loads a feed answer within the limit", async () => {
+        const { source, controls } = create();
+        controls.respondWith(POINTS);
+        await expect(source.load(request())).resolves.toHaveLength(2);
+      });
+
+      it("loads a detail answer within the limit", async () => {
+        const { source, controls } = create();
+        controls.respondWithDetailLine([0, 0], [1, 1]);
+        await expect(source.loadDetail(detailRequest)).resolves.toHaveLength(1);
+      });
+
+      it("refuses a feed answer larger than the source's limit as invalid", async () => {
+        const { source, controls } = create();
+        controls.respondWithOversizeAnswer("feed");
+        expect((await rejection(source.load(request()))).kind).toBe("invalid");
+      });
+
+      it("refuses a detail answer larger than the source's limit as invalid", async () => {
+        const { source, controls } = create();
+        controls.respondWithOversizeAnswer("detail");
+        expect((await rejection(source.loadDetail(detailRequest))).kind).toBe(
+          "invalid",
+        );
+      });
     });
 
     describe("identify", () => {

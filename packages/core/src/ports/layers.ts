@@ -101,19 +101,23 @@ export interface LayerDetailRequest {
  *
  * @remarks `load` and `loadDetail` reject only with a `LayerError`:
  *   `network` when the request failed, `invalid` when the response could not
- *   be decoded, `empty` when it decoded to no features, and `aborted` when the
- *   signal fired first.
+ *   be decoded or is larger than the source's limit on the size of an answer,
+ *   `empty` when it decoded to no features, and `aborted` when the signal fired
+ *   first.
  *
  *   `identify` rejects only with a `LayerError` too, but never with `empty`:
  *   nothing found is the common answer, so it resolves to an empty list.
  *   `network` includes a service that answered with an error status, which
  *   until an `unauthorised` kind exists includes 401 and 403. `invalid` is a
  *   URL that cannot be built or is not `https` (see `identifyRequestUrl`),
- *   and an answer that is not a document the decoder reads. A source keeps
- *   nothing an `identify` was answered with: every tap asks again. Core sets
- *   no limit on the size of an answer, because that belongs to the source: a
- *   source that reads from a network applies one of its own and refuses a
- *   larger answer as `invalid` (`FetchLayerSource` reads at most 1 MiB).
+ *   an answer that is not a document the decoder reads, and an answer larger
+ *   than the source's limit. A source keeps nothing an `identify` was answered
+ *   with: every tap asks again.
+ *
+ *   The size of an answer belongs to the source: one that reads from a network
+ *   applies a limit of its own to every `load`, `loadDetail` and `identify`
+ *   answer, stops reading at the limit and refuses a larger answer as
+ *   `invalid`, so a provider cannot make the page hold an unbounded body.
  */
 export interface LayerSource {
   load(request: LayerLoadRequest): Promise<readonly LayerFeature[]>;

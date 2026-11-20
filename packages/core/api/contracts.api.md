@@ -206,6 +206,7 @@ export interface LayerSourceControls {
     respondToIdentifyWith(points: readonly ContractPoint[]): void;
     respondWith(points: readonly ContractPoint[]): void;
     respondWithDetailLine(from: readonly [number, number], to: readonly [number, number]): void;
+    respondWithOversizeAnswer(kind: "feed" | "detail"): void;
 }
 
 // @public

@@ -47,6 +47,9 @@ runLayerSourceContract("FakeLayerSource", () => {
           },
         ]);
       },
+      respondWithOversizeAnswer: (kind) => {
+        source.setOversizeAnswer(CONTRACT_LAYER.id, kind);
+      },
       failWith: (kind) => {
         source.fail(CONTRACT_LAYER.id, kind);
       },
@@ -106,6 +109,38 @@ describe("FakeLayerSource", () => {
     source.setFeatures(SAMPLE_FEED_LAYER.id, [samplePoint("a")]);
     await expect(
       source.load({ definition: SAMPLE_FEED_LAYER, controls: {}, now }),
+    ).resolves.toHaveLength(1);
+  });
+
+  it("refuses an oversize detail as invalid while the features still load", async () => {
+    const source = new FakeLayerSource();
+    source.setFeatures(SAMPLE_ALERT_LAYER.id, [samplePoint("a")]);
+    source.setDetail(SAMPLE_ALERT_LAYER.id, [samplePoint("shape")]);
+    source.setOversizeAnswer(SAMPLE_ALERT_LAYER.id, "detail");
+    await expect(
+      source.load({ definition: SAMPLE_ALERT_LAYER, controls: {}, now }),
+    ).resolves.toHaveLength(1);
+    await expect(
+      source.loadDetail({
+        definition: SAMPLE_ALERT_LAYER,
+        feature: samplePoint("a", { area: "https://alerts.test/g" }),
+      }),
+    ).rejects.toMatchObject({ kind: "invalid" });
+  });
+
+  it("refuses an oversize feed as invalid while its detail still loads", async () => {
+    const source = new FakeLayerSource();
+    source.setFeatures(SAMPLE_ALERT_LAYER.id, [samplePoint("a")]);
+    source.setDetail(SAMPLE_ALERT_LAYER.id, [samplePoint("shape")]);
+    source.setOversizeAnswer(SAMPLE_ALERT_LAYER.id, "feed");
+    await expect(
+      source.load({ definition: SAMPLE_ALERT_LAYER, controls: {}, now }),
+    ).rejects.toMatchObject({ kind: "invalid" });
+    await expect(
+      source.loadDetail({
+        definition: SAMPLE_ALERT_LAYER,
+        feature: samplePoint("a", { area: "https://alerts.test/g" }),
+      }),
     ).resolves.toHaveLength(1);
   });
 

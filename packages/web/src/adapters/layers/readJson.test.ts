@@ -2,7 +2,7 @@
 // Copyright MapCairn contributors
 import { LayerError } from "@mapcairn/core";
 import { describe, expect, it } from "vitest";
-import { NO_BYTE_LIMIT, readJsonWithin } from "./readJson";
+import { readJsonWithin } from "./readJson";
 
 const LIMIT = 100;
 
@@ -22,13 +22,6 @@ describe("readJsonWithin", () => {
     await expect(
       readJsonWithin(new Response('{"a":1}'), LIMIT),
     ).resolves.toEqual({ a: 1 });
-  });
-
-  it("parses any size when there is no limit", async () => {
-    const long = "x".repeat(10_000);
-    await expect(
-      readJsonWithin(new Response(JSON.stringify({ long })), NO_BYTE_LIMIT),
-    ).resolves.toEqual({ long });
   });
 
   it("refuses a body that is not JSON, as invalid", async () => {

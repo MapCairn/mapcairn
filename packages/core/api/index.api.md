@@ -1304,6 +1304,7 @@ export class FakeLayerSource implements LayerSource {
     setDetail(layerId: string, shapes: readonly LayerFeature[]): void;
     setFeatures(layerId: string, features: readonly LayerFeature[]): void;
     setIdentified(layerId: string, features: readonly LayerFeature[]): void;
+    setOversizeAnswer(layerId: string, kind: "feed" | "detail"): void;
 }
 
 // @public
