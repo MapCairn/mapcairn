@@ -148,7 +148,7 @@ module.exports = {
       name: "umbrella-root-has-no-adapter",
       severity: "error",
       comment:
-        "Only the umbrella's adapter-maplibre subpath file may import the MapLibre adapter package. The root and the other subpaths stay free of the engine, so an app that does not import the subpath carries none.",
+        "Only the umbrella's adapter-maplibre subpath file may import the MapLibre adapter package. The root and the other subpaths stay free of the engine, so an app that does not import the subpath carries none. This rule sees direct imports of scripts only: it does not parse src/styles.css (an @import), and the drift tests in packages/core/src/lint/umbrella.test.ts catch a re-export of the adapter through another file.",
       from: {
         path: "^packages/sdk/src",
         pathNot: "^packages/sdk/src/adapterMaplibre\\.ts$",

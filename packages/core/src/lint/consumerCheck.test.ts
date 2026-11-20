@@ -307,6 +307,39 @@ describe("stylesheetProblems", () => {
     expect([...new Set(readable)]).toEqual([...SCRIPT_SET_PROPERTIES].sort());
   });
 
+  it("asks for the engine's rules only when told the app carries them, as the umbrella's stylesheet does", () => {
+    const sheet = `${tokens}.x{width:var(--abc1234)}`;
+    expect(stylesheetProblems(sheet)).toEqual([]);
+    expect(stylesheetProblems(sheet, { engine: true })).toEqual([
+      "the built CSS has no engine rule from the adapter's styles.css",
+    ]);
+    expect(
+      stylesheetProblems(
+        `${sheet}[data-map-host] .maplibregl-map{isolation:isolate}`,
+        { engine: true },
+      ),
+    ).toEqual([]);
+    expect(
+      stylesheetProblems(`${sheet}.maplibregl-map{isolation:isolate}`, {
+        engine: true,
+      }),
+    ).toHaveLength(1);
+  });
+
+  it("finds the engine rule in the adapter's own built stylesheet", () => {
+    const styles = readFileSync(
+      path.join(REPO, "packages/adapter-maplibre/dist/styles.css"),
+      "utf8",
+    );
+    const themeTokens = readFileSync(
+      path.join(REPO, "packages/theme/dist/tokens.css"),
+      "utf8",
+    );
+    expect(
+      stylesheetProblems(`${themeTokens}${styles}`, { engine: true }),
+    ).toEqual([]);
+  });
+
   it("fails without the dark theme, or without any component rule", () => {
     expect(stylesheetProblems(".x{width:var(--a-b)}").join("\n")).toMatch(
       /dark theme/,

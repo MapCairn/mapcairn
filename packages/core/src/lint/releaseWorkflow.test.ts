@@ -69,9 +69,20 @@ describe("release.yml", () => {
     const waitMinutes =
       CONFIRM_DELAYS_MS.reduce((sum: number, ms: number) => sum + ms, 0) /
       60_000;
+    // The floor, in minutes:
+    //   packages * (wait + reads * readAllowance + publishAllowance) + setup
+    // where `wait` is the sum of the registry waits, there is one read before
+    // the first wait and one after each (so one more than the waits), each read
+    // is allowed 10 s for its round trip, the publish with its provenance 30 s,
+    // and setup (checkout, npm, the checks of the files) 10 minutes.
+    const reads = CONFIRM_DELAYS_MS.length + 1;
+    const readAllowanceMinutes = 10 / 60;
+    const publishAllowanceMinutes = 30 / 60;
     const setupMinutes = 10;
     expect(minutes).toBeGreaterThanOrEqual(
-      SDK_PACKAGES.length * waitMinutes + setupMinutes,
+      SDK_PACKAGES.length *
+        (waitMinutes + reads * readAllowanceMinutes + publishAllowanceMinutes) +
+        setupMinutes,
     );
   });
 

@@ -25,7 +25,8 @@
  * - `peerDependencies` and `devDependencies` of an SDK package are listed and
  *   never fail: a peer is the host's own choice, and a dev dependency is not
  *   shipped. The exception is an SDK package that another SDK package depends
- *   on (the MapLibre adapter, which the umbrella depends on): npm installs its
+ *   on (today `map` and `react`, whose peers are `react` and `react-dom`, and
+ *   the MapLibre adapter, whose peer is `maplibre-gl`): npm installs its
  *   required peers for every app that installs the package that needs it, so
  *   its required peers, and their trees, are judged like dependencies. Its
  *   optional peers are still only listed.

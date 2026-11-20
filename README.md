@@ -53,6 +53,23 @@ import { MapChrome, ServicesProvider } from "@mapcairn/sdk";
 
 The packages are not on npm yet (see Status above), so the install works once they are. `@mapcairn/sdk` re-exports `core`, `map`, `react` and `theme` from its root, and the MapLibre adapter at `@mapcairn/sdk/adapter-maplibre`. Its stylesheet is the three the packages ship, in order: tokens, the map's, the engine's. An app that wants less installs the packages it needs: `core` has no React or browser dependency, and `theme` installs without the interface. [`packages/sdk/README.md`](packages/sdk/README.md) lists the entry points and says how to keep one copy of a package when you also list it directly.
 
+For a real map, swap the adapter into the services. The MapLibre adapter is at its own subpath so that the umbrella's root stays free of the map engine; `maplibre-gl` is a required peer of the umbrella, and the adapter needs the URL of the engine's worker, which your app serves:
+
+```ts
+import { createFakeServices } from "@mapcairn/sdk";
+import { createMapLibreMapAdapter } from "@mapcairn/sdk/adapter-maplibre";
+
+const services = {
+  ...createFakeServices(),
+  createMapAdapter: () =>
+    createMapLibreMapAdapter({
+      loadWorkerUrl: async () => "/maplibre-gl-worker.mjs",
+    }),
+};
+```
+
+[`packages/adapter-maplibre/README.md`](packages/adapter-maplibre/README.md) says what the adapter asks of a host. The whole-app example below and `examples/embed` stay on the fakes.
+
 This is a whole app. It mounts the map with the SDK's interface around it and a search box at the top, written against the four packages, which is what the playground and `examples/embed` use. Every name in it comes from `@mapcairn/sdk` too, so with the umbrella you change the imports and drop the second stylesheet:
 
 ```tsx
@@ -120,22 +137,7 @@ function Chrome({ background }: { readonly background: ReactNode }) {
 }
 ```
 
-`createFakeServices()` runs the interface on the SDK's in-memory fakes, so it requests nothing and draws no map tiles. A real map swaps in the MapLibre adapter, which the umbrella carries at its own subpath so that the root stays free of the map engine. `maplibre-gl` is a required peer of the umbrella, and the adapter needs the URL of the engine's worker, which your app serves:
-
-```ts
-import { createFakeServices } from "@mapcairn/sdk";
-import { createMapLibreMapAdapter } from "@mapcairn/sdk/adapter-maplibre";
-
-const services = {
-  ...createFakeServices(),
-  createMapAdapter: () =>
-    createMapLibreMapAdapter({
-      loadWorkerUrl: async () => "/maplibre-gl-worker.mjs",
-    }),
-};
-```
-
-[`packages/adapter-maplibre/README.md`](packages/adapter-maplibre/README.md) says what the adapter asks of a host. The example above and `examples/embed` stay on the fakes.
+`createFakeServices()` runs the interface on the SDK's in-memory fakes, so the app above requests nothing and draws no map tiles.
 
 [`examples/embed`](examples/embed/README.md) is the full version of this app, written against the four packages directly, with the end stack of controls, the sheet, the measure tool, layers and a search provider of its own, and a test in `packages/core/src/lint/readme.test.ts` fails if this snippet uses an import, a component or a prop that the example does not (an import from `@mapcairn/sdk` counts as the package it re-exports). [`docs/guides/extending.md`](docs/guides/extending.md) lists what an app provides around it (the stylesheet import, base styles and the font). The snippet sets no page styles: the SDK ships no base stylesheet today, so an app gives the page a height, removes the body margin and sets its own font and colours (the example does it in `examples/embed/src/main.tsx` and `page.css`). Whether the SDK should ship base styles or stable alias properties for theming is not decided.
 

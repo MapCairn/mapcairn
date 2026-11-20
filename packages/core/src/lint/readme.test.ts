@@ -81,12 +81,12 @@ describe("README.md", () => {
     ).toEqual([]);
   });
 
-  it("shows the real-map adapter from the umbrella's subpath after the example, as one short block", () => {
+  it("shows the real-map adapter from the umbrella's subpath before the whole-app example, as one short block", () => {
     const real = fencedBlocks(README, "ts").find((block) =>
       block.includes("@mapcairn/sdk/adapter-maplibre"),
     );
     expect(real).toBeDefined();
-    expect(README.indexOf(real ?? "")).toBeGreaterThan(README.indexOf(snippet));
+    expect(README.indexOf(real ?? "")).toBeLessThan(README.indexOf(snippet));
     expect(real).toContain("createMapLibreMapAdapter");
     expect(real).toContain("loadWorkerUrl");
     expect(

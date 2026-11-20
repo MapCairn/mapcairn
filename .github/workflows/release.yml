@@ -373,9 +373,10 @@ jobs:
       cancel-in-progress: false
     runs-on: ubuntu-latest
     # Every package waits up to about 10 minutes for the registry after its
-    # publish (CONFIRM_DELAYS_MS in verifyRelease.mjs), six packages in a row,
-    # plus setup.
-    timeout-minutes: 75
+    # publish (CONFIRM_DELAYS_MS in verifyRelease.mjs), plus the time of the
+    # registry reads and of the publish itself, six packages in a row, plus
+    # setup (releaseWorkflow.test.ts has the formula).
+    timeout-minutes: 90
     permissions:
       id-token: write # trusted publishing: npm exchanges this run's OIDC token for a short-lived credential, so no secret is stored
       contents: read # check out the repository

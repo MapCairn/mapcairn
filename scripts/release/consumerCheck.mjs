@@ -373,10 +373,19 @@ export const SCRIPT_SET_PROPERTIES = [
  * `tokens.css` defines (the two sheets are built against the same names).
  *
  * @param {string} css The built stylesheet text, all files joined.
+ * @param {{ engine?: boolean }} [options] With `engine`, the sheet must also hold
+ *   the adapter's rule that fits the engine into the map region, as the
+ *   umbrella's stylesheet carries it (an app that imports the packages'
+ *   stylesheets by name does not need it from this check).
  * @returns {string[]}
  */
-export function stylesheetProblems(css) {
+export function stylesheetProblems(css, { engine = false } = {}) {
   const problems = [];
+  if (engine && !/\[data-map-host\]\s+\.maplibregl-map\b/.test(css)) {
+    problems.push(
+      "the built CSS has no engine rule from the adapter's styles.css",
+    );
+  }
   if (!/\[data-theme=["']?dark["']?\]/.test(css)) {
     problems.push("the built CSS has no dark theme block from tokens.css");
   }
@@ -967,9 +976,10 @@ function auditSignatures(app) {
  *
  * @param {string} app The installed app.
  * @param {string} [prefix] Put before each line of the report, to say which app it was.
+ * @param {{ engineStyles?: boolean }} [options] With `engineStyles`, the built CSS must hold the adapter's engine rule (the umbrella app, whose one stylesheet carries it).
  * @returns {string[]} One line for each check.
  */
-function checkApp(app, prefix = "") {
+function checkApp(app, prefix = "", { engineStyles = false } = {}) {
   /** @type {string[]} */
   const lines = [];
   const plain = renderPlain(app);
@@ -1000,6 +1010,7 @@ function checkApp(app, prefix = "") {
   );
   const cssProblems = stylesheetProblems(
     builtCss(path.join(app, "dist", "client")),
+    { engine: engineStyles },
   );
   if (cssProblems.length > 0) {
     throw new Error(cssProblems.join("\n"));
@@ -1038,7 +1049,7 @@ function checkApp(app, prefix = "") {
 
 /**
  * Proves the umbrella's root holds no map engine, from the module graphs of
- * four builds of an app that lists only the umbrella (`bundleGraph.mjs`): its
+ * five builds of an app that lists only the umbrella (`bundleGraph.mjs`): its
  * client, server and Worker bundles never reach `maplibre-gl` or the adapter,
  * and the two control builds, which import the adapter through the umbrella's
  * subpath, do.
@@ -1101,7 +1112,7 @@ function checkUmbrella({ root, packed, published, versions }) {
   install(app, installFlags({ published }));
   const lines = [
     `${prefix}npm install: ok`,
-    ...checkApp(app, prefix),
+    ...checkApp(app, prefix, { engineStyles: true }),
     ...checkEngineFreeRoot(app, prefix),
   ];
   if (published !== null) {

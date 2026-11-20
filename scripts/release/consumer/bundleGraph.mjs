@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
-// Builds the app four ways with Vite's own API and prints which modules each
+// Builds the app five ways with Vite's own API and prints which modules each
 // build holds, so the check can say whether the umbrella's root brings the
 // map engine into a client, a server or a Worker bundle. Nothing is written:
 // every build runs with `write: false`. The last two builds go through the

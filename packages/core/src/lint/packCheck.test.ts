@@ -388,6 +388,19 @@ describe("files the build did not make", () => {
       "dist/secret.js": "/* empty css */",
     });
     expect(ordinary.join("\n")).toContain("dist/secret.js: no source map");
+    for (const [name, text] of [
+      ["before", 'var x = "_abc";\n/* empty css */\n'],
+      ["samelinebefore", "var y = 1; /* empty css */\n"],
+      ["sameline", "/* empty css */ var z = 2;\n"],
+      ["notcomment", "// empty css\n"],
+    ]) {
+      const file = `dist/${name}.styles.js`;
+      const found = problems([...GOOD_FILES, file], {}, 1000, {
+        "dist/index.js.map": sourceMap(),
+        [file]: text,
+      });
+      expect(found.join("\n"), name).toContain(`${file}: no source map`);
+    }
     const unreadable = problems([...GOOD_FILES, "dist/b.styles.js"]);
     expect(unreadable.join("\n")).toContain("dist/b.styles.js: no source map");
   });

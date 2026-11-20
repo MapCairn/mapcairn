@@ -687,6 +687,19 @@ describe.skipIf(process.platform === "win32")(
       expect(published.join("\n")).not.toContain("mapcairn-map-");
     });
 
+    it("stops when the publish of the hyphenated adapter fails, and publishes nothing after it", () => {
+      const run = runPublishStep({
+        mode: "publish",
+        states: ALL_MISSING,
+        publishFails: ["adapter-maplibre"],
+      });
+      expect(run.status).not.toBe(0);
+      const published = actions(run).filter((call) => call.startsWith("npm "));
+      expect(published).toHaveLength(5);
+      expect(published.join("\n")).toContain("mapcairn-adapter-maplibre-");
+      expect(published.join("\n")).not.toContain("mapcairn-sdk-");
+    });
+
     it("stops when a published version does not appear on the registry", () => {
       const run = runPublishStep({
         mode: "publish",

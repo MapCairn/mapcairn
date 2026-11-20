@@ -70,8 +70,12 @@ function fixture(
     "packages/map": {
       ...sdk("map"),
       dependencies: { "@mapcairn/core": "file:../core" },
+      peerDependencies: { react: "^19.0.0", "react-dom": "^19.0.0" },
     },
-    "packages/react": sdk("react"),
+    "packages/react": {
+      ...sdk("react"),
+      peerDependencies: { react: "^19.0.0" },
+    },
     "packages/theme": sdk("theme"),
     "packages/sdk": {
       ...sdk("sdk"),
@@ -82,7 +86,12 @@ function fixture(
         "@mapcairn/react": "1.0.0",
         "@mapcairn/theme": "1.0.0",
       },
-      peerDependencies: { "maplibre-gl": "^6.18.0", react: "^19.0.0" },
+      peerDependencies: {
+        "host-only": "^1.0.0",
+        "maplibre-gl": "^6.18.0",
+        react: "^19.0.0",
+        "react-dom": "^19.0.0",
+      },
     },
   };
   const lockfile = {
@@ -98,6 +107,8 @@ function fixture(
         version: "6.18.0",
         license: "BSD-3-Clause",
       },
+      "node_modules/react": { version: "19.3.1", license: "MIT" },
+      "node_modules/react-dom": { version: "19.3.1", license: "MIT" },
       ...Object.fromEntries(
         ["core", "map", "react", "theme", "adapter-maplibre"].map((name) => [
           `node_modules/@mapcairn/${name}`,
@@ -209,7 +220,7 @@ describe("checkSdkLicences", () => {
       ),
     );
     expect(report.failures).toEqual([]);
-    expect(report.checked).toBe(3);
+    expect(report.checked).toBe(5);
   });
 
   it("fails a disallowed licence, even deep in the tree, and names the SDK package that needs it", () => {
@@ -284,7 +295,7 @@ describe("checkSdkLicences", () => {
       ),
     );
     expect(report.failures).toEqual([]);
-    expect(report.checked).toBe(3);
+    expect(report.checked).toBe(5);
   });
 
   it("falls back to a parent's node_modules from a nested package", () => {
@@ -342,22 +353,22 @@ describe("checkSdkLicences", () => {
       fixture({ a: "1.0.0" }, { "node_modules/a": pkg("MIT") }),
     );
     expect(report.failures).toEqual([]);
-    expect(report.checked).toBe(2);
+    expect(report.checked).toBe(4);
   });
 
-  it("ignores the peers of a package no SDK package depends on, and dev dependencies, but lists them", () => {
+  it("ignores a peer that only a package no SDK package depends on requires, an optional peer and dev dependencies, but lists them", () => {
     const report: Report = checkSdkLicences(
       fixture(
         {},
         {
-          "node_modules/react": pkg("GPL-3.0-only"),
+          "node_modules/host-only": pkg("GPL-3.0-only"),
           "node_modules/vitest": pkg("GPL-3.0-only"),
           "node_modules/typescript": pkg("GPL-3.0-only"),
         },
       ),
     );
     expect(report.failures).toEqual([]);
-    expect(report.peers["@mapcairn/sdk"]).toEqual(["react"]);
+    expect(report.peers["@mapcairn/sdk"]).toEqual(["host-only"]);
     expect(report.peers["@mapcairn/core"]).toEqual(["vitest"]);
     expect(report.dev["@mapcairn/core"]).toEqual(["typescript"]);
   });
@@ -388,6 +399,17 @@ describe("checkSdkLicences", () => {
     expect(report.peers["@mapcairn/adapter-maplibre"]).toEqual([]);
   });
 
+  it("judges the react and react-dom peers of map and react, as the real lockfile has them", () => {
+    const report: Report = checkSdkLicences(
+      fixture({}, { "node_modules/react": pkg("GPL-3.0-only") }),
+    );
+    expect(report.failures.map((f) => [f.name, f.requiredBy])).toEqual([
+      ["react", "@mapcairn/map"],
+    ]);
+    expect(report.judgedPeers["@mapcairn/map"]).toEqual(["react", "react-dom"]);
+    expect(report.judgedPeers["@mapcairn/react"]).toEqual(["react"]);
+  });
+
   it("fails a disallowed licence on the peer itself", () => {
     const report: Report = checkSdkLicences(
       fixture({}, { "node_modules/maplibre-gl": pkg("GPL-3.0-only") }),
@@ -416,7 +438,7 @@ describe("checkSdkLicences", () => {
       ),
     );
     expect(report.failures).toHaveLength(1);
-    expect(report.checked).toBe(4);
+    expect(report.checked).toBe(6);
   });
 
   it("follows the peer dependencies of a transitive package", () => {
@@ -430,7 +452,7 @@ describe("checkSdkLicences", () => {
       ),
     );
     expect(report.failures.map((f) => f.name)).toEqual(["p"]);
-    expect(report.checked).toBe(3);
+    expect(report.checked).toBe(5);
   });
 
   it("skips an optional peer and a peer the lockfile does not hold", () => {
@@ -447,7 +469,7 @@ describe("checkSdkLicences", () => {
       ),
     );
     expect(report.failures).toEqual([]);
-    expect(report.checked).toBe(2);
+    expect(report.checked).toBe(4);
   });
 
   it("walks a link to a workspace that is not an SDK package", () => {
@@ -559,7 +581,7 @@ describe("scripts/sdkLicences.mjs, run as a command", {
     const result = run();
     expect(result.status).toBe(0);
     expect(result.stdout).toContain("packages/web");
-    expect(result.stdout).toContain("2 production dependencies");
+    expect(result.stdout).toContain("4 production dependencies");
   });
 
   it("exits 1 and names the package, licence and file for a disallowed licence", () => {
