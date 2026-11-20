@@ -944,6 +944,122 @@ describe("published text", () => {
     });
   });
 
+  describe("links inside an unbalanced link", () => {
+    it.each([
+      "[a]([b](//evil.test)",
+      "[a]( [b](//evil.test)",
+      "[a]([b]([c](//evil.test)",
+      "[a]([b](javascript&#58;alert(1))",
+      "[a]([b](\\\\evil.test)",
+      "[a](\n[b](//evil.test)",
+      "[a]([x]: //evil.test",
+      "[x]: [y]: //evil.test",
+      "[a [x]: //evil.test",
+    ])("fails %j", (bad) => {
+      expect(messages(withLine(bad)).join(" ")).toMatch(/link/i);
+    });
+  });
+
+  describe("trailing punctuation and dot segments", () => {
+    it("lets a repository address end in sentence punctuation, tildes included", () => {
+      for (const good of [
+        "https://github.com/MapCairn/mapcairn~~",
+        "(see https://github.com/MapCairn/mapcairn)",
+        "(https://github.com/MapCairn/mapcairn/pull/1).",
+        "*https://github.com/MapCairn/mapcairn/pull/1*",
+      ]) {
+        expect(messages(withLine(good))).toEqual([]);
+      }
+      expect(messages(withLine("~www.evil.test~")).join(" ")).toMatch(/link/i);
+    });
+
+    it.each([
+      "https://github.com/MapCairn/mapcairn/..%3b/x",
+      "https://github.com/MapCairn/mapcairn/.%3Bx/../../x",
+      "https://github.com/MapCairn/mapcairn/‮/x",
+    ])("fails the address %j", (address) => {
+      expect(messages(withLine(`[a](${address})`)).join(" ")).toMatch(/link/i);
+    });
+
+    it("fails a format character, such as a right-to-left override, in a target", () => {
+      expect(messages(withLine("[a](docs/‮a.md)")).join(" ")).toMatch(/link/i);
+    });
+  });
+
+  describe("time on long lines", () => {
+    const UNITS = [
+      " ",
+      "`",
+      "[",
+      "](",
+      "<",
+      "\\",
+      "\t",
+      "http://",
+      "www.",
+      "[x]: ",
+      "]:",
+      "@",
+      "a@",
+      "a@a.",
+      "!",
+      "](<",
+      "- ",
+      "> ",
+      "#",
+      "\r\n",
+      "`a `",
+      "[a](",
+      "&",
+      "%2e",
+      "/",
+      ".",
+      "(",
+      ")",
+      "*",
+      "_",
+      "\\<",
+      "a.b.",
+      "x@y-",
+      " ",
+      "<a ",
+      "<!--",
+      "~",
+      "=",
+      "-",
+      "a",
+    ];
+    const LENGTH = 200_000;
+    const BOUND_MS = 1500;
+    const HEAD = "## 0.1.0 (2026-12-01)\n\n### What is new\n\n";
+
+    function seconds(text: string): number {
+      const started = Date.now();
+      checkChangelog(text);
+      return Date.now() - started;
+    }
+
+    it.each(UNITS)("stays fast on a line of %j", (unit) => {
+      const run = unit.repeat(Math.ceil(LENGTH / unit.length));
+      expect(seconds(`${HEAD}${run}\n`)).toBeLessThan(BOUND_MS);
+      expect(seconds(`${HEAD}a ${run}!\n`)).toBeLessThan(BOUND_MS);
+      const lines = `${unit}\n`.repeat(Math.ceil(50_000 / (unit.length + 1)));
+      expect(seconds(`${HEAD}${lines}`)).toBeLessThan(BOUND_MS);
+    });
+
+    it.each([
+      ["a", "a", ""],
+      ["www.", ".", "a"],
+      ["http://", "*", "a"],
+      ["www.", "~", "a"],
+      ["", "a.", "!"],
+    ])("stays fast on %j then 100k of %j then %j", (start, unit, end) => {
+      expect(
+        seconds(`${HEAD}${start}${unit.repeat(100_000)}${end}\n`),
+      ).toBeLessThan(BOUND_MS);
+    });
+  });
+
   describe("headings", () => {
     const VERSION = "## 0.2.0 (2026-12-01)";
 

@@ -14,21 +14,21 @@
  * `//` or backslash that a browser reads as another host, no control or white
  * space character, and no character that decodes into one of these.
  */
-const RELATIVE_PATH = /^(?![\\/]{2})[^\p{Cc}\s:&\\<>"'`]+$/u;
+const RELATIVE_PATH = /^(?![\\/]{2})[^\p{Cc}\p{Cf}\s:&\\<>"'`]+$/u;
 /** The path of this repository on GitHub, compared in lower case. */
 const REPOSITORY_PATH = "/mapcairn/mapcairn";
 /** A path segment that is a dot segment, or looks like one to a server. */
-const DOT_SEGMENT = /^(?:\.|%2e){1,2}(?:;.*)?$/i;
+const DOT_SEGMENT = /^(?:\.|%2e){1,2}(?:;.*|%3b.*)?$/i;
 /** An encoded slash or backslash, which a server may read as a separator. */
 const ENCODED_SEPARATOR = /%2f|%5c/i;
-/** The target of an inline link: the text after `](` up to a space or `)`. */
-const INLINE_TARGET = /\]\(\s*([^\s)]*)/g;
+/** The target of an inline link: the text after `](` up to a space, a bracket or `)`. A `[` ends it, so a link opened inside another link's target (`[a]([b](//evil.test)`) is read as an empty target and refused. */
+const INLINE_TARGET = /\]\(\s*([^\s)[\]]*)/g;
 /** What follows `]:`, the start of a link reference definition wherever it stands. */
 const DEFINITION_TARGET = /\]:[ \t]*(\S*)/g;
 /** An email address, which a renderer turns into a `mailto:` link. */
-const EMAIL = /[\w.+-]+@[\w-]+(?:\.[\w-]+)+/;
+const EMAIL = /(?<![\w.+-])[\w.+-]+@[\w-]+(?:\.[\w-]+)+/;
 /** Punctuation that ends a sentence after an address, not part of it. */
-const TRAILING_PUNCTUATION = /[)\].,;:!?'"*_~]+$/;
+const TRAILING_PUNCTUATION = new Set(")].,;:!?'\"*_~");
 /** An address a renderer turns into a link without brackets. */
 const BARE_ADDRESS = /(?:https?:\/\/|ftp:\/\/|www\.)\S*/gi;
 
@@ -60,7 +60,7 @@ function opensMarkup(text) {
  * @returns {boolean}
  */
 function isRepositoryUrl(address) {
-  if (/[\p{Cc}\s\\]/u.test(address)) {
+  if (/[\p{Cc}\p{Cf}\s\\]/u.test(address)) {
     return false;
   }
   let url;
@@ -114,6 +114,22 @@ function linkTargets(prose) {
 }
 
 /**
+ * The address without the sentence punctuation after it, cut at the last
+ * character that is not punctuation (a loop, not a pattern anchored at the
+ * end, which would take quadratic time on a long run of punctuation).
+ *
+ * @param {string} address
+ * @returns {string}
+ */
+function withoutTrailingPunctuation(address) {
+  let end = address.length;
+  while (end > 0 && TRAILING_PUNCTUATION.has(address[end - 1])) {
+    end -= 1;
+  }
+  return address.slice(0, end);
+}
+
+/**
  * The addresses written out in the text, which a renderer turns into links
  * itself, without their trailing punctuation. Only a page of this repository
  * may stand there: a bare `www.example.test` is a link, not a relative path.
@@ -123,7 +139,7 @@ function linkTargets(prose) {
  */
 function bareAddresses(prose) {
   return (prose.match(BARE_ADDRESS) ?? []).map((address) =>
-    address.replace(TRAILING_PUNCTUATION, ""),
+    withoutTrailingPunctuation(address),
   );
 }
 
