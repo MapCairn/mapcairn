@@ -123,6 +123,10 @@ const opaquePair = (
  */
 export const contrastPairs: readonly ContrastPair[] = [
   ...surfacePairs,
+  // Also the checked switch: its thumb is `accentContrast` on the `accent`
+  // track and its tick is `accent` on the thumb (`Switch.css.ts`). Contrast is
+  // symmetric, so this 4.5:1 pair covers both, well above the 3:1 the parts
+  // of a control need (WCAG 1.4.11).
   opaquePair("accentContrast", "accent", "text"),
   opaquePair("text", "accentTint", "text"),
   opaquePair("accent", "accentTint", "text"),
