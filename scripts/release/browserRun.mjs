@@ -92,6 +92,20 @@ function serve(root) {
 }
 
 /**
+ * Stops a server and drops its open connections, so it cannot wait on a
+ * keep-alive socket.
+ *
+ * @param {import("node:http").Server} server
+ * @returns {Promise<void>}
+ */
+function closeServer(server) {
+  return new Promise((resolve) => {
+    server.close(() => resolve());
+    server.closeAllConnections();
+  });
+}
+
+/**
  * The problems with the frame the engine drew: its canvas has a size, and a
  * pixel of the map region, away from the point the style draws, has the
  * style's background colour.
@@ -109,6 +123,17 @@ async function drawnFrameProblems(page, host) {
   if (region === null) {
     return ["the map region has no box"];
   }
+  // Two animation frames after the engine reports idle, so the frame is on
+  // screen. The pixel is read from a screenshot because the engine's default
+  // is `preserveDrawingBuffer: false`, so the page cannot read the canvas
+  // back; `colourProblems` allows a small rounding difference, which a
+  // byte-for-byte comparison with a reference render would not.
+  await page.evaluate(
+    () =>
+      new Promise((resolve) =>
+        requestAnimationFrame(() => requestAnimationFrame(resolve)),
+      ),
+  );
   const shot = await page.screenshot({
     clip: { x: region.x + 8, y: region.y + 8, width: 1, height: 1 },
   });
@@ -128,15 +153,17 @@ export async function drawRealMap(folder, executablePath) {
     "playwright-core",
   );
   const server = await serve(path.resolve(folder));
-  const browser = await chromium.launch({ executablePath });
+  /** @type {import("playwright-core").Browser | undefined} */
+  let browser;
   const stop = () => {
-    void Promise.allSettled([browser.close(), server.close()]).finally(() =>
-      process.exit(1),
+    void Promise.allSettled([browser?.close(), closeServer(server)]).finally(
+      () => process.exit(1),
     );
   };
   process.once("SIGINT", stop);
   process.once("SIGTERM", stop);
   try {
+    browser = await chromium.launch({ executablePath });
     const { port } = /** @type {import("node:net").AddressInfo} */ (
       server.address()
     );
@@ -264,8 +291,8 @@ export async function drawRealMap(folder, executablePath) {
   } finally {
     process.off("SIGINT", stop);
     process.off("SIGTERM", stop);
-    await browser.close();
-    await new Promise((resolve) => server.close(resolve));
+    await browser?.close();
+    await closeServer(server);
   }
 }
 
