@@ -79,6 +79,14 @@ export interface MapChromeProps {
   }) => void;
 }
 
+/** What changes in the bottom-end slot that no change of size reports: the credits popover opening, moving or mounting. */
+const POPOVER_CHANGES: MutationObserverInit = {
+  subtree: true,
+  childList: true,
+  attributes: true,
+  attributeFilter: ["hidden", "data-placement", "data-readout-clear"],
+};
+
 /** Layout boxes read from the slots, in px from the container's top edge. */
 interface Measurements {
   readonly width: number;
@@ -148,6 +156,9 @@ type SlotName =
   | "bottom-centre"
   | "bottom-end";
 
+/** The layout box of a slot, as {@link box} reads it. */
+type SlotBox = NonNullable<ReturnType<typeof box>>;
+
 /** Layout box of a slot, ignoring transforms (which only lift or shift it). */
 function box(slots: Map<SlotName, HTMLElement>, name: SlotName) {
   const element = slots.get(name);
@@ -201,15 +212,29 @@ function mapKeyRaiseAbove(
  */
 function popoverRiseOverCentre(
   root: HTMLElement,
-  bottomEnd: { readonly top: number } | null,
-  bottomCentre: { readonly top: number } | null,
+  slots: {
+    readonly start: SlotBox | null;
+    readonly end: SlotBox | null;
+    readonly centre: SlotBox | null;
+  },
   centreSpan: Span | null,
-  endRaise: number,
+  raises: { readonly start: number; readonly end: number },
 ): number {
+  // MapChrome reads the credits popover through its `data-chrome` hook and its
+  // `data-readout-clear` state, which is a coupling with `Attribution`: the
+  // popover is the one floating element wider than its slot's box.
   const popover = root.querySelector<HTMLElement>(
     '[data-chrome="attribution-popover"]:not([hidden])',
   );
-  if (!popover || !bottomEnd || !bottomCentre || centreSpan === null) {
+  const tops = {
+    start: slots.start && slots.start.height > 0 ? slots.start.top : null,
+    end: slots.end && slots.end.height > 0 ? slots.end.top : null,
+    centre: slots.centre && slots.centre.height > 0 ? slots.centre.top : null,
+  };
+  if (!popover || tops.end === null || tops.centre === null) {
+    return 0;
+  }
+  if (centreSpan === null) {
     return 0;
   }
   const rootBox = root.getBoundingClientRect();
@@ -221,12 +246,13 @@ function popoverRiseOverCentre(
   if (!sharesWidth(centreSpan, popoverSpan, CHROME_GAP_PX)) {
     return 0;
   }
-  const rise = Number.parseFloat(
-    root.style.getPropertyValue(chromeVars.bottomEndRise),
-  );
+  // The rise its `transform` already gives it over a taller readout, from this
+  // measurement (the same as `bottomEndRise` in `verticalRoom`).
   const rowRise =
-    popover.dataset.readoutClear === "true" || Number.isNaN(rise) ? 0 : rise;
-  return Math.max(0, bottomEnd.top + endRaise - bottomCentre.top - rowRise);
+    popover.dataset.readoutClear === "true" || tops.start === null
+      ? 0
+      : Math.max(0, tops.end + raises.end - (tops.start + raises.start));
+  return Math.max(0, tops.end + raises.end - tops.centre - rowRise);
 }
 
 function measure(
@@ -297,10 +323,12 @@ function measure(
     bottomEndRaise: centreSharesEnd ? raise : 0,
     popoverCentreRise: popoverRiseOverCentre(
       root,
-      bottomEnd,
-      bottomCentre,
+      { start: bottomStart, end: bottomEnd, centre: bottomCentre },
       centreSpan,
-      centreSharesEnd ? raise : 0,
+      {
+        start: centreSharesStart ? raise : 0,
+        end: centreSharesEnd ? raise : 0,
+      },
     ),
     tourBottom: tour && tour.height > 0 ? tour.top + tour.height : null,
     mapKeyBottom:
@@ -502,6 +530,7 @@ export function MapChrome({
   const startShiftXRef = useRef(0);
 
   const observerRef = useRef<ResizeObserver | null>(null);
+  const popoverChangesRef = useRef<MutationObserver | null>(null);
   const update = useCallback(() => {
     const root = rootRef.current;
     if (!root || !observerRef.current) {
@@ -553,6 +582,9 @@ export function MapChrome({
       if (element) {
         slots.current.set(name, element);
         observerRef.current?.observe(element);
+        if (name === "bottom-end") {
+          popoverChangesRef.current?.observe(element, POPOVER_CHANGES);
+        }
         return;
       }
       if (previous) {
@@ -585,17 +617,19 @@ export function MapChrome({
     }
     // The credits popover opens, closes and moves beside the end stack by
     // attribute, with no change of size that the observer above would report.
+    // Only the slot that holds it is watched.
     const popoverChanges = new MutationObserver(() => {
       update();
     });
-    popoverChanges.observe(root, {
-      subtree: true,
-      attributes: true,
-      attributeFilter: ["hidden", "data-placement", "data-readout-clear"],
-    });
+    popoverChangesRef.current = popoverChanges;
+    const endSlot = slots.current.get("bottom-end");
+    if (endSlot) {
+      popoverChanges.observe(endSlot, POPOVER_CHANGES);
+    }
     return () => {
       observer.disconnect();
       popoverChanges.disconnect();
+      popoverChangesRef.current = null;
       observerRef.current = null;
     };
   }, [update]);

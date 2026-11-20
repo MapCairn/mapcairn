@@ -621,6 +621,37 @@ async function overFramesDuring(
 }
 
 /*
+ * A long credits list (six layers on) with the draw toolbar open on a short
+ * tablet: the room above the button is too small once the popover rises over
+ * the toolbar, so the popover moves beside the end stack and shows every link,
+ * and does not stay above the button in a smaller box that scrolls.
+ */
+for (const height of [600, 680]) {
+  test(`the credits popover shows every link and clears the draw toolbar at 820x${height}`, async ({
+    page,
+    mapPage,
+  }) => {
+    await mockLayerProviders(page);
+    await page.setViewportSize({ width: 820, height });
+    await mapPage.goto(KEYED_LAYERS);
+    await collapseCredits(mapPage);
+    await mapPage.startDrawing();
+    await waitForStableLayout(page);
+    await mapPage.creditsButton.click();
+    await expect(mapPage.creditsRegion).toBeVisible();
+    await waitForStableLayout(page);
+
+    const scrolls = await mapPage.creditsRegion.evaluate(
+      (element) => element.scrollHeight > element.clientHeight + 1,
+    );
+    expect(scrolls, "the popover scrolls").toBe(false);
+    const popover = await boxOf(page, '[data-chrome="attribution-popover"]');
+    const toolbar = await boxOf(page, '[data-chrome="bottom-centre"]');
+    expect(popover && toolbar && intersects(popover, toolbar)).toBe(false);
+  });
+}
+
+/*
  * Real time and real frames: the page clock the other cases install replays its
  * animation frames in one batch, without the layout observers in between, so
  * it cannot show what a frame draws. The credits show themselves for their

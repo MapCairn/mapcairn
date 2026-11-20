@@ -561,7 +561,10 @@ describe("MapChrome layout", () => {
 
     describe("the open credits popover", () => {
       /** A desktop row with the credits popover in bottom-end, drawn at `popover`. */
-      function withPopover(popover: { left: number; width: number } | null) {
+      function withPopover(
+        popover: { left: number; width: number } | null,
+        readout?: { top: number; height: number },
+      ) {
         mount({
           bottomEnd: (
             <section
@@ -573,6 +576,9 @@ describe("MapChrome layout", () => {
           ),
         });
         resize(1440, 900);
+        if (readout) {
+          place("bottom-start", readout.top, readout.height);
+        }
         span("bottom-start", 12, 112);
         span("bottom-end", 1384, 44);
         place("bottom-centre", 900 - 12 - 150, 150, 465);
@@ -596,6 +602,29 @@ describe("MapChrome layout", () => {
         expect(cssVar(chromeVars.popoverCentreRise)).toBe(
           `${844 - (900 - 12 - 150)}px`,
         );
+      });
+
+      it("takes the rise its transform already gives it over a taller readout off the extra rise, unless it clears the readout", () => {
+        // The readout is 44 px taller than the credits' slot, so the popover's
+        // transform already rises 44 px; the toolbar's top is 106 px above the credits.
+        withPopover({ left: 590, width: 218 }, { top: 800, height: 88 });
+        expect(cssVar(chromeVars.bottomEndRise)).toBe("44px");
+        expect(cssVar(chromeVars.popoverCentreRise)).toBe(`${106 - 44}px`);
+      });
+
+      it("takes none off it when the popover clears the readout and so has no transform rise", () => {
+        withPopover({ left: 590, width: 218 }, { top: 800, height: 88 });
+        const element = root().querySelector<HTMLElement>(
+          '[data-chrome="attribution-popover"]',
+        );
+        if (!element) {
+          throw new Error("No popover");
+        }
+        element.dataset.readoutClear = "true";
+        act(() => {
+          observers.trigger();
+        });
+        expect(cssVar(chromeVars.popoverCentreRise)).toBe("106px");
       });
 
       it("does not rise over a toolbar it shares no width with", () => {

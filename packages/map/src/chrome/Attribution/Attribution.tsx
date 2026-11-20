@@ -300,6 +300,30 @@ export function Attribution({
     }
   }, [open, placement]);
 
+  // The room above can shrink after that decision: `MapChrome` writes the
+  // popover's rise over a toolbar once it has seen the popover open, and the
+  // popover's box shrinks with it. Decide again when its box changes.
+  useLayoutEffect(() => {
+    const region = regionRef.current;
+    if (
+      !open ||
+      placement !== "above" ||
+      region === null ||
+      typeof ResizeObserver === "undefined"
+    ) {
+      return;
+    }
+    const observer = new ResizeObserver(() => {
+      if (region.scrollHeight > region.clientHeight) {
+        setPlacement("beside");
+      }
+    });
+    observer.observe(region);
+    return () => {
+      observer.disconnect();
+    };
+  }, [open, placement]);
+
   // Focus moves into the popover when the person opens it.
   useEffect(() => {
     if (openRequest === 0) {
