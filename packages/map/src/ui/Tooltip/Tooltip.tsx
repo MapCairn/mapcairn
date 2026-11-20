@@ -3,7 +3,9 @@
 import { tokenValues } from "@mapcairn/theme";
 import * as RadixTooltip from "@radix-ui/react-tooltip";
 import type { ReactElement, ReactNode } from "react";
+import { useCallback, useRef } from "react";
 import { usePreferences } from "../../services";
+import { inheritColours } from "./inheritColours";
 import * as styles from "./Tooltip.css";
 
 /** Gap between the trigger and the tooltip, in pixels, taken from the spacing scale. */
@@ -64,17 +66,34 @@ export interface TooltipProps {
  * open while the pointer is over the tooltip itself (WCAG 1.4.13). Touch
  * devices cannot hover, so when the device preferences report no fine
  * pointer the tooltip does not exist at all and only the trigger renders.
+ *
+ * The bubble renders in a portal under `body`, outside any element a host
+ * scoped a theme to, so it takes the colours its trigger sees (see
+ * `inheritColours`). A host's scoped theme therefore reaches it with no
+ * markup or option of its own. The colours are read once, when the bubble
+ * opens: a theme or colour scheme change while it is open applies the next
+ * time it opens.
  */
 export function Tooltip({ content, children }: TooltipProps) {
   const { finePointer } = usePreferences();
+  // Radix types a trigger ref as a button, although `asChild` accepts any element.
+  const trigger = useRef<HTMLButtonElement>(null);
+  const takeTriggerColours = useCallback((bubble: HTMLElement | null) => {
+    if (bubble !== null && trigger.current !== null) {
+      inheritColours(trigger.current, bubble);
+    }
+  }, []);
   if (!finePointer) {
     return children;
   }
   return (
     <RadixTooltip.Root disableHoverableContent={false}>
-      <RadixTooltip.Trigger asChild>{children}</RadixTooltip.Trigger>
+      <RadixTooltip.Trigger asChild ref={trigger}>
+        {children}
+      </RadixTooltip.Trigger>
       <RadixTooltip.Portal>
         <RadixTooltip.Content
+          ref={takeTriggerColours}
           className={styles.content}
           sideOffset={SIDE_OFFSET}
           collisionPadding={SIDE_OFFSET}
