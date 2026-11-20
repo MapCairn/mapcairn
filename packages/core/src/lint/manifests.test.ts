@@ -14,8 +14,6 @@ const REPO = path.resolve(
   "../../../..",
 );
 
-/** The packages an outside app installs. */
-
 /**
  * Directories and files that are test code shipped as modules, for a host's
  * own test runner. They import vitest and fast-check, which the host brings
@@ -40,7 +38,7 @@ const TYPES_PACKAGES: Readonly<Record<string, string>> = {
 /** The custom export condition that points a build tool at source. */
 const SOURCE_CONDITION = "@mapcairn/source";
 
-/** Packages that build to `dist`: all four. */
+/** Packages that build to `dist`: every package in the SDK list. */
 const BUILT_PACKAGES: readonly string[] = SDK_PACKAGES;
 
 /** The conditions an entry point of a built package carries, in order. */
@@ -60,6 +58,7 @@ interface StylesheetExport {
  * Every entry point each built SDK package offers, and nothing else. A
  * stylesheet is a plain path, since it has no source form.
  */
+// Keyed by name, so a package added to the SDK list fails at the lookup until it has an entry here.
 const BUILT_ENTRY_POINTS: Readonly<
   Record<string, Record<string, ConditionalExport | StylesheetExport>>
 > = {
@@ -112,6 +111,7 @@ const BUILT_ENTRY_POINTS: Readonly<
  * too, because a host that resolves the source condition compiles those files
  * and their stylesheets must survive tree-shaking.
  */
+// Keyed by name, so a package added to the SDK list fails at the lookup until it has an entry here.
 const SIDE_EFFECTS: Readonly<Record<string, unknown>> = {
   core: false,
   map: ["**/*.css", "**/*.css.ts"],

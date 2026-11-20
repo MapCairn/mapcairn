@@ -8,4 +8,4 @@
  * and a test fails when a public workspace is missing from it or a listed one
  * does not exist. Adding a package means adding it here, once, in its place.
  */
-export const SDK_PACKAGES = ["core", "react", "theme", "map"];
+export const SDK_PACKAGES = Object.freeze(["core", "react", "theme", "map"]);
