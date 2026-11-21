@@ -2,8 +2,12 @@
 // Copyright MapCairn contributors
 import { describe, expect, it } from "vitest";
 import { SITE_URL } from "../constants/siteConfig";
-import { EMBED_EXAMPLE_FILES } from "../product/embedExampleFiles";
-import { HEADLINE, lineToText, SECTIONS } from "../product/productContent";
+import {
+  EMBED_EXCERPT,
+  HEADLINE,
+  lineToText,
+  SECTIONS,
+} from "../product/productContent";
 import { loader } from "./index.md";
 
 describe("/index.md, the product page as Markdown", () => {
@@ -31,13 +35,12 @@ describe("/index.md, the product page as Markdown", () => {
     }
   });
 
-  it("carries each file of the embedding example as a code block under its name", async () => {
+  it("carries the page's excerpt of the embedding example as a code block under its name, and not the whole app", async () => {
     const text = await loader().text();
-    for (const { name, language, code } of EMBED_EXAMPLE_FILES) {
-      expect(text).toContain(
-        `\`${name}\`:\n\n\`\`\`${language}\n${code}\n\`\`\``,
-      );
-    }
+    expect(text).toContain(
+      `\`src/main.tsx, an excerpt\`:\n\n\`\`\`tsx\n${EMBED_EXCERPT}\n\`\`\``,
+    );
+    expect(text).not.toContain("createRoot(root)");
   });
 
   it("makes every link on the site absolute", async () => {

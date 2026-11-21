@@ -2,18 +2,7 @@
 // Copyright MapCairn contributors
 import type { ClipboardPort } from "@mapcairn/core";
 import { Icon, LiveRegionProvider, SkipLink } from "@mapcairn/map";
-import {
-  Accessibility,
-  AppWindow,
-  ChevronDown,
-  CodeXml,
-  Compass,
-  Heart,
-  Layers,
-  Palette,
-  Plug,
-  ShieldCheck,
-} from "lucide-react";
+import { ArrowRight, ChevronDown, Heart } from "lucide-react";
 import type { ReactNode } from "react";
 import { Brand } from "../app/Brand";
 import { DOCUMENT_SCROLL } from "../app/documentScroll";
@@ -25,28 +14,34 @@ import {
   SOURCE_REPOSITORY_URL,
 } from "../constants/siteConfig";
 import { CopyCodeButton } from "./CopyCodeButton";
+import { CONTOUR_VIEW_BOX, CONTOURS } from "./contours";
+import { DemoFigure } from "./DemoFigure";
 import { type CodeTokenKind, highlightCode } from "./highlightCode";
 import { InstallBlock } from "./InstallBlock";
 import * as styles from "./ProductPage.css";
-import { ProductPlate } from "./ProductPlate";
 import {
+  BADGES,
+  BADGES_LABEL,
   type Block,
   type Disclosure,
+  type Feature,
   GITHUB_ACTION,
+  HEADER_LINKS,
   HEADLINE,
-  HERO_INSTALL,
-  HERO_NOTE,
+  INSTALL_GROUP_LABEL,
+  INSTALL_OPTIONS,
+  INSTALL_REQUIREMENTS,
   type Inline,
   LEDE,
-  type LegendIcon,
-  type LegendItem,
   type Line,
-  NPM_ACTION,
   PLAYGROUND_ACTION,
+  RELEASE_NOTES_LINK,
+  RELEASE_TEXT,
   REPOSITORY_PAGES,
   SECTIONS,
   type Section,
 } from "./productContent";
+import { formatReleaseDate, type ReleaseFacts } from "./releaseDate";
 import { SurveyArt } from "./SurveyArt";
 
 /** The id of the main landmark, the skip link's target. */
@@ -103,92 +98,110 @@ function HighlightedCode({ source }: { readonly source: string }) {
   );
 }
 
+/** The latest release and its date, as one sentence. */
+function releaseLine(release: ReleaseFacts): string {
+  return RELEASE_TEXT.line(release.version, formatReleaseDate(release.date));
+}
+
 /**
- * The actions: View on GitHub as the one button, then the playground and the
- * npm package as two links in a row, the first at the start and the second at
- * the end where the row has the width.
+ * The hero's background: the contours of the page's survey sheet, the land
+ * round the summit where a cairn would stand, drawn faint in the hairline ink
+ * behind the words. Decoration only, hidden from assistive technology, and
+ * set in the same grid cell as the words rather than positioned, so it never
+ * moves them.
  */
-function Actions() {
+function ContourMotif() {
   return (
-    <div className={styles.actions}>
-      <a
-        className={styles.primaryAction}
-        href={GITHUB_ACTION.href}
-        data-testid="action-github"
+    <svg
+      className={styles.heroMotif}
+      viewBox={`0 0 ${CONTOUR_VIEW_BOX.width} ${CONTOUR_VIEW_BOX.height}`}
+      preserveAspectRatio="xMaxYMid slice"
+      aria-hidden="true"
+      focusable="false"
+      data-testid="hero-motif"
+    >
+      {CONTOURS.map(({ index, d }) => (
+        <path
+          key={d}
+          className={index ? styles.motifIndex : styles.motifLine}
+          d={d}
+        />
+      ))}
+    </svg>
+  );
+}
+
+/** A code example in a box: its name at the top, a small copy button in the corner, and the code, which scrolls inside the box. */
+function CodeExample({
+  block,
+  clipboard,
+}: {
+  readonly block: Extract<Block, { kind: "code" }>;
+  readonly clipboard: ClipboardPort;
+}) {
+  return (
+    <div className={styles.codeExample}>
+      <div className={styles.codeHeader}>
+        <span className={styles.codeFile}>{block.label}</span>
+        <CopyCodeButton
+          code={block.code}
+          label={block.label}
+          clipboard={clipboard}
+        />
+      </div>
+      {/* A named region the keyboard can reach and scroll (WCAG 2.1.1). It stays a
+          pre, which keeps the code's whitespace, rather than becoming a section. */}
+      {/* biome-ignore lint/a11y/useSemanticElements: a pre keeps the code's whitespace; a section would not */}
+      <pre
+        className={styles.codeBlock}
+        // biome-ignore lint/a11y/noNoninteractiveTabindex: a scrollable region must take focus to be scrolled from the keyboard
+        tabIndex={0}
+        role="region"
+        aria-label={block.label}
       >
-        <Icon icon={CodeXml} />
-        {GITHUB_ACTION.text}
-      </a>
-      <ul className={styles.heroLinks}>
-        <li>
-          <a
-            className={styles.heroLink}
-            href={PLAYGROUND_ACTION.href}
-            data-testid="action-playground"
-          >
-            {PLAYGROUND_ACTION.text}
-          </a>
-        </li>
-        <li>
-          <a
-            className={styles.heroLink}
-            href={NPM_ACTION.href}
-            data-testid="action-npm"
-          >
-            {NPM_ACTION.text}
-          </a>
-        </li>
-      </ul>
+        <code>
+          {block.language === HIGHLIGHTED_LANGUAGE ? (
+            <HighlightedCode source={block.code} />
+          ) : (
+            block.code
+          )}
+        </code>
+      </pre>
     </div>
   );
 }
 
-/** Items that open to show their detail: native disclosures, in the page's markup whether open or not. */
+/** Questions that open to show their answer: native disclosures, in the page's markup whether open or not, the whole row the target. */
 function Disclosures({ items }: { readonly items: readonly Disclosure[] }) {
   return (
     <div className={styles.disclosures}>
       {items.map(({ summary, detail }) => (
         <details key={summary} className={styles.disclosure}>
           <summary className={styles.summary}>
-            {summary}
+            <span>{summary}</span>
             <Icon icon={ChevronDown} className={styles.marker} />
           </summary>
-          {detail.map((line) => (
-            <p key={JSON.stringify(line)} className={styles.detail}>
-              <Text line={line} />
-            </p>
-          ))}
+          <div className={styles.detailBody}>
+            {detail.map((line) => (
+              <p key={JSON.stringify(line)} className={styles.detail}>
+                <Text line={line} />
+              </p>
+            ))}
+          </div>
         </details>
       ))}
     </div>
   );
 }
 
-/** The Lucide icon each legend item is drawn with. */
-const LEGEND_ICONS: Readonly<Record<LegendIcon, typeof Layers>> = {
-  interface: AppWindow,
-  layers: Layers,
-  accessible: Accessibility,
-  private: ShieldCheck,
-  ports: Plug,
-  design: Palette,
-};
-
-/**
- * A legend: what the SDK gives, set out like the key of a map, an icon in a
- * fixed column beside each name and its meaning. Always shown, so a skimmer
- * and a page without scripts see the content and not only headings.
- */
-function Legend({ items }: { readonly items: readonly LegendItem[] }) {
+/** What you get: a few benefits, each a short heading and what it lets you do, always shown. */
+function Features({ items }: { readonly items: readonly Feature[] }) {
   return (
-    <ul className={styles.legend}>
-      {items.map(({ icon, name, text }) => (
-        <li key={name} className={styles.legendItem}>
-          <span className={styles.legendSymbol}>
-            <Icon icon={LEGEND_ICONS[icon]} />
-          </span>
-          <span className={styles.legendName}>{name}</span>
-          <p className={styles.legendText}>
+    <ul className={styles.features}>
+      {items.map(({ name, text }) => (
+        <li key={name} className={styles.feature}>
+          <h3 className={styles.featureName}>{name}</h3>
+          <p className={styles.featureText}>
             <Text line={text} />
           </p>
         </li>
@@ -201,9 +214,11 @@ function Legend({ items }: { readonly items: readonly LegendItem[] }) {
 function BlockView({
   block,
   clipboard,
+  release,
 }: {
   readonly block: Block;
   readonly clipboard: ClipboardPort;
+  readonly release: ReleaseFacts;
 }): ReactNode {
   switch (block.kind) {
     case "paragraph":
@@ -225,64 +240,16 @@ function BlockView({
     case "subheading":
       return <h3 className={styles.subheading}>{block.text}</h3>;
     case "code":
-      // A named region the keyboard can reach and scroll (WCAG 2.1.1). It stays a
-      // pre, which keeps the code's whitespace, rather than becoming a section.
-      // The file's name and its copy button sit above it, so the code stays
-      // selectable by hand.
-      return (
-        <div className={styles.codeExample}>
-          <div className={styles.codeHeader}>
-            <span className={styles.codeFile}>{block.label}</span>
-            <CopyCodeButton
-              code={block.code}
-              label={block.label}
-              clipboard={clipboard}
-            />
-          </div>
-          {/* biome-ignore lint/a11y/useSemanticElements: a pre keeps the code's whitespace; a section would not */}
-          <pre
-            className={styles.codeBlock}
-            // biome-ignore lint/a11y/noNoninteractiveTabindex: a scrollable region must take focus to be scrolled from the keyboard
-            tabIndex={0}
-            role="region"
-            aria-label={block.label}
-          >
-            <code>
-              {block.language === HIGHLIGHTED_LANGUAGE ? (
-                <HighlightedCode source={block.code} />
-              ) : (
-                block.code
-              )}
-            </code>
-          </pre>
-        </div>
-      );
-    case "install":
-      return (
-        <InstallBlock
-          label={block.label}
-          options={block.options}
-          clipboard={clipboard}
-        />
-      );
+      return <CodeExample block={block} clipboard={clipboard} />;
     case "details":
       return <Disclosures items={block.items} />;
-    case "legend":
-      return <Legend items={block.items} />;
-    case "plate":
-      return <ProductPlate id={block.id} />;
-    case "deepLinks":
+    case "features":
+      return <Features items={block.items} />;
+    case "release":
       return (
-        <ul className={styles.deepLinks} data-testid="playground-deep-links">
-          {block.links.map((link) => (
-            <li key={link.href}>
-              <a className={styles.blockLink} href={link.href}>
-                <Icon icon={Compass} className={styles.linkIcon} />
-                {link.text}
-              </a>
-            </li>
-          ))}
-        </ul>
+        <p className={styles.paragraph} data-testid="release-line">
+          {releaseLine(release)}
+        </p>
       );
   }
 }
@@ -291,9 +258,11 @@ function BlockView({
 function SectionView({
   section,
   clipboard,
+  release,
 }: {
   readonly section: Section;
   readonly clipboard: ClipboardPort;
+  readonly release: ReleaseFacts;
 }) {
   const headingId = `${section.id}-heading`;
   return (
@@ -312,6 +281,7 @@ function SectionView({
           key={index}
           block={block}
           clipboard={clipboard}
+          release={release}
         />
       ))}
     </section>
@@ -319,53 +289,98 @@ function SectionView({
 }
 
 /**
- * The header: the brand, then the playground at every width. The repository
- * is not linked here: the hero's View on GitHub and the footer already do.
+ * The header: a slim bar that stays at the top while the page scrolls, with
+ * the brand and three text links, the playground, the documentation and the
+ * repository, at every width and never behind a menu.
  */
 function ProductHeader() {
   return (
     <header className={styles.header}>
-      <a className={styles.brand} href={PRODUCT_PATH}>
-        <Brand />
-      </a>
-      <nav aria-label="Main">
-        <ul className={styles.nav}>
-          <li>
-            <a
-              className={styles.navLink}
-              href={PLAYGROUND_PATH}
-              data-testid="nav-playground"
-            >
-              Playground
-            </a>
-          </li>
-        </ul>
-      </nav>
+      <div className={styles.headerBar}>
+        <a className={styles.brand} href={PRODUCT_PATH}>
+          <Brand />
+        </a>
+        <nav aria-label="Main">
+          <ul className={styles.nav}>
+            {HEADER_LINKS.map(({ text, href }) => (
+              <li key={href}>
+                <a
+                  className={styles.navLink}
+                  href={href}
+                  data-testid={`nav-${text.toLowerCase()}`}
+                >
+                  {text}
+                </a>
+              </li>
+            ))}
+          </ul>
+        </nav>
+      </div>
     </header>
   );
 }
 
-/** The hero: the pitch, the install block as its main action and the links, with a picture of the playground beside them. */
-function Hero({ clipboard }: { readonly clipboard: ClipboardPort }) {
+/**
+ * The hero: what MapCairn is in a heading and one sentence, the playground as
+ * the page's one filled button, the install command as the second action, the
+ * repository as a quiet link, then three badges and the latest release. The
+ * contour motif sits behind the words in the same grid cell.
+ */
+function Hero({
+  clipboard,
+  release,
+}: {
+  readonly clipboard: ClipboardPort;
+  readonly release: ReleaseFacts;
+}) {
   return (
     <div className={styles.hero}>
+      <ContourMotif />
       <div className={styles.heroText}>
         <h1 className={styles.headline}>{HEADLINE}</h1>
         <p className={styles.lede}>
           <Text line={LEDE} />
         </p>
-        <InstallBlock
-          label={HERO_INSTALL.label}
-          options={HERO_INSTALL.options}
-          clipboard={clipboard}
-        />
-        <Actions />
-        <p className={styles.note}>
-          <Text line={HERO_NOTE} />
-        </p>
-      </div>
-      <div className={styles.heroArt}>
-        <ProductPlate id="hero" />
+        <a
+          className={styles.primaryAction}
+          href={PLAYGROUND_ACTION.href}
+          data-testid="action-playground"
+        >
+          {PLAYGROUND_ACTION.text}
+          <Icon icon={ArrowRight} />
+        </a>
+        <div className={styles.installArea}>
+          <InstallBlock
+            label={INSTALL_GROUP_LABEL}
+            options={INSTALL_OPTIONS}
+            clipboard={clipboard}
+          />
+          <p className={styles.requirements}>
+            <Text line={INSTALL_REQUIREMENTS} />
+          </p>
+        </div>
+        <a
+          className={styles.tertiaryLink}
+          href={GITHUB_ACTION.href}
+          data-testid="action-github"
+        >
+          {GITHUB_ACTION.text}
+        </a>
+        <div className={styles.trust}>
+          <ul className={styles.badges} aria-label={BADGES_LABEL}>
+            {BADGES.map((badge) => (
+              <li key={badge} className={styles.badge}>
+                {badge}
+              </li>
+            ))}
+          </ul>
+          <p className={styles.trustLine} data-testid="hero-release">
+            {releaseLine(release)}{" "}
+            <a className={styles.link} href={RELEASE_NOTES_LINK.href}>
+              {RELEASE_NOTES_LINK.text}
+            </a>
+          </p>
+        </div>
       </div>
     </div>
   );
@@ -429,33 +444,34 @@ function ProductFooter() {
 }
 
 /**
- * The product page at `/`: the pitch, the install block, View on GitHub as the
- * one button with the playground and npm links under it, the embedding example,
- * what you get, the playground, when it fits and the questions, with the
- * playground one link away from anywhere on the page.
+ * The product page at `/`, ordered by what an evaluator needs to decide: the
+ * hero (what it is, the playground, the install command), the playground at
+ * work, what you get, when it fits, the licence, cost and readiness, the
+ * smallest mount, the remaining questions, then the relief strip and the
+ * footer.
  *
  * @remarks Server-rendered: it loads no map code and no service but the
- *   clipboard it is given,
- *   and its own markup requests nothing from another site (in production the
- *   host adds its cookieless page-view counter, as on every page). It links
- *   to the repository's front page from exactly two places, the hero's View
- *   on GitHub and the footer's Source code, to the short named set of pages in
- *   it (`REPOSITORY_PAGES`, in the footer, with the documentation again in the
- *   production answer and the example app in "How do I use it?"), to the
- *   package on npm from the hero's View on npm, to the footer's Mastodon
- *   profile (`rel="me"`), and otherwise only to this site: never an issue, a
- *   pull request or a milestone.
+ *   clipboard it is given, and its own markup requests nothing from another
+ *   site (in production the host adds its cookieless page-view counter, as on
+ *   every page). It links the repository's front page from three places (the
+ *   header's GitHub, the hero's View on GitHub and the footer's Source code),
+ *   a short named set of its pages, the footer's Mastodon profile
+ *   (`rel="me"`), the map's credits under the picture, and otherwise only
+ *   this site: never an issue, a pull request or a milestone. The playground
+ *   is linked from the header, the hero's button and the footer.
  *   Its first element is the inline script that sends an old map link
  *   (`/#map=...`) on to the playground before the page paints. It is English
  *   only, by decision, so it sets `lang="en-GB"` on its own root whatever
- *   language the playground is in. The clipboard serves the
- *   embedding example's copy button, and the page mounts its own live regions
- *   for that button's messages.
+ *   language the playground is in. The clipboard serves the copy buttons, and
+ *   the page mounts its own live regions for their messages. The latest
+ *   release comes from the route's loader, which reads the changelog.
  */
 export function ProductPage({
   clipboard,
+  release,
 }: {
   readonly clipboard: ClipboardPort;
+  readonly release: ReleaseFacts;
 }) {
   return (
     <div
@@ -473,12 +489,14 @@ export function ProductPage({
         <SkipLink targetId={MAIN_ID}>Skip to content</SkipLink>
         <ProductHeader />
         <main id={MAIN_ID} tabIndex={-1} className={styles.main}>
-          <Hero clipboard={clipboard} />
+          <Hero clipboard={clipboard} release={release} />
+          <DemoFigure />
           {SECTIONS.map((section) => (
             <SectionView
               key={section.id}
               section={section}
               clipboard={clipboard}
+              release={release}
             />
           ))}
           <div className={styles.closing} data-testid="closing">

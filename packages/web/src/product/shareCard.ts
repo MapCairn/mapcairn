@@ -49,7 +49,7 @@ export interface ShareCardWords {
  * that file cannot be loaded outside Vite, so the card cannot import it.
  */
 export const PRODUCT_CARD: ShareCardWords = {
-  headline: "Accessible map interfaces for the public",
+  headline: "Accessible map interfaces for React and MapLibre",
   lede: "An open-source React SDK for public-interest maps.",
 };
 

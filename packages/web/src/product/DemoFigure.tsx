@@ -6,19 +6,18 @@ import {
   type CaptureTheme,
   captureSubject,
 } from "./captureSubjects";
-import basemapsDark from "./captures/basemaps-dark.webp";
-import basemapsLight from "./captures/basemaps-light.webp";
 import heroDark from "./captures/hero-dark.webp";
 import heroLight from "./captures/hero-light.webp";
+import heroWideDark from "./captures/heroWide-dark.webp";
+import heroWideLight from "./captures/heroWide-light.webp";
 import * as styles from "./ProductPage.css";
-import { type PlateTick, plateGeometry } from "./plateGeometry";
 import {
+  DEMO_PLATES,
   PLATE_CREDITS_LEAD,
   PLATES,
   plateAlt,
   plateBasemaps,
   plateCredits,
-  plateLiveLink,
 } from "./productContent";
 
 /** The picture of each subject for each theme, as the build serves them from this site. */
@@ -26,7 +25,7 @@ const PICTURES: Readonly<
   Record<CaptureSubjectId, Readonly<Record<CaptureTheme, string>>>
 > = {
   hero: { light: heroLight, dark: heroDark },
-  basemaps: { light: basemapsLight, dark: basemapsDark },
+  heroWide: { light: heroWideLight, dark: heroWideDark },
 };
 
 /** The class of the image for a theme: the dark one starts hidden and the page's theme shows it (`ProductPage.css.ts`). */
@@ -35,84 +34,13 @@ const THEME_CLASS: Readonly<Record<CaptureTheme, string>> = {
   dark: styles.plateDark,
 };
 
-/** How far a tick reaches out from the picture's edge into the collar, in pixels. */
-const TICK_LENGTH = 6;
+/** The class of each size's frame: the narrow one on a phone, the wide one from the tablet width. */
+const SIZE_CLASS = {
+  narrow: styles.plateNarrow,
+  wide: styles.plateWide,
+} as const;
 
-/** A position along an edge as a percentage, which an SVG attribute takes, so no inline style is needed. */
-function percent(fraction: number): string {
-  return `${(fraction * 100).toFixed(3)}%`;
-}
-
-/**
- * The collar down the picture's start edge: a tick and a label of latitude
- * for each of the view's whole minutes, read downwards. Ticks reach out from
- * the picture, at the collar's end edge, through a nested SVG whose origin is
- * that edge.
- */
-function LatitudeCollar({ ticks }: { readonly ticks: readonly PlateTick[] }) {
-  return (
-    <svg
-      className={styles.plateLatitude}
-      aria-hidden="true"
-      focusable="false"
-      data-testid="plate-latitude"
-    >
-      {ticks.map(({ fraction, label }) => (
-        <g key={label}>
-          <svg x="100%" overflow="visible" aria-hidden="true" focusable="false">
-            <line
-              className={styles.plateTick}
-              x1={0}
-              x2={-TICK_LENGTH}
-              y1={percent(fraction)}
-              y2={percent(fraction)}
-            />
-          </svg>
-          <text
-            className={styles.plateLatitudeLabel}
-            x="40%"
-            y={percent(fraction)}
-          >
-            {label}
-          </text>
-        </g>
-      ))}
-    </svg>
-  );
-}
-
-/** The collar under the picture: a tick and a label of longitude for each of the view's whole minutes. */
-function LongitudeCollar({ ticks }: { readonly ticks: readonly PlateTick[] }) {
-  return (
-    <svg
-      className={styles.plateLongitude}
-      aria-hidden="true"
-      focusable="false"
-      data-testid="plate-longitude"
-    >
-      {ticks.map(({ fraction, label }) => (
-        <g key={label}>
-          <line
-            className={styles.plateTick}
-            x1={percent(fraction)}
-            x2={percent(fraction)}
-            y1={0}
-            y2={TICK_LENGTH}
-          />
-          <text
-            className={styles.plateLongitudeLabel}
-            x={percent(fraction)}
-            y="60%"
-          >
-            {label}
-          </text>
-        </g>
-      ))}
-    </svg>
-  );
-}
-
-/** The credits under a picture: each credit the map itself shows for its basemaps, linked as the map links them. */
+/** The credits under the picture: each credit the map itself shows for its basemaps, linked as the map links them. */
 function PlateCredits({ id }: { readonly id: CaptureSubjectId }) {
   const credits = plateCredits(id);
   return (
@@ -130,61 +58,53 @@ function PlateCredits({ id }: { readonly id: CaptureSubjectId }) {
   );
 }
 
-/** The link that opens the live playground over the view a picture shows, when the picture has one. */
-function PlateLive({ id }: { readonly id: CaptureSubjectId }) {
-  const live = plateLiveLink(id);
-  if (live === undefined) {
-    return null;
-  }
+/**
+ * One size of the picture: its image for each theme in a frame. Each image is
+ * lazy, with its size in attributes so nothing shifts; the one for the other
+ * theme, and the frame of the other size, are not drawn (`display: none`), so
+ * the browser fetches one file.
+ */
+function PlateFrame({ size }: { readonly size: keyof typeof DEMO_PLATES }) {
+  const id = DEMO_PLATES[size];
+  const subject = captureSubject(id);
   return (
-    <a className={styles.plateLive} href={live.href}>
-      {live.text}
-    </a>
+    <div
+      className={`${styles.plateFrame} ${SIZE_CLASS[size]}`}
+      data-testid={`plate-${id}`}
+    >
+      {CAPTURE_THEMES.map((theme) => (
+        <img
+          key={theme}
+          className={`${styles.plateImage} ${THEME_CLASS[theme]}`}
+          src={PICTURES[id][theme]}
+          width={subject.width}
+          height={subject.height}
+          alt={plateAlt(id, theme)}
+          loading="lazy"
+          decoding="async"
+        />
+      ))}
+    </div>
   );
 }
 
 /**
- * A picture of the running playground, set on a survey sheet: the capture in
- * a neatline, with a collar of latitude and longitude ticks worked out from
- * the view the capture shows (`plateGeometry.ts`), and a caption that credits
- * the map. Each theme has its own image, lazy, with its size in attributes so
- * nothing shifts; the one for the other theme is not drawn (`display: none`),
- * so the browser never fetches it, and the page's theme chooses between them
- * with CSS alone.
+ * The playground at work, straight under the hero and the largest picture on
+ * the page: one view captured at two sizes, the narrow one edge to edge on a
+ * phone and the wide one at the column's width from the tablet width, chosen
+ * by CSS alone, as each theme's picture is. The caption says what it shows,
+ * its basemaps and the map's credits, which are the same for both sizes.
  */
-export function ProductPlate({ id }: { readonly id: CaptureSubjectId }) {
-  const subject = captureSubject(id);
-  const { longitudeTicks, latitudeTicks } = plateGeometry({
-    ...subject.view,
-    width: subject.width,
-    height: subject.height,
-  });
+export function DemoFigure() {
   return (
-    <figure className={styles.plate} data-testid={`plate-${id}`}>
-      <div className={styles.plateSheet}>
-        <div className={styles.plateFrame}>
-          {CAPTURE_THEMES.map((theme) => (
-            <img
-              key={theme}
-              className={`${styles.plateImage} ${THEME_CLASS[theme]}`}
-              src={PICTURES[id][theme]}
-              width={subject.width}
-              height={subject.height}
-              alt={plateAlt(id, theme)}
-              loading="lazy"
-              decoding="async"
-            />
-          ))}
-        </div>
-        <LatitudeCollar ticks={latitudeTicks} />
-        <LongitudeCollar ticks={longitudeTicks} />
-      </div>
-      <PlateLive id={id} />
+    <figure className={styles.demo} data-testid="demo">
+      <PlateFrame size="narrow" />
+      <PlateFrame size="wide" />
       <figcaption className={styles.plateCaption}>
         <span>
-          {PLATES[id].caption} {plateBasemaps(id)}
+          {PLATES[DEMO_PLATES.wide].caption} {plateBasemaps(DEMO_PLATES.wide)}
         </span>
-        <PlateCredits id={id} />
+        <PlateCredits id={DEMO_PLATES.wide} />
       </figcaption>
     </figure>
   );

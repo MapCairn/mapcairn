@@ -56,6 +56,11 @@ const DOCUMENTS: readonly (readonly [string, string, string])[] = [
     "what the SDK offers, how to install and embed it, and the packages",
   ],
   [
+    "Embedding walkthrough",
+    "docs/guides/embed-a-map.md",
+    "the whole embedding app, file by file, with what each part does",
+  ],
+  [
     "Embedding and extending",
     "docs/guides/extending.md",
     "embedding the SDK in an app, and adding basemaps, layers, search and routing providers and adapters",

@@ -6,9 +6,8 @@ import {
   type ClipboardPort,
   type ClipboardResult,
   FakeClipboard,
-  parseUrlHash,
-  serialiseUrlHash,
 } from "@mapcairn/core";
+import { compositeOver, contrastRatio, tokenValues } from "@mapcairn/theme";
 import {
   act,
   fireEvent,
@@ -20,7 +19,6 @@ import {
 import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { MAP_LINK_REDIRECT_SCRIPT } from "../app/mapLinkRedirect";
-import { SITE_URL } from "../constants/siteConfig";
 import { loader as markdownLoader } from "../routes/index.md";
 import { loader as llmsLoader } from "../routes/llms.txt";
 import { loader as fullLoader } from "../routes/llms-full.txt";
@@ -31,6 +29,9 @@ import { ProductPage } from "./ProductPage";
 import * as styles from "./ProductPage.css";
 import {
   CAPABILITY_MATRIX_LINK,
+  EMBED_EXCERPT,
+  EMBED_GUIDE_LINK,
+  excerptOf,
   faqEntries,
   HEADLINE,
   INSTALL_COMMAND,
@@ -38,7 +39,6 @@ import {
   lineToText,
   NPM_PACKAGE_URL,
   PLATE_CREDITS_LEAD,
-  PLATE_LIVE_TEXT,
   PLATES,
   plateAlt,
   plateCredits,
@@ -69,18 +69,36 @@ const CAPABILITY_MATRIX = `${REPO}/blob/main/docs/guides/capability-matrix.md`;
 /** The example app, which the answer on how to use the SDK links. */
 const EXAMPLE_APP = `${REPO}/tree/main/examples/embed`;
 
-/** The README, whose embedding example the page shows. */
+/** The README, whose embedding example the page cuts its excerpt from. */
 const README = readFileSync(
   path.resolve(__dirname, "../../../../README.md"),
   "utf8",
 );
 
+/** The embedding walkthrough the page links, which holds the whole app. */
+const EMBED_GUIDE = readFileSync(
+  path.resolve(__dirname, "../../../../docs/guides/embed-a-map.md"),
+  "utf8",
+);
+
+/** The walkthrough's address on GitHub, which the page links. */
+const EMBED_GUIDE_URL = `${REPO}/blob/main/docs/guides/embed-a-map.md`;
+
+/** The name of the excerpt's code region and of its copy button. */
+const EXCERPT = "src/main.tsx, an excerpt";
+
+/** A release for the page to name, as the route's loader gives it. */
+const RELEASE = { version: "0.1.0", date: "2026-11-21" } as const;
+
 /** The entry file of the embedding example, the one that holds the app. */
 const MAIN_CODE =
   EMBED_EXAMPLE_FILES.find((file) => file.name === "src/main.tsx")?.code ?? "";
 
-function renderPage(clipboard: ClipboardPort = new FakeClipboard()) {
-  return render(<ProductPage clipboard={clipboard} />);
+function renderPage(
+  clipboard: ClipboardPort = new FakeClipboard(),
+  release: { readonly version: string; readonly date: string } = RELEASE,
+) {
+  return render(<ProductPage clipboard={clipboard} release={release} />);
 }
 
 /** The page's polite and assertive live regions. */
@@ -97,16 +115,16 @@ function section(name: string): HTMLElement {
 }
 
 describe("the product page stands on its own", () => {
-  it("has one h1 that says what teams can build, and for whom", () => {
+  it("has one h1 that says what it makes and what it is built on", () => {
     renderPage();
     const headings = screen.getAllByRole("heading", { level: 1 });
     expect(headings).toHaveLength(1);
     expect(headings[0]).toHaveTextContent(
-      "Accessible map interfaces for the public",
+      "Accessible map interfaces for React and MapLibre",
     );
   });
 
-  it("says under the h1 what MapCairn is and which teams it is for", () => {
+  it("says under the h1, in one sentence, what MapCairn is and what it gives", () => {
     renderPage();
     const lede = screen.getByRole("heading", { level: 1 })
       .nextElementSibling as HTMLElement;
@@ -114,11 +132,8 @@ describe("the product page stands on its own", () => {
     expect(lede).toHaveTextContent(
       "MapCairn is an open-source React SDK for public-interest maps",
     );
+    expect(lede).toHaveTextContent("the whole interface around a MapLibre map");
     expect(lede.textContent?.match(/\.(\s|$)/g)).toHaveLength(1);
-    expect(lede).toHaveTextContent("WCAG 2.2 AA as the target");
-    expect(lede).toHaveTextContent(
-      "by default, nothing requested beyond the basemap until a person asks, unless a host turns on search suggestions",
-    );
   });
 
   it("points no answer at a section that lacks the install block, on the page, in /index.md and in /llms-full.txt", async () => {
@@ -152,44 +167,74 @@ describe("the product page stands on its own", () => {
     expect(await fullLoader().text()).toContain(hero);
   });
 
-  it("has one clear order: embed, what you get, see it working, fit, then questions", () => {
+  it("has one order, by what an evaluator needs to decide: what you get, fit, licence and readiness, the mount, then the questions", () => {
     renderPage();
     expect(
       screen.getAllByRole("heading", { level: 2 }).map((h) => h.textContent),
     ).toEqual([
-      "Embed a map",
       "What you get",
-      "See it working",
       "When it fits, and when it does not",
+      "Licence, cost and readiness",
+      "Embed a map",
       "Questions",
     ]);
   });
 
-  it("shows what you get as a legend that is always open: at most six things, each with an icon, a short name and its meaning", () => {
+  it("keeps the heading levels in order: one h1, h2 for each section, h3 inside them", () => {
+    const { container } = renderPage();
+    const levels = [...container.querySelectorAll("h1, h2, h3, h4")].map(
+      (heading) => Number(heading.tagName.slice(1)),
+    );
+    expect(levels[0]).toBe(1);
+    levels.forEach((level, index) => {
+      expect(level - (levels[index - 1] ?? 0)).toBeLessThanOrEqual(1);
+    });
+    expect(levels).not.toContain(4);
+  });
+
+  it("shows what you get open, as at most four benefits, accessibility and privacy first, each an h3 and what it lets you do", () => {
     renderPage();
     const you = section("What you get");
     expect(you.querySelector("details")).toBeNull();
     const items = within(you).getAllByRole("listitem");
-    expect(items.length).toBeLessThanOrEqual(6);
+    expect(items.length).toBeLessThanOrEqual(4);
+    const names = items.map(
+      (item) => within(item).getByRole("heading", { level: 3 }).textContent,
+    );
+    expect(names.slice(0, 2)).toEqual([
+      "Accessible by default",
+      "Private by design",
+    ]);
     for (const item of items) {
-      const icon = item.querySelector("svg");
-      expect(icon).toHaveAttribute("aria-hidden", "true");
-      const name = item.querySelector(`.${styles.legendName}`);
-      expect(name?.textContent?.length).toBeLessThan(45);
+      const name = within(item).getByRole("heading", { level: 3 });
+      expect(name.textContent?.length).toBeLessThan(45);
       expect(item.querySelector("p")?.textContent?.length).toBeGreaterThan(60);
     }
   });
 
-  it("puts what you get in /index.md as headings with their text, as it did when they opened", async () => {
-    const markdown = await markdownLoader().text();
-    expect(markdown).toContain(
-      "### A finished map interface\n\nSearch by place or by coordinates",
+  it("says what you get as benefits, not architecture: no port, adapter or token jargon in the names", () => {
+    renderPage();
+    const names = within(section("What you get"))
+      .getAllByRole("heading", { level: 3 })
+      .map((heading) => heading.textContent ?? "");
+    for (const name of names) {
+      expect(name).not.toMatch(/\b(port|adapter|token|contract)s?\b/i);
+    }
+    expect(section("What you get")).toHaveTextContent(
+      "Swap in your own search, routing or tiles without touching the interface",
     );
   });
 
-  it("names the SDK's packages, one line each, one tap away", () => {
+  it("puts what you get in /index.md as headings with their text", async () => {
+    const markdown = await markdownLoader().text();
+    expect(markdown).toContain(
+      "### Accessible by default\n\nWCAG 2.2 AA is the target in the light and the dark theme.",
+    );
+  });
+
+  it("names the SDK's packages, one line each, in an answer one tap away", () => {
     renderPage();
-    const embed = section("Embed a map");
+    const questions = section("Questions");
     for (const name of [
       "@mapcairn/core",
       "@mapcairn/map",
@@ -197,42 +242,49 @@ describe("the product page stands on its own", () => {
       "@mapcairn/theme",
       "@mapcairn/adapter-maplibre",
     ]) {
-      expect(within(embed).getByText(name)).toBeInTheDocument();
+      expect(within(questions).getByText(name)).toBeInTheDocument();
     }
+    expect(questions.textContent).toContain("advanced option");
   });
 
-  it("puts the install block in the hero, between the lede and the actions, and not again in the embedding section", () => {
+  it("orders the hero: the h1, the lede, the playground button, the install command, then the repository link", () => {
     renderPage();
     const h1 = screen.getByRole("heading", { level: 1 });
+    const main = within(screen.getByRole("main"));
+    const playground = main.getByRole("link", { name: "Try the playground" });
     const group = screen.getByRole("group", { name: "Package manager" });
+    const github = main.getByRole("link", { name: "View on GitHub" });
     expect(h1.parentElement).toContainElement(group);
-    expect(section("Embed a map").querySelector("fieldset")).toBeNull();
-    expect(
-      (h1.nextElementSibling as HTMLElement).compareDocumentPosition(group) &
-        Node.DOCUMENT_POSITION_FOLLOWING,
-    ).toBeTruthy();
-    const github = within(screen.getByRole("main")).getByRole("link", {
-      name: "View on GitHub",
+    expect(h1.parentElement).toContainElement(github);
+    const order = [
+      h1.nextElementSibling as HTMLElement,
+      playground,
+      group,
+      github,
+    ];
+    order.slice(1).forEach((element, index) => {
+      expect(
+        (order[index] as HTMLElement).compareDocumentPosition(element) &
+          Node.DOCUMENT_POSITION_FOLLOWING,
+      ).toBeTruthy();
     });
-    expect(
-      group.compareDocumentPosition(github) & Node.DOCUMENT_POSITION_FOLLOWING,
-    ).toBeTruthy();
+    expect(section("Embed a map").querySelector("fieldset")).toBeNull();
   });
 
-  it("leads with the umbrella's install command, ahead of the example and of any single package", () => {
+  it("leads with the umbrella's install command, ahead of the example", () => {
     renderPage();
-    const embed = section("Embed a map");
     const install = screen.getByText(INSTALL_COMMAND);
     expect(install.tagName).toBe("CODE");
-    const example = within(embed).getByRole("region", { name: "index.html" });
+    const example = within(section("Embed a map")).getByRole("region", {
+      name: EXCERPT,
+    });
     expect(
       install.compareDocumentPosition(example) &
         Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBeTruthy();
-    const first = embed.querySelector("p");
+    const first = section("Embed a map").querySelector("p");
     expect(first?.textContent).toContain("@mapcairn/sdk");
     expect(first?.textContent).not.toContain("@mapcairn/core");
-    expect(embed.textContent).toContain("advanced option");
   });
 
   it("installs the umbrella from the default npm tag, as the README does, with no tag after the package name", async () => {
@@ -251,129 +303,99 @@ describe("the product page stands on its own", () => {
     expect(text).toContain("advanced option");
   });
 
-  it("shows each file of the embedding example in its own focusable region, named for the file, in the order they are made", () => {
+  it("highlights the excerpt's syntax with classes, never an inline style", () => {
     renderPage();
-    const embed = section("Embed a map");
-    const regions = within(embed)
-      .getAllByRole("region")
-      .filter(
-        (region) => region.tagName === "PRE" && !region.closest("fieldset"),
-      );
-    expect(regions.map((region) => region.getAttribute("aria-label"))).toEqual([
-      "index.html",
-      "src/page.css",
-      "src/main.tsx",
-    ]);
-    regions.forEach((region, index) => {
-      expect(region).toHaveAttribute("tabindex", "0");
-      expect(region.textContent).toBe(EMBED_EXAMPLE_FILES[index]?.code);
-    });
-  });
-
-  it("heads each file with its name, beside its own copy button", () => {
-    renderPage();
-    const embed = section("Embed a map");
-    for (const { name } of EMBED_EXAMPLE_FILES) {
-      const region = within(embed).getByRole("region", { name });
-      const heading = region.parentElement?.firstElementChild;
-      expect(heading?.textContent).toContain(name);
-      expect(
-        within(heading as HTMLElement).getByRole("button", {
-          name: `Copy code, ${name}`,
-        }),
-      ).toHaveTextContent("Copy code");
-    }
-  });
-
-  it("highlights the example's syntax with classes, never an inline style", () => {
-    renderPage();
-    const code = screen.getByRole("region", { name: "src/main.tsx" });
+    const code = screen.getByRole("region", { name: EXCERPT });
     const spans = [...code.querySelectorAll("span")];
     const classOf = (text: string) =>
       spans.find((span) => span.textContent === text)?.className;
-    expect(classOf("import")).toBe(styles.codeKeyword);
-    expect(classOf('"@mapcairn/sdk"')).toBe(styles.codeMuted);
-    expect(classOf("11")).toBe(styles.codeMuted);
+    expect(classOf("function")).toBe(styles.codeKeyword);
+    expect(classOf("return")).toBe(styles.codeKeyword);
     expect(classOf("ServicesProvider")).toBe(styles.codeName);
     expect(code.querySelector("[style]")).toBeNull();
   });
 
-  it("offers three actions once, in the hero: View on GitHub first, then the playground and the npm package", () => {
-    renderPage();
+  it("makes Try the playground the page's one filled button, and its first link in the main content", () => {
+    const { container } = renderPage();
     const main = screen.getByRole("main");
-    expect(
-      within(main).getByRole("link", { name: "View on GitHub" }),
-    ).toHaveAttribute("href", REPO);
-    expect(
-      within(main).getByRole("link", { name: "Try the playground" }),
-    ).toHaveAttribute("href", "/map");
-    expect(
-      within(main).getByRole("link", { name: "View on npm" }),
-    ).toHaveAttribute("href", NPM_PACKAGE);
-    expect(NPM_PACKAGE_URL).toBe(NPM_PACKAGE);
-    expect(
-      within(main)
-        .getAllByRole("link")
-        .slice(0, 3)
-        .map((link) => link.textContent),
-    ).toEqual(["View on GitHub", "Try the playground", "View on npm"]);
+    const playground = within(main).getByRole("link", {
+      name: "Try the playground",
+    });
+    expect(playground).toHaveAttribute("href", "/map");
+    expect(playground.className).toContain(styles.primaryAction);
+    expect(container.querySelectorAll(`.${styles.primaryAction}`)).toHaveLength(
+      1,
+    );
+    expect(within(main).getAllByRole("link")[0]).toBe(playground);
   });
 
-  it("offers View on GitHub as the one button and the playground and npm as two links in a row under it", () => {
+  it("offers the repository in the hero as a quiet text link after the install command, not as a button", () => {
     renderPage();
-    const main = within(screen.getByRole("main"));
-    const github = main.getByRole("link", { name: "View on GitHub" });
-    const playground = main.getByRole("link", { name: "Try the playground" });
-    const npm = main.getByRole("link", { name: "View on npm" });
-    expect(github.className).toContain(styles.primaryAction);
-    const row = playground.closest("ul") as HTMLElement;
-    expect(row).not.toBeNull();
-    expect(within(row).getAllByRole("link")).toEqual([playground, npm]);
-    expect(row).not.toContainElement(github);
-    expect(playground.className).not.toContain(styles.primaryAction);
-    expect(
-      github.compareDocumentPosition(row) & Node.DOCUMENT_POSITION_FOLLOWING,
-    ).toBeTruthy();
+    const github = within(screen.getByRole("main")).getByRole("link", {
+      name: "View on GitHub",
+    });
+    expect(github).toHaveAttribute("href", REPO);
+    expect(github.className).toContain(styles.tertiaryLink);
+    expect(github.className).not.toContain(styles.primaryAction);
   });
 
-  it("links to npm from exactly one place, the hero, and nowhere else", () => {
+  it("shows three badges as plain text drawn by the page, accessibility as a target", () => {
+    renderPage();
+    const badges = screen.getByRole("list", { name: "At a glance" });
+    expect(
+      within(badges)
+        .getAllByRole("listitem")
+        .map((badge) => badge.textContent),
+    ).toEqual(["Targets WCAG 2.2 AA", "AGPL-3.0", "MapLibre GL JS"]);
+    expect(badges.querySelector("img, svg, a")).toBeNull();
+  });
+
+  it("names the latest release and its date in the hero, with the release notes, from what the loader read", () => {
+    renderPage(new FakeClipboard(), { version: "9.8.7", date: "2030-02-03" });
+    const line = screen.getByTestId("hero-release");
+    expect(line).toHaveTextContent(
+      "The latest release is 9.8.7, released on 3 February 2030. Release notes",
+    );
+    expect(
+      within(line).getByRole("link", { name: "Release notes" }),
+    ).toHaveAttribute("href", `${REPO}/releases`);
+  });
+
+  it("does not link the npm package from the page, which the install command already names", () => {
     renderPage();
     const npm = screen
       .getAllByRole("link")
       .filter((link) =>
         (link.getAttribute("href") ?? "").startsWith("https://www.npmjs.com/"),
       );
-    expect(npm).toHaveLength(1);
-    expect(screen.getByRole("main")).toContainElement(npm[0] ?? null);
+    expect(npm).toHaveLength(0);
+    expect(NPM_PACKAGE_URL).toBe(NPM_PACKAGE);
   });
 
-  it("links to the npm package from /index.md and /llms-full.txt too", async () => {
-    expect(await markdownLoader().text()).toContain(
+  it("links the npm package from /llms.txt, among the policies and source", async () => {
+    expect(await llmsLoader().text()).toContain(
       `[View on npm](${NPM_PACKAGE})`,
     );
-    expect(await fullLoader().text()).toContain(
-      `[View on npm](${NPM_PACKAGE})`,
-    );
+    expect(await markdownLoader().text()).not.toContain(NPM_PACKAGE);
   });
 
-  it("links to the repository's front page from exactly two places: the hero's button and the footer's Source code", () => {
+  it("links to the repository's front page from exactly three places: the header's GitHub, the hero's View on GitHub and the footer's Source code", () => {
     renderPage();
     const github = screen
       .getAllByRole("link")
       .filter((link) => link.getAttribute("href") === REPO);
     expect(github.map((link) => link.textContent)).toEqual([
+      "GitHub",
       "View on GitHub",
       "Source code",
     ]);
-    for (const link of github) {
-      expect(link).toHaveAttribute("href", REPO);
-    }
-    const [hero, footer] = github;
+    const [header, hero, footer] = github;
+    expect(screen.getByRole("banner")).toContainElement(header ?? null);
     expect(screen.getByRole("main")).toContainElement(hero ?? null);
     expect(screen.getByRole("contentinfo")).toContainElement(footer ?? null);
   });
 
-  it("keeps only Playground in the header", () => {
+  it("keeps the brand, Playground, Docs and GitHub in the header, and nothing else", () => {
     renderPage();
     const header = screen.getByRole("banner");
     expect(
@@ -383,22 +405,25 @@ describe("the product page stands on its own", () => {
     ).toEqual([
       ["MapCairn", "/"],
       ["Playground", "/map"],
+      ["Docs", `${REPO}#documentation`],
+      ["GitHub", REPO],
     ]);
   });
 
-  it("opens the playground through links its own hash parser reads as a view", () => {
+  it("links the playground from the header, the hero's button and the footer, and nowhere else", () => {
     renderPage();
-    const deepLinks = within(screen.getByTestId("playground-deep-links"))
+    const playground = screen
       .getAllByRole("link")
-      .map((link) => link.getAttribute("href") ?? "");
-    expect(deepLinks.length).toBeGreaterThan(0);
-    for (const href of deepLinks) {
-      expect(href.startsWith("/map#")).toBe(true);
-      // The address round-trips through the app's own reader and writer.
-      const state = parseUrlHash(href.slice(href.indexOf("#")));
-      expect(state.view).toBeDefined();
-      expect(`/map${serialiseUrlHash(state)}`).toBe(href);
-    }
+      .filter((link) => (link.getAttribute("href") ?? "").startsWith("/map"));
+    expect(playground.map((link) => link.getAttribute("href"))).toEqual([
+      "/map",
+      "/map",
+      "/map",
+    ]);
+    const [header, hero, footer] = playground;
+    expect(screen.getByRole("banner")).toContainElement(header ?? null);
+    expect(screen.getByRole("main")).toContainElement(hero ?? null);
+    expect(screen.getByRole("contentinfo")).toContainElement(footer ?? null);
   });
 
   it("says what MapCairn is not", () => {
@@ -409,64 +434,97 @@ describe("the product page stands on its own", () => {
     );
   });
 
-  it("states the licence as open source under the AGPL-3.0, which allows commercial use", () => {
-    const { container } = renderPage();
-    expect(container.textContent).toContain(
-      "Open source under the AGPL-3.0, which allows commercial use.",
-    );
+  it("answers the licence, the cost and readiness in plain prose that is always shown, not behind a disclosure", () => {
+    renderPage();
+    const licence = section("Licence, cost and readiness");
+    expect(licence.querySelector("details")).toBeNull();
+    expect(
+      within(licence)
+        .getAllByRole("heading", { level: 3 })
+        .map((heading) => heading.textContent),
+    ).toEqual([
+      "What the AGPL-3.0 asks of your app",
+      "Your options",
+      "What it costs",
+      "How ready it is",
+    ]);
   });
 
-  it("answers what it costs with nothing, that the licence allows commercial use, and a link to the licence guide", () => {
+  it("states the licence in the guide's words: open source under the AGPL-3.0-only, which allows commercial use, and the source is the price", () => {
     renderPage();
-    const answer = screen.getByText(/^Nothing: it is open source/, {
-      selector: "p",
-    });
-    expect(answer).toHaveTextContent(
-      "Nothing: it is open source under the AGPL-3.0, which allows commercial use.",
+    const licence = section("Licence, cost and readiness");
+    expect(licence).toHaveTextContent(
+      "MapCairn is AGPL-3.0-only, an open-source licence that allows commercial use",
+    );
+    expect(licence).toHaveTextContent(
+      "you must offer them the corresponding source of the code you combine with the SDK and serve with it, under the same licence",
+    );
+    expect(licence).toHaveTextContent(
+      "An app that only your own staff use is not distributed",
     );
     expect(
-      within(answer).getByRole("link", { name: "licence guide" }),
+      within(licence).getByRole("link", { name: "licence guide" }),
     ).toHaveAttribute("href", `${REPO}/blob/main/docs/guides/licence.md`);
+    expect(licence).toHaveTextContent("It is not legal advice.");
   });
 
   it("keeps the README's sentence that a licence for closed-source use is not on offer yet, and says closed-source use needs separate terms", () => {
-    const { container } = renderPage();
-    expect(container.textContent).toContain(
+    renderPage();
+    const licence = section("Licence, cost and readiness");
+    expect(licence).toHaveTextContent(
       "A licence for closed-source use is not on offer yet.",
     );
-    expect(container.textContent).toContain(
-      "needs separate terms. A licence for closed-source use",
+    expect(licence).toHaveTextContent(
+      "while it is distributed with the SDK inside needs separate terms",
     );
   });
 
-  it("says in See it working what the playground adds, and where its services' terms apply", () => {
+  it("says what it costs: nothing to install or use, with each provider's own terms", () => {
     renderPage();
-    const see = section("See it working");
-    expect(see).toHaveTextContent(
-      "its search, directions and data layers are this site's adapters and definitions",
+    expect(section("Licence, cost and readiness")).toHaveTextContent(
+      "Nothing to install or use. The services a map uses, such as tiles, search and routing, are yours to choose, and each provider has its own terms.",
     );
-    expect(see).toHaveTextContent(
+  });
+
+  it("says how ready it is: the latest release from the loader, that it is before 1.0, what it lacks and who maintains it", () => {
+    renderPage(new FakeClipboard(), { version: "0.3.0", date: "2027-04-09" });
+    const licence = section("Licence, cost and readiness");
+    expect(within(licence).getByTestId("release-line")).toHaveTextContent(
+      "The latest release is 0.3.0, released on 9 April 2027.",
+    );
+    expect(licence).toHaveTextContent(
+      "It is before version 1.0: a minor release can change the public API, and each release's notes name what to change.",
+    );
+    expect(licence).toHaveTextContent(
+      "a prebuilt bundle for pages without React",
+    );
+    expect(licence).toHaveTextContent(
+      "no other framework or bundler has been tried",
+    );
+    expect(licence).toHaveTextContent("one volunteer maintainer");
+    expect(
+      within(licence).getByRole("link", { name: "capability matrix" }),
+    ).toHaveAttribute("href", CAPABILITY_MATRIX_LINK.href);
+  });
+
+  it("says in an answer what the playground adds, and where its services' terms apply", () => {
+    renderPage();
+    const questions = section("Questions");
+    expect(questions).toHaveTextContent(
+      "Its search, directions and data layers are this site's adapters and definitions",
+    );
+    expect(questions).toHaveTextContent(
       "Nominatim for search and the FOSSGIS Valhalla server for directions",
     );
-    expect(see).toHaveTextContent(
+    expect(questions).toHaveTextContent(
       "not meant for other sites' production traffic",
     );
-    expect(see).toHaveTextContent(
+    expect(questions).toHaveTextContent(
       "Your app supplies its own providers. The SDK ships the interface, the MapLibre adapter and in-memory fakes.",
     );
   });
 
-  it("says in the production answer that it is before 1.0, and that each release's notes name what to change", () => {
-    renderPage();
-    const production = screen.getByText(/^The reference site runs on it/, {
-      selector: "p",
-    });
-    expect(production.nextElementSibling).toHaveTextContent(
-      "It is before version 1.0: a minor release can change the public API, and each release's notes name what to change.",
-    );
-  });
-
-  it("links the capability matrix and the example app in the text instead of naming them", () => {
+  it("links the example app, the walkthrough and the capability matrix in the text instead of naming them", () => {
     renderPage();
     expect(
       screen.getByRole("link", { name: "capability matrix" }),
@@ -474,6 +532,12 @@ describe("the product page stands on its own", () => {
     expect(
       screen.getByRole("link", { name: "examples/embed" }),
     ).toHaveAttribute("href", EXAMPLE_APP);
+    for (const link of screen.getAllByRole("link", {
+      name: "embedding walkthrough",
+    })) {
+      expect(link).toHaveAttribute("href", EMBED_GUIDE_URL);
+    }
+    expect(EMBED_GUIDE_LINK.href).toBe(EMBED_GUIDE_URL);
   });
 
   it("ends with a quiet line that says where it is made, then the licence and its links, and nothing else", () => {
@@ -522,14 +586,15 @@ describe("the product page stands on its own", () => {
     expect(link).toHaveAttribute("rel", "me");
   });
 
-  it("links only to the repository's front page, the named set of its pages (and the example app), the package page, the Mastodon profile or this site: no other file, folder, section or contributing page", () => {
+  it("links only to the repository's front page, the named set of its pages (with the walkthrough and the example app), the Mastodon profile, the map's credits or this site: no other file, folder, section or contributing page", () => {
     renderPage();
     const named = new Set<string>([
       ...FOOTER_REPOSITORY_PAGES.map(([, href]) => href),
       EXAMPLE_APP,
       CAPABILITY_MATRIX,
+      EMBED_GUIDE_URL,
     ]);
-    // The credits a picture carries, which its basemaps ask for wherever the map shows.
+    // The credits the picture carries, which its basemaps ask for wherever the map shows.
     const creditHrefs = new Set<string>(
       CAPTURE_SUBJECTS.flatMap(({ id }) =>
         plateCredits(id).flatMap((credit) => credit.href ?? []),
@@ -542,7 +607,6 @@ describe("the product page stands on its own", () => {
       expect(
         href === REPO ||
           named.has(href) ||
-          href === NPM_PACKAGE ||
           href === MASTODON ||
           creditHrefs.has(href) ||
           /^[/#]/.test(href),
@@ -554,7 +618,7 @@ describe("the product page stands on its own", () => {
 
   it("asks nothing of a third party: no image, frame, script source or stylesheet from elsewhere", () => {
     const html = renderToStaticMarkup(
-      <ProductPage clipboard={new FakeClipboard()} />,
+      <ProductPage clipboard={new FakeClipboard()} release={RELEASE} />,
     );
     expect(html).not.toMatch(/<(iframe|link|object|embed)\b/);
     for (const [, source] of html.matchAll(/<img\b[^>]*\ssrc="([^"]*)"/g)) {
@@ -590,7 +654,7 @@ describe("the product page stands on its own", () => {
 
   it("starts with the old map link redirect, exactly as its CSP hash allows", () => {
     const html = renderToStaticMarkup(
-      <ProductPage clipboard={new FakeClipboard()} />,
+      <ProductPage clipboard={new FakeClipboard()} release={RELEASE} />,
     );
     expect(html).toContain(`<script>${MAP_LINK_REDIRECT_SCRIPT}</script>`);
     expect(html.indexOf("<script>")).toBeLessThan(html.indexOf("<a "));
@@ -602,6 +666,34 @@ describe("the product page stands on its own", () => {
     expect(skip).toHaveTextContent("Skip to content");
     expect(skip).toHaveAttribute("href", "#content");
     expect(screen.getByRole("main")).toHaveAttribute("id", "content");
+  });
+
+  it("draws the contour motif behind the hero's words as decoration only, with no text in it", () => {
+    renderPage();
+    const motif = screen.getByTestId("hero-motif");
+    expect(motif).toHaveAttribute("aria-hidden", "true");
+    expect(motif).toHaveAttribute("focusable", "false");
+    expect(motif.querySelector("text")).toBeNull();
+    expect(motif.querySelectorAll("path").length).toBeGreaterThan(2);
+    const h1 = screen.getByRole("heading", { level: 1 });
+    expect(motif.parentElement).toContainElement(h1);
+    expect(
+      motif.compareDocumentPosition(h1) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+  });
+
+  it("draws the motif in an ink that keeps the hero's text and muted text at 4.5:1 or more where they cross it, in both themes", () => {
+    for (const theme of ["light", "dark"] as const) {
+      const roles = tokenValues.themeValues[theme].opaque;
+      const line = compositeOver(roles.hairline, roles.pageBackground);
+      expect(contrastRatio(roles.text, line), theme).toBeGreaterThanOrEqual(
+        4.5,
+      );
+      expect(
+        contrastRatio(roles.textMuted, line),
+        theme,
+      ).toBeGreaterThanOrEqual(4.5);
+    }
   });
 
   it("draws its artwork once, after the last section and before the footer, as decoration only", () => {
@@ -635,37 +727,32 @@ describe("the product page stands on its own", () => {
   });
 });
 
-/** The figure of a picture by its subject. */
-function plate(id: string): HTMLElement {
-  return screen.getByTestId(`plate-${id}`);
-}
-
-describe("the pictures", () => {
-  it("shows the hero's picture in a figure after the h1, in the hero", () => {
+describe("the picture of the playground", () => {
+  it("follows the hero straight away, before the first section, as one figure", () => {
     renderPage();
-    const hero = plate("hero");
-    expect(hero.tagName).toBe("FIGURE");
+    const demo = screen.getByTestId("demo");
+    expect(demo.tagName).toBe("FIGURE");
+    const main = screen.getByRole("main");
+    expect(main.children[1]).toBe(demo);
     expect(
-      screen.getByRole("heading", { level: 1 }).compareDocumentPosition(hero),
-    ).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
-    expect(screen.getByRole("main").firstElementChild).toContainElement(hero);
+      demo.compareDocumentPosition(main.querySelector("section") as Element) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
   });
 
-  it("puts the phone capture in What you get, before the legend", () => {
+  it("holds one view at two sizes, the narrow one for a phone and the wide one from the tablet width, chosen by class", () => {
     renderPage();
-    const you = section("What you get");
-    const figure = plate("basemaps");
-    expect(you).toContainElement(figure);
-    const [legend] = within(you).getAllByRole("list");
-    expect(figure.compareDocumentPosition(legend as Element)).toBe(
-      Node.DOCUMENT_POSITION_FOLLOWING,
-    );
+    expect(screen.getByTestId("plate-hero")).toHaveClass(styles.plateNarrow);
+    expect(screen.getByTestId("plate-heroWide")).toHaveClass(styles.plateWide);
   });
 
   for (const { id, width, height } of CAPTURE_SUBJECTS) {
     it(`draws the ${id} picture as two lazy images of its size, one for each theme, each with its own alt text, from this site`, () => {
       renderPage();
-      const images = within(plate(id)).getAllByRole("img", { hidden: true });
+      const images = within(screen.getByTestId(`plate-${id}`)).getAllByRole(
+        "img",
+        { hidden: true },
+      );
       expect(images).toHaveLength(CAPTURE_THEMES.length);
       for (const [index, theme] of CAPTURE_THEMES.entries()) {
         const image = images[index] as HTMLElement;
@@ -681,140 +768,96 @@ describe("the pictures", () => {
     });
   }
 
-  it("tells in each alt text what the picture shows, the basemap and the theme, and the hero names the length it measures", () => {
+  it("tells in each alt text what the picture shows, the basemap and the theme, and names the length it measures", () => {
     for (const { id } of CAPTURE_SUBJECTS) {
       for (const theme of CAPTURE_THEMES) {
         const alt = plateAlt(id, theme);
         expect(alt).toContain(PLATES[id].description);
         expect(alt).toContain(`${theme} theme`);
+        expect(alt).toContain("3.42 km");
       }
     }
-    expect(plateAlt("hero", "light")).toContain("3.42 km");
-    expect(plateAlt("hero", "light")).toContain("Bright basemap");
-    expect(plateAlt("hero", "dark")).toContain("Fiord basemap");
+    expect(plateAlt("heroWide", "light")).toContain("Bright basemap");
+    expect(plateAlt("heroWide", "dark")).toContain("Fiord basemap");
   });
 
-  it("credits the map under every picture, in the words and links of the basemap's own definition", () => {
+  it("credits the map under the picture, in the words and links of the basemap's own definition", () => {
     renderPage();
     for (const { id } of CAPTURE_SUBJECTS) {
-      const credits = plateCredits(id);
-      expect(credits.map((credit) => credit.text)).toEqual([
+      expect(plateCredits(id).map((credit) => credit.text)).toEqual([
         "© OpenStreetMap contributors",
         "OpenFreeMap",
         "OpenMapTiles",
         "MapLibre",
       ]);
-      const lead = within(plate(id)).getByText(PLATE_CREDITS_LEAD, {
-        exact: false,
-      });
-      const links = within(lead).getAllByRole("link");
-      expect(links.map((link) => link.textContent)).toEqual(
-        credits.map((credit) => credit.text),
-      );
-      expect(links.map((link) => link.getAttribute("href"))).toEqual(
-        credits.map((credit) => credit.href),
-      );
-      // Pinned, so a change to a definition's link is seen here and in ATTRIBUTIONS.md.
-      expect(links.map((link) => link.getAttribute("href"))).toEqual([
-        "https://www.openstreetmap.org/copyright",
-        "https://openfreemap.org",
-        "https://openmaptiles.org",
-        "https://maplibre.org",
-      ]);
-      expect(plate(id)).toHaveTextContent(PLATES[id].caption);
     }
+    const credits = plateCredits("heroWide");
+    const lead = within(screen.getByTestId("demo")).getByText(
+      PLATE_CREDITS_LEAD,
+      { exact: false },
+    );
+    const links = within(lead).getAllByRole("link");
+    expect(links.map((link) => link.textContent)).toEqual(
+      credits.map((credit) => credit.text),
+    );
+    // Pinned, so a change to a definition's link is seen here and in ATTRIBUTIONS.md.
+    expect(links.map((link) => link.getAttribute("href"))).toEqual([
+      "https://www.openstreetmap.org/copyright",
+      "https://openfreemap.org",
+      "https://openmaptiles.org",
+      "https://maplibre.org",
+    ]);
+    expect(screen.getByTestId("demo")).toHaveTextContent(
+      PLATES.heroWide.caption,
+    );
   });
 
   it("names the basemap of each theme in the caption, so either picture is described", () => {
     renderPage();
-    expect(plate("hero")).toHaveTextContent(
+    expect(screen.getByTestId("demo")).toHaveTextContent(
       "The basemap is Bright in the light theme and Fiord in the dark theme.",
     );
-  });
-
-  it("draws a collar of latitude and longitude ticks round each picture, as decoration only", () => {
-    renderPage();
-    for (const { id } of CAPTURE_SUBJECTS) {
-      const collars = [
-        within(plate(id)).getByTestId("plate-latitude"),
-        within(plate(id)).getByTestId("plate-longitude"),
-      ];
-      for (const collar of collars) {
-        expect(collar).toHaveAttribute("aria-hidden", "true");
-        expect(collar).toHaveAttribute("focusable", "false");
-        expect(collar.querySelectorAll("line").length).toBeGreaterThanOrEqual(
-          2,
-        );
-        const labels = [...collar.querySelectorAll("text")].map(
-          (text) => text.textContent ?? "",
-        );
-        expect(labels.length).toBeGreaterThanOrEqual(2);
-        for (const label of labels) {
-          expect(label).toMatch(/^\d+°\d\d′\d\d″[NSEW]$/);
-        }
-      }
-    }
   });
 
   it("swaps the pictures with CSS alone: each picture's dark twin carries the class that starts hidden", () => {
     renderPage();
     for (const { id } of CAPTURE_SUBJECTS) {
-      const [light, dark] = within(plate(id)).getAllByRole("img", {
-        hidden: true,
-      });
+      const [light, dark] = within(
+        screen.getByTestId(`plate-${id}`),
+      ).getAllByRole("img", { hidden: true });
       expect(light).toHaveClass(styles.plateLight);
       expect(dark).toHaveClass(styles.plateDark);
     }
   });
 
-  it("offers the hero's picture as a link to the live playground over the view it shows, and no other picture", () => {
+  it("links nowhere but the map's credits: the hero's button is the way into the playground", () => {
     renderPage();
-    const link = within(plate("hero")).getByRole("link", {
-      name: PLATE_LIVE_TEXT,
-    });
-    const href = link.getAttribute("href") ?? "";
-    expect(href).toBe("/map#map=13.00/-33.93650/18.40700");
-    // The address round-trips through the app's own reader and writer, and names no basemap, so the playground's theme chooses it.
-    const state = parseUrlHash(href.slice(href.indexOf("#")));
-    expect(state.view).toBeDefined();
-    expect(`/map${serialiseUrlHash(state)}`).toBe(href);
-    expect(
-      within(plate("basemaps")).queryByRole("link", { name: PLATE_LIVE_TEXT }),
-    ).toBeNull();
-    // A plain link: nothing loads before it is followed, and no script is needed.
-    expect(link.tagName).toBe("A");
-    expect(link).not.toHaveAttribute("target");
+    const links = within(screen.getByTestId("demo")).getAllByRole("link");
+    expect(links.map((link) => link.getAttribute("href"))).toEqual(
+      plateCredits("heroWide").map((credit) => credit.href),
+    );
   });
 
-  it("says the same in /index.md and /llms-full.txt", async () => {
+  it("describes the picture and its credits in /index.md and /llms-full.txt, in step with the page", async () => {
     for (const text of [
       await markdownLoader().text(),
       await fullLoader().text(),
     ]) {
-      expect(text).toContain(
-        `[${PLATE_LIVE_TEXT}](${SITE_URL}/map#map=13.00/-33.93650/18.40700)`,
-      );
-    }
-  });
-
-  it("describes each picture and its credits in /index.md and /llms-full.txt, in step with the page", async () => {
-    for (const text of [
-      await markdownLoader().text(),
-      await fullLoader().text(),
-    ]) {
-      for (const { id } of CAPTURE_SUBJECTS) {
-        expect(text).toContain(PLATES[id].description);
-        expect(text).toContain(plateCreditsText(id));
-      }
+      expect(text).toContain(PLATES.heroWide.description);
+      expect(text).toContain(plateCreditsText("heroWide"));
     }
   });
 });
 
 /** The README's code blocks of one language, after its "Embed a map" heading. */
 function readmeBlocks(language: string): string[] {
-  const embed = README.slice(README.indexOf("## Embed a map"));
+  return codeBlocks(README.slice(README.indexOf("## Embed a map")), language);
+}
+
+/** The code blocks of one language in a Markdown text. */
+function codeBlocks(markdown: string, language: string): string[] {
   return [
-    ...embed.matchAll(
+    ...markdown.matchAll(
       new RegExp(`\`\`\`${language}\\n([\\s\\S]*?)\\n\`\`\``, "g"),
     ),
   ].map((match) => match[1] ?? "");
@@ -834,6 +877,12 @@ describe("the embedding example", () => {
     expect(readmeBlocks("html")).toEqual([code("index.html")]);
     expect(readmeBlocks("css")).toEqual([code("src/page.css")]);
     expect(readmeBlocks("tsx")).toEqual([code("src/main.tsx")]);
+  });
+
+  it("is the same three files in the walkthrough the page links, character for character", () => {
+    for (const { language, code } of EMBED_EXAMPLE_FILES) {
+      expect(codeBlocks(EMBED_GUIDE, language)).toEqual([code]);
+    }
   });
 
   it("starts main.tsx with the Vite types line, and gives the map a height", () => {
@@ -865,46 +914,77 @@ describe("the embedding example", () => {
     expect(MAIN_CODE).toContain("createMapAdapter");
   });
 
-  it("is the same code in /index.md and /llms-full.txt, each file under its name", async () => {
+  it("shows on the page one excerpt of about ten lines, cut from the README's main.tsx so it cannot differ from the type-checked app", () => {
+    expect(MAIN_CODE).toContain(EMBED_EXCERPT);
+    expect(EMBED_EXCERPT.startsWith("function App() {")).toBe(true);
+    expect(EMBED_EXCERPT.endsWith("\n}")).toBe(true);
+    expect(EMBED_EXCERPT.split("\n").length).toBeLessThanOrEqual(12);
+    expect(EMBED_EXCERPT).toContain("<ServicesProvider services={services}>");
+    renderPage();
+    const embed = section("Embed a map");
+    const regions = within(embed).getAllByRole("region");
+    expect(regions.map((region) => region.getAttribute("aria-label"))).toEqual([
+      EXCERPT,
+    ]);
+    expect(regions[0]).toHaveAttribute("tabindex", "0");
+    expect(regions[0]?.textContent).toBe(EMBED_EXCERPT);
+  });
+
+  it("cuts an excerpt from the line that starts it to the first closing brace at the start of a line, and refuses one that is not there", () => {
+    expect(excerptOf("a\nfunction f() {\n  x;\n}\nb\n}", "function f()")).toBe(
+      "function f() {\n  x;\n}",
+    );
+    expect(() => excerptOf("a\nb", "function g()")).toThrow(/No block/);
+    expect(() => excerptOf("function g() {\n  open", "function g()")).toThrow(
+      /No block/,
+    );
+  });
+
+  it("heads the excerpt with its name, beside its own copy button in the box's corner", () => {
+    renderPage();
+    const region = screen.getByRole("region", { name: EXCERPT });
+    const heading = region.parentElement?.firstElementChild as HTMLElement;
+    expect(heading.textContent).toContain(EXCERPT);
+    const button = within(heading).getByRole("button", {
+      name: `Copy code, ${EXCERPT}`,
+    });
+    expect(button.textContent).toBe("");
+    expect(button.querySelector("svg")).toHaveAttribute("aria-hidden", "true");
+  });
+
+  it("carries the excerpt, not the whole app, in /index.md and /llms-full.txt", async () => {
     for (const text of [
       await markdownLoader().text(),
       await fullLoader().text(),
     ]) {
-      for (const { name, language, code } of EMBED_EXAMPLE_FILES) {
-        expect(text).toContain(
-          `\`${name}\`:\n\n\`\`\`${language}\n${code}\n\`\`\``,
-        );
-      }
+      expect(text).toContain(
+        `\`${EXCERPT}\`:\n\n\`\`\`tsx\n${EMBED_EXCERPT}\n\`\`\``,
+      );
+      expect(text).not.toContain("createRoot(root)");
     }
   });
 
-  it("no longer says the fakes draw a map, and says what draws it", () => {
+  it("says what the excerpt leaves out, and links the walkthrough for the whole app", () => {
     renderPage();
     const embed = section("Embed a map");
     expect(embed.textContent).toContain(
-      "This is a whole React app in a Vite project: the map from the MapLibre adapter, the SDK's interface around it and a search box.",
+      "A whole Vite and React app is three files: index.html, a short style sheet that gives the map a height, and src/main.tsx, which builds the services with the MapLibre adapter",
     );
     expect(embed.textContent).toContain(
-      "with the adapter passed in to draw the map; search shows sample results until you add a search adapter",
+      "Search and the rest of the interface run on in-memory fakes until you add adapters",
     );
-    expect(embed.textContent).not.toContain("draw no map tiles");
-    expect(embed.textContent).toContain(
-      "Add src/page.css, a short style sheet, so the map has a height",
-    );
-    expect(embed.textContent).not.toContain("three lines");
-    expect(embed.textContent).not.toContain("other two files");
-    expect(embed.textContent).toContain(
-      "imports the SDK only through its package",
-    );
+    expect(
+      within(embed).getByRole("link", { name: "embedding walkthrough" }),
+    ).toHaveAttribute("href", EMBED_GUIDE_URL);
   });
 });
 
 describe("what the page says the SDK sends", () => {
   it("names the basemap as the one request the SDK's map makes by itself", () => {
     renderPage();
-    expect(
-      screen.getByRole("region", { name: "Questions" }).textContent,
-    ).toContain("The SDK sends nothing by itself, apart from the basemap:");
+    expect(section("Questions").textContent).toContain(
+      "The SDK sends nothing by itself, apart from the basemap:",
+    );
   });
 });
 
@@ -917,7 +997,7 @@ describe("copying the embedding example", () => {
   function copyButton(): HTMLElement {
     return within(
       screen.getByRole("region", { name: "Embed a map" }),
-    ).getByRole("button", { name: "Copy code, src/main.tsx" });
+    ).getByRole("button", { name: `Copy code, ${EXCERPT}` });
   }
 
   it("writes nothing to the clipboard until the visitor asks", () => {
@@ -931,8 +1011,8 @@ describe("copying the embedding example", () => {
     const clipboard = new FakeClipboard();
     renderPage(clipboard);
     fireEvent.click(copyButton());
-    await waitFor(() => expect(clipboard.written).toEqual([MAIN_CODE]));
-    const code = screen.getByRole("region", { name: "src/main.tsx" });
+    await waitFor(() => expect(clipboard.written).toEqual([EMBED_EXCERPT]));
+    const code = screen.getByRole("region", { name: EXCERPT });
     expect(clipboard.written[0]).toBe(code.textContent);
   });
 
@@ -942,12 +1022,10 @@ describe("copying the embedding example", () => {
     button.focus();
     fireEvent.click(button);
     expect(
-      await screen.findByRole("button", { name: "Copied, src/main.tsx" }),
+      await screen.findByRole("button", { name: `Copied, ${EXCERPT}` }),
     ).toBeInTheDocument();
     await waitFor(() =>
-      expect(liveRegions().polite).toHaveTextContent(
-        "Code copied, src/main.tsx",
-      ),
+      expect(liveRegions().polite).toHaveTextContent(`Code copied, ${EXCERPT}`),
     );
     expect(liveRegions().assertive).toBeEmptyDOMElement();
     expect(document.activeElement).toBe(button);
@@ -961,7 +1039,7 @@ describe("copying the embedding example", () => {
       await Promise.resolve();
     });
     expect(
-      screen.getByRole("button", { name: "Copied, src/main.tsx" }),
+      screen.getByRole("button", { name: `Copied, ${EXCERPT}` }),
     ).toBeInTheDocument();
     act(() => {
       vi.advanceTimersByTime(COPIED_FEEDBACK_MS);
@@ -979,7 +1057,7 @@ describe("copying the embedding example", () => {
     act(() => {
       vi.advanceTimersByTime(COPIED_FEEDBACK_MS - 100);
     });
-    const copied = screen.getByRole("button", { name: "Copied, src/main.tsx" });
+    const copied = screen.getByRole("button", { name: `Copied, ${EXCERPT}` });
     copied.focus();
     fireEvent.click(copied);
     await act(async () => {
@@ -988,7 +1066,7 @@ describe("copying the embedding example", () => {
     act(() => {
       vi.advanceTimersByTime(COPIED_FEEDBACK_MS - 100);
     });
-    expect(screen.getByRole("button", { name: "Copied, src/main.tsx" })).toBe(
+    expect(screen.getByRole("button", { name: `Copied, ${EXCERPT}` })).toBe(
       copied,
     );
     expect(copied).not.toBeDisabled();
@@ -1016,12 +1094,12 @@ describe("copying the embedding example", () => {
       pending[1]?.({ ok: true });
     });
     expect(
-      await screen.findByRole("button", { name: "Copied, src/main.tsx" }),
+      await screen.findByRole("button", { name: `Copied, ${EXCERPT}` }),
     ).toBeInTheDocument();
     await act(async () => {
       pending[0]?.({ ok: false, reason: "denied" });
     });
-    expect(screen.getByRole("button", { name: "Copied, src/main.tsx" })).toBe(
+    expect(screen.getByRole("button", { name: `Copied, ${EXCERPT}` })).toBe(
       button,
     );
     expect(liveRegions().assertive).toBeEmptyDOMElement();
@@ -1035,17 +1113,17 @@ describe("copying the embedding example", () => {
     button.focus();
     fireEvent.click(button);
     expect(
-      await screen.findByRole("button", { name: "Copy failed, src/main.tsx" }),
+      await screen.findByRole("button", { name: `Copy failed, ${EXCERPT}` }),
     ).toBeInTheDocument();
     await waitFor(() =>
       expect(liveRegions().assertive).toHaveTextContent(
-        "Could not copy src/main.tsx. Select the code and copy it manually.",
+        `Could not copy ${EXCERPT}. Select the code and copy it manually.`,
       ),
     );
     expect(document.activeElement).toBe(button);
-    const code = screen.getByRole("region", { name: "src/main.tsx" });
+    const code = screen.getByRole("region", { name: EXCERPT });
     expect(code).toHaveAttribute("tabindex", "0");
-    expect(code.textContent).toBe(MAIN_CODE);
+    expect(code.textContent).toBe(EMBED_EXCERPT);
   });
 
   it("copies again after a failure once the clipboard works", async () => {
@@ -1054,29 +1132,25 @@ describe("copying the embedding example", () => {
     renderPage(clipboard);
     fireEvent.click(copyButton());
     const failed = await screen.findByRole("button", {
-      name: "Copy failed, src/main.tsx",
+      name: `Copy failed, ${EXCERPT}`,
     });
     clipboard.succeed();
     fireEvent.click(failed);
     expect(
-      await screen.findByRole("button", { name: "Copied, src/main.tsx" }),
+      await screen.findByRole("button", { name: `Copied, ${EXCERPT}` }),
     ).toBeInTheDocument();
-    expect(clipboard.written).toEqual([MAIN_CODE]);
+    expect(clipboard.written).toEqual([EMBED_EXCERPT]);
   });
 
-  it("names the file in what it announces, for each of the three buttons", async () => {
+  it("names what it copies in what it announces", async () => {
     renderPage();
-    for (const { name } of EMBED_EXAMPLE_FILES) {
-      fireEvent.click(
-        screen.getByRole("button", { name: `Copy code, ${name}` }),
-      );
-      await waitFor(() =>
-        expect(liveRegions().polite).toHaveTextContent(`Code copied, ${name}`),
-      );
-    }
+    fireEvent.click(copyButton());
+    await waitFor(() =>
+      expect(liveRegions().polite).toHaveTextContent(`Code copied, ${EXCERPT}`),
+    );
   });
 
-  it("leaves no duplicate test id on the three blocks and their buttons", () => {
+  it("leaves no duplicate test id on the code and its button", () => {
     const { container } = renderPage();
     expect(
       container.querySelectorAll("[data-testid='copy-code']"),
@@ -1086,11 +1160,11 @@ describe("copying the embedding example", () => {
     );
   });
 
-  it("renders on the server with the button and no message", () => {
+  it("renders on the server with the button, named in words, and no message", () => {
     const html = renderToStaticMarkup(
-      <ProductPage clipboard={new FakeClipboard()} />,
+      <ProductPage clipboard={new FakeClipboard()} release={RELEASE} />,
     );
-    expect(html).toContain(">Copy code</button>");
+    expect(html).toContain(`aria-label="Copy code, ${EXCERPT}"`);
     expect(html).not.toContain("Code copied");
   });
 });

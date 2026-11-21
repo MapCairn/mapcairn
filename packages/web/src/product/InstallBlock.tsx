@@ -26,8 +26,8 @@ export interface InstallBlockProps {
  * and the first radio chosen, plain CSS shows the command of the chosen radio
  * (`:has(:checked)`), and the radios choose natively, with the arrow keys
  * following the reading direction. The copy button is the only part that needs
- * a script, so it appears once the page runs, in a row that is already
- * reserved. Which manager was chosen is read back from the radios when the
+ * a script, so it appears once the page runs, in the corner of the command,
+ * which already leaves it room. Which manager was chosen is read back from the radios when the
  * page starts, so a choice made before then is the one copied. Nothing is
  * stored: the choice lasts until the page is left.
  */
@@ -78,7 +78,7 @@ export function InstallBlock({ label, options, clipboard }: InstallBlockProps) {
             </pre>
           </div>
         ))}
-        <div className={styles.installCopy} data-testid="install-copy-row">
+        <div className={styles.installCopy} data-testid="install-copy">
           {running && current !== undefined && (
             <CopyCodeButton
               code={current.command}
