@@ -32,7 +32,7 @@ describe("contrastRows", () => {
     }
   });
 
-  it("takes the worse of white and black under a translucent surface", () => {
+  it("takes the worst of white, black and Fiord's land under a translucent surface", () => {
     const pair = CONTRAST_PAIRS.find((entry) => entry.id === "text-surface");
     expect(pair).toBeDefined();
     if (!pair) {
@@ -46,12 +46,13 @@ describe("contrastRows", () => {
     const worst = Math.min(
       over(representativeBackdrops.white),
       over(representativeBackdrops.black),
+      over(representativeBackdrops.defaultDarkBasemap),
     );
     expect(measurePair(pair, roles)).toBeCloseTo(worst, 6);
     expect(worst).toBeLessThan(over(representativeBackdrops.white));
   });
 
-  it("measures map overlays against every representative basemap", () => {
+  it("measures map overlays against every representative basemap, by the mark or by its halo", () => {
     const pair = CONTRAST_PAIRS.find((entry) => entry.id === "pin-basemap");
     expect(pair?.background).toBe("basemaps");
     if (!pair) {
@@ -60,10 +61,21 @@ describe("contrastRows", () => {
     const roles = themeValues.light.colour;
     const worst = Math.min(
       ...Object.values(representativeBackdrops).map((backdrop) =>
-        contrastRatio(roles.mapPin, backdrop),
+        Math.max(
+          contrastRatio(roles.mapPin, backdrop),
+          Math.min(
+            contrastRatio(roles.mapHalo, backdrop),
+            contrastRatio(roles.mapPin, roles.mapHalo),
+          ),
+        ),
       ),
     );
     expect(measurePair(pair, roles)).toBeCloseTo(worst, 6);
+    // Fiord is the backdrop the mark alone cannot clear, so the halo carries it.
+    expect(
+      contrastRatio(roles.mapPin, representativeBackdrops.defaultDarkBasemap),
+    ).toBeLessThan(pair.minimum);
+    expect(measurePair(pair, roles)).toBeGreaterThanOrEqual(pair.minimum);
   });
 
   it("reports a failure when a pair is below its minimum", () => {

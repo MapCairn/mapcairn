@@ -180,9 +180,9 @@ export const ROLE_PAIRS: Readonly<Record<ColourRole, string | ExemptRole>> = {
 
 /**
  * The opaque colours a pair's background becomes. A translucent surface takes
- * on whatever map is under it, so it is flattened over pure white and pure
- * black, the two extremes; a map overlay is placed on every representative
- * basemap.
+ * on whatever map is under it, so it is flattened over pure white, pure black
+ * and Fiord's mid-dark land, the extremes and the mid-tone; a map overlay is
+ * placed on every representative basemap.
  */
 function backgroundsFor(pairing: ContrastPair, roles: ColourRoles): Rgba[] {
   if (pairing.background === "basemaps") {
@@ -191,16 +191,41 @@ function backgroundsFor(pairing: ContrastPair, roles: ColourRoles): Rgba[] {
     );
   }
   const role = roles[pairing.background];
-  return [representativeBackdrops.white, representativeBackdrops.black].map(
-    (backdrop) => compositeOver(role, backdrop),
+  return [
+    representativeBackdrops.white,
+    representativeBackdrops.black,
+    representativeBackdrops.defaultDarkBasemap,
+  ].map((backdrop) => compositeOver(role, backdrop));
+}
+
+/**
+ * The contrast of a pair over one backdrop. A map overlay is drawn on its
+ * halo, so it shows when the mark clears the backdrop, or when its halo clears
+ * the backdrop and the mark clears its halo; any other pair is the plain ratio.
+ */
+function ratioOver(
+  pairing: ContrastPair,
+  roles: ColourRoles,
+  under: Rgba,
+): number {
+  const mark = compositeOver(roles[pairing.foreground], under);
+  const direct = contrastRatio(mark, under);
+  if (pairing.background !== "basemaps") {
+    return direct;
+  }
+  const halo = parseColour(roles.mapHalo);
+  const byHalo = Math.min(
+    contrastRatio(halo, under),
+    contrastRatio(mark, halo),
   );
+  return Math.max(direct, byHalo);
 }
 
 /** The worst-case contrast ratio of a pair in one set of colour roles. */
 export function measurePair(pairing: ContrastPair, roles: ColourRoles): number {
   return Math.min(
     ...backgroundsFor(pairing, roles).map((under) =>
-      contrastRatio(compositeOver(roles[pairing.foreground], under), under),
+      ratioOver(pairing, roles, under),
     ),
   );
 }

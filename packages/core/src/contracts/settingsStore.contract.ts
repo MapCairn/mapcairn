@@ -36,7 +36,7 @@ export function runSettingsStoreContract(
         zoomButtons: null,
         saveData: null,
         projection: "flat",
-        basemapId: "bright",
+        basemapId: null,
         lastView: null,
         tourSeen: null,
         language: null,
@@ -57,7 +57,7 @@ export function runSettingsStoreContract(
       expect(after).not.toBe(before);
       expect(after.units).toBe("imperial");
       expect(after.theme).toBe("system");
-      expect(after.basemapId).toBe("bright");
+      expect(after.basemapId).toBeNull();
       expect(before.units).toBe("metric");
     });
 
@@ -93,15 +93,26 @@ export function runSettingsStoreContract(
       store.set({
         zoomButtons: null,
         saveData: null,
+        basemapId: null,
         lastView: null,
         tourSeen: null,
         language: null,
       });
       expect(store.get().language).toBeNull();
+      expect(store.get().basemapId).toBeNull();
       expect(store.get().zoomButtons).toBeNull();
       expect(store.get().saveData).toBeNull();
       expect(store.get().lastView).toBeNull();
       expect(store.get().tourSeen).toBeNull();
+    });
+
+    it("tells a basemap never chosen (null) from one chosen, even the default's id", () => {
+      const { store } = create();
+      expect(store.get().basemapId).toBeNull();
+      store.set({ basemapId: "bright" });
+      expect(store.get().basemapId).toBe("bright");
+      store.set({ basemapId: null });
+      expect(store.get().basemapId).toBeNull();
     });
 
     it("notifies subscribers with the new settings after a change", () => {

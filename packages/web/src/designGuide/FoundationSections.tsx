@@ -91,7 +91,7 @@ export function ContrastSection() {
     <GuideSection
       id="contrast"
       title="Contrast"
-      intro="Measured with the theme package's contrast maths. A translucent surface is flattened over pure white and pure black and the worse result is shown; map overlays are measured on every representative basemap. Text needs 4.5:1 and icons, control edges and focus rings need 3:1 (WCAG 2.2 AA)."
+      intro="Measured with the theme package's contrast maths. A translucent surface is flattened over pure white, pure black and Fiord's mid-dark land and the worst result is shown; map overlays are measured on every representative basemap, passing when the mark or its halo clears 3:1. Text needs 4.5:1 and icons, control edges and focus rings need 3:1 (WCAG 2.2 AA)."
     >
       <table className={styles.table} data-testid="contrast-table">
         <caption className={styles.tableCaption}>

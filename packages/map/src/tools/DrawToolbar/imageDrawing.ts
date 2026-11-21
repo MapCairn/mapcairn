@@ -9,8 +9,8 @@ import { parseColour, toHex, tokenValues } from "@mapcairn/theme";
 
 /**
  * The shapes as a drawing for a saved map image, in the overlay's colours for
- * the light theme (the basemap never follows the theme, so the image does not
- * either). Undefined when there is nothing to draw, so the image is the map
+ * the light theme, whatever theme is showing: the white halo under them shows
+ * on every basemap, light or dark, so the image reads the same everywhere. Undefined when there is nothing to draw, so the image is the map
  * alone.
  *
  * @internal

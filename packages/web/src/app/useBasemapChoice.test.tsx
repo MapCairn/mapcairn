@@ -406,7 +406,7 @@ describe("useBasemapChoice when every tile of a basemap fails", () => {
     expect(services.fakes.settings.get().basemapId).toBe("osm");
     act(() => hook.result.current.unavailableNow(streets));
     expect(hook.result.current.savedChoice).toBe("bright");
-    expect(services.fakes.settings.get().basemapId).not.toBe("osm");
+    expect(services.fakes.settings.get().basemapId).toBeNull();
   });
 
   it("leaves a long-standing saved choice alone when its provider is down, until the person goes back", () => {
@@ -464,5 +464,173 @@ describe("useBasemapChoice when every tile of a basemap fails", () => {
     act(() => hook.result.current.unavailableNow(streets));
     // Liberty drew again, so it is a valid place to go back to, not the default.
     expect(hook.result.current.failure?.kept.id).toBe("liberty");
+  });
+});
+
+describe("useBasemapChoice follows the theme until a basemap is chosen", () => {
+  function setupFor(
+    theme: "light" | "dark",
+    options: {
+      readonly stored?: string | null;
+      readonly linked?: string;
+      readonly themeChoice?: "system" | "light" | "dark";
+    } = {},
+  ) {
+    const services = createFakeServices();
+    services.fakes.theme.setSystemTheme(theme);
+    if (options.stored !== undefined && options.stored !== null) {
+      services.fakes.settings.set({ basemapId: options.stored });
+    }
+    if (options.themeChoice !== undefined) {
+      services.fakes.settings.set({ theme: options.themeChoice });
+    }
+    const wrapper = ({ children }: { children: ReactNode }) => (
+      <ServicesProvider services={services}>{children}</ServicesProvider>
+    );
+    const hook = renderHook(() => useBasemapChoice(options.linked), {
+      wrapper,
+    });
+    return { services, hook };
+  }
+
+  it("shows Bright to a first visit in the light theme and Fiord in the dark theme, saving nothing", () => {
+    const light = setupFor("light");
+    expect(light.hook.result.current.basemap.id).toBe("bright");
+    expect(light.hook.result.current.choice).toBe("bright");
+    expect(light.services.fakes.settings.get().basemapId).toBeNull();
+
+    const dark = setupFor("dark");
+    expect(dark.hook.result.current.basemap.id).toBe("fiord");
+    expect(dark.hook.result.current.choice).toBe("fiord");
+    expect(dark.hook.result.current.savedChoice).toBe("fiord");
+    expect(dark.services.fakes.settings.get().basemapId).toBeNull();
+  });
+
+  it("follows the system theme when the theme setting is System, and the chosen theme when it is not", () => {
+    expect(
+      setupFor("dark", { themeChoice: "light" }).hook.result.current.basemap.id,
+    ).toBe("bright");
+    expect(
+      setupFor("light", { themeChoice: "dark" }).hook.result.current.basemap.id,
+    ).toBe("fiord");
+  });
+
+  it("switches the default when the theme changes, live, for a visitor who never chose", () => {
+    const { services, hook } = setupFor("light");
+    expect(hook.result.current.basemap.id).toBe("bright");
+    act(() => services.fakes.theme.setSystemTheme("dark"));
+    expect(hook.result.current.basemap.id).toBe("fiord");
+    expect(hook.result.current.choice).toBe("fiord");
+    act(() => services.fakes.settings.set({ theme: "light" }));
+    expect(hook.result.current.basemap.id).toBe("bright");
+    expect(services.fakes.settings.get().basemapId).toBeNull();
+  });
+
+  it("keeps a chosen basemap when the theme changes, even the default's own id", () => {
+    const picked = setupFor("light", { stored: "liberty" });
+    act(() => picked.services.fakes.theme.setSystemTheme("dark"));
+    expect(picked.hook.result.current.basemap.id).toBe("liberty");
+
+    const brightPicked = setupFor("light", { stored: "bright" });
+    act(() => brightPicked.services.fakes.theme.setSystemTheme("dark"));
+    expect(brightPicked.hook.result.current.basemap.id).toBe("bright");
+  });
+
+  it("keeps the basemap chosen in this visit across a theme change and a reload", () => {
+    const { services, hook } = setupFor("dark");
+    act(() => hook.result.current.choose("bright"));
+    act(() => hook.result.current.applied(basemap("bright")));
+    expect(services.fakes.settings.get().basemapId).toBe("bright");
+    act(() => services.fakes.theme.setSystemTheme("light"));
+    act(() => services.fakes.theme.setSystemTheme("dark"));
+    expect(hook.result.current.basemap.id).toBe("bright");
+
+    const wrapper = ({ children }: { children: ReactNode }) => (
+      <ServicesProvider services={services}>{children}</ServicesProvider>
+    );
+    const reloaded = renderHook(() => useBasemapChoice(undefined), {
+      wrapper,
+    });
+    expect(reloaded.result.current.basemap.id).toBe("bright");
+  });
+
+  it("gives a link's basemap to a viewer in either theme, and a link with none the viewer's default", () => {
+    expect(
+      setupFor("dark", { linked: "bright" }).hook.result.current.basemap.id,
+    ).toBe("bright");
+    expect(
+      setupFor("light", { linked: "fiord" }).hook.result.current.basemap.id,
+    ).toBe("fiord");
+    expect(
+      setupFor("dark", { linked: undefined }).hook.result.current.basemap.id,
+    ).toBe("fiord");
+  });
+
+  it("treats a retired or unknown saved or linked id as no choice, so the theme's default shows", () => {
+    for (const id of ["auto", "maptoolkit-dark", "retired-basemap"]) {
+      expect(
+        setupFor("dark", { stored: id }).hook.result.current.basemap.id,
+        id,
+      ).toBe("fiord");
+      expect(
+        setupFor("dark", { linked: id }).hook.result.current.basemap.id,
+        id,
+      ).toBe("fiord");
+      expect(
+        setupFor("light", { stored: id }).hook.result.current.basemap.id,
+        id,
+      ).toBe("bright");
+    }
+  });
+
+  it("falls back to the theme's default, not Bright, when a basemap cannot start the map", () => {
+    const dark = setupFor("dark", { stored: "liberty" });
+    act(() =>
+      dark.hook.result.current.mountFailed(
+        new MapEngineError("load-failed"),
+        basemap("liberty"),
+      ),
+    );
+    expect(dark.hook.result.current.basemap.id).toBe("fiord");
+  });
+
+  it("falls back to the theme's default when every tile of a basemap fails", () => {
+    const dark = setupFor("dark", { stored: "liberty" });
+    act(() => dark.hook.result.current.unavailableNow(basemap("liberty")));
+    expect(dark.hook.result.current.basemap.id).toBe("fiord");
+  });
+
+  it("does not turn a follower into a chooser when the default's own provider is down and the person goes back", () => {
+    const { services, hook } = setupFor("dark");
+    act(() => hook.result.current.unavailableNow(basemap("fiord")));
+    act(() => hook.result.current.goBack());
+    expect(services.fakes.settings.get().basemapId).toBeNull();
+    act(() => services.fakes.theme.setSystemTheme("light"));
+    expect(hook.result.current.basemap.id).toBe("bright");
+  });
+
+  it("puts a follower back to following when the basemap it chose proves to be down", () => {
+    const { services, hook } = setupFor("dark");
+    act(() => hook.result.current.choose("osm"));
+    act(() => hook.result.current.applied(basemap("osm")));
+    act(() => hook.result.current.unavailableNow(basemap("osm")));
+    expect(services.fakes.settings.get().basemapId).toBeNull();
+  });
+
+  it("saves the basemap shown when its own tile is pressed, so a follower becomes a chooser and the choice stays", () => {
+    const { services, hook } = setupFor("dark");
+    act(() => hook.result.current.choose("fiord"));
+    expect(services.fakes.settings.get().basemapId).toBe("fiord");
+    act(() => services.fakes.theme.setSystemTheme("light"));
+    expect(hook.result.current.basemap.id).toBe("fiord");
+  });
+
+  it("keeps the choice saved before when the shown, already saved basemap is pressed again", () => {
+    const { services, hook } = setupFor("light", { stored: "positron" });
+    act(() => hook.result.current.choose("osm"));
+    act(() => hook.result.current.applied(basemap("osm")));
+    act(() => hook.result.current.choose("osm"));
+    act(() => hook.result.current.unavailableNow(basemap("osm")));
+    expect(services.fakes.settings.get().basemapId).toBe("positron");
   });
 });

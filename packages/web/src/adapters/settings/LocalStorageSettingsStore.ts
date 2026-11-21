@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
 import {
-  DEFAULT_BASEMAP_ID,
   LANGUAGE_STORAGE_KEY,
   type MapProjection,
   parseThemeChoice,
@@ -19,7 +18,7 @@ const DEFAULTS: Settings = Object.freeze({
   zoomButtons: null,
   saveData: null,
   projection: "flat",
-  basemapId: DEFAULT_BASEMAP_ID,
+  basemapId: null,
   lastView: null,
   tourSeen: null,
   language: null,
@@ -71,10 +70,9 @@ function parseOptionalBoolean(raw: unknown): boolean | null {
   return typeof raw === "boolean" ? raw : null;
 }
 
-function parseBasemapId(raw: unknown): string {
-  return typeof raw === "string" && BASEMAP_ID_PATTERN.test(raw)
-    ? raw
-    : DEFAULTS.basemapId;
+/** A stored id is a choice; anything else means "none yet", so the default follows the theme. */
+function parseBasemapId(raw: unknown): string | null {
+  return typeof raw === "string" && BASEMAP_ID_PATTERN.test(raw) ? raw : null;
 }
 
 function isNumberInRange(value: unknown, min: number, max: number): boolean {

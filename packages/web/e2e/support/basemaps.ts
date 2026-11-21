@@ -15,15 +15,15 @@ export const RASTER_BASEMAP_NAME = "Streets";
 /** Matches its provider credit (the first link in the credits, before "MapLibre"). */
 export const RASTER_BASEMAP_CREDIT = /OpenStreetMap/;
 
-/** The default basemap, in both interface themes. */
+/** The default basemap in the light theme, for a visitor who never chose one. */
 export const DEFAULT_VECTOR_BASEMAP_ID = "bright";
 
 /** Its name in the picker. */
 export const DEFAULT_VECTOR_BASEMAP_NAME = "Bright";
 
 /**
- * The default basemap's land colour as computed CSS, which the map region
- * shows before the map draws, in both themes.
+ * The light default basemap's land colour as computed CSS, which the map
+ * region shows before the map draws, in the light theme.
  */
 export const DEFAULT_VECTOR_BASEMAP_BACKGROUND = "rgb(248, 244, 240)";
 
@@ -52,11 +52,17 @@ export const REMOVED_MAPTOOLKIT_BASEMAP_ID = "maptoolkit-dark";
 /** VersaTiles Colorful, which the SDK defines and the site does not offer. */
 export const COLORFUL_BASEMAP_ID = "colorful";
 
-/** OpenFreeMap Fiord, a dark basemap. */
+/** OpenFreeMap Fiord, a dark basemap and the default in the dark theme. */
 export const FIORD_BASEMAP_ID = "fiord";
 
 /** Its name in the picker. */
 export const FIORD_BASEMAP_NAME = "Fiord";
+
+/**
+ * Fiord's land colour as computed CSS, which the map region shows before the
+ * map draws, in the dark theme.
+ */
+export const FIORD_BASEMAP_BACKGROUND = "rgb(69, 81, 110)";
 
 /**
  * The ids of Topographic and Satellite, which the site no longer offers and
