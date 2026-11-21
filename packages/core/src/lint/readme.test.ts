@@ -22,7 +22,9 @@ import {
 import { BASEMAPS, DEFAULT_BASEMAP_ID } from "../basemaps/basemaps";
 import {
   fencedBlocks,
+  headingAnchors,
   isUsedByExample,
+  LICENCE_DUTY,
   namedImports,
   relativeLinks,
   tagAttributes,
@@ -316,6 +318,98 @@ describe("README.md", () => {
       (target) => !existsSync(path.join(REPO, target)),
     );
     expect(broken).toEqual([]);
+  });
+
+  it("does not list a host's own colours as missing, and says what is still missing", () => {
+    expect(README).not.toContain("your own colours and font with contrast");
+    expect(README).toContain(
+      "your own font, or colours beyond the 14 interface roles",
+    );
+  });
+
+  it("describes the licence as allowing commercial use and offering the source, not publishing it", () => {
+    const section = README.slice(README.indexOf("\n## Licence"));
+    expect(section).toContain("AGPL-3.0-only");
+    expect(section).toContain(
+      "an open-source licence that allows commercial use",
+    );
+    expect(section).toContain(LICENCE_DUTY);
+    expect(section).not.toMatch(/publish the corresponding source/);
+    expect(section).toContain("(docs/guides/licence.md)");
+    const start = README.indexOf("## When MapCairn fits");
+    const fits = README.slice(start, README.indexOf("\n## ", start + 1));
+    expect(fits).not.toMatch(/can publish its source/);
+    expect(fits).toContain("to the people who use it");
+  });
+
+  it("names the licence AGPL-3.0-only as the manifests do, in the badge and in the other documents that state it", () => {
+    expect(README).toContain("[![Licence: AGPL-3.0-only]");
+    for (const doc of ["CONTRIBUTING.md", "GOVERNANCE.md"]) {
+      const text = readFileSync(path.join(REPO, doc), "utf8");
+      expect(
+        text.replace("the AGPL-3.0 or another OSI-approved licence", ""),
+        doc,
+      ).not.toMatch(/AGPL-3\.0(?!-only)/);
+    }
+    const contributing = readFileSync(
+      path.join(REPO, "CONTRIBUTING.md"),
+      "utf8",
+    );
+    expect(contributing).toContain("(docs/guides/licence.md)");
+    expect(contributing).not.toMatch(/may agree other licence terms/);
+  });
+
+  it("shows the install command under the intro, before the screenshot, with the requirements and a link to Embed a map beside it", () => {
+    const intro = README.indexOf("This repository also holds the playground");
+    const install = README.indexOf(
+      "npm install @mapcairn/sdk@next react react-dom maplibre-gl",
+    );
+    const screenshot = README.indexOf("docs/images/playground-light.png");
+    expect(intro).toBeGreaterThan(-1);
+    expect(install).toBeGreaterThan(intro);
+    expect(install).toBeLessThan(screenshot);
+    const beside = README.slice(install, screenshot);
+    for (const requirement of [
+      "React 19",
+      "`maplibre-gl` 6.18 or later",
+      "Vite",
+      "`bundler`, `node16` or `nodenext`",
+      "(#embed-a-map)",
+    ]) {
+      expect(beside, requirement).toContain(requirement);
+    }
+  });
+
+  it("names the requirements as the SDK's manifest and README state them", () => {
+    const manifest = JSON.parse(
+      readFileSync(path.join(REPO, "packages/sdk/package.json"), "utf8"),
+    ) as { readonly peerDependencies: Record<string, string> };
+    expect(manifest.peerDependencies["react"]).toMatch(/^\^19\./);
+    expect(manifest.peerDependencies["maplibre-gl"]).toBe("^6.18.0");
+  });
+
+  it("calls the repository checkout steps what they are, not a quick start", () => {
+    expect(README).toContain("\n## Run the playground from source\n");
+    expect(README).not.toMatch(/quick start/i);
+  });
+
+  it("links to headings of its own that exist", () => {
+    const anchors = headingAnchors(README);
+    const missing = [...README.matchAll(/\]\(#([^)\s]+)\)/g)]
+      .map((match) => match[1] ?? "")
+      .filter((anchor) => !anchors.includes(anchor));
+    expect(missing).toEqual([]);
+  });
+
+  it("says where to ask a question and where to report a problem", () => {
+    const section = README.slice(
+      README.indexOf("## Contributing, security and conduct"),
+    );
+    expect(section).toContain(
+      "https://github.com/MapCairn/mapcairn/discussions",
+    );
+    expect(section).toContain("https://github.com/MapCairn/mapcairn/issues");
+    expect(section).toContain("SECURITY.md");
   });
 
   it("names no issue or pull request, so it stays true as they close", () => {

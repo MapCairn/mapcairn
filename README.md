@@ -8,13 +8,19 @@
 # MapCairn
 
 [![CI](https://github.com/MapCairn/mapcairn/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/MapCairn/mapcairn/actions/workflows/ci.yml)
-[![Licence: AGPL-3.0](https://img.shields.io/badge/licence-AGPL--3.0-blue)](LICENSE)
+[![Licence: AGPL-3.0-only](https://img.shields.io/badge/licence-AGPL--3.0--only-blue)](LICENSE)
 [![OpenSSF Best Practices](https://www.bestpractices.dev/projects/16543/badge)](https://www.bestpractices.dev/projects/16543)
 [![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/MapCairn/mapcairn/badge)](https://scorecard.dev/viewer/?uri=github.com/MapCairn/mapcairn)
 
 **MapCairn is an open-source React SDK for maps that serve the public.** It is for teams building public-interest map applications, such as open data and hazard maps, who would rather spend their time on the data than on the interface around it. MapCairn supplies that interface on top of MapLibre GL JS: search, measuring and drawing tools, a layers panel and a design system, built to be accessible and private. Open data layers are written as data, and every service the map talks to sits behind a small interface, so it can be replaced or faked in a test.
 
 This repository also holds the playground, a reference site built from the SDK's packages.
+
+```bash
+npm install @mapcairn/sdk@next react react-dom maplibre-gl
+```
+
+That needs React 19, `maplibre-gl` 6.18 or later and an ESM bundler that handles CSS imports (tested with Vite), and a TypeScript `moduleResolution` of `bundler`, `node16` or `nodenext`. [Embed a map](#embed-a-map) shows a whole app.
 
 <p>
   <picture>
@@ -25,15 +31,11 @@ This repository also holds the playground, a reference site built from the SDK's
 
 The playground in its light and dark themes, with the earthquakes layer on and a distance measured. Map data and tile credits are in [`ATTRIBUTIONS.md`](ATTRIBUTIONS.md).
 
-**Status:** a release candidate, for early adopters. The packages are on npm under the `next` tag, which is why the install line below says `@next` until `0.1.0`. The API is still settling, so a breaking change can land before `0.1.0`; the [changelog](CHANGELOG.md) lists each one. [`docs/guides/releasing.md`](docs/guides/releasing.md) describes how a release is made.
+**Status:** a release candidate, for early adopters. The packages are on npm under the `next` tag, which is why the install line above says `@next` until `0.1.0`. The API is still settling, so a breaking change can land before `0.1.0`; the [changelog](CHANGELOG.md) lists each one. [`docs/guides/releasing.md`](docs/guides/releasing.md) describes how a release is made.
 
 ## Embed a map
 
-Install `@mapcairn/sdk`. It is the one package most apps need: it holds the whole SDK, with one stylesheet and two import paths, the interface from the root and the MapLibre adapter that draws the map from a subpath. React is a peer dependency and `maplibre-gl` is a required peer, because the adapter needs the engine, so a strict package manager wants both listed:
-
-```bash
-npm install @mapcairn/sdk@next react react-dom maplibre-gl
-```
+The install command at the top of this page installs `@mapcairn/sdk`. It is the one package most apps need: it holds the whole SDK, with one stylesheet and two import paths, the interface from the root and the MapLibre adapter that draws the map from a subpath. React is a peer dependency and `maplibre-gl` is a required peer, because the adapter needs the engine, so a strict package manager wants both listed in that command.
 
 `@mapcairn/sdk` re-exports `core`, `map`, `react` and `theme` from its root, and the MapLibre adapter at `@mapcairn/sdk/adapter-maplibre`. Its root never imports the engine, so an app that does not import the subpath carries none. Its stylesheet is the three the packages ship, in order: tokens, the map's, the engine's. The individual packages are the advanced option, for a host that wants fewer dependencies: `core` has no React or browser dependency, `theme` installs without the interface, and the adapter is a package of its own (see [Packages](#packages)). [`packages/sdk/README.md`](packages/sdk/README.md) lists the entry points and says how to keep one copy of a package when you also list it directly.
 
@@ -242,7 +244,7 @@ It fits a team that:
 - builds in React and wants a complete, accessible map interface rather than a blank canvas;
 - shows open data from providers the browser can reach directly, and wants each layer requested only when a person turns it on;
 - wants to test its map interface without a browser or WebGL, against fakes;
-- can publish its source under AGPL-3.0, or will discuss other terms (see [Licence](#licence)).
+- can offer its app's source, under AGPL-3.0-only (which allows commercial use), to the people who use it, or will discuss closed-source terms (see [Licence](#licence)).
 
 It is not the right choice today if you need:
 
@@ -250,13 +252,13 @@ It is not the right choice today if you need:
 - GIS analysis. MapCairn is not a GIS analysis engine: it measures, draws and has geometry helpers, but does no overlay analysis or geoprocessing;
 - a map engine other than MapLibre GL JS, or tilt, terrain and 3D buildings;
 - to mount it in a page without React, or to reach layers behind a login;
-- your own colours and font with contrast checked, clustering of dense points or offline use.
+- your own font, or colours beyond the 14 interface roles, clustering of dense points or offline use.
 
 A map renderer on its own leaves every interface decision to you, which is the better choice when your interface has little in common with a map application. The [capability matrix](docs/guides/capability-matrix.md) lists what MapCairn has, partly has and lacks, with the issue for each gap that has one, and [`ROADMAP.md`](ROADMAP.md) says what comes next.
 
-## Quick start
+## Run the playground from source
 
-You need Node 24 or newer and npm 11 or newer.
+This is for working on MapCairn itself, not for using it in an app. You need Node 24 or newer and npm 11 or newer, which the repository's `engines` require.
 
 ```bash
 git clone https://github.com/MapCairn/mapcairn.git
@@ -299,6 +301,7 @@ Most apps install only `@mapcairn/sdk`. The packages inside it are published on 
 | [`DESIGN.md`](DESIGN.md)                                                             | Tokens, layout slots, accessibility contracts and the lint rules                                           |
 | [`docs/guides/public-api.md`](docs/guides/public-api.md)                             | What counts as the SDK's public API beyond its exports, the API reports and how a change is classed        |
 | [`docs/guides/extending.md`](docs/guides/extending.md)                               | Embedding the SDK, and adding a basemap, each kind of data layer, a search or routing provider, an adapter |
+| [`docs/guides/licence.md`](docs/guides/licence.md)                                   | What the AGPL means for your project, for people who know MIT, Apache-2.0 and GPL-3.0                      |
 | [`docs/guides/translate-the-sdk.md`](docs/guides/translate-the-sdk.md)               | Another language, a choice of languages, translating definitions, your own message-format library          |
 | [`docs/guides/serving-layers.md`](docs/guides/serving-layers.md)                     | Which layer kind to serve from your own server, what each costs, and OGC API Features, WMS and WMTS layers |
 | [`docs/guides/content-security-policy.md`](docs/guides/content-security-policy.md)   | The Content Security Policy a page hosting the SDK needs, and why                                          |
@@ -316,16 +319,18 @@ Most apps install only `@mapcairn/sdk`. The packages inside it are published on 
 
 ## Contributing, security and conduct
 
+Ask a question in [Discussions](https://github.com/MapCairn/mapcairn/discussions), and report a bug or propose a change in the [issue tracker](https://github.com/MapCairn/mapcairn/issues). Report a security problem privately, as [`SECURITY.md`](SECURITY.md) explains, not in an issue.
+
 See [`CONTRIBUTING.md`](CONTRIBUTING.md) for checks and conventions, [`GOVERNANCE.md`](GOVERNANCE.md) for who decides what, [`ROADMAP.md`](ROADMAP.md) for what is planned and what is not, [`SECURITY.md`](SECURITY.md) for private vulnerability reporting (with the [assurance case](docs/assurance-case.md)) and [`CODE_OF_CONDUCT.md`](CODE_OF_CONDUCT.md) for community expectations.
 
 Everyone is welcome to use the coding agent they prefer, and the same rules in [`AGENTS.md`](AGENTS.md) apply to all of them. [`docs/guides/working-with-agents.md`](docs/guides/working-with-agents.md) lists what Claude Code, Codex, OpenCode, GitHub Copilot, Antigravity, Cursor and Qwen Code read, as checked against their documentation, how to start, and what has not been tried.
 
 ## Licence
 
-MapCairn is licensed under [AGPL-3.0](LICENSE), and each SDK package (`packages/core`, `packages/map`, `packages/react`, `packages/theme`, `packages/adapter-maplibre` and `packages/sdk`) carries its own copy. If you ship the SDK in a product, or let people use a modified version over a network, you must publish the corresponding source under the same licence.
+MapCairn is licensed under [AGPL-3.0-only](LICENSE), an open-source licence that allows commercial use, and each SDK package (`packages/core`, `packages/map`, `packages/react`, `packages/theme`, `packages/adapter-maplibre` and `packages/sdk`) carries its own copy. If you distribute an app that includes the SDK, including by serving it to people's browsers, you must offer them the corresponding source of the code you combine with the SDK and serve with it, under the same licence. If you modify the SDK and let people interact with your modified version over a network, you must offer them its corresponding source. A licence for closed-source use is not on offer yet. [What the licence means for your project](docs/guides/licence.md) says it in plain words and is not legal advice.
 
 The SDK packages depend only on permissively licensed packages (MIT, BSD, Apache-2.0, ISC and similar), and `npm run lint` fails when a new production dependency of one has any other licence.
 
-The author welcomes conversations about other terms for closed-source use. A licence for closed-source use is not on offer yet, and any that is agreed would go towards the continued development of MapCairn. Contact the author at [mapcairn@timothybrits.co.za](mailto:mapcairn@timothybrits.co.za).
+The author welcomes conversations about other terms for closed-source use. Any licence for closed-source use that is agreed would go towards the continued development of MapCairn. Contact the author at [mapcairn@timothybrits.co.za](mailto:mapcairn@timothybrits.co.za).
 
 See [`ATTRIBUTIONS.md`](ATTRIBUTIONS.md) for software and basemap credits and [`PRIVACY.md`](PRIVACY.md) for the privacy policy.
