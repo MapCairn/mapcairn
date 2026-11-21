@@ -166,7 +166,7 @@ The areas were drawn up from the public documentation of commercial and open-sou
 | Capability                                                                                        | Status  | Evidence                                                                                                                                                                               | Tracked by          |
 | ------------------------------------------------------------------------------------------------- | ------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------- |
 | React components built from four packages, with an example app that uses only public entry points | has     | `examples/embed`, `docs/guides/extending.md`                                                                                                                                           | none                |
-| The map engine adapter as an optional package                                                     | partial | `packages/adapter-maplibre` is in the release set from `0.1.0-rc.3` and the umbrella re-exports it at `@mapcairn/sdk/adapter-maplibre`; not on npm until that release is published     | [#43], after [#24]  |
+| The map engine adapter as an optional package                                                     | partial | `packages/adapter-maplibre` is in the release set from `0.1.0-rc.3` and the umbrella re-exports it at `@mapcairn/sdk/adapter-maplibre`                                                 | [#43], after [#24]  |
 | A script and stylesheet with a mount function for pages without React                             | lacks   | none                                                                                                                                                                                   | [#44]               |
 | A guide for serving the bundle from a Windows web server and server-rendered pages                | partial | `docs/guides/serving-from-iis.md`, checked against Microsoft's documentation and not run on a server; it has no prebuilt bundle or mount function to describe                          | [#221], after [#44] |
 | The Content Security Policy a host needs                                                          | has     | `docs/guides/content-security-policy.md`, `buildContentSecurityPolicy` in `examples/embed/src/contentSecurityPolicy.ts`                                                                | none (#230 closed)  |
@@ -205,13 +205,13 @@ The areas were drawn up from the public documentation of commercial and open-sou
 
 ## Developer experience
 
-| Capability                                                       | Status | Evidence                                   | Tracked by |
-| ---------------------------------------------------------------- | ------ | ------------------------------------------ | ---------- |
-| Ports with fakes and shared contract suites, and coverage floors | has    | `packages/core/src/contracts`, `AGENTS.md` | none       |
-| An example app and guides                                        | has    | `examples/embed`, `docs/guides`            | none       |
-| Packages published with generated API documentation              | lacks  | the packages are not yet published         | [#1]       |
-| A documentation site                                             | lacks  | none                                       | [#199]     |
-| Component documentation for consumers                            | lacks  | none                                       | [#174]     |
+| Capability                                                       | Status  | Evidence                                                        | Tracked by |
+| ---------------------------------------------------------------- | ------- | --------------------------------------------------------------- | ---------- |
+| Ports with fakes and shared contract suites, and coverage floors | has     | `packages/core/src/contracts`, `AGENTS.md`                      | none       |
+| An example app and guides                                        | has     | `examples/embed`, `docs/guides`                                 | none       |
+| Packages published with generated API documentation              | partial | published as release candidates; no generated API documentation | [#1]       |
+| A documentation site                                             | lacks   | none                                                            | [#199]     |
+| Component documentation for consumers                            | lacks   | none                                                            | [#174]     |
 
 ## Proposed order for the SDK track
 
@@ -219,7 +219,7 @@ This is a proposal, not a promise. It orders the open issues by what unlocks the
 
 **Now: finish what is half built and open the way in**
 
-- [#1]: until the packages can be installed with API documentation, nothing else reaches a team.
+- [#1]: the packages are published as release candidates, but until they also come with generated API documentation, a team has only the guides and the type declarations to read.
 - [#117] to [#119], [#121], [#122] (the rest of [#49]): the selection port and hook are built and nothing in the interface uses them yet.
 - [#146]: accessibility is the project's main claim, and the announcements have had automated checks only.
 

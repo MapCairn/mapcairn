@@ -62,6 +62,7 @@ const BYTES_PER_KB = 1000;
  * @property {string[]} privatePackages The SDK packages whose manifest sets `private`.
  * @property {{ hasSection: boolean, findings: string[] }} changelog
  * @property {string[]} tags The release tags, such as `v0.1.0-rc.1`.
+ * @property {boolean} releasedAsTagged Whether the current version's tag is an ancestor of HEAD and CHANGELOG.md is as it was at the tag, which is the state between releases and not a Release branch.
  * @property {Array<{ name: string, files: number, size: number, problems: string[] }> | null} tarballs Null when they were not checked.
  * @property {Record<string, RegistryAnswer> | null} registry Null when the registry could not be read.
  * @property {boolean} signedIn Whether `npm whoami` succeeds here.
@@ -143,7 +144,17 @@ export function buildReport(facts) {
   line(
     "Left for you",
     [
-      leftForYou({ blockers, prepared, registry }),
+      leftForYou({
+        blockers,
+        prepared,
+        released:
+          prepared &&
+          facts.releasedAsTagged &&
+          facts.tags.includes(`v${sdk.version}`)
+            ? sdk.version
+            : null,
+        registry,
+      }),
       ...reviewerWarning({ facts, registry, warnings }),
     ].join(" "),
   );
@@ -239,6 +250,13 @@ function notesLines({ facts, line, blocker }) {
  */
 function tagLines({ facts, line, blocker }) {
   const tag = `v${facts.sdk.version}`;
+  if (facts.tags.includes(tag) && facts.releasedAsTagged) {
+    line(
+      "Tag",
+      `${tag} is already released; the next release needs a new version.`,
+    );
+    return;
+  }
   if (facts.tags.includes(tag)) {
     blocker(
       "Tag",
@@ -478,12 +496,16 @@ function identityLines({ facts, warnings }) {
  * @param {object} input
  * @param {string[]} input.blockers
  * @param {boolean} input.prepared
+ * @param {string | null} input.released The version, when it is already released and nothing has changed since (between releases), otherwise null.
  * @param {"unknown" | "none" | "some" | "all"} input.registry
  * @returns {string}
  */
-function leftForYou({ blockers, prepared, registry }) {
+function leftForYou({ blockers, prepared, released, registry }) {
   if (blockers.length > 0) {
     return "Fix the problems above first.";
+  }
+  if (released) {
+    return `nothing yet. v${released} is already released. An agent runs the release skill for the next version: plan, notes, apply, then opens the Release pull request.`;
   }
   if (!prepared) {
     return "nothing yet. An agent runs the release skill: plan, notes, apply, then opens the Release pull request.";
@@ -679,6 +701,31 @@ function readChangelog(root, version) {
 }
 
 /**
+ * Whether the checkout is in the state between releases: the current version
+ * is tagged, the tag is an ancestor of HEAD, and CHANGELOG.md has not changed
+ * since it, committed or not (the working tree is compared). A Release branch
+ * changes CHANGELOG.md, so a tagged version there
+ * is still a problem.
+ *
+ * @param {object} input
+ * @param {string} input.root
+ * @param {string | null} input.version The shared version, null when they differ.
+ * @param {string[]} input.tags The release tags.
+ * @param {(args: string[], cwd: string) => { ok: boolean }} [input.runGit] Runs `git`; replaced in tests.
+ * @returns {boolean}
+ */
+export function readReleasedAsTagged({ root, version, tags, runGit = git }) {
+  const tag = `v${version}`;
+  if (version === null || !tags.includes(tag)) {
+    return false;
+  }
+  return (
+    runGit(["merge-base", "--is-ancestor", tag, "HEAD"], root).ok &&
+    runGit(["diff", "--quiet", tag, "--", "CHANGELOG.md"], root).ok
+  );
+}
+
+/**
  * @param {string} root
  * @returns {Facts}
  */
@@ -708,13 +755,19 @@ function readFacts(root) {
     ["api", `repos/${REPOSITORY}/environments/npm`],
     root,
   );
+  const tags = git(["tag", "--list", "v*"], root)
+    .stdout.split(/\r?\n/)
+    .filter(Boolean);
   return {
     sdk,
     privatePackages,
     changelog: readChangelog(root, sdk.version),
-    tags: git(["tag", "--list", "v*"], root)
-      .stdout.split(/\r?\n/)
-      .filter(Boolean),
+    tags,
+    releasedAsTagged: readReleasedAsTagged({
+      root,
+      version: sdk.version,
+      tags,
+    }),
     tarballs: prepared ? packResults(root) : null,
     registry,
     environment: parseEnvironment(

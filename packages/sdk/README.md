@@ -1,6 +1,6 @@
 # `@mapcairn/sdk`
 
-The whole MapCairn SDK from one import: it re-exports `@mapcairn/core`, `@mapcairn/map`, `@mapcairn/react` and `@mapcairn/theme` from its root, and the MapLibre adapter, `@mapcairn/adapter-maplibre`, at the subpath `@mapcairn/sdk/adapter-maplibre`, so an app learns one package name instead of five. It holds no code of its own. Use the four packages directly when you want less: `core` has no React or browser dependency, and `theme` installs without the interface.
+The whole MapCairn SDK from one import: it re-exports `@mapcairn/core`, `@mapcairn/map`, `@mapcairn/react` and `@mapcairn/theme` from its root, and the MapLibre adapter, `@mapcairn/adapter-maplibre`, at the subpath `@mapcairn/sdk/adapter-maplibre`, so an app learns one package name instead of five. It is the recommended install, and it holds no code of its own. The individual packages are the advanced option, for a host that wants fewer dependencies: `core` has no React or browser dependency, and `theme` installs without the interface.
 
 **Status:** a release candidate, for early adopters. The API is still settling, so a breaking change can land before `0.1.0`; the [changelog](https://github.com/MapCairn/mapcairn/blob/main/CHANGELOG.md) lists each one. Until `0.1.0`, add `@next` to the package name in the install commands below.
 
