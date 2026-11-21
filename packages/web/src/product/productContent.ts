@@ -4,7 +4,7 @@ import {
   PLAYGROUND_PATH,
   SOURCE_REPOSITORY_URL,
 } from "../constants/siteConfig";
-import embedExampleSource from "./embedExample.tsx?raw";
+import { EMBED_EXAMPLE_FILES } from "./embedExampleFiles";
 
 /*
  * The product page's words, once. The page (`ProductPage.tsx`), its Markdown
@@ -133,22 +133,17 @@ export const COPY_CODE = {
   idle: "Copy code",
   copied: "Copied",
   failed: "Copy failed",
-  copiedMessage: "Code copied",
-  failedMessage: "Could not copy. Select the code and copy it manually.",
+  /** What is announced when a file copied, naming the file. */
+  copiedMessage: (file: string) => `Code copied, ${file}`,
+  /** What is announced when a file did not copy, naming it and saying what to do instead. */
+  failedMessage: (file: string) =>
+    `Could not copy ${file}. Select the code and copy it manually.`,
 } as const;
 
 /** The line under the hero's two buttons. */
 export const HERO_NOTE: Line = [
   "Open source under the AGPL-3.0. Contributions are welcome.",
 ];
-
-/**
- * The embedding example, from the first line that starts with `import`,
- * exactly as it compiles: the licence header and the note above it are left out.
- */
-export const EMBED_EXAMPLE_CODE = embedExampleSource
-  .slice(embedExampleSource.search(/^import /m))
-  .trimEnd();
 
 /** A line as plain text: the words of its links and names, with no markup. */
 export function lineToText(line: Line): string {
@@ -198,14 +193,28 @@ export const SECTIONS: readonly Section[] = [
       {
         kind: "paragraph",
         text: [
-          "This is a whole React app: the map, the SDK's interface around it and a search box. It imports the packages inside the SDK directly, as the project's own example does, and every name in it also comes from the umbrella. The project's tests compile and render this exact code.",
+          "This is a whole React app in a Vite project: the map from the MapLibre adapter, the SDK's interface around it and a search box. Add ",
+          { code: "src/page.css" },
+          ", a short style sheet, so the map has a height, and replace the project's ",
+          { code: "index.html" },
+          " and ",
+          { code: "src/main.tsx" },
+          " with the ones below.",
         ],
       },
+      ...EMBED_EXAMPLE_FILES.map(
+        ({ name, language, code }): Block => ({
+          kind: "code",
+          label: name,
+          language,
+          code,
+        }),
+      ),
       {
-        kind: "code",
-        label: "Embedding example",
-        language: "tsx",
-        code: EMBED_EXAMPLE_CODE,
+        kind: "paragraph",
+        text: [
+          "The app imports the SDK only through its package, and the project's tests type-check this exact code the way an app outside the repository would. The map asks a public tile provider for its tiles once it mounts, so choose the basemap whose terms and privacy you accept.",
+        ],
       },
       {
         kind: "details",
@@ -217,7 +226,13 @@ export const SECTIONS: readonly Section[] = [
                 { code: "ServicesProvider" },
                 " holds the services: search, storage, the map adapter and the rest. ",
                 { code: "createFakeServices()" },
-                " gives the SDK's in-memory fakes, which request nothing and draw no map tiles; a real app passes its own adapters, such as one over MapLibre GL JS.",
+                " gives the in-memory services, with the adapter passed in to draw the map; search shows sample results until you add a search adapter.",
+              ],
+              [
+                { code: "createMapLibreMapAdapter" },
+                " draws the map with MapLibre GL JS. It needs the address of the engine's worker file, which a Vite app gets from the ",
+                { code: "?worker&url" },
+                " import.",
               ],
               [
                 { code: "LiveRegionProvider" },
@@ -445,7 +460,7 @@ export const SECTIONS: readonly Section[] = [
             summary: "What does it send to third parties?",
             detail: [
               [
-                "The SDK sends nothing by itself: requests come from the adapters a host supplies, and only when a person asks. The reference site counts page views with Cloudflare Web Analytics, which is cookieless, and its browser contacts the map tile providers, the search and routing services when you use them, and a layer's provider when you turn it on, as ",
+                "The SDK sends nothing by itself, apart from the basemap: requests come from the adapters a host supplies, and only when a person asks. The reference site counts page views with Cloudflare Web Analytics, which is cookieless, and its browser contacts the map tile providers, the search and routing services when you use them, and a layer's provider when you turn it on, as ",
                 { text: "its privacy policy", href: "/privacy" },
                 " lists.",
               ],

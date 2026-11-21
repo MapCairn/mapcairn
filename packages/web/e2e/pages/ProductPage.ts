@@ -21,7 +21,7 @@ export class ProductPage {
   readonly heroPlayground: Locator;
   readonly heroNpm: Locator;
   readonly code: Locator;
-  /** The embedding example's copy button, before it has copied. */
+  /** The copy button of the example's main.tsx, before it has copied. */
   readonly copyCode: Locator;
 
   constructor(readonly page: Page) {
@@ -41,8 +41,10 @@ export class ProductPage {
       name: "Try the playground",
     });
     this.heroNpm = this.main.getByRole("link", { name: "View on npm" });
-    this.code = page.getByRole("region", { name: "Embedding example" });
-    this.copyCode = this.main.getByRole("button", { name: "Copy code" });
+    this.code = page.getByRole("region", { name: "src/main.tsx" });
+    this.copyCode = this.main.getByRole("button", {
+      name: "Copy code, src/main.tsx",
+    });
   }
 
   /** Opens the product page, with an optional hash, and waits for its h1. */
