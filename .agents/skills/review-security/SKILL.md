@@ -36,7 +36,7 @@ Skip a line that does not apply without comment. Each line names the place to lo
 
 - No cookie, no identifier, no tracker, no fingerprinting, and nothing identifying or household-level stored or logged. The Worker makes no outbound request and holds no secret.
 - `routes/log-error.ts` still rejects a request from another `Origin`, one with no `Content-Length` or one over `CLIENT_ERROR_REPORT_MAX_BODY_BYTES`, validates each field against its bound (`CLIENT_ERROR_REPORT_MAX_FIELD_LENGTH`), logs the page address as origin and path only (the hash holds the map view, which can be a position) and strips control characters so a report cannot forge a log line. A new field in a report is a privacy change.
-- A new request to a provider goes only when the person asks, sends no cookies or referrer, and sends no more than the feature needs (a position, a typed query). Request counts per action are stated.
+- A new request to a provider goes only when the person asks, sends no cookies or referrer, and sends no more than the feature needs (a position, a typed query). The one exception is the routing provider, which sends the site's origin only (never the page, query or fragment) because its terms ask for a Referer, and the privacy page says so. Request counts per action are stated.
 
 **Links and files (parsers of untrusted input)**
 
