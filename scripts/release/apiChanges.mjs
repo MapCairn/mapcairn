@@ -11,7 +11,7 @@ import { SDK_PACKAGES } from "../sdkPackages.mjs";
 
 /**
  * @typedef {object} ApiChange
- * @property {"added" | "removed" | "changed" | "union-member-added" | "enum-member-added" | "gained-internal" | "gained-beta" | "required-member-added"} kind
+ * @property {"added" | "removed" | "changed" | "union-member-added" | "union-member-removed" | "enum-member-added" | "gained-internal" | "gained-beta" | "required-member-added"} kind
  * @property {string} name
  * @property {boolean} likelyBreaking Whether `docs/guides/public-api.md` calls this a likely breaking change.
  * @property {string} detail One sentence about what changed.
@@ -193,6 +193,38 @@ function withoutTrailingComma(line) {
   return line.replace(/,\s*$/, "");
 }
 
+/** How many removed union members a detail names before it counts the rest. */
+export const UNION_MEMBERS_LISTED = 10;
+
+/**
+ * The sentence for a union that lost members: the first
+ * `UNION_MEMBERS_LISTED` named, then the count of the rest and the total, and
+ * the members it gained, named the same way.
+ *
+ * @param {string} name
+ * @param {string[]} gone The members the union lost.
+ * @param {string[]} fresh The members it gained.
+ * @returns {string}
+ */
+function unionLossDetail(name, gone, fresh) {
+  const listed = (/** @type {string[]} */ members) =>
+    members.slice(0, UNION_MEMBERS_LISTED).join(", ");
+  const rest = gone.length - UNION_MEMBERS_LISTED;
+  const lost =
+    rest > 0
+      ? `${name} lost ${gone.length} members: ${listed(gone)} and ${rest} more`
+      : `${name} lost ${listed(gone)}`;
+  if (fresh.length === 0) {
+    return `${lost}.`;
+  }
+  const more = fresh.length - UNION_MEMBERS_LISTED;
+  const gained =
+    more > 0
+      ? `${fresh.length} members: ${listed(fresh)} and ${more} more`
+      : listed(fresh);
+  return `${lost}, and gained ${gained}.`;
+}
+
 /**
  * @param {ReportEntry} before
  * @param {ReportEntry} after
@@ -229,6 +261,15 @@ function compareEntries(before, after) {
         detail: `${name} gained ${fresh.join(", ")}, so a host's exhaustive switch stops compiling.`,
       };
     }
+    if (gone.length > 0) {
+      return {
+        kind: "union-member-removed",
+        name,
+        likelyBreaking: supported,
+        detail: unionLossDetail(name, gone, fresh),
+      };
+    }
+    return gainedBeta(before, after, name);
   }
   if (removed.length === 0 && added.length > 0) {
     if (/^export\s+(?:declare\s+)?(?:const\s+)?enum\s/.test(before.lines[0])) {
@@ -263,15 +304,27 @@ function compareEntries(before, after) {
       detail: `${name} changed or lost a line: ${removed[0].trim()}`,
     };
   }
-  if (count(after, "@beta") > count(before, "@beta")) {
-    return {
-      kind: "gained-beta",
-      name,
-      likelyBreaking: false,
-      detail: `${name} is now tagged @beta; name it in the release notes.`,
-    };
+  return gainedBeta(before, after, name);
+}
+
+/**
+ * @param {ReportEntry} before
+ * @param {ReportEntry} after
+ * @param {string} name
+ * @returns {ApiChange | null}
+ */
+function gainedBeta(before, after, name) {
+  const beta = (/** @type {ReportEntry} */ entry) =>
+    entry.tags.filter((line) => line.includes("@beta")).length;
+  if (beta(after) <= beta(before)) {
+    return null;
   }
-  return null;
+  return {
+    kind: "gained-beta",
+    name,
+    likelyBreaking: false,
+    detail: `${name} is now tagged @beta; name it in the release notes.`,
+  };
 }
 
 /**

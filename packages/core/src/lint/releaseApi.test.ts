@@ -222,10 +222,67 @@ describe("diffReports", () => {
     });
   });
 
-  it("calls a replaced union member a change, not an addition", () => {
+  it("names the members a union loses, and calls it likely breaking", () => {
+    const before =
+      '// @public\nexport type Mode = "light" | "dark" | "auto" | "night";';
+    const [change] = changes([before], [mode]);
+    expect(change).toMatchObject({
+      kind: "union-member-removed",
+      name: "Mode",
+      likelyBreaking: true,
+    });
+    expect(change.detail).toBe('Mode lost "auto", "night".');
+  });
+
+  it("names a removed member of a replaced union, and says what it gained", () => {
     const [change] = changes(
       [mode],
       ['// @public\nexport type Mode = "light" | "night" | "auto";'],
+    );
+    expect(change).toMatchObject({
+      kind: "union-member-removed",
+      likelyBreaking: true,
+    });
+    expect(change.detail).toBe('Mode lost "dark", and gained "night", "auto".');
+  });
+
+  it("does not call a reordered union a change", () => {
+    expect(
+      changes([mode], ['// @public\nexport type Mode = "dark" | "light";']),
+    ).toEqual([]);
+  });
+
+  it("shortens a long list of removed members and gives the total", () => {
+    const keys = (count: number) =>
+      Array.from({ length: count }, (_, index) => `    | "key.${index}"`).join(
+        "\n",
+      );
+    const union = (count: number) =>
+      `// @public\nexport type MessageKey =\n${keys(count)};`;
+    const [change] = changes([union(30)], [union(5)]);
+    expect(change.kind).toBe("union-member-removed");
+    expect(change.detail).toContain('"key.5", "key.6"');
+    expect(change.detail).toContain('"key.14"');
+    expect(change.detail).not.toContain('"key.15"');
+    expect(change.detail).toContain("15 more");
+    expect(change.detail).toContain("25 members");
+  });
+
+  it("calls the loss of a member of an @internal union unsupported, not breaking", () => {
+    const [change] = changes(
+      ['// @internal\nexport type Mode = "light" | "dark";'],
+      ['// @internal\nexport type Mode = "light" | "night";'],
+    );
+    expect(change).toMatchObject({
+      kind: "union-member-removed",
+      likelyBreaking: false,
+    });
+  });
+
+  it("keeps a union that stops being a union as a plain change", () => {
+    const [change] = changes(
+      [mode],
+      ['// @public\nexport type Mode = "light";'],
     );
     expect(change).toMatchObject({ kind: "changed", likelyBreaking: true });
   });
