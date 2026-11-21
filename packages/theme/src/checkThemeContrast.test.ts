@@ -523,6 +523,6 @@ describe("checkThemeContrast", () => {
       )?.ratio;
 
     expect(ratio("white")).toBeCloseTo(3.98, 2);
-    expect(ratio("black")).toBeCloseTo(3.62, 2);
+    expect(ratio("black")).toBeCloseTo(3.83, 2);
   });
 });

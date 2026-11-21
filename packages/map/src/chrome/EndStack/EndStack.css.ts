@@ -14,6 +14,8 @@ import { scrollFade } from "../scrollFade.css";
  * sits over the map; wheel, touch and focus (which scrolls the focused
  * control into view) all still scroll it. A fade (`scrollFade`) shows the end
  * that has more behind it, which is what tells a person the column scrolls.
+ * It scrolls only while it has more to show (`data-scroll-more` is not
+ * `none`); otherwise it does not clip.
  */
 export const stack = style([
   scrollFade,
@@ -31,6 +33,10 @@ export const stack = style([
     margin: `calc(-1 * ${tokens.space.xs})`,
     selectors: {
       "&::-webkit-scrollbar": { display: "none" },
+      // With everything in view there is nothing to scroll, and a scroll
+      // container would clip the groups' shadows at its box: on a dark theme
+      // that shows as a faint band that dims the map beside the controls.
+      '&[data-scroll-more="none"]': { overflowY: "visible" },
     },
   },
 ]);
