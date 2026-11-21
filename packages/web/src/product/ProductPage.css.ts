@@ -466,6 +466,24 @@ export const codeExample = style({
   gap: tokens.space.xs,
 });
 
+/** A file's name at the start of the row, the copy button at its end. */
+export const codeHeader = style({
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "space-between",
+  gap: tokens.space.sm,
+  maxWidth: MEASURE,
+});
+
+/** The file's name over its code: monospace, quieter than the code. */
+export const codeFile = style({
+  minWidth: 0,
+  overflowWrap: "anywhere",
+  fontFamily: tokens.type.familyMono,
+  fontSize: tokens.type.small.size,
+  color: tokens.color.textMuted,
+});
+
 /**
  * The copy button: a quiet 48 px pill that reads like the secondary action,
  * with the same hover and pressed states. Its words and icon say what the
@@ -473,7 +491,7 @@ export const codeExample = style({
  */
 export const copyButton = style({
   ...action,
-  alignSelf: "end",
+  flexShrink: 0,
   paddingInline: tokens.space.md,
   border: `1px solid ${tokens.color.controlBoundary}`,
   backgroundColor: tokens.color.surfaceRaised,

@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
 import { describe, expect, it } from "vitest";
+import { EMBED_EXAMPLE_FILES } from "./embedExampleFiles";
 import { type CodeRun, highlightCode } from "./highlightCode";
-import { EMBED_EXAMPLE_CODE } from "./productContent";
 
 /** The text of a list of runs, joined. */
 function join(runs: readonly CodeRun[]): string {
@@ -10,8 +10,10 @@ function join(runs: readonly CodeRun[]): string {
 }
 
 describe("highlightCode", () => {
-  it("keeps every character of the embedding example, in order", () => {
-    expect(join(highlightCode(EMBED_EXAMPLE_CODE))).toBe(EMBED_EXAMPLE_CODE);
+  it("keeps every character of each file of the embedding example, in order", () => {
+    for (const { code } of EMBED_EXAMPLE_FILES) {
+      expect(join(highlightCode(code))).toBe(code);
+    }
   });
 
   it("marks keywords, strings, numbers, comments and capitalised names, and leaves the rest plain", () => {

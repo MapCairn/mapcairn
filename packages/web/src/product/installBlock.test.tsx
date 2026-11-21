@@ -134,7 +134,7 @@ describe("the install block on the page", () => {
   it("offers the copy button once the page runs, named for the command it copies", async () => {
     render(<ProductPage clipboard={new FakeClipboard()} />);
     expect(
-      await screen.findByRole("button", {
+      await within(installGroup()).findByRole("button", {
         name: `Copy code, ${INSTALL_COMMAND}`,
       }),
     ).toBeInTheDocument();
@@ -146,7 +146,7 @@ describe("the install block on the page", () => {
       const clipboard = new FakeClipboard();
       render(<ProductPage clipboard={clipboard} />);
       fireEvent.click(screen.getByRole("radio", { name: manager }));
-      const button = await screen.findByRole("button", {
+      const button = await within(installGroup()).findByRole("button", {
         name: `Copy code, ${command}`,
       });
       fireEvent.click(button);
@@ -155,7 +155,9 @@ describe("the install block on the page", () => {
         "Code copied",
       );
       expect(
-        screen.getByRole("button", { name: `Copied, ${command}` }),
+        within(installGroup()).getByRole("button", {
+          name: `Copied, ${command}`,
+        }),
       ).toBeInTheDocument();
     },
   );
@@ -193,13 +195,13 @@ describe("the install block on the page", () => {
     clipboard.failWith("denied");
     render(<ProductPage clipboard={clipboard} />);
     fireEvent.click(
-      await screen.findByRole("button", {
+      await within(installGroup()).findByRole("button", {
         name: `Copy code, ${INSTALL_COMMAND}`,
       }),
     );
     await waitFor(() =>
       expect(screen.getByTestId("live-region-assertive")).toHaveTextContent(
-        "Could not copy. Select the code and copy it manually.",
+        `Could not copy ${INSTALL_COMMAND}. Select the code and copy it manually.`,
       ),
     );
     expect(screen.getByText(INSTALL_COMMAND)).toBeInTheDocument();
@@ -213,11 +215,13 @@ describe("the install block on the page", () => {
       render(<ProductPage clipboard={new FakeClipboard()} />);
       fireEvent.click(screen.getByRole("radio", { name: "bun" }));
       fireEvent.click(
-        await screen.findByRole("button", {
+        await within(installGroup()).findByRole("button", {
           name: /^Copy code, bun add/,
         }),
       );
-      await screen.findByRole("button", { name: /^Copied, bun add/ });
+      await within(installGroup()).findByRole("button", {
+        name: /^Copied, bun add/,
+      });
       expect(stored).not.toHaveBeenCalled();
       expect(sent).not.toHaveBeenCalled();
       expect(document.cookie).toBe(cookies);

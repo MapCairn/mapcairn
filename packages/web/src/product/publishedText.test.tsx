@@ -7,6 +7,7 @@ import { loader as markdownLoader } from "../routes/index.md";
 import { loader as llmsLoader } from "../routes/llms.txt";
 import { loader as fullLoader } from "../routes/llms-full.txt";
 import { meta } from "../routes/product";
+import { EMBED_EXAMPLE_FILES } from "./embedExampleFiles";
 import { ProductPage } from "./ProductPage";
 import { INSTALL_OPTIONS, NPM_ACTION } from "./productContent";
 
@@ -93,7 +94,12 @@ describe.each(SOURCES)("%s", (_name, read) => {
   });
 
   it("holds no fact that is true only for a while", async () => {
-    expect(await read()).not.toMatch(VOLATILE);
+    // The example's code is not a statement about today: `height: 100%` is CSS.
+    const prose = EMBED_EXAMPLE_FILES.reduce(
+      (text, { code }) => text.replaceAll(code, ""),
+      await read(),
+    );
+    expect(prose).not.toMatch(VOLATILE);
   });
 });
 

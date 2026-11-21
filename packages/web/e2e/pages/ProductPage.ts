@@ -21,7 +21,7 @@ export class ProductPage {
   readonly heroPlayground: Locator;
   readonly heroNpm: Locator;
   readonly code: Locator;
-  /** The embedding example's copy button, before it has copied. */
+  /** The copy button of the example's main.tsx, before it has copied. */
   readonly copyCode: Locator;
   /** The install block's radio group of package managers. */
   readonly installGroup: Locator;
@@ -43,10 +43,9 @@ export class ProductPage {
       name: "Try the playground",
     });
     this.heroNpm = this.main.getByRole("link", { name: "View on npm" });
-    this.code = page.getByRole("region", { name: "Embedding example" });
+    this.code = page.getByRole("region", { name: "src/main.tsx" });
     this.copyCode = this.main.getByRole("button", {
-      name: "Copy code",
-      exact: true,
+      name: "Copy code, src/main.tsx",
     });
     this.installGroup = this.main.getByRole("group", {
       name: "Package manager",
