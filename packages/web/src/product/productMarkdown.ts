@@ -57,6 +57,8 @@ function block(item: Block): string {
       return `### ${item.text}`;
     case "code":
       return `\`\`\`${item.language}\n${item.code}\n\`\`\``;
+    case "install":
+      return `\`\`\`bash\n${item.options.map((option) => option.command).join("\n")}\n\`\`\``;
     case "details":
       return item.items
         .map(

@@ -301,6 +301,165 @@ test.describe("the product page", () => {
     });
   });
 
+  test.describe("the install commands", () => {
+    const COMMANDS = {
+      npm: "npm install @mapcairn/sdk react react-dom maplibre-gl",
+      pnpm: "pnpm add @mapcairn/sdk react react-dom maplibre-gl",
+      yarn: "yarn add @mapcairn/sdk react react-dom maplibre-gl",
+      bun: "bun add @mapcairn/sdk react react-dom maplibre-gl",
+    } as const;
+    const MANAGERS = Object.keys(COMMANDS) as (keyof typeof COMMANDS)[];
+
+    test("show the npm command first, and one command at a time as each manager is chosen", async ({
+      page,
+    }) => {
+      const product = new ProductPage(page);
+      await product.goto();
+      await expect(product.installChoice("npm")).toBeChecked();
+      for (const chosen of MANAGERS) {
+        await product.installChoice(chosen).click();
+        await expect(product.installChoice(chosen)).toBeChecked();
+        for (const manager of MANAGERS) {
+          const command = product.installCommand(manager);
+          if (manager === chosen) {
+            await expect(command).toBeVisible();
+            await expect(command).toHaveText(COMMANDS[manager]);
+          } else {
+            await expect(command).toBeHidden();
+          }
+        }
+      }
+    });
+
+    test("say what the SDK needs under the block", async ({ page }) => {
+      const product = new ProductPage(page);
+      await product.goto();
+      await expect(
+        product.main.getByText(
+          "Needs React 19, maplibre-gl 6.18 or later and a bundler that handles CSS imports.",
+        ),
+      ).toBeVisible();
+    });
+
+    test("are chosen with the arrow keys, which follow the reading direction", async ({
+      page,
+    }) => {
+      const product = new ProductPage(page);
+      await product.goto();
+      await product.installChoice("npm").focus();
+      await page.keyboard.press("ArrowRight");
+      await expect(product.installChoice("pnpm")).toBeChecked();
+      await expect(product.installChoice("pnpm")).toBeFocused();
+      await expect(product.installCommand("pnpm")).toBeVisible();
+      await page.keyboard.press("ArrowLeft");
+      await expect(product.installChoice("npm")).toBeChecked();
+      // The page is left to right by decision; a right-to-left group reverses the keys.
+      await product.installGroup.evaluate((group) => {
+        group.setAttribute("dir", "rtl");
+      });
+      await product.installChoice("npm").focus();
+      await page.keyboard.press("ArrowLeft");
+      await expect(product.installChoice("pnpm")).toBeChecked();
+      await page.keyboard.press("ArrowRight");
+      await expect(product.installChoice("npm")).toBeChecked();
+    });
+
+    test("take one tab stop, then the command and the copy button, with a target of at least 44 px for each manager", async ({
+      page,
+    }) => {
+      await page.setViewportSize({ width: 320, height: 568 });
+      const product = new ProductPage(page);
+      await product.goto();
+      for (const manager of MANAGERS) {
+        const box = await product.installChoice(manager).boundingBox();
+        expect(box?.width ?? 0, manager).toBeGreaterThanOrEqual(44);
+        expect(box?.height ?? 0, manager).toBeGreaterThanOrEqual(44);
+      }
+      const copy = await product.installCopy(COMMANDS.npm).boundingBox();
+      expect(copy?.height ?? 0).toBeGreaterThanOrEqual(44);
+      await product.installChoice("pnpm").click();
+      await product.installChoice("pnpm").focus();
+      await page.keyboard.press("Tab");
+      await expect(product.installCommand("pnpm")).toBeFocused();
+      await page.keyboard.press("Tab");
+      await expect(product.installCopy(COMMANDS.pnpm)).toBeFocused();
+    });
+
+    test("copy the chosen manager's command, say Copied and announce it", async ({
+      page,
+    }) => {
+      await recordClipboard(page, { ok: true });
+      const product = new ProductPage(page);
+      await product.goto();
+      await product.installChoice("bun").click();
+      await product.installCopy(COMMANDS.bun).click();
+      await expect(
+        product.installGroup.getByRole("button", {
+          name: `Copied, ${COMMANDS.bun}`,
+        }),
+      ).toBeFocused();
+      await expect(page.getByTestId("live-region-polite")).toHaveText(
+        "Code copied",
+      );
+      await expect.poll(() => copiedTexts(page)).toEqual([COMMANDS.bun]);
+      // The embedding example's own button is a different button.
+      await expect(product.copyCode).toBeVisible();
+    });
+
+    test("say when the browser refuses, and leave the command selectable", async ({
+      page,
+    }) => {
+      await recordClipboard(page, { ok: false });
+      const product = new ProductPage(page);
+      await product.goto();
+      await product.installCopy(COMMANDS.npm).click();
+      await expect(page.getByTestId("live-region-assertive")).toHaveText(
+        "Could not copy. Select the code and copy it manually.",
+      );
+      const selectable = await product
+        .installCommand("npm")
+        .evaluate((element) => getComputedStyle(element).userSelect);
+      expect(selectable).not.toBe("none");
+      await expect.poll(() => copiedTexts(page)).toEqual([]);
+    });
+
+    test("remember nothing in the browser", async ({ page }) => {
+      const product = new ProductPage(page);
+      await product.goto();
+      const stored = () =>
+        page.evaluate(() => [
+          ...Object.entries(localStorage),
+          ...Object.entries(sessionStorage),
+        ]);
+      const before = await stored();
+      const cookies = await page.context().cookies();
+      await product.installChoice("yarn").click();
+      expect(await stored()).toEqual(before);
+      expect(await page.context().cookies()).toEqual(cookies);
+    });
+  });
+
+  test.describe("the install commands without a script", () => {
+    test.use({ javaScriptEnabled: false });
+
+    test("show the npm command, let the radios choose another and offer no dead copy button", async ({
+      page,
+    }) => {
+      const product = new ProductPage(page);
+      await page.goto("/");
+      await expect(product.installCommand("npm")).toHaveText(
+        "npm install @mapcairn/sdk react react-dom maplibre-gl",
+      );
+      await expect(product.installCommand("pnpm")).toBeHidden();
+      await product.installChoice("pnpm").click();
+      await expect(product.installCommand("pnpm")).toHaveText(
+        "pnpm add @mapcairn/sdk react react-dom maplibre-gl",
+      );
+      await expect(product.installCommand("npm")).toBeHidden();
+      await expect(product.installGroup.getByRole("button")).toHaveCount(0);
+    });
+  });
+
   test.describe("buttons and links answer the pointer", () => {
     test("an action rises under a pointer and shrinks a little when pressed", async ({
       page,

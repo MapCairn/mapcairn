@@ -8,13 +8,13 @@ import { loader as llmsLoader } from "../routes/llms.txt";
 import { loader as fullLoader } from "../routes/llms-full.txt";
 import { meta } from "../routes/product";
 import { ProductPage } from "./ProductPage";
-import { INSTALL_COMMAND, NPM_ACTION } from "./productContent";
+import { INSTALL_OPTIONS, NPM_ACTION } from "./productContent";
 
 /*
  * The rules every text the product page publishes keeps: the page itself, its
  * structured data, `/index.md`, `/llms.txt` and `/llms-full.txt`. They link to
  * no issue, pull request or milestone and cite none by number, say nothing
- * about npm beyond `INSTALL_COMMAND` and the link to the package (`NPM_ACTION`),
+ * about npm beyond the install commands (and the package managers' names that choose them) and the link to the package (`NPM_ACTION`),
  * never mention commercial terms, and hold no fact that is true only today (a percentage, a "coming soon"), so the page stays true as the
  * SDK changes.
  */
@@ -30,6 +30,10 @@ const VOLATILE =
 /** Everything the rendered page says and links to, as one text. */
 function pageText(): string {
   const { container } = render(<ProductPage clipboard={new FakeClipboard()} />);
+  // The install block's choices are the package managers' names, npm among them.
+  for (const choice of container.querySelectorAll("fieldset label")) {
+    choice.remove();
+  }
   const hrefs = [...container.querySelectorAll("a")].map(
     (link) => link.getAttribute("href") ?? "",
   );
@@ -75,8 +79,10 @@ describe.each(SOURCES)("%s", (_name, read) => {
   it("says nothing about npm beyond the install command and the link to the package, and nothing about commercial terms", async () => {
     const text = await read();
     expect(
-      text
-        .replaceAll(INSTALL_COMMAND, "")
+      INSTALL_OPTIONS.reduce(
+        (rest, { command }) => rest.replaceAll(command, ""),
+        text,
+      )
         .replaceAll(NPM_ACTION.href, "")
         .replaceAll(NPM_ACTION.text, ""),
     ).not.toMatch(/npm/i);

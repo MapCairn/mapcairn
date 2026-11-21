@@ -19,6 +19,12 @@ const ICONS = { idle: Copy, copied: Check, failed: X } as const;
 export interface CopyCodeButtonProps {
   /** The source to copy, exactly as the example shows it. */
   readonly code: string;
+  /**
+   * What the code is, when a page holds more than one button. The accessible
+   * name is then the visible words, a comma and this, so the visible words
+   * come first and each button has its own name.
+   */
+  readonly label?: string;
   readonly clipboard: ClipboardPort;
 }
 
@@ -31,7 +37,11 @@ export interface CopyCodeButtonProps {
  * outcome is shown or announced. Focus stays on the button, which is never
  * disabled.
  */
-export function CopyCodeButton({ code, clipboard }: CopyCodeButtonProps) {
+export function CopyCodeButton({
+  code,
+  label,
+  clipboard,
+}: CopyCodeButtonProps) {
   // `attempt` counts outcomes, so each successful copy restarts the reset
   // timer even when the button already says Copied.
   const [{ state, attempt }, setOutcome] = useState<{
@@ -81,6 +91,9 @@ export function CopyCodeButton({ code, clipboard }: CopyCodeButtonProps) {
       className={styles.copyButton}
       data-state={state}
       data-testid="copy-code"
+      aria-label={
+        label === undefined ? undefined : `${COPY_CODE[state]}, ${label}`
+      }
       onClick={copy}
     >
       <Icon icon={ICONS[state]} className={styles.copyIcon} />
