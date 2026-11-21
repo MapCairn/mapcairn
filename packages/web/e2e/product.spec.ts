@@ -192,6 +192,15 @@ test.describe("the product page", () => {
         expect(install?.x ?? 0).toBeGreaterThan(
           (words?.x ?? 0) + (words?.width ?? 0),
         );
+        // Beside the words the command still fits its column on one line.
+        const lines = await product.installCommand("npm").evaluate((pre) => {
+          const range = document.createRange();
+          range.selectNodeContents(pre);
+          return new Set(
+            [...range.getClientRects()].map((rect) => Math.round(rect.top)),
+          ).size;
+        });
+        expect(lines).toBe(1);
       } else {
         expect(install?.y ?? 0).toBeGreaterThan(
           (words?.y ?? 0) + (words?.height ?? 0),
@@ -467,7 +476,10 @@ test.describe("the product page", () => {
         const where = await page.evaluate(() => {
           const focused = document.activeElement as HTMLElement | null;
           const header = document.querySelector("header");
-          if (!focused || !header || header.contains(focused)) {
+          // The skip link shows itself over the top of the page by design; the
+          // header's own links are in the header. Only the page's content counts.
+          const content = focused?.closest("main, footer");
+          if (!focused || !header || !content) {
             return null;
           }
           const box = focused.getBoundingClientRect();
@@ -668,7 +680,7 @@ test.describe("the product page", () => {
       await product.goto();
       await expect(
         product.main.getByText(
-          "Needs React 19, maplibre-gl 6.18 or later and a bundler that handles CSS imports.",
+          "It adds the SDK and its three peers. Needs React 19, maplibre-gl 6.18 or later and a bundler that handles CSS imports (tried with Vite).",
         ),
       ).toBeVisible();
     });
@@ -1248,7 +1260,10 @@ test.describe("the product page", () => {
       const demo = page.getByTestId("demo");
       await demo.scrollIntoViewIfNeeded();
       await expect(demo.getByRole("img")).toHaveCount(1);
-      await expect(demo.getByRole("img")).toHaveAttribute("alt", /dark theme/);
+      await expect(demo.getByRole("img")).toHaveAttribute(
+        "src",
+        /-dark[^/]*\.webp$/,
+      );
     });
 
     test("credits the map under the picture with links to the credited pages", async ({

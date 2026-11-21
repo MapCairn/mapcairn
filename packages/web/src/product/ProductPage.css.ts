@@ -22,8 +22,8 @@ const TABLET = "screen and (min-width: 48rem)";
 /** From here the button, the install command and the links sit side by side where they fit. */
 const ROOMY = "screen and (min-width: 30rem)";
 
-/** From here the hero is two columns: the words at the start, the install command at the end. */
-const WIDE = "screen and (min-width: 64rem)";
+/** From here the hero is two columns, the words at the start and the install command at the end: wide enough that the command fits its column on one line. */
+const WIDE = "screen and (min-width: 75rem)";
 
 /** The reading width of the text, about 70 characters of the large type. */
 const MEASURE = "38rem";
@@ -293,8 +293,9 @@ export const hero = style([
 export const heroMotif = style({
   gridArea: "1 / 1",
   width: "100%",
-  height: "100%",
-  minHeight: 0,
+  // No height of its own, so the drawing never makes the hero taller than its words; it fills the cell they set.
+  blockSize: 0,
+  minBlockSize: "100%",
   overflow: "hidden",
   pointerEvents: "none",
 });
@@ -339,7 +340,7 @@ export const heroText = style({
   "@media": {
     [WIDE]: {
       display: "grid",
-      gridTemplateColumns: `minmax(0, ${MEASURE}) minmax(0, 1fr)`,
+      gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
       columnGap: SECTION_SPACE,
       rowGap: tokens.space.lg,
       justifyItems: "start",
@@ -539,7 +540,8 @@ export const badges = style({
 export const badge = style({
   display: "inline-flex",
   alignItems: "center",
-  paddingBlock: tokens.space.xxs,
+  minHeight: `calc(${tokens.size.icon} + ${tokens.space.xxs})`,
+  paddingBlock: 0,
   paddingInline: tokens.space.sm,
   border: `1px solid ${tokens.color.controlBoundary}`,
   borderRadius: tokens.radius.pill,
@@ -554,6 +556,10 @@ export const badge = style({
 export const badgeLink = style([
   link,
   {
+    display: "inline-flex",
+    alignItems: "center",
+    // A 24 px target (WCAG 2.5.8) inside the pill.
+    minHeight: tokens.size.icon,
     color: tokens.color.text,
     paddingBlock: 0,
   },
@@ -673,7 +679,9 @@ export const plateCredits = style({
 export const section = style([
   pageColumn,
   {
-    paddingBlockStart: SECTION_SPACE,
+    // A margin, not padding, so the section's box starts at its heading and an
+    // anchor to it lands the heading just below the sticky header.
+    marginBlockStart: SECTION_SPACE,
     display: "flex",
     flexDirection: "column",
     alignItems: "stretch",
