@@ -592,11 +592,27 @@ describe("distTagReport", () => {
       expected: "next",
       answers: all({
         tags: { latest: "0.1.0-rc.3", next: "0.1.0-rc.3" },
-        versions: ["0.1.0-rc.1", "0.1.0-rc.3"],
+        versions: ["0.0.0-stage", "0.1.0-rc.3"],
       }),
     });
     expect(report.problems).toEqual([]);
-    expect(report.lines.join("\n")).toContain("no stable version");
+    const text = report.lines.join("\n");
+    expect(text).toContain("no stable version exists");
+    expect(text).toContain("no-stable-version rule");
+    expect(text).toContain("0.0.0-stage");
+  });
+
+  it("fails a candidate whose latest sits on it once a stable version exists, naming that version", () => {
+    const report = distTagReport({
+      version: "0.1.1-rc.1",
+      expected: "next",
+      answers: all({
+        tags: { latest: "0.1.1-rc.1", next: "0.1.1-rc.1" },
+        versions: ["0.1.0", "0.1.1-rc.1"],
+      }),
+    });
+    expect(report.problems).toHaveLength(SDK_PACKAGES.length);
+    expect(report.problems[0]).toContain("0.1.0");
   });
 
   it("fails a prerelease that took latest over from a stable version, naming it", () => {

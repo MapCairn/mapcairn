@@ -322,7 +322,7 @@ export function distTagReport({ version, expected, answers }) {
         );
       } else if (stable.length === 0) {
         lines.push(
-          `${name}: latest is ${version}, and the registry has no stable version for it to take latest from (no-stable-version rule; other versions: ${others.join(", ")})`,
+          `${name}: latest is ${version}, and no stable version exists, so latest cannot have been taken from one (no-stable-version rule; other versions: ${others.join(", ")})`,
         );
       } else {
         problems.push(
