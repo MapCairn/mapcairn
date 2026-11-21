@@ -214,7 +214,7 @@ export function provenanceReport(answers, requireProvenance) {
 }
 
 /**
- * Reads where a package's expected tag and `latest` point, and how many
+ * Reads where a package's expected tag and `latest` point, and which
  * versions it has, from three registry reads: `npm view <name>@<tag> version`
  * for each tag (npm resolves a tag as a version range), and
  * `npm view <name> versions --json`.
@@ -224,7 +224,7 @@ export function provenanceReport(answers, requireProvenance) {
  * @param {{ status: number | null, stdout: string, stderr: string }} input.expectedResult
  * @param {{ status: number | null, stdout: string, stderr: string }} input.latestResult
  * @param {{ status: number | null, stdout: string, stderr: string }} input.versionsResult
- * @returns {{ tags: Record<string, string>, versionCount: number } | null} Null when the registry gave no usable answer.
+ * @returns {{ tags: Record<string, string>, versions: string[] } | null} Null when the registry gave no usable answer.
  */
 export function parsePackageTags({
   expected,
@@ -263,22 +263,26 @@ export function parsePackageTags({
   }
   return {
     tags,
-    versionCount: Array.isArray(versions) ? versions.length : 1,
+    versions: Array.isArray(versions)
+      ? versions.map(String)
+      : [String(versions)],
   };
 }
 
 /**
  * Checks that the version sits under the dist-tag the release rules gave it,
- * and that a prerelease did not take `latest` from an earlier version. A
- * package's first version gets `latest` from npm whatever its tag (the
- * hand-published `0.1.0-rc.1` has it), so `latest` is only reported for a
- * prerelease, and fails only when the prerelease took it over from an earlier
- * version.
+ * and that a prerelease did not take `latest` from an earlier stable version.
+ * npm gives a package's first version `latest` whatever its tag (the
+ * hand-published `0.1.0-rc.1` has it), so `latest` on the prerelease passes
+ * when the package has no other version (the first-version rule) or no other
+ * stable version (the no-stable-version rule), and the line says which rule
+ * applied. It fails only when a stable version exists, since `latest` may have
+ * been taken from it.
  *
  * @param {object} input
  * @param {string} input.version
  * @param {string} input.expected The tag `distTagFor` gives the version.
- * @param {Record<string, { tags: Record<string, string>, versionCount: number } | null>} input.answers What the registry said about each package, null where it gave no usable answer.
+ * @param {Record<string, { tags: Record<string, string>, versions: string[] } | null>} input.answers What the registry said about each package, null where it gave no usable answer.
  * @returns {{ lines: string[], problems: string[] }}
  */
 export function distTagReport({ version, expected, answers }) {
@@ -309,14 +313,22 @@ export function distTagReport({ version, expected, answers }) {
       lines.push(
         `${name}: latest is ${latest ?? "not set"} (not moved by this prerelease)`,
       );
-    } else if (answer.versionCount <= 1) {
-      lines.push(
-        `${name}: latest is ${version}, which npm gave the package's first version`,
-      );
     } else {
-      problems.push(
-        `${name}: latest is ${version}, but a prerelease must not take latest from an earlier version`,
-      );
+      const others = answer.versions.filter((other) => other !== version);
+      const stable = others.filter((other) => !other.includes("-"));
+      if (others.length === 0) {
+        lines.push(
+          `${name}: latest is ${version}, which npm gave the package's first version (first-version rule)`,
+        );
+      } else if (stable.length === 0) {
+        lines.push(
+          `${name}: latest is ${version}, and no stable version exists, so latest cannot have been taken from one (no-stable-version rule; other versions: ${others.join(", ")})`,
+        );
+      } else {
+        problems.push(
+          `${name}: latest is ${version}, but a prerelease must not take latest from an earlier stable version (${stable.join(", ")})`,
+        );
+      }
     }
   }
   return { lines, problems };

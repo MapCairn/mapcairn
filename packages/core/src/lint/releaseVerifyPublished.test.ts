@@ -565,7 +565,7 @@ describe("distTagReport", () => {
       expected: "next",
       answers: all({
         tags: { latest: "0.1.0-rc.1", next: "0.1.0-rc.2" },
-        versionCount: 2,
+        versions: ["0.1.0-rc.1", "0.1.0-rc.2"],
       }),
     });
     expect(report.problems).toEqual([]);
@@ -573,30 +573,60 @@ describe("distTagReport", () => {
     expect(report.lines.join("\n")).toContain("latest is 0.1.0-rc.1");
   });
 
-  it("accepts the latest that npm gave a package's first version, and says so", () => {
+  it("accepts the latest that npm gave a package's first version, and names the rule", () => {
     const report = distTagReport({
       version: "0.1.0-rc.1",
       expected: "next",
       answers: all({
         tags: { latest: "0.1.0-rc.1", next: "0.1.0-rc.1" },
-        versionCount: 1,
+        versions: ["0.1.0-rc.1"],
       }),
     });
     expect(report.problems).toEqual([]);
     expect(report.lines.join("\n")).toContain("first version");
   });
 
-  it("fails a prerelease that took latest over from an earlier version", () => {
+  it("accepts latest on the prerelease when the registry holds no stable version, and names the rule", () => {
+    const report = distTagReport({
+      version: "0.1.0-rc.3",
+      expected: "next",
+      answers: all({
+        tags: { latest: "0.1.0-rc.3", next: "0.1.0-rc.3" },
+        versions: ["0.0.0-stage", "0.1.0-rc.3"],
+      }),
+    });
+    expect(report.problems).toEqual([]);
+    const text = report.lines.join("\n");
+    expect(text).toContain("no stable version exists");
+    expect(text).toContain("no-stable-version rule");
+    expect(text).toContain("0.0.0-stage");
+  });
+
+  it("fails a candidate whose latest sits on it once a stable version exists, naming that version", () => {
+    const report = distTagReport({
+      version: "0.1.1-rc.1",
+      expected: "next",
+      answers: all({
+        tags: { latest: "0.1.1-rc.1", next: "0.1.1-rc.1" },
+        versions: ["0.1.0", "0.1.1-rc.1"],
+      }),
+    });
+    expect(report.problems).toHaveLength(SDK_PACKAGES.length);
+    expect(report.problems[0]).toContain("0.1.0");
+  });
+
+  it("fails a prerelease that took latest over from a stable version, naming it", () => {
     const report = distTagReport({
       version: "0.1.0-rc.2",
       expected: "next",
       answers: all({
         tags: { latest: "0.1.0-rc.2", next: "0.1.0-rc.2" },
-        versionCount: 2,
+        versions: ["0.0.9", "0.1.0-rc.2"],
       }),
     });
     expect(report.problems).toHaveLength(SDK_PACKAGES.length);
     expect(report.problems[0]).toContain("latest");
+    expect(report.problems[0]).toContain("0.0.9");
   });
 
   it("fails when the expected tag does not point at the version", () => {
@@ -605,7 +635,7 @@ describe("distTagReport", () => {
       expected: "next",
       answers: all({
         tags: { latest: "0.1.0-rc.1", next: "0.1.0-rc.1" },
-        versionCount: 2,
+        versions: ["0.1.0-rc.1", "0.1.0-rc.2"],
       }),
     });
     expect(report.problems[0]).toContain("next is 0.1.0-rc.1, not 0.1.0-rc.2");
@@ -618,7 +648,7 @@ describe("distTagReport", () => {
         expected: "latest",
         answers: all({
           tags: { latest: "0.1.0", next: "0.1.0-rc.2" },
-          versionCount: 4,
+          versions: ["0.1.0-rc.1", "0.1.0-rc.2", "0.1.0"],
         }),
       }).problems,
     ).toEqual([]);
@@ -628,7 +658,7 @@ describe("distTagReport", () => {
         expected: "latest",
         answers: all({
           tags: { latest: "0.1.0-rc.2" },
-          versionCount: 4,
+          versions: ["0.1.0-rc.1", "0.1.0-rc.2"],
         }),
       }).problems[0],
     ).toContain("latest is 0.1.0-rc.2, not 0.1.0");
@@ -638,7 +668,7 @@ describe("distTagReport", () => {
         expected: "previous",
         answers: all({
           tags: { latest: "0.2.0", previous: "0.1.1" },
-          versionCount: 5,
+          versions: ["0.1.0", "0.1.1", "0.2.0"],
         }),
       }).problems,
     ).toEqual([]);
@@ -659,7 +689,7 @@ describe("parsePackageTags", () => {
   const ok = (stdout: string) => ({ status: 0, stdout, stderr: "" });
   const missing = { status: 1, stdout: "", stderr: "npm error code E404" };
 
-  it("reads where the expected tag and latest point, and how many versions there are", () => {
+  it("reads where the expected tag and latest point, and which versions there are", () => {
     expect(
       parsePackageTags({
         expected: "next",
@@ -669,11 +699,11 @@ describe("parsePackageTags", () => {
       }),
     ).toEqual({
       tags: { latest: "0.1.0-rc.1", next: "0.1.0-rc.2" },
-      versionCount: 2,
+      versions: ["0.1.0-rc.1", "0.1.0-rc.2"],
     });
   });
 
-  it("counts the single version npm prints as a string, and leaves out a tag that is not set", () => {
+  it("lists the single version npm prints as a string, and leaves out a tag that is not set", () => {
     expect(
       parsePackageTags({
         expected: "previous",
@@ -681,7 +711,7 @@ describe("parsePackageTags", () => {
         latestResult: ok("0.2.0"),
         versionsResult: ok('"0.2.0"'),
       }),
-    ).toEqual({ tags: { latest: "0.2.0" }, versionCount: 1 });
+    ).toEqual({ tags: { latest: "0.2.0" }, versions: ["0.2.0"] });
   });
 
   it("is null for any other failure, or an answer that is not JSON", () => {
