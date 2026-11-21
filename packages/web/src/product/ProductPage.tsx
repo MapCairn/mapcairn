@@ -15,6 +15,7 @@ import {
 } from "../constants/siteConfig";
 import { CopyCodeButton } from "./CopyCodeButton";
 import { type CodeTokenKind, highlightCode } from "./highlightCode";
+import { InstallBlock } from "./InstallBlock";
 import * as styles from "./ProductPage.css";
 import {
   type Block,
@@ -198,6 +199,14 @@ function BlockView({
             </code>
           </pre>
         </div>
+      );
+    case "install":
+      return (
+        <InstallBlock
+          label={block.label}
+          options={block.options}
+          clipboard={clipboard}
+        />
       );
     case "details":
       return <Disclosures items={block.items} />;

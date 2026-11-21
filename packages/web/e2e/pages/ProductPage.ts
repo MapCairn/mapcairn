@@ -23,6 +23,8 @@ export class ProductPage {
   readonly code: Locator;
   /** The copy button of the example's main.tsx, before it has copied. */
   readonly copyCode: Locator;
+  /** The install block's radio group of package managers. */
+  readonly installGroup: Locator;
 
   constructor(readonly page: Page) {
     this.headline = page.getByRole("heading", {
@@ -44,6 +46,35 @@ export class ProductPage {
     this.code = page.getByRole("region", { name: "src/main.tsx" });
     this.copyCode = this.main.getByRole("button", {
       name: "Copy code, src/main.tsx",
+    });
+    this.installGroup = this.main.getByRole("group", {
+      name: "Package manager",
+    });
+  }
+
+  /** The radio for one package manager. */
+  installChoice(manager: string): Locator {
+    return this.installGroup.getByRole("radio", { name: manager, exact: true });
+  }
+
+  /** The pill that holds one package manager's radio, which carries the chosen and hover looks. */
+  installPill(manager: string): Locator {
+    return this.installGroup.locator("label", { hasText: manager }).filter({
+      has: this.page.getByRole("radio", { name: manager, exact: true }),
+    });
+  }
+
+  /** The install command of one package manager, shown only while that manager is chosen. */
+  installCommand(manager: string): Locator {
+    return this.installGroup.getByRole("region", {
+      name: `Install command for ${manager}`,
+    });
+  }
+
+  /** The install block's copy button, named for the manager's command it copies. */
+  installCopy(manager: string): Locator {
+    return this.installGroup.getByRole("button", {
+      name: `Copy code, ${manager} install command`,
     });
   }
 

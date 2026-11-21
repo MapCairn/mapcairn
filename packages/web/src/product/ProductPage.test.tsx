@@ -168,7 +168,9 @@ describe("the product page stands on its own", () => {
     const embed = section("Embed a map");
     const regions = within(embed)
       .getAllByRole("region")
-      .filter((region) => region.tagName === "PRE");
+      .filter(
+        (region) => region.tagName === "PRE" && !region.closest("fieldset"),
+      );
     expect(regions.map((region) => region.getAttribute("aria-label"))).toEqual([
       "index.html",
       "src/page.css",

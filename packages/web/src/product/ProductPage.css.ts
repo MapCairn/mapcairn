@@ -550,6 +550,135 @@ export const codeBlock = style({
   },
 });
 
+/** The install block: a group with no frame of its own, as wide as the reading column. */
+export const install = style({
+  minWidth: 0,
+  maxWidth: MEASURE,
+  margin: 0,
+  padding: 0,
+  border: 0,
+});
+
+/**
+ * The choices in a row that wraps, then the chosen command and the copy
+ * button's row, each across the full width. `order` puts them in that sequence
+ * whatever the markup's, which keeps each choice beside its own command.
+ */
+export const installRow = style({
+  display: "flex",
+  flexWrap: "wrap",
+  gap: tokens.space.xs,
+});
+
+/** One manager: a wrapper that only groups its choice with its command, so the grid places them. */
+export const installOption = style({
+  display: "contents",
+});
+
+/**
+ * A choice, a 48 px pill that reads like the secondary action. The chosen one
+ * takes the accent edge and tint, and is underlined so colour is not the only
+ * sign, in forced colours too.
+ */
+export const installChoice = style({
+  ...action,
+  // The name and the radio share one cell, so the radio covers the pill.
+  display: "inline-grid",
+  placeItems: "center",
+  order: 1,
+  minWidth: tokens.size.control,
+  paddingInline: 0,
+  border: `1px solid ${tokens.color.controlBoundary}`,
+  backgroundColor: tokens.color.surfaceRaised,
+  color: tokens.color.text,
+  fontFamily: tokens.type.family,
+  cursor: "pointer",
+  selectors: {
+    "&:has(input:checked)": {
+      borderColor: tokens.color.accent,
+      backgroundColor: tokens.color.accentTint,
+      textDecoration: "underline",
+      textDecorationThickness: "2px",
+    },
+    "&:has(input:focus-visible)": focusRing,
+    "&:active": {
+      ...actionPressed,
+      borderColor: tokens.color.accent,
+      backgroundColor: tokens.color.accentTint,
+    },
+  },
+  "@media": {
+    // The pill's own focus is its radio's, so the ring is kept as on the copy button.
+    [HOVER]: {
+      selectors: {
+        "&:hover:not(:has(input:focus-visible)):not(:active)": {
+          transform: LIFT,
+          boxShadow: tokens.shadow.floating,
+          borderColor: tokens.color.accent,
+          backgroundColor: tokens.color.accentTint,
+        },
+      },
+    },
+    [HOVER_FORCED]: {
+      selectors: { "&:hover": { textDecoration: "underline" } },
+    },
+    [FORCED]: {
+      selectors: {
+        "&:has(input:checked)": { borderColor: "Highlight" },
+      },
+    },
+  },
+});
+
+/** The manager's name, in the pill's one grid cell, which carries the pill's padding so the radio covers it. */
+export const installName = style({
+  gridArea: "1 / 1",
+  paddingInline: tokens.space.md,
+});
+
+/** The native radio, invisible and in the same cell as the name, so the whole pill is its target. */
+export const installRadio = style({
+  gridArea: "1 / 1",
+  width: "100%",
+  height: "100%",
+  margin: 0,
+  opacity: 0,
+  cursor: "pointer",
+});
+
+/** The command of the chosen manager only, across the full width under the choices. */
+export const installCommand = style([
+  codeBlock,
+  {
+    order: 2,
+    flexBasis: "100%",
+    // Without `:has()` every command shows, each in its named region, so none is lost.
+    "@supports": {
+      "selector(:has(*))": {
+        display: "none",
+        selectors: {
+          [`${installOption}:has(input:checked) > &`]: { display: "block" },
+        },
+      },
+    },
+  },
+]);
+
+/**
+ * The row for the copy button: reserved, so the page does not move when the
+ * button arrives, and gone where scripts do not run, since no button comes.
+ */
+export const installCopy = style({
+  order: 3,
+  flexBasis: "100%",
+  display: "flex",
+  justifyContent: "flex-end",
+  minHeight: tokens.size.control,
+  "@media": {
+    "(scripting: none)": { display: "none" },
+  },
+});
+
 /** A keyword in the code example: the one accent. */
 export const codeKeyword = style({
   color: tokens.color.accent,
