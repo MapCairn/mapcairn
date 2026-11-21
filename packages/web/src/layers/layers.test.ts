@@ -247,7 +247,7 @@ describe("the host's layer definitions", () => {
         tiles: `${tiles}/flood/{z}/{y}/{x}.png`,
       },
     });
-    const allowed = "https://ows.globalfloods.eu";
+    const allowed = "https://gibs.earthdata.nasa.gov";
 
     it("reports an identify origin that connect-src does not allow, and not for img-src", () => {
       expect(cspGaps(onOrigins(allowed, "https://api.test"))).toEqual([
