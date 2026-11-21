@@ -875,6 +875,8 @@ export const EN_GB_CATALOGUE: Record<MessageKey, string> = {
     "This site is open source software, released under the AGPL-3.0 licence.",
   "host.about.link": "View the source code and licence on GitHub",
   "host.about.product": "About MapCairn, the SDK behind this map",
+  "host.map.noScript":
+    "The map needs JavaScript. You can still read about MapCairn, its source code and its privacy policy.",
   "host.map.summary":
     "The MapCairn playground is an interactive map built with the MapCairn SDK. Search for places or coordinates, measure distances and areas, draw and export shapes, compare basemaps and turn on open data layers.",
 };

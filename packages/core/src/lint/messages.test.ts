@@ -731,6 +731,7 @@ const EXPECTED_PLACEHOLDERS: Record<MessageKey, readonly string[]> = {
   "host.about.link": [],
   "host.about.product": [],
   "host.map.summary": [],
+  "host.map.noScript": [],
 };
 
 /** Every `{name}` placeholder used in `value`, deduplicated. */

@@ -733,7 +733,8 @@ export type MessageKey =
   | "host.about.text"
   | "host.about.link"
   | "host.about.product"
-  | "host.map.summary";
+  | "host.map.summary"
+  | "host.map.noScript";
 
 /**
  * A host's own translatable definition text: a host-defined catalogue `key`

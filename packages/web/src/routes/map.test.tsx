@@ -56,6 +56,7 @@ describe("map route server render", () => {
         { key: "ui.skipToMap", params: {} },
         { key: "app.loadingMap", params: {} },
         { key: "host.map.summary", params: {} },
+        { key: "host.map.noScript", params: {} },
         { key: "host.about.product", params: {} },
       ]),
     );
@@ -69,14 +70,16 @@ describe("map route server render", () => {
   it("has the hidden page heading and a map-coloured placeholder", () => {
     // The heading sits in a banner landmark, so no page content is outside a
     // landmark (axe best-practice rule "region").
-    expect(html).toMatch(/<header><h1 class="[^"]+">MapCairn<\/h1>/);
+    expect(html).toMatch(
+      /<header class="[^"]+"><h1 class="[^"]+">MapCairn<\/h1>/,
+    );
     expect(html).toMatch(/<main class="[^"]+" aria-busy="true"/);
     expect(html).toContain('data-testid="map-placeholder"');
   });
 
   it("says in the server's HTML what the playground is, for readers that do not run the app", () => {
     const header = html.slice(
-      html.indexOf("<header>"),
+      html.indexOf("<header"),
       html.indexOf("</header>"),
     );
     expect(header).toContain(
@@ -90,13 +93,16 @@ describe("map route server render", () => {
       html.indexOf("</noscript>"),
     );
     expect(noscript).toContain(
-      '<a href="/">About MapCairn, the SDK behind this map</a>',
+      "The map needs JavaScript. You can still read about MapCairn, its source code and its privacy policy.",
     );
-    expect(noscript).toContain(
-      '<a href="https://github.com/MapCairn/mapcairn">View the source code and licence on GitHub</a>',
+    expect(noscript).toMatch(
+      /<a class="[^"]+" href="\/">About MapCairn, the SDK behind this map<\/a>/,
     );
-    expect(noscript).toContain(
-      '<a href="/privacy">Read the privacy policy</a>',
+    expect(noscript).toMatch(
+      /<a class="[^"]+" href="https:\/\/github\.com\/MapCairn\/mapcairn">View the source code and licence on GitHub<\/a>/,
+    );
+    expect(noscript).toMatch(
+      /<a class="[^"]+" href="\/privacy">Read the privacy policy<\/a>/,
     );
   });
 

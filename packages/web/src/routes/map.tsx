@@ -12,14 +12,15 @@ import type { LinksFunction, MetaFunction } from "react-router";
 import { App } from "../App";
 import { ClientOnly } from "../app/ClientOnly";
 import { MAP_REGION_ID } from "../app/initialView";
-import { mapPlaceholder } from "../app/shell.css";
-import { buildPageMeta } from "../buildPageMeta";
+import { NoScriptNotice } from "../app/NoScriptNotice";
 import {
-  PLAYGROUND_PATH,
-  PRODUCT_PATH,
-  SITE_URL,
-  SOURCE_REPOSITORY_URL,
-} from "../constants/siteConfig";
+  hiddenWithoutScripts,
+  mapHeader,
+  mapPlaceholder,
+  placeholderChrome,
+} from "../app/shell.css";
+import { buildPageMeta } from "../buildPageMeta";
+import { PLAYGROUND_PATH, SITE_URL } from "../constants/siteConfig";
 import {
   englishTitle,
   MAP_TITLE,
@@ -82,8 +83,8 @@ export const links: LinksFunction = () => [
  * What the playground is, for a crawler or a model that reads the server's
  * HTML without running the app: one paragraph in the page header, hidden on
  * screen and read by assistive technology after the page heading, and, when
- * scripts do not run, links to the product page, the source and the privacy
- * policy.
+ * scripts do not run, a notice that the map needs them with links to the
+ * product page, the source and the privacy policy.
  */
 function PlaygroundSummary() {
   const { t } = useMessages();
@@ -91,17 +92,7 @@ function PlaygroundSummary() {
     <>
       <VisuallyHidden as="p">{t("host.map.summary", {})}</VisuallyHidden>
       <noscript>
-        <ul>
-          <li>
-            <a href={PRODUCT_PATH}>{t("host.about.product", {})}</a>
-          </li>
-          <li>
-            <a href={SOURCE_REPOSITORY_URL}>{t("host.about.link", {})}</a>
-          </li>
-          <li>
-            <a href="/privacy">{t("settings.privacy.link", {})}</a>
-          </li>
-        </ul>
+        <NoScriptNotice />
       </noscript>
     </>
   );
@@ -126,8 +117,8 @@ export default function MapRoute() {
   const { t } = messages;
   return (
     <>
-      <SkipLink targetId={MAP_REGION_ID} />
-      <header>
+      <SkipLink targetId={MAP_REGION_ID} className={hiddenWithoutScripts} />
+      <header className={mapHeader}>
         <VisuallyHidden as="h1">MapCairn</VisuallyHidden>
         <PlaygroundSummary />
       </header>
@@ -139,12 +130,14 @@ export default function MapRoute() {
             id={MAP_REGION_ID}
             data-testid="map-placeholder"
           >
-            <VisuallyHidden>{t("app.loadingMap", {})}</VisuallyHidden>
-            <ChromeSkeleton
-              copy={chromeSkeletonCopy(messages)}
-              directions
-              draw
-            />
+            <div className={placeholderChrome}>
+              <VisuallyHidden>{t("app.loadingMap", {})}</VisuallyHidden>
+              <ChromeSkeleton
+                copy={chromeSkeletonCopy(messages)}
+                directions
+                draw
+              />
+            </div>
           </main>
         }
       >

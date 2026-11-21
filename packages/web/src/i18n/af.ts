@@ -894,6 +894,8 @@ export const AF_CATALOGUE: Record<MessageKey, string> = {
     "Hierdie webwerf is oopbronsagteware wat onder die AGPL-3.0-lisensie vrygestel word.",
   "host.about.link": "Kyk na die bronkode en lisensie op GitHub",
   "host.about.product": "Oor MapCairn, die SDK agter hierdie kaart",
+  "host.map.noScript":
+    "Die kaart het JavaScript nodig. Jy kan steeds oor MapCairn, die bronkode en die privaatheidsbeleid lees.",
   "host.map.summary":
     "Die MapCairn-speelgrond is 'n interaktiewe kaart wat met die MapCairn-SDK gebou is. Soek plekke of koördinate, meet afstande en oppervlaktes, teken en voer vorms uit, vergelyk basiskaarte en skakel oop datalae aan.",
 };
