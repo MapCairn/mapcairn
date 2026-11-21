@@ -1047,34 +1047,100 @@ describe("published text", () => {
       "a",
     ];
     const HEAD = "## 0.1.0 (2026-12-01)\n\n### What is new\n\n";
-    /** The smaller size, and the larger one, four times as big. */
-    const SMALL = 25_000;
-    const LARGE = 4 * SMALL;
-    /** Linear work grows about 4 times from SMALL to LARGE, quadratic about 16. */
+    /** The smallest size tried, and how many times the larger run is bigger. */
+    const START = 25_000;
+    const FACTOR = 4;
+    /** The small run must cost at least this much CPU time to be measured. */
+    const FLOOR_MS = 2;
+    /** The small size never grows past this, so a shape that stays cheap ends. */
+    const MAX_SMALL = 400_000;
+    /** Linear work grows about 4 times from small to large, quadratic about 16. */
     const MAX_GROWTH = 10;
-    /** Below this a timing is noise, so it is not divided into. */
-    const NOISE_MS = 20;
+    /**
+     * Each timing is the best of the runs so far, small and large taken in
+     * turn so a burst of load on the machine hits both. Load only ever makes a
+     * run slower, so the best run is the closest to the real cost: after
+     * MIN_ROUNDS the loop stops once the best timings are within the limit, and
+     * otherwise keeps sampling up to MAX_ROUNDS. Work that really is quadratic
+     * is never faster than its best run, so it fails after all of them.
+     */
+    const MIN_ROUNDS = 3;
+    const MAX_ROUNDS = 15;
 
-    function bestOfThree(text: string): number {
+    type Run = (text: string) => unknown;
+
+    function bestOf(runs: number, text: string, run: Run): number {
       let best = Number.POSITIVE_INFINITY;
-      for (let run = 0; run < 3; run += 1) {
+      for (let count = 0; count < runs; count += 1) {
         const started = cpuMs();
-        checkChangelog(text);
+        run(text);
         best = Math.min(best, cpuMs() - started);
       }
       return best;
     }
 
     /**
+     * Doubles the size until one run costs at least the floor, so a cheap shape
+     * is measured on a run long enough to tell linear from quadratic work.
+     */
+    function sizeToMeasure(make: (size: number) => string, run: Run): number {
+      let size = START;
+      while (size < MAX_SMALL && bestOf(1, make(size), run) < FLOOR_MS) {
+        size *= 2;
+      }
+      return size;
+    }
+
+    /**
      * Fails when the time grows much faster than the size. It compares two
      * sizes of the same shape instead of a fixed time, so a slow machine does
-     * not fail it.
+     * not fail it, and it picks the sizes so the small run costs about the
+     * floor: a ratio of two timings that are mostly noise cannot fail.
      */
-    function expectLinear(make: (size: number) => string): void {
-      const small = bestOfThree(make(SMALL));
-      const large = bestOfThree(make(LARGE));
-      expect(large / Math.max(small, NOISE_MS)).toBeLessThan(MAX_GROWTH);
+    function expectLinear(
+      make: (size: number) => string,
+      run: Run = checkChangelog,
+    ): void {
+      const size = sizeToMeasure(make, run);
+      const smallText = make(size);
+      const largeText = make(FACTOR * size);
+      let small = Number.POSITIVE_INFINITY;
+      let large = Number.POSITIVE_INFINITY;
+      const growth = () => large / Math.max(small, Number.EPSILON);
+      for (let round = 1; round <= MAX_ROUNDS; round += 1) {
+        small = Math.min(small, bestOf(1, smallText, run));
+        large = Math.min(large, bestOf(1, largeText, run));
+        if (round >= MIN_ROUNDS && growth() < MAX_GROWTH) {
+          break;
+        }
+      }
+      expect(
+        growth(),
+        `${size} units took ${small.toFixed(2)} ms and ${FACTOR * size} took ${large.toFixed(2)} ms of CPU time`,
+      ).toBeLessThan(MAX_GROWTH);
     }
+
+    /**
+     * The checker plus a scan that looks for a control character from every
+     * position, which is quadratic on a line that has none.
+     */
+    function withQuadraticControlScan(text: string): unknown {
+      let found = 0;
+      for (const line of text.split("\n")) {
+        for (let from = 0; from < line.length; from += 1) {
+          found += line.indexOf("\u0001", from);
+        }
+      }
+      return [found, checkChangelog(text)];
+    }
+
+    it("fails a quadratic control character scan on a line of spaces, and shows both timings", () => {
+      const spaces = (size: number) => `${HEAD}${" ".repeat(size)}\n`;
+      expectLinear(spaces);
+      expect(() => expectLinear(spaces, withQuadraticControlScan)).toThrow(
+        /\d+ units took [\d.]+ ms and \d+ took [\d.]+ ms of CPU time/,
+      );
+    });
 
     it.each(UNITS)("scales linearly on a line of %j", (unit) => {
       const repeated = (size: number) =>
