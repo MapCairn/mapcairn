@@ -246,7 +246,7 @@ It fits a team that:
 - builds in React and wants a complete, accessible map interface rather than a blank canvas;
 - shows open data from providers the browser can reach directly, and wants each layer requested only when a person turns it on;
 - wants to test its map interface without a browser or WebGL, against fakes;
-- can offer its app's source, under AGPL-3.0-only (which allows commercial use), to the people who use it, or will discuss closed-source terms (see [Licence](#licence)).
+- can offer its app's source, under AGPL-3.0-only (which allows commercial use), to the people who use it (see [Licence](#licence)).
 
 It is not the right choice today if you need:
 
@@ -331,10 +331,8 @@ Everyone is welcome to use the coding agent they prefer, and the same rules in [
 
 ## Licence
 
-MapCairn is licensed under [AGPL-3.0-only](LICENSE), an open-source licence that allows commercial use, and each SDK package (`packages/core`, `packages/map`, `packages/react`, `packages/theme`, `packages/adapter-maplibre` and `packages/sdk`) carries its own copy. If you distribute an app that includes the SDK, including by serving it to people's browsers, you must offer them the corresponding source of the code you combine with the SDK and serve with it, under the same licence. If you modify the SDK and let people interact with your modified version over a network, you must offer them its corresponding source. A licence for closed-source use is not on offer yet. [What the licence means for your project](docs/guides/licence.md) says it in plain words and is not legal advice.
+MapCairn is licensed under [AGPL-3.0-only](LICENSE), an open-source licence that allows commercial use, and each SDK package (`packages/core`, `packages/map`, `packages/react`, `packages/theme`, `packages/adapter-maplibre` and `packages/sdk`) carries its own copy. If you distribute an app that includes the SDK, including by serving it to people's browsers, you must offer them the corresponding source of the code you combine with the SDK and serve with it, under the same licence. If you modify the SDK and let people interact with your modified version over a network, you must offer them its corresponding source. [What the licence means for your project](docs/guides/licence.md) says it in plain words and is not legal advice.
 
 The SDK packages depend only on permissively licensed packages (MIT, BSD, Apache-2.0, ISC and similar), and `npm run lint` fails when a new production dependency of one has any other licence.
-
-The author welcomes conversations about other terms for closed-source use. Any licence for closed-source use that is agreed would go towards the continued development of MapCairn. Contact the author at [mapcairn@timothybrits.co.za](mailto:mapcairn@timothybrits.co.za).
 
 See [`ATTRIBUTIONS.md`](ATTRIBUTIONS.md) for software and basemap credits and [`PRIVACY.md`](PRIVACY.md) for the privacy policy.
