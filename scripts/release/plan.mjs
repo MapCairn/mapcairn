@@ -85,7 +85,9 @@ function isBotAccount(author) {
  * while the last tag is a prerelease) is based on that last tag, the previous
  * candidate, for both the pull requests and the API report comparison. Any
  * other release is based on the last tag that is not a prerelease, or the
- * start of the project when there is none.
+ * start of the project when there is none. A stable release after candidates
+ * keeps that base for its notes and adds `sinceLastCandidate`, based on the
+ * last candidate.
  *
  * @param {object} input
  * @param {string | null} input.pre The prerelease identifier, such as `rc`.
@@ -104,13 +106,11 @@ export function planRelease({ pre, sources }) {
   const since = laterCandidate
     ? (last?.tag ?? null)
     : (lastStable?.tag ?? null);
-  const commits = sources
-    .commits(since)
-    .map((commit) => ({
-      ...parseCommit(commit.subject, commit.body),
-      hash: commit.hash,
-    }))
-    .filter((commit) => commit.scope !== "release");
+  const commits = sdkCommitsSince(since, sources);
+  const candidateBase =
+    pre === null && last !== null && isPrerelease(last.version)
+      ? last.tag
+      : null;
 
   const apiChanges =
     since === null
@@ -118,7 +118,9 @@ export function planRelease({ pre, sources }) {
       : compareApiReports(sources.reports(since), sources.reports(null));
   if (since === null) {
     notices.push(
-      "There is no earlier release, so the API reports are not compared.",
+      candidateBase === null
+        ? "There is no earlier release, so the API reports are not compared."
+        : `There is no stable release yet, so the notes part compares no API reports; sinceLastCandidate compares them against ${candidateBase}.`,
     );
   }
   const compatibility =
@@ -139,29 +141,16 @@ export function planRelease({ pre, sources }) {
     );
   } else if (last !== null && isPrerelease(last.version)) {
     notices.push(
-      `The notes cover everything since ${since ?? "the start"}, the last tag that is not a prerelease.`,
+      `The notes cover everything since ${since ?? "the start"}, the last tag that is not a prerelease${candidateBase === null ? "" : `; sinceLastCandidate covers the changes since ${candidateBase}`}.`,
     );
   }
 
-  const merged = sources.mergedPullRequests();
-  const resolved = commits.map((commit) => ({
-    commit,
-    info: resolvePullRequest(commit, sources, merged),
-  }));
-  const pullRequests = resolved.map(({ commit, info }) => {
-    if (info === null && commit.pullRequest !== null) {
-      notices.push(`Could not read pull request #${commit.pullRequest}.`);
-    }
-    return {
-      number: info?.number ?? commit.pullRequest,
-      title: info?.title ?? commit.subject,
-      url: info?.url ?? null,
-      author: info?.author?.login ?? null,
-      type: commit.type,
-      scope: commit.scope,
-      breaking: commit.breaking,
-    };
-  });
+  const listPullRequests = pullRequestLister(sources, notices);
+  const { resolved, pullRequests } = listPullRequests(commits);
+  const sinceLastCandidate =
+    candidateBase === null
+      ? null
+      : planSinceCandidate(candidateBase, sources, listPullRequests, notices);
 
   return {
     lastTag: last?.tag ?? null,
@@ -176,18 +165,127 @@ export function planRelease({ pre, sources }) {
       .filter((pullRequest) => pullRequest.breaking)
       .map((pullRequest) => pullRequest.number),
     apiChanges,
-    compatibilityChanges: compatibility.map((entry) => ({
-      ...entry,
-      likelyBreaking: true,
-      detail: `${entry.path} lost ${entry.deletedLines} line${entry.deletedLines === 1 ? "" : "s"}, so an entry may have been removed or edited.`,
-    })),
+    compatibilityChanges: compatibilityEntries(compatibility),
     contributorsToThank: contributorsToThank(
       resolved.map(({ info }) => info),
       sources,
       notices,
     ),
+    sinceLastCandidate,
     reviewByHand: REVIEW_BY_HAND,
     notices,
+  };
+}
+
+/**
+ * The commits that touch the SDK packages since a tag, release commits left
+ * out.
+ *
+ * @param {string | null} tag
+ * @param {PlanSources} sources
+ */
+function sdkCommitsSince(tag, sources) {
+  return sources
+    .commits(tag)
+    .map((commit) => ({
+      ...parseCommit(commit.subject, commit.body),
+      hash: commit.hash,
+    }))
+    .filter((commit) => commit.scope !== "release");
+}
+
+/**
+ * Compatibility files that lost lines, as the plan prints them.
+ *
+ * @param {Array<{ path: string, deletedLines: number }>} deletions
+ */
+function compatibilityEntries(deletions) {
+  return deletions.map((entry) => ({
+    ...entry,
+    likelyBreaking: true,
+    detail: `${entry.path} lost ${entry.deletedLines} line${entry.deletedLines === 1 ? "" : "s"}, so an entry may have been removed or edited.`,
+  }));
+}
+
+/**
+ * A function that lists the pull requests behind commits, each as the plan
+ * prints it, with the lookup result kept for the contributors to thank. Two
+ * lists in one plan share lookups, and report an unreadable pull request once.
+ *
+ * @param {PlanSources} sources
+ * @param {string[]} notices
+ */
+function pullRequestLister(sources, notices) {
+  const merged = sources.mergedPullRequests();
+  /** @type {Map<string, PullRequestInfo | null>} */
+  const lookups = new Map();
+  /** @type {Set<number>} */
+  const unreadable = new Set();
+  /**
+   * @param {Array<import("./versionRules.mjs").ParsedCommit & { hash: string }>} commits
+   */
+  return (commits) => {
+    const resolved = commits.map((commit) => {
+      if (!lookups.has(commit.hash)) {
+        lookups.set(commit.hash, resolvePullRequest(commit, sources, merged));
+      }
+      return { commit, info: lookups.get(commit.hash) ?? null };
+    });
+    const pullRequests = resolved.map(({ commit, info }) => {
+      if (
+        info === null &&
+        commit.pullRequest !== null &&
+        !unreadable.has(commit.pullRequest)
+      ) {
+        unreadable.add(commit.pullRequest);
+        notices.push(`Could not read pull request #${commit.pullRequest}.`);
+      }
+      return {
+        number: info?.number ?? commit.pullRequest,
+        title: info?.title ?? commit.subject,
+        url: info?.url ?? null,
+        author: info?.author?.login ?? null,
+        type: commit.type,
+        scope: commit.scope,
+        breaking: commit.breaking,
+      };
+    });
+    return { resolved, pullRequests };
+  };
+}
+
+/**
+ * The changes since the last candidate, for a stable release planned after
+ * one: the notes cover everything since the last stable tag, but a person
+ * reviewing the release needs to see what changed since the candidate that was
+ * tried. It names its base, so the two parts are never confused.
+ *
+ * @param {string} base The last tag, a candidate.
+ * @param {PlanSources} sources
+ * @param {ReturnType<typeof pullRequestLister>} listPullRequests
+ * @param {string[]} notices
+ */
+function planSinceCandidate(base, sources, listPullRequests, notices) {
+  const apiChanges = compareApiReports(
+    sources.reports(base),
+    sources.reports(null),
+  );
+  const compatibilityChanges = compatibilityEntries(
+    sources.compatibilityDeletions(base),
+  );
+  const breaking =
+    apiChanges.filter((change) => change.likelyBreaking).length +
+    compatibilityChanges.length;
+  if (breaking > 0) {
+    notices.push(
+      `${breaking} likely breaking API change${breaking === 1 ? "" : "s"} since ${base}; read sinceLastCandidate.`,
+    );
+  }
+  return {
+    base,
+    pullRequests: listPullRequests(sdkCommitsSince(base, sources)).pullRequests,
+    apiChanges,
+    compatibilityChanges,
   };
 }
 
