@@ -69,7 +69,7 @@ and your IP address. As you type, the text so far is also sent to Photon, a
 search-as-you-type geocoding service that komoot runs on OpenStreetMap data, to
 suggest places. A request goes out each time you pause after typing at least
 three characters, so one search can send several partial versions of it, and
-Photon may log them with your IP address. Your browser sends no cookies with these requests. A search or an address lookup sent to Nominatim also carries this site's address as the referrer: the address of the site only, not the page you are on or the map position, because the service asks for one. The suggestions sent to Photon carry no referrer. Picking a suggestion sends nothing more, and if
+Photon may log them with your IP address. Your browser sends no cookies with these requests. A search or an address lookup sent to Nominatim also carries this site's address as the referrer: the address of the site only, not the page you are on, because the service asks for one. The suggestions sent to Photon carry no referrer. Picking a suggestion sends nothing more, and if
 suggestions stop working, Enter and the Search button still search through
 Nominatim. A search that is only a
 pair of coordinates is read in your browser and is not sent to the geocoder;
@@ -90,8 +90,7 @@ temperature), the Global Disaster Alert and Coordination System (GDACS) for fire
 flood, tropical cyclone, volcano and drought alerts, and the jsDelivr content
 delivery network for the country boundaries. Show affected area sends one more
 request to GDACS for that event only. Tile layers request images for the part
-of the map you are looking at, so the provider can tell roughly where you are
-looking. Nothing passes through this site, and nothing is stored beyond the
+of the map you are looking at, so the provider can tell roughly where you are looking. Like basemap tiles, they also carry this site's address as the referrer. Nothing passes through this site, and nothing is stored beyond the
 page you have open. The layers you turn on are written into the page address
 so a link can be shared; they are not sent anywhere else. Opening a link that
 has layers turned on requests those layers straight away, because the link
@@ -111,8 +110,7 @@ community and built on OpenStreetMap data. It sends the route's coordinates
 (its stops, or the origin of a travel-time area) and the travel mode. Your
 browser makes the request itself, so the server also receives your IP address,
 its usual request headers (such as its user agent) and this site's address as
-the referrer: the address of the site only, not the page you are on, the map
-position beyond the places you asked about, or anything this site has stored.
+the referrer: the address of the site only, not the page you are on or anything this site has stored.
 The server may log all of this. Nothing is sent before you ask.
 MapCairn stores nothing about the request, and the results are not saved or put in
 the page address.
