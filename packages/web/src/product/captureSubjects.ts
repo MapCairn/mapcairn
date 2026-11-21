@@ -5,7 +5,7 @@
  * What the product page's captures show: one subject for each picture, the
  * place and size it is captured at and the basemap each theme uses. The capture
  * script (`scripts/captureProduct.ts`) takes its pictures from this table, the
- * page (`productContent.ts` and `ProductPlate.tsx`) reads the same table for
+ * page (`productContent.ts` and `DemoFigure.tsx`) reads the same table for
  * their size and caption, and a test holds every committed image to it. The
  * words that describe each picture are in `productContent.ts`.
  */
