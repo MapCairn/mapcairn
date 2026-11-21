@@ -135,13 +135,18 @@ export function captureSubject(id: CaptureSubjectId): CaptureSubject {
   return subject;
 }
 
+/** The address of the playground over a subject's view alone: zoom, latitude and longitude, with the basemap left to the playground. */
+export function captureView(subject: CaptureSubject): string {
+  const { zoom, latitude, longitude } = subject.view;
+  return `#map=${zoom.toFixed(2)}/${latitude.toFixed(5)}/${longitude.toFixed(5)}`;
+}
+
 /** The address of the playground over a subject's view and a theme's basemap. */
 export function captureAddress(
   subject: CaptureSubject,
   theme: CaptureTheme,
 ): string {
-  const { zoom, latitude, longitude } = subject.view;
-  return `#map=${zoom.toFixed(2)}/${latitude.toFixed(5)}/${longitude.toFixed(5)}&basemap=${subject.basemaps[theme]}`;
+  return `${captureView(subject)}&basemap=${subject.basemaps[theme]}`;
 }
 
 /** The length a subject's measured line reads; a subject that measures nothing is a mistake in the caller. */

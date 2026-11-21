@@ -1082,6 +1082,14 @@ export const blockLink = style([
   },
 ]);
 
+/** The link under a plate that opens the live playground over the view it shows: a full-size target, in the page's link style. */
+export const plateLive = style([
+  blockLink,
+  {
+    alignSelf: "flex-start",
+  },
+]);
+
 /** The compass before each deep link. */
 export const linkIcon = style({
   flexShrink: 0,
