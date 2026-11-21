@@ -27,8 +27,8 @@ const MEASURE = "40rem";
 /** The tallest the code example gets before it scrolls inside its own box. */
 const CODE_HEIGHT = "26rem";
 
-/** The widest the art gets, so it stays beside the words rather than taking over. */
-const ART_WIDTH = "30rem";
+/** The widest the closing relief strip gets: its sheet is 640 units wide, so it is drawn at one pixel to the unit. */
+const ART_WIDTH = "40rem";
 
 /** The widest a plate gets: its capture's width and its latitude collar, a little over, so its picture is shown no larger than it was taken. */
 const PLATE_WIDTH = "26rem";
@@ -60,6 +60,38 @@ const LONG_TICK_PITCH = `calc(${TICK_PITCH} * 5)`;
 /** How wide a tick is: a long one is twice a short one. */
 const TICK_WIDTH = "1px";
 const LONG_TICK_WIDTH = "2px";
+
+/**
+ * The graticule rule: a baseline with a short tick every 48 px and a long one
+ * every 240 px, all of it decoration, in flow so it takes its own height. It
+ * opens every section and the closing relief strip, so the page keeps one
+ * motif. The ticks are the blue of the survey marks, a graphic colour that
+ * keeps 3:1 on the page in both themes; the pattern is the same read from
+ * either end, so it needs no mirrored copy.
+ */
+const graticuleRule = {
+  content: '""',
+  display: "block",
+  // The border-box keeps the rule 12 px tall with the forced-colours border added.
+  boxSizing: "border-box",
+  height: RULE_HEIGHT,
+  marginBlockStart: tokens.space.sm,
+  marginBlockEnd: RULE_TO_HEADING,
+  backgroundRepeat: "no-repeat",
+  backgroundPosition: "0 100%",
+  backgroundSize: `100% 100%, 100% ${tokens.space.xs}, 100% 1px`,
+  backgroundImage: [
+    `repeating-linear-gradient(90deg, ${tokens.color.mapMeasureLine} 0 ${LONG_TICK_WIDTH}, transparent ${LONG_TICK_WIDTH} ${LONG_TICK_PITCH})`,
+    `repeating-linear-gradient(90deg, ${tokens.color.mapMeasureLine} 0 ${TICK_WIDTH}, transparent ${TICK_WIDTH} ${TICK_PITCH})`,
+    `linear-gradient(${tokens.color.controlBoundary}, ${tokens.color.controlBoundary})`,
+  ].join(", "),
+} as const;
+
+/** Forced colours repaint no background image, so the rule is a plain line in the system's text colour. */
+const graticuleRuleForced = {
+  backgroundImage: "none",
+  borderBlockEnd: "1px solid CanvasText",
+} as const;
 
 /*
  * Interaction states. Hover shows only where a pointer can hover, so a touch
@@ -258,19 +290,28 @@ export const heroArt = style({
 });
 
 /**
- * The survey drawing's place at the end of the page, after the last section
- * and before the footer: the way ends at the cairn. It keeps the page's
- * column and the drawing's own width.
+ * The relief strip's place at the end of the page, after the last section and
+ * before the footer: the way ends at the cairn. It opens with the same
+ * graticule rule as a section and keeps the page's column and the strip's own
+ * width.
  */
 export const closing = style({
   ...pageColumn,
   paddingBlockEnd: tokens.space.xl,
+  selectors: {
+    "&::before": { ...graticuleRule, marginBlockEnd: tokens.space.md },
+  },
   "@media": {
     [WIDE]: { paddingInline: tokens.space.xl },
+    [FORCED]: {
+      selectors: {
+        "&::before": graticuleRuleForced,
+      },
+    },
   },
 });
 
-/** The closing drawing, only as wide as it needs to be. */
+/** The relief strip, no wider than its sheet. */
 export const closingArt = style({
   maxWidth: ART_WIDTH,
 });
@@ -522,30 +563,7 @@ export const section = style({
   alignItems: "stretch",
   scrollMarginBlockStart: tokens.space.md,
   selectors: {
-    /*
-     * The graticule rule: a baseline with a short tick every 48 px and a long
-     * one every 240 px, all of it decoration, in flow so it takes its own
-     * height. The ticks are the blue of the survey marks, a graphic colour that
-     * keeps 3:1 on the page in both themes; the pattern is the same read from
-     * either end, so it needs no mirrored copy.
-     */
-    "&::before": {
-      content: '""',
-      display: "block",
-      // The border-box keeps the rule 12 px tall with the forced-colours border added.
-      boxSizing: "border-box",
-      height: RULE_HEIGHT,
-      marginBlockStart: tokens.space.sm,
-      marginBlockEnd: RULE_TO_HEADING,
-      backgroundRepeat: "no-repeat",
-      backgroundPosition: "0 100%",
-      backgroundSize: `100% 100%, 100% ${tokens.space.xs}, 100% 1px`,
-      backgroundImage: [
-        `repeating-linear-gradient(90deg, ${tokens.color.mapMeasureLine} 0 ${LONG_TICK_WIDTH}, transparent ${LONG_TICK_WIDTH} ${LONG_TICK_PITCH})`,
-        `repeating-linear-gradient(90deg, ${tokens.color.mapMeasureLine} 0 ${TICK_WIDTH}, transparent ${TICK_WIDTH} ${TICK_PITCH})`,
-        `linear-gradient(${tokens.color.controlBoundary}, ${tokens.color.controlBoundary})`,
-      ].join(", "),
-    },
+    "&::before": graticuleRule,
   },
   "@media": {
     [WIDE]: {
@@ -554,10 +572,7 @@ export const section = style({
     /* Forced colours repaint no background image, so the rule is a plain line in the system's text colour. */
     [FORCED]: {
       selectors: {
-        "&::before": {
-          backgroundImage: "none",
-          borderBlockEnd: "1px solid CanvasText",
-        },
+        "&::before": graticuleRuleForced,
       },
     },
   },

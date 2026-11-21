@@ -617,6 +617,20 @@ describe("the product page stands on its own", () => {
     expect(art[0]).toHaveAttribute("aria-hidden", "true");
     expect(art[0]).toHaveAttribute("focusable", "false");
   });
+
+  it("keeps all of the artwork's text outside the drawing, in the hidden frame, as the two labels only", () => {
+    renderPage();
+    const strip = screen.getByTestId("survey-art-frame");
+    expect(strip).toHaveAttribute("aria-hidden", "true");
+    expect(screen.getByTestId("survey-art").querySelector("text")).toBeNull();
+    expect(strip.textContent).toBe(
+      `${screen.getByTestId("survey-art-spot-height").textContent}${screen.getByTestId("survey-art-length").textContent}`,
+    );
+    expect(screen.getByTestId("survey-art-spot-height")).toHaveTextContent(
+      /^[\d,]+$/,
+    );
+    expect(screen.getByTestId("survey-art-length")).toHaveTextContent(/ km$/);
+  });
 });
 
 /** The figure of a picture by its subject. */
