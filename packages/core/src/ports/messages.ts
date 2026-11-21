@@ -700,6 +700,7 @@ export type MessageKey =
   | "host.notes.pinLookup"
   | "host.notes.routing"
   | "host.credits.fixTheMap"
+  | "host.credits.about"
   | "host.title.map"
   | "privacy.title"
   | "privacy.updated"

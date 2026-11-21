@@ -41,6 +41,28 @@ test.describe("map credits", () => {
     await expect(button).toHaveAttribute("aria-expanded", "false");
   });
 
+  test("ends with a link to the product page, reachable by keyboard, for a visitor who arrived by a shared link", async ({
+    page,
+    mapPage,
+  }) => {
+    await mapPage.goto("#map=6/-26.2/28");
+    await collapseCredits(mapPage);
+    await mapPage.creditsButton.click();
+    const links = mapPage.creditsRegion.getByRole("link");
+    const about = links.last();
+    await expect(about).toHaveText("About MapCairn");
+    await expect(about).toHaveAttribute("href", "/");
+
+    await page.keyboard.press("Tab");
+    await page.keyboard.press("Tab");
+    await page.keyboard.press("Tab");
+    await page.keyboard.press("Tab");
+    await expect(about).toBeFocused();
+    await page.keyboard.press("Enter");
+    await expect(page).toHaveURL(/\/$/);
+    await expect(page.getByRole("heading", { level: 1 }).first()).toBeVisible();
+  });
+
   test("a second press, a press outside and a map move all close it", async ({
     page,
     mapPage,

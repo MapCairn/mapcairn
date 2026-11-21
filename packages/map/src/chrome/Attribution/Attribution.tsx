@@ -21,6 +21,7 @@ import {
 import { useMap } from "../../host";
 import { useMessages, usePreferences } from "../../services";
 import { IconButton } from "../../ui";
+import { isSitePath, isWebAddress } from "../../ui/linkAddress";
 import { CHROME_GAP_PX } from "../chromeSpacing";
 import { useChromeLayout } from "../layoutContext";
 import * as styles from "./Attribution.css";
@@ -146,6 +147,14 @@ function useSettled(open: boolean): boolean {
 
 const NO_CREDITS: readonly LayerAttribution[] = [];
 
+/** A link to a page of the host's own, such as its About page. */
+export interface AttributionAboutLink {
+  /** A path on the host's site (`/about`) or an http or https address. Any other address is left out. */
+  readonly href: string;
+  /** A name that says where the link goes. */
+  readonly label: string;
+}
+
 /** Props for {@link Attribution}. */
 export interface AttributionProps {
   /** The active basemap. Its credits, plus the engine's, are listed. */
@@ -161,6 +170,13 @@ export interface AttributionProps {
    * and opening them counts as the first showing.
    */
   readonly introHeld?: boolean;
+  /**
+   * A link to the host's About page, listed after the credits, so a visitor
+   * who arrives on the map from a shared link can find the product behind it.
+   * The credits button is on every screen, so the link is always one press
+   * away. It opens in the same tab.
+   */
+  readonly aboutLink?: AttributionAboutLink;
 }
 
 /**
@@ -200,6 +216,7 @@ export function Attribution({
   basemap,
   layerCredits = NO_CREDITS,
   introHeld: hostHold = false,
+  aboutLink,
 }: AttributionProps) {
   const { adapter, view, onUserZoom } = useMap();
   const { layout } = useChromeLayout();
@@ -442,6 +459,14 @@ export function Attribution({
               )}
             </li>
           ))}
+          {aboutLink &&
+          (isSitePath(aboutLink.href) || isWebAddress(aboutLink.href)) ? (
+            <li className={styles.about}>
+              <a href={aboutLink.href} className={styles.link}>
+                {aboutLink.label}
+              </a>
+            </li>
+          ) : null}
         </ul>
       </section>
     </div>

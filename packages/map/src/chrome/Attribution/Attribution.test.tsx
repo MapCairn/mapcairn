@@ -795,6 +795,82 @@ describe("Attribution on first load", () => {
   });
 });
 
+describe("Attribution about link", () => {
+  const ABOUT = { href: "/", label: "About MapCairn" };
+
+  it("lists the host's own page after the credits, as a plain link", () => {
+    renderChrome(<Attribution basemap={BASEMAP} aboutLink={ABOUT} />, {
+      map: SETTLED,
+    });
+    const region = open();
+    const links = Array.from(region.querySelectorAll("a"));
+    const about = links.at(-1);
+    expect(about).toHaveTextContent("About MapCairn");
+    expect(about).toHaveAttribute("href", "/");
+    expect(about).not.toHaveAttribute("target");
+    expect(links.length).toBeGreaterThan(1);
+    expect(
+      screen.getByRole("link", { name: "OpenStreetMap contributors" }),
+    ).toBeInTheDocument();
+  });
+
+  it("is reachable by Tab after the last credit", () => {
+    renderChrome(<Attribution basemap={BASEMAP} aboutLink={ABOUT} />, {
+      map: SETTLED,
+    });
+    const region = open();
+    const order = Array.from(region.querySelectorAll("a")).map(
+      (link) => link.textContent,
+    );
+    expect(order.indexOf("About MapCairn")).toBe(order.length - 1);
+  });
+
+  it("stays open while it is pressed, as a press inside the popover does", () => {
+    renderChrome(<Attribution basemap={BASEMAP} aboutLink={ABOUT} />, {
+      map: SETTLED,
+    });
+    const region = open();
+    fireEvent.pointerDown(screen.getByRole("link", { name: "About MapCairn" }));
+    expect(region).toBeVisible();
+  });
+
+  it("accepts an address on another site too", () => {
+    renderChrome(
+      <Attribution
+        basemap={BASEMAP}
+        aboutLink={{ href: "https://example.org/about", label: "About us" }}
+      />,
+      { map: SETTLED },
+    );
+    open();
+    expect(screen.getByRole("link", { name: "About us" })).toHaveAttribute(
+      "href",
+      "https://example.org/about",
+    );
+  });
+
+  it.each(["javascript:alert(1)", "//example.org", "about"])(
+    "leaves out an address that is not a site path or a web address: %s",
+    (href) => {
+      renderChrome(
+        <Attribution
+          basemap={BASEMAP}
+          aboutLink={{ href, label: "About us" }}
+        />,
+        { map: SETTLED },
+      );
+      open();
+      expect(screen.queryByRole("link", { name: "About us" })).toBeNull();
+    },
+  );
+
+  it("adds nothing when the host gives none", () => {
+    renderChrome(<Attribution basemap={BASEMAP} />, { map: SETTLED });
+    open();
+    expect(screen.queryByRole("link", { name: "About MapCairn" })).toBeNull();
+  });
+});
+
 describe("Attribution message catalogue", () => {
   it("names the button and the popover from one key", () => {
     const { services } = renderChrome(<Attribution basemap={BASEMAP} />, {

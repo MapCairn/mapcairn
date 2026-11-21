@@ -31,6 +31,7 @@ import {
   useState,
 } from "react";
 import { routingCredits } from "../constants/routingCredits";
+import { PRODUCT_PATH } from "../constants/siteConfig";
 import { AppReadout } from "./AppReadout";
 import { AppTour } from "./AppTour";
 import { Brand } from "./Brand";
@@ -221,6 +222,10 @@ function ChromeContent({ app, map, background }: ChromeContentProps) {
         <Attribution
           basemap={app.basemap}
           introHeld={app.tour.state.status !== "off"}
+          aboutLink={{
+            href: PRODUCT_PATH,
+            label: messages.t("host.credits.about", {}),
+          }}
           layerCredits={
             app.directions.result
               ? [
