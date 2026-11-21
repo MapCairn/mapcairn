@@ -426,10 +426,10 @@ function ProductFooter() {
 }
 
 /**
- * The product page at `/`: the pitch, the install block, View on GitHub with the playground and npm links, the embedding
- * example, what you get, the playground, when it fits and the questions, with
- * View on GitHub as the first action and the playground one link away from
- * anywhere on the page.
+ * The product page at `/`: the pitch, the install block, View on GitHub as the
+ * one button with the playground and npm links under it, the embedding example,
+ * what you get, the playground, when it fits and the questions, with the
+ * playground one link away from anywhere on the page.
  *
  * @remarks Server-rendered: it loads no map code and no service but the
  *   clipboard it is given,

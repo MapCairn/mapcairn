@@ -835,6 +835,20 @@ test.describe("the product page", () => {
       }
     });
 
+    test("in forced colours the hero's two links stay visible and underlined", async ({
+      page,
+    }) => {
+      await page.emulateMedia({ forcedColors: "active" });
+      const product = new ProductPage(page);
+      await product.goto();
+      for (const link of [product.heroPlayground, product.heroNpm]) {
+        await expect(link).toBeVisible();
+        const style = await interactionStyle(link);
+        expect(style.textDecorationLine).toContain("underline");
+        expect(style.color).not.toBe(style.backgroundColor);
+      }
+    });
+
     test("a link's underline thickens under a pointer", async ({
       page,
       isMobile,

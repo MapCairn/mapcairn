@@ -182,7 +182,7 @@ export const GITHUB_ACTION: InlineLink = {
   href: SOURCE_REPOSITORY_URL,
 };
 
-/** The secondary action, wherever the page offers it. */
+/** The playground link, a plain link in the hero's row under the button and again in the footer. */
 export const PLAYGROUND_ACTION: InlineLink = {
   text: "Try the playground",
   href: PLAYGROUND_PATH,
@@ -206,7 +206,7 @@ export const HEADLINE = "Accessible map interfaces for the public";
 
 /** The sentence under the h1: what MapCairn is and what it promises, with the page's own hedge on the target and on what is requested. */
 export const LEDE: Line = [
-  "MapCairn is an open-source React SDK for public-interest maps: the whole interface around a MapLibre map, with WCAG 2.2 AA as the target, and nothing requested beyond the basemap until a person asks.",
+  "MapCairn is an open-source React SDK for public-interest maps: the whole interface around a MapLibre map, with WCAG 2.2 AA as the target and, by default, nothing requested beyond the basemap until a person asks, unless a host turns on search suggestions.",
 ];
 
 /** The umbrella package and its three peers, as every package manager is asked to add them. */
@@ -267,7 +267,7 @@ export const COPY_CODE = {
     `Could not copy ${file}. Select the code and copy it manually.`,
 } as const;
 
-/** The line under the hero's three actions. */
+/** The line under the hero's button and links. */
 export const HERO_NOTE: Line = [
   "Open source under the AGPL-3.0, which allows commercial use. Contributions are welcome.",
 ];
@@ -535,7 +535,7 @@ export const SECTIONS: readonly Section[] = [
               [
                 "Install ",
                 { code: "@mapcairn/sdk" },
-                ", as the first section shows. Or start from the example app in ",
+                ", as the command at the top of the page shows. Or start from the example app in ",
                 { text: "examples/embed", href: EXAMPLE_APP_LINK.href },
                 " in the source on GitHub, which uses the SDK only through its public entry points. The playground shows the whole SDK working.",
               ],

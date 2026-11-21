@@ -18,7 +18,7 @@ import { globalStyle, style } from "@vanilla-extract/css";
 /** From here the hero puts its art beside its words. */
 const WIDE = "screen and (min-width: 56rem)";
 
-/** From here the actions sit side by side, wrapping onto a second row when they do not fit. */
+/** From here the button and the two links share a line, and the legend's text sits beside its name. */
 const ROOMY = "screen and (min-width: 30rem)";
 
 /** The reading width of the sections, about 65 characters of the large type. */
@@ -540,8 +540,8 @@ export const codeFile = style({
 });
 
 /**
- * The copy button: a quiet 48 px pill that reads like the secondary action,
- * with the same hover and pressed states. Its words and icon say what the
+ * The copy button: a quiet 48 px pill that reads like the install
+ * block's pills, with the same hover and pressed states. Its words and icon say what the
  * last copy did.
  */
 export const copyButton = style({
@@ -631,7 +631,7 @@ export const installOption = style({
 });
 
 /**
- * A choice, a 48 px pill that reads like the secondary action. The chosen one
+ * A choice, a 48 px pill: outlined, raised on hover and tinted when pressed. The chosen one
  * takes the accent edge and tint, and is underlined so colour is not the only
  * sign, in forced colours too.
  */

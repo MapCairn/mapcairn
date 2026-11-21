@@ -29,6 +29,7 @@ import { ProductPage } from "./ProductPage";
 import * as styles from "./ProductPage.css";
 import {
   CAPABILITY_MATRIX_LINK,
+  faqEntries,
   HEADLINE,
   INSTALL_COMMAND,
   LEDE,
@@ -106,6 +107,35 @@ describe("the product page stands on its own", () => {
       "MapCairn is an open-source React SDK for public-interest maps",
     );
     expect(lede.textContent?.match(/\.(\s|$)/g)).toHaveLength(1);
+    expect(lede).toHaveTextContent("WCAG 2.2 AA as the target");
+    expect(lede).toHaveTextContent(
+      "by default, nothing requested beyond the basemap until a person asks, unless a host turns on search suggestions",
+    );
+  });
+
+  it("points no answer at a section that lacks the install block, on the page, in /index.md and in /llms-full.txt", async () => {
+    const answers = faqEntries().map(({ answer }) => answer);
+    for (const answer of answers) {
+      expect(answer).not.toMatch(/\b(first|embed\w*|above) section\b/i);
+    }
+    const pointer = answers.find((answer) =>
+      answer.includes("the command at the top of the page"),
+    );
+    expect(pointer).toBeDefined();
+    renderPage();
+    const group = screen.getByRole("group", { name: "Package manager" });
+    const first = document.querySelector("main section") as HTMLElement;
+    expect(
+      group.compareDocumentPosition(first) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    for (const text of [
+      await markdownLoader().text(),
+      await fullLoader().text(),
+    ]) {
+      expect(text).toContain("the command at the top of the page");
+      expect(text.indexOf(INSTALL_COMMAND)).toBeLessThan(text.indexOf("\n## "));
+      expect(text).not.toMatch(/as the first section shows/);
+    }
   });
 
   it("puts the same hero at the top of /index.md and in /llms-full.txt", async () => {
