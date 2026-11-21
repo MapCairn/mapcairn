@@ -14,7 +14,7 @@ import { INSTALL_COMMAND } from "./productContent";
  * The rules every text the product page publishes keeps: the page itself, its
  * structured data, `/index.md`, `/llms.txt` and `/llms-full.txt`. They link to
  * no issue, pull request or milestone and cite none by number, say nothing
- * about npm beyond the one install command, never mention commercial terms, and hold no fact that is true
+ * about npm beyond `INSTALL_COMMAND` (with its `@next`, the one allowed exception), never mention commercial terms, and hold no fact that is true
  * only today (a percentage, a "coming soon"), so the page stays true as the
  * SDK changes.
  */

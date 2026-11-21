@@ -16,7 +16,8 @@ import embedExampleSource from "./embedExample.tsx?raw";
  * Evergreen by design: it describes what the SDK is and how it is built, not
  * counts, versions, dates, plans or what is in progress, so a change to the SDK
  * normally needs nothing here. What is current lives in the repository's
- * documentation.
+ * documentation. The one exception is `INSTALL_COMMAND`, which carries `@next`
+ * until `0.1.0`.
  *
  * Links: the repository from exactly two places, the hero's View on GitHub and
  * the footer's Source code, the project's Mastodon profile from the footer (with
