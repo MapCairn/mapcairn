@@ -36,6 +36,15 @@ const REPO = path.resolve(
 
 const BUILT_PACKAGES: readonly string[] = BUILT_SDK_PACKAGES;
 
+/**
+ * API Extractor type-checks a package and everything its declarations import,
+ * which takes 1 to 7 seconds for a package when the machine is quiet (the
+ * umbrella package, which re-exports the others, is the slowest). Alongside
+ * the other lint tests it took up to 52 seconds, so the limit is well above
+ * that and sits beside the case instead of in the global timeout.
+ */
+const API_EXTRACTOR_TIMEOUT_MS = 180_000;
+
 interface Comparison {
   readonly missing: string[];
   readonly changed: string[];
@@ -153,12 +162,16 @@ describe.each(BUILT_PACKAGES)("@mapcairn/%s API reports", (name) => {
     expect(committed).toEqual(entries.map((entry) => `${entry}.api.md`).sort());
   });
 
-  it("matches the built declarations", async () => {
-    const { reports } = await generateReports(folder);
-    expect(compareReports(folder, reports)).toEqual({
-      missing: [],
-      changed: [],
-      stale: [],
-    });
-  }, 60_000);
+  it(
+    "matches the built declarations",
+    async () => {
+      const { reports } = await generateReports(folder);
+      expect(compareReports(folder, reports)).toEqual({
+        missing: [],
+        changed: [],
+        stale: [],
+      });
+    },
+    API_EXTRACTOR_TIMEOUT_MS,
+  );
 });

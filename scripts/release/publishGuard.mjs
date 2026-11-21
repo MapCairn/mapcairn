@@ -151,6 +151,9 @@ const LAUNCHERS = new Set([
   "changesets",
 ]);
 
+/** Matches text that holds the name of a launcher. */
+const LAUNCHER_NAME = new RegExp([...LAUNCHERS].join("|"));
+
 /** npm options that take the next word as their value. */
 const VALUE_OPTIONS = new Set([
   "-w",
@@ -335,6 +338,12 @@ function programName(word) {
  * @returns {boolean}
  */
 function isLauncher(word) {
+  // The program name is a stretch of the word, lower-cased, so a word that
+  // holds no launcher's name cannot be one. Most strings in a source file are
+  // prose or markup, and skipping the clean-up for them saves most of the scan.
+  if (!LAUNCHER_NAME.test(word.toLowerCase())) {
+    return false;
+  }
   return LAUNCHERS.has(programName(word));
 }
 

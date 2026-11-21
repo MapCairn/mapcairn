@@ -36,6 +36,13 @@ const REPO = path.resolve(
 /** Spawning git can be slow while coverage runs in parallel. */
 const CHILD_TIMEOUT_MS = 30_000;
 
+/**
+ * Reading and scanning every file that executes takes about a second alone,
+ * and the wall clock grows with the load while other test runs share the
+ * machine, so this scan keeps its own limit beside the case.
+ */
+const SCAN_TIMEOUT_MS = 30_000;
+
 /** Commands found in a line of shell. */
 function inShell(text: string): string[] {
   return forbiddenInShellText(text);
@@ -84,6 +91,10 @@ describe("forbiddenInShellText", () => {
       "publish",
     ],
     ["with the executable name on Windows", "npm.cmd publish", "publish"],
+    ["in capitals", "NPM.CMD publish", "publish"],
+    ["by its folder", "/usr/local/bin/npm publish", "publish"],
+    ["by a Windows folder", "C:\\nodejs\\NPM.CMD publish", "publish"],
+    ["pinned to a version", "pnpm@10.0.0 publish", "publish"],
     ["with a quoted program and command", '"npm" "publish"', "publish"],
     ["after && in a chain", "npm run build && npm publish", "publish"],
     ["after a semicolon", "echo done; npm publish", "publish"],
@@ -1088,10 +1099,14 @@ describe("jobRanges", () => {
 });
 
 describe("the repository", () => {
-  it("holds no forbidden command in a file that executes", () => {
-    const findings = scanRepository(REPO) as unknown[];
-    expect(describeFindings(findings)).toEqual([]);
-  });
+  it(
+    "holds no forbidden command in a file that executes",
+    () => {
+      const findings = scanRepository(REPO) as unknown[];
+      expect(describeFindings(findings)).toEqual([]);
+    },
+    SCAN_TIMEOUT_MS,
+  );
 
   it("is run by npm run lint and by the pre-commit hook", () => {
     const manifest = JSON.parse(
