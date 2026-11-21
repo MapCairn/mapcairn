@@ -287,6 +287,69 @@ describe("diffReports", () => {
     expect(change).toMatchObject({ kind: "changed", likelyBreaking: true });
   });
 
+  it("still reports a change outside the member list of a union with the same members", () => {
+    const [change] = changes(
+      ["// @public\nexport type Foo<T extends string> = Box<T> | null;"],
+      ["// @public\nexport type Foo<T extends number> = Box<T> | null;"],
+    );
+    expect(change).toMatchObject({ kind: "changed", likelyBreaking: true });
+  });
+
+  it("shortens a long list of gained members too", () => {
+    const members = (from: number, to: number) =>
+      Array.from({ length: to - from }, (_, index) => `"k${from + index}"`);
+    const union = (list: string[]) =>
+      `// @public\nexport type Key = ${list.join(" | ")};`;
+    const [change] = changes(
+      [
+        union(
+          ["old", ...members(0, 2)].map((m) => (m === "old" ? '"old"' : m)),
+        ),
+      ],
+      [union(members(0, 20))],
+    );
+    expect(change.detail).toContain('lost "old"');
+    expect(change.detail).toContain("gained 18 members");
+    expect(change.detail).toContain("and 8 more");
+  });
+
+  it("names exactly ten removed members in full, and counts from eleven", () => {
+    const keys = (count: number) =>
+      Array.from({ length: count }, (_, index) => `"k${index}"`);
+    const union = (list: string[]) =>
+      `// @public\nexport type Key = ${list.join(" | ")};`;
+    const [ten] = changes([union(keys(12))], [union(keys(2))]);
+    expect(ten.detail).toBe(`Key lost ${keys(12).slice(2).join(", ")}.`);
+    const [eleven] = changes([union(keys(13))], [union(keys(2))]);
+    expect(eleven.detail).toContain("lost 11 members:");
+    expect(eleven.detail).toContain("and 1 more");
+    expect(eleven.detail).not.toContain('"k12"');
+  });
+
+  it("still sees a @beta tag gained by a reordered union", () => {
+    const [change] = changes(
+      [mode],
+      ['// @beta\nexport type Mode = "dark" | "light";'],
+    );
+    expect(change).toMatchObject({ kind: "gained-beta" });
+  });
+
+  it("keeps a member whose text holds a bar or a bracket in a string literal whole", () => {
+    const before =
+      '// @public\nexport type Sep = "a|b" | \'(\' | `x|${string}` | "c";';
+    const after = "// @public\nexport type Sep = \"c\" | '(';";
+    const [change] = changes([before], [after]);
+    expect(change.kind).toBe("union-member-removed");
+    expect(change.detail).toBe('Sep lost "a|b", `x|${string}`.');
+  });
+
+  it("reads an escaped quote inside a literal member", () => {
+    const before = '// @public\nexport type Q = "say \\"a|b\\"" | "x" | "y";';
+    const after = '// @public\nexport type Q = "x" | "y";';
+    const [change] = changes([before], [after]);
+    expect(change.detail).toBe('Q lost "say \\"a|b\\"".');
+  });
+
   it("calls a new member of an enum likely breaking", () => {
     const before =
       "// @public\nexport enum Level {\n    High = 1,\n    Low = 0\n}";

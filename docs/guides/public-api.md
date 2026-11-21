@@ -127,10 +127,10 @@ CI prints each warning in a group and a count for each package as one annotation
 
 - a removed or changed line in a report, and a line that gained an `@internal` tag;
 - a required member added to an exported interface or abstract class a host implements (an optional member, or a member of an ordinary class, does not count; for an abstract class only a new abstract member does). Hosts implement the ports, so adding a required member to one breaks them;
-- an added or removed member of an exported union, or an added member of an enum. API Extractor prints a short union on one line, so a new member shows as a changed line, and a long one on several lines; the script reads the members from the report text itself. A union that loses members is reported as `union-member-removed`, likely breaking, and names them (the first 10, then the count of the rest and the total), and says what it gained;
+- an added or removed member of an exported union, or an added member of an enum. API Extractor may print a union on one line or on several, so the script reads the members from the report text itself. A union that loses members is reported as `union-member-removed`, likely breaking, and names them (the first 10, then the count of the rest and the total), and says what it gained;
 - a change under `packages/core/src/urlHash/sharedLinks.test.ts` or `packages/core/src/layers/legacyDefinitions/` that removes or edits an entry (any removed line in the diff since the last tag). Adding an entry is not breaking.
 
-Two kinds of change need a person, because no check sees them: a message key removed or renamed (the release notes list new keys so a host can translate them), and a stored format changed. While the version is `0.x`, a likely breaking change gives a minor bump; from `1.0.0` it gives a major one (the rules are in plan 0014).
+The plan names removed and renamed message keys, because the keys are a union in the report (a rename shows as lost X and gained Y), but a person still writes them into the release notes and lists the new keys so a host can translate them. One kind of change no check sees needs a person: a stored format changed. While the version is `0.x`, a likely breaking change gives a minor bump; from `1.0.0` it gives a major one (the rules are in plan 0014).
 
 ## Who decides
 
