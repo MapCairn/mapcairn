@@ -427,7 +427,7 @@ export const SECTIONS: readonly Section[] = [
             summary: "How is it licensed?",
             detail: [
               [
-                "The SDK is AGPL-3.0: if you ship it in a product, or let people use a modified version over a network, you publish the corresponding source under the same licence. The SDK's own dependencies are permissively licensed.",
+                "The SDK is AGPL-3.0-only. If you distribute an app that includes it, or let people interact with a modified version over a network, you must provide them with the corresponding source under the same licence. A licence for closed-source use is not available yet. The SDK's own dependencies are permissively licensed.",
               ],
             ],
           },
