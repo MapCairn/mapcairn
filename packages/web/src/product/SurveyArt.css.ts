@@ -184,6 +184,9 @@ const label = style({
   },
 });
 
+/** A small step back along the inline axis, for a label that sits before its mark. */
+const BEFORE = `calc(-1 * ${tokens.space.xs})`;
+
 /**
  * Where a label's top start corner goes in a crop's frame, from a point of the
  * sheet and a gap along the inline axis: the start margin is a share of the
@@ -200,21 +203,21 @@ const labelMargins = (crop: Crop, point: Point, gap: string, drop: string) => {
 };
 
 /**
- * Beside the cairn: its start edge a small step after the cairn's side, its
- * middle level with the middle of the cairn.
+ * Beside the cairn, on its start side: the label's end edge a small step
+ * before the cairn, its middle level with the middle of the cairn. Moved back
+ * by its own width, so it never needs room beyond the cairn, at any text size.
  */
 export const spotHeight = style([
   label,
   {
-    ...labelMargins(WIDE_CROP, SPOT_HEIGHT.at, tokens.space.xs, "0px"),
-    transform: "translateY(-50%)",
+    ...labelMargins(WIDE_CROP, SPOT_HEIGHT.at, BEFORE, "0px"),
+    transform: "translate(-100%, -50%)",
+    selectors: {
+      // The page's root is always left to right; the mirrored shift is what the harmony scanner asks of any horizontal translation.
+      '[dir="rtl"] &': { transform: "translate(100%, -50%)" },
+    },
     "@media": {
-      [NARROW]: labelMargins(
-        NARROW_CROP,
-        SPOT_HEIGHT.at,
-        tokens.space.xs,
-        "0px",
-      ),
+      [NARROW]: labelMargins(NARROW_CROP, SPOT_HEIGHT.at, BEFORE, "0px"),
     },
   },
 ]);

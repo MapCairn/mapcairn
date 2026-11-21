@@ -20,17 +20,19 @@ import {
  * summit, a dropped pin and the line measured from the pin to the cairn. The
  * drawing itself holds no text, so nothing in it shrinks with it: the two
  * labels, the summit's height and the line's length, are HTML at the small
- * step (13 px) set beside the marks they name, in the ink of the page's text.
+ * step (13 px) set beside the marks they name (the height on the cairn's start side, so it
+ * has room at any text size), in the ink of the page's text.
  * Every position comes from `surveyGeometry.ts`, so the marks agree by
- * construction. It depicts no real place and carries nothing the page's text
- * does not: all of it is `aria-hidden`, and every colour is a token through a
- * class. The anchors a browser test measures carry `data-anchor`.
+ * construction. It depicts no real place and its two figures, the height and
+ * the length, are invented decoration: nothing on the page relies on them, and
+ * all of it is `aria-hidden`. Every colour is a token through a class. The
+ * anchors a browser test measures carry `data-anchor`.
  */
 
 /** The cairn on the summit, in the blue of the survey marks. */
 function Cairn() {
   return (
-    <g transform={CAIRN_TRANSFORM} strokeLinejoin="round">
+    <g transform={CAIRN_TRANSFORM} strokeLinejoin="round" data-anchor="cairn">
       {STONES.map(({ points, offset }) => (
         <g key={points} transform={offset}>
           <polygon className={styles.halo} strokeWidth="40" points={points} />
@@ -44,7 +46,7 @@ function Cairn() {
 /** The dropped pin, drawn as the playground draws it, with its tip on {@link PIN_TIP}. */
 function Pin() {
   return (
-    <g transform={`translate(${PIN_TIP.x} ${PIN_TIP.y})`}>
+    <g transform={`translate(${PIN_TIP.x} ${PIN_TIP.y})`} data-anchor="pin">
       <path className={styles.pinBody} d={PIN_PATH} />
       <circle
         className={styles.pinDot}

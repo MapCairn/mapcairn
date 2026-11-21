@@ -13,7 +13,6 @@ import {
   CAIRN_FOOT,
   type Crop,
   EASTINGS,
-  GRID_STEP,
   MEASURE,
   MEASURE_LABEL,
   MEASURE_METRES,
@@ -72,15 +71,18 @@ describe("the relief strip's geometry", () => {
     expect(MEASURE.to.x).toBeGreaterThan(MEASURE.from.x);
   });
 
-  it("puts the grid ticks on the grid's true positions, numbered with north the larger", () => {
+  it("puts the grid ticks a kilometre apart inside the sheet", () => {
     expect(EASTINGS.map((tick) => tick.at)).toEqual(
-      Array.from({ length: EASTINGS.length }, (_, i) => (i + 1) * GRID_STEP),
+      Array.from({ length: EASTINGS.length }, (_, i) => (i + 1) * UNITS_PER_KM),
     );
-    const northings = NORTHINGS.map((tick) => Number(tick.label));
-    expect([...northings].sort((a, b) => b - a)).toEqual(northings);
-    const eastings = EASTINGS.map((tick) => Number(tick.label));
-    expect([...eastings].sort((a, b) => a - b)).toEqual(eastings);
-    expect(GRID_STEP).toBe(UNITS_PER_KM);
+    expect(NORTHINGS.map((tick) => tick.at)).toEqual(
+      Array.from(
+        { length: NORTHINGS.length },
+        (_, i) => (i + 1) * UNITS_PER_KM,
+      ),
+    );
+    expect(EASTINGS.at(-1)?.at).toBeLessThan(SHEET.width);
+    expect(NORTHINGS.at(-1)?.at).toBeLessThan(SHEET.height);
   });
 
   it("marks every fifth contour from the base as an index contour, and gives the summit a height just above the highest", () => {
@@ -99,8 +101,8 @@ describe("the relief strip's geometry", () => {
     expect(SPOT_HEIGHT.text).toBe(SUMMIT.metres.toLocaleString("en-GB"));
   });
 
-  it("sets the spot height at the cairn's side, in the middle of its height", () => {
-    expect(SPOT_HEIGHT.at.x).toBe(CAIRN_BOX.right);
+  it("sets the spot height on the cairn's start side, in the middle of its height", () => {
+    expect(SPOT_HEIGHT.at.x).toBe(CAIRN_BOX.left);
     expect(SPOT_HEIGHT.at.y).toBeGreaterThan(CAIRN_BOX.top);
     expect(SPOT_HEIGHT.at.y).toBeLessThan(CAIRN_BOX.bottom);
   });

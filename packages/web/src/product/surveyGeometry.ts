@@ -54,45 +54,31 @@ export const UNITS_PER_KM = 160;
 /** Metres in a kilometre. */
 const METRES_PER_KM = 1000;
 
-/** The grid's spacing in view box units: one kilometre, so each grid number is a kilometre. */
-export const GRID_STEP = UNITS_PER_KM;
+/** The grid's spacing in view box units: one kilometre. */
+const GRID_STEP = UNITS_PER_KM;
 
-/** How far a grid tick reaches into the sheet. */
+/** How far a grid tick reaches into the sheet. The strip does not draw the grid; the link preview image does. */
 export const TICK_LENGTH = 6;
 
-/** The first easting along the top and the first northing down the side, as on a sheet's grid references. */
-const FIRST_EASTING = 41;
-const FIRST_NORTHING = 12;
-
-/** The grid lines' positions along each axis, inside the sheet. */
-function gridPositions(extent: number): number[] {
-  const positions: number[] = [];
-  for (let at = GRID_STEP; at < extent; at += GRID_STEP) {
-    positions.push(at);
-  }
-  return positions;
-}
-
-/** A grid tick and its number, centred on the tick. */
+/** A grid line's place along an axis. */
 export interface GridTick {
   readonly at: number;
-  readonly label: string;
 }
 
-/** Two figures, padded, as grid numbers are written. */
-function gridNumber(value: number): string {
-  return String(value).padStart(2, "0");
+/** The grid lines' ticks along an axis, a kilometre apart, inside the sheet. */
+function gridTicks(extent: number): GridTick[] {
+  const ticks: GridTick[] = [];
+  for (let at = GRID_STEP; at < extent; at += GRID_STEP) {
+    ticks.push({ at });
+  }
+  return ticks;
 }
 
-/** The eastings: ticks along the top edge, numbered left to right. */
-export const EASTINGS: readonly GridTick[] = gridPositions(SHEET.width).map(
-  (at) => ({ at, label: gridNumber(FIRST_EASTING + at / GRID_STEP) }),
-);
+/** The eastings: ticks along the top edge. */
+export const EASTINGS: readonly GridTick[] = gridTicks(SHEET.width);
 
-/** The northings: ticks down the left edge, numbered so north (up) is the larger. */
-export const NORTHINGS: readonly GridTick[] = gridPositions(SHEET.height).map(
-  (at) => ({ at, label: gridNumber(FIRST_NORTHING - at / GRID_STEP) }),
-);
+/** The northings: ticks down the left edge. */
+export const NORTHINGS: readonly GridTick[] = gridTicks(SHEET.height);
 
 /** The cairn stands on the summit: its foot is the summit point. */
 export const CAIRN_FOOT: Point = { x: SUMMIT.x, y: SUMMIT.y };
@@ -141,10 +127,15 @@ export const CAIRN_BOX: Box = {
   bottom: CAIRN_FOOT.y,
 };
 
-/** The summit's spot height, set beside the cairn: `at` is the middle of its start edge, before the gap the stylesheet adds. */
+/**
+ * The summit's spot height, set on the cairn's start side, so it has room at
+ * any text size however near the strip's end edge the cairn is: `at` is the
+ * middle of the cairn's start edge, and the label's end edge goes a gap before
+ * it (the stylesheet adds the gap and shifts the label by its own width).
+ */
 export const SPOT_HEIGHT = {
   text: formatNumber(SUMMIT.metres, LANGUAGE),
-  at: { x: CAIRN_BOX.right, y: (CAIRN_BOX.top + CAIRN_BOX.bottom) / 2 },
+  at: { x: CAIRN_BOX.left, y: (CAIRN_BOX.top + CAIRN_BOX.bottom) / 2 },
 } as const;
 
 /** The dropped pin: its tip is the point it marks. */
@@ -197,9 +188,6 @@ export const MEASURE_LABEL = {
 /** The clear space kept round the marks a crop must show. */
 const CROP_MARGIN = 24;
 
-/** The room a crop keeps beyond the cairn for the spot height, in view box units, which the label's fixed size fits at the scales the page draws. */
-const SPOT_HEIGHT_ROOM = 64;
-
 /** The part of the sheet the strip shows, top to bottom: the marks and a margin. */
 const BAND = {
   top: Math.min(CAIRN_BOX.top, PIN_BOX.top) - CROP_MARGIN,
@@ -245,7 +233,7 @@ export const WIDE_CROP: Crop = cropOf({
 /** The strip on a narrow screen: the same band, enlarged round the marks, so they stay big enough. */
 export const NARROW_CROP: Crop = cropOf({
   left: PIN_BOX.left - CROP_MARGIN,
-  right: CAIRN_BOX.right + SPOT_HEIGHT_ROOM,
+  right: CAIRN_BOX.right + CROP_MARGIN,
   top: BAND.top,
   bottom: BAND.bottom,
 });
