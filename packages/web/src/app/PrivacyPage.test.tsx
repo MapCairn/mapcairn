@@ -111,9 +111,10 @@ describe("PrivacyPage", () => {
     ).toBeInTheDocument();
     const text = screen.getByText(/Every data layer is off/).textContent;
     expect(text).toMatch(/nothing is requested before\s+that/);
-    for (const provider of ["USGS", "NASA", "GDACS", "Copernicus"]) {
+    for (const provider of ["USGS", "NASA", "GDACS"]) {
       expect(text).toContain(provider);
     }
+    expect(text).not.toContain("Copernicus");
     expect(text).toMatch(/IP address/);
   });
 

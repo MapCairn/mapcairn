@@ -24,7 +24,6 @@ export const LAYER_PROVIDER_ORIGINS: readonly string[] = [
   "https://earthquake.usgs.gov",
   "https://gibs.earthdata.nasa.gov",
   "https://www.gdacs.org",
-  "https://ows.globalfloods.eu",
   "https://cdn.jsdelivr.net",
 ];
 
@@ -48,7 +47,7 @@ const FEEDS: readonly { readonly pattern: RegExp; readonly file: string }[] = [
   },
 ];
 
-const TILE_PATTERN = /gibs\.earthdata\.nasa\.gov|ows\.globalfloods\.eu/;
+const TILE_PATTERN = /gibs\.earthdata\.nasa\.gov/;
 
 /** Every request the suite saw for a layer provider, in order. */
 export interface LayerRequests {

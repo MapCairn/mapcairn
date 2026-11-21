@@ -167,7 +167,6 @@ describe("PrivacyPage in the active language", () => {
       "NASA",
       "Global Imagery Browse Services",
       "GDACS",
-      "Copernicus",
       "jsDelivr",
       "Cloudflare Web Analytics",
       "static.cloudflareinsights.com",

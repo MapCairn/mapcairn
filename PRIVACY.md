@@ -88,8 +88,7 @@ with your IP address: the US Geological Survey (USGS) for earthquakes, NASA's
 Global Imagery Browse Services for its imagery layers (satellite imagery,
 rainfall, fire hotspots, where people live, Earth at night and sea
 temperature), the Global Disaster Alert and Coordination System (GDACS) for fire,
-flood, tropical cyclone, volcano and drought alerts, and Copernicus (the Global
-Flood Awareness System) for the flood hazard map, and the jsDelivr content
+flood, tropical cyclone, volcano and drought alerts, and the jsDelivr content
 delivery network for the country boundaries. Show affected area sends one more
 request to GDACS for that event only. Tile layers request images for the part
 of the map you are looking at, so the provider can tell roughly where you are
