@@ -20,6 +20,16 @@ import {
 
 const PREAMBLE = "# Changelog\n\nWhat changed in each release.\n\n";
 
+/**
+ * Milliseconds of CPU time the process has used. Unlike a wall clock it does
+ * not count the time the process waits for a core, so a busy machine does not
+ * stretch a timing.
+ */
+function cpuMs(): number {
+  const { user, system } = process.cpuUsage();
+  return (user + system) / 1000;
+}
+
 const GOOD = `${PREAMBLE}## 0.2.0 (2026-12-01)
 
 ### What is new
@@ -937,7 +947,7 @@ describe("published text", () => {
 
   describe("a long line", () => {
     it("finishes quickly on a line of spaces", () => {
-      const started = Date.now();
+      const started = cpuMs();
       for (const shape of [
         `${" ".repeat(100_000)}x`,
         `- ${" ".repeat(100_000)}x`,
@@ -946,7 +956,7 @@ describe("published text", () => {
       ]) {
         checkChangelog(withLine(shape));
       }
-      expect(Date.now() - started).toBeLessThan(2000);
+      expect(cpuMs() - started).toBeLessThan(2000);
     });
   });
 
@@ -1048,9 +1058,9 @@ describe("published text", () => {
     function bestOfThree(text: string): number {
       let best = Number.POSITIVE_INFINITY;
       for (let run = 0; run < 3; run += 1) {
-        const started = performance.now();
+        const started = cpuMs();
         checkChangelog(text);
-        best = Math.min(best, performance.now() - started);
+        best = Math.min(best, cpuMs() - started);
       }
       return best;
     }
