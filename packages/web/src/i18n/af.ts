@@ -846,6 +846,7 @@ export const AF_CATALOGUE: Record<MessageKey, string> = {
     "Stuur die speld se ligging, tot op sowat 11 m, na OpenStreetMap se Nominatim-diens.",
   "host.notes.routing":
     "Niks word gestuur voordat jy dit vra nie. Kry roete stuur die stoppe en die manier van reis, en 'n reistydgebied stuur die eerste stop, saam met jou IP-adres, na die Valhalla-roetediens wat FOSSGIS bedryf. Dit gebruik OpenStreetMap-data.",
+  "host.credits.fixTheMap": "Maak die kaart reg",
   "host.title.map": "Interaktiewe kaart",
   "privacy.title": "Privaatheidsbeleid",
   "privacy.updated": "Laas opgedateer: {date}",
