@@ -826,7 +826,7 @@ export const EN_GB_CATALOGUE: Record<MessageKey, string> = {
   "host.notes.pinLookup":
     "Sends the pin's position, to about 11 m, to OpenStreetMap's Nominatim service.",
   "host.notes.routing":
-    "Nothing is sent until you ask. Get route sends the stops and the way of travelling, and a travel time area sends the first stop, with your IP address, to the Valhalla routing service run by FOSSGIS. It uses OpenStreetMap data.",
+    "Nothing is sent until you ask. Get route sends the stops and the way of travelling, and a travel time area sends the first stop, with your IP address and this site's address as the referrer, to the Valhalla routing service run by FOSSGIS. It uses OpenStreetMap data.",
   "host.title.map": "Interactive map",
   "privacy.title": "Privacy policy",
   "privacy.updated": "Last updated: {date}",

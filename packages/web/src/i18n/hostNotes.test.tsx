@@ -120,5 +120,6 @@ describe("the host's privacy notes", () => {
       /Valhalla[\s\S]*FOSSGIS/,
     );
     expect(AF_CATALOGUE["host.notes.routing"]).toMatch(/IP-adres/);
+    expect(AF_CATALOGUE["host.notes.routing"]).toMatch(/as die verwyser/);
   });
 });
