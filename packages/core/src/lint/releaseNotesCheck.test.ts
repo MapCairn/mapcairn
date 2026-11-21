@@ -20,6 +20,16 @@ import {
 
 const PREAMBLE = "# Changelog\n\nWhat changed in each release.\n\n";
 
+/**
+ * Milliseconds of CPU time the process has used. Unlike a wall clock it does
+ * not count the time the process waits for a core, so a busy machine does not
+ * stretch a timing.
+ */
+function cpuMs(): number {
+  const { user, system } = process.cpuUsage();
+  return (user + system) / 1000;
+}
+
 const GOOD = `${PREAMBLE}## 0.2.0 (2026-12-01)
 
 ### What is new
@@ -937,7 +947,7 @@ describe("published text", () => {
 
   describe("a long line", () => {
     it("finishes quickly on a line of spaces", () => {
-      const started = Date.now();
+      const started = cpuMs();
       for (const shape of [
         `${" ".repeat(100_000)}x`,
         `- ${" ".repeat(100_000)}x`,
@@ -946,7 +956,7 @@ describe("published text", () => {
       ]) {
         checkChangelog(withLine(shape));
       }
-      expect(Date.now() - started).toBeLessThan(2000);
+      expect(cpuMs() - started).toBeLessThan(2000);
     });
   });
 
@@ -1044,16 +1054,6 @@ describe("published text", () => {
     const MAX_GROWTH = 10;
     /** Below this a timing is noise, so it is not divided into. */
     const NOISE_MS = 20;
-
-    /**
-     * Milliseconds of CPU time the process has used. Unlike a wall clock it
-     * does not count the time the process waits for a core, so a busy machine
-     * inflates one of the two timings and not the other far less often.
-     */
-    function cpuMs(): number {
-      const { user, system } = process.cpuUsage();
-      return (user + system) / 1000;
-    }
 
     function bestOfThree(text: string): number {
       let best = Number.POSITIVE_INFINITY;
