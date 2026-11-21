@@ -35,6 +35,11 @@ export interface ContrastPair {
   readonly kind: PairKind;
   /** The AA minimum ratio for {@link kind}. */
   readonly minimum: number;
+  /**
+   * True for a map overlay that is drawn on a halo (`mapHalo`), so it may show
+   * by its halo. A mark drawn without one is measured against the map alone.
+   */
+  readonly drawnWithHalo?: boolean;
 }
 
 /** Builds a pair with the minimum that matches its kind. */
@@ -124,14 +129,26 @@ export const CONTRAST_PAIRS: readonly ContrastPair[] = [
     "focusRing",
     "non-text",
   ),
-  pair("pin-basemap", "Pin on any basemap", "mapPin", "basemaps", "non-text"),
-  pair(
-    "accuracy-basemap",
-    "Accuracy outline on any basemap",
-    "mapAccuracy",
-    "basemaps",
-    "non-text",
-  ),
+  {
+    ...pair(
+      "pin-basemap",
+      "Pin on any basemap",
+      "mapPin",
+      "basemaps",
+      "non-text",
+    ),
+    drawnWithHalo: true,
+  },
+  {
+    ...pair(
+      "accuracy-basemap",
+      "Accuracy outline on any basemap",
+      "mapAccuracy",
+      "basemaps",
+      "non-text",
+    ),
+    drawnWithHalo: true,
+  },
   pair("pin-halo", "Pin against its halo", "mapPin", "mapHalo", "non-text"),
   pair(
     "line-halo",
@@ -199,9 +216,10 @@ function backgroundsFor(pairing: ContrastPair, roles: ColourRoles): Rgba[] {
 }
 
 /**
- * The contrast of a pair over one backdrop. A map overlay is drawn on its
- * halo, so it shows when the mark clears the backdrop, or when its halo clears
- * the backdrop and the mark clears its halo; any other pair is the plain ratio.
+ * The contrast of a pair over one backdrop. A map overlay drawn on a halo shows
+ * when the mark clears the backdrop, or when its halo clears the backdrop and
+ * the mark clears its halo; any other pair, and a mark with no halo, is the
+ * plain ratio.
  */
 function ratioOver(
   pairing: ContrastPair,
@@ -210,7 +228,7 @@ function ratioOver(
 ): number {
   const mark = compositeOver(roles[pairing.foreground], under);
   const direct = contrastRatio(mark, under);
-  if (pairing.background !== "basemaps") {
+  if (pairing.background !== "basemaps" || pairing.drawnWithHalo !== true) {
     return direct;
   }
   const halo = parseColour(roles.mapHalo);

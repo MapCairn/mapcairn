@@ -78,6 +78,27 @@ describe("contrastRows", () => {
     expect(measurePair(pair, roles)).toBeGreaterThanOrEqual(pair.minimum);
   });
 
+  it("gives halo credit only to a mark that is drawn on a halo", () => {
+    const pair = CONTRAST_PAIRS.find((entry) => entry.id === "pin-basemap");
+    if (!pair) {
+      throw new Error("missing pair");
+    }
+    const roles = themeValues.light.colour;
+    expect(pair.drawnWithHalo).toBe(true);
+    expect(measurePair({ ...pair, drawnWithHalo: false }, roles)).toBeLessThan(
+      pair.minimum,
+    );
+    expect(measurePair(pair, roles)).toBeGreaterThanOrEqual(pair.minimum);
+  });
+
+  it("lists the pin and the accuracy outline as drawn on a halo", () => {
+    for (const id of ["pin-basemap", "accuracy-basemap"]) {
+      expect(
+        CONTRAST_PAIRS.find((entry) => entry.id === id)?.drawnWithHalo,
+      ).toBe(true);
+    }
+  });
+
   it("reports a failure when a pair is below its minimum", () => {
     const pair = CONTRAST_PAIRS.find((entry) => entry.id === "text-surface");
     if (!pair) {

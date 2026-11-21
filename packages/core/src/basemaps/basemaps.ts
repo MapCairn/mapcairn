@@ -272,7 +272,7 @@ export function createBasemapCatalogue(
     );
   }
   for (const id of Object.values(themeDefaultIds ?? {})) {
-    if (!byId.has(id)) {
+    if (id !== undefined && !byId.has(id)) {
       throw new Error(`The default basemap "${id}" is not in the catalogue.`);
     }
   }

@@ -35,8 +35,9 @@ export const neutral = {
 /**
  * The one accent: a clear blue at hue 255. Chroma follows the sRGB gamut edge
  * at each lightness, which is why it peaks in the middle of the ramp.
- * Step 600 is the map overlay blue and the light focus ring; 700 is the light
- * accent used for text and fills; 300 is the dark accent.
+ * Step 600 is the light theme's map overlay blue and focus ring; 400 is the
+ * dark theme's, light enough to show over Fiord; 700 is the light accent used
+ * for text and fills; 300 is the dark accent.
  */
 export const accent = {
   50: "oklch(0.97 0.013 255)",
@@ -115,7 +116,7 @@ export const representativeBackdrops = {
   lightMap: "#f2efe9",
   /**
    * The land (background layer) colour of OpenFreeMap Bright, the default
-   * basemap in both themes. It must equal `DEFAULT_BASEMAP_BACKGROUND` in
+   * basemap in the light theme. It must equal `DEFAULT_BASEMAP_BACKGROUND` in
    * `@mapcairn/core`, which this package cannot import; a test in
    * `packages/web` checks that they agree.
    */

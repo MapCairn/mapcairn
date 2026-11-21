@@ -254,6 +254,21 @@ describe("AccuracyCircle", () => {
     );
   });
 
+  it("draws a halo circle under the outline, in the same place and size, so it shows over a mid-tone basemap", async () => {
+    await renderOverlays(
+      <AccuracyCircle center={A} accuracyMetres={500} testId="acc" />,
+    );
+    const outline = screen.getByTestId("acc");
+    const halo = screen.getByTestId("acc-halo");
+    for (const name of ["cx", "cy", "r"]) {
+      expect(halo.getAttribute(name)).toBe(outline.getAttribute(name));
+    }
+    expect(halo.getAttribute("class")).not.toBe(outline.getAttribute("class"));
+    expect(
+      halo.compareDocumentPosition(outline) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+  });
+
   it("keeps a tiny circle visible", async () => {
     await renderOverlays(
       <AccuracyCircle center={A} accuracyMetres={1} testId="acc" />,

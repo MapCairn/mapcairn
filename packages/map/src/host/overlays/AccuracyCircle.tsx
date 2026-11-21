@@ -23,8 +23,9 @@ export interface AccuracyCircleProps {
 /**
  * The circle around a found location, sized from the ground resolution at its
  * latitude so it matches the real accuracy at every zoom (on a globe, the
- * resolution at the view centre, which holds across the sphere). Render it
- * inside `MapOverlayLayer`.
+ * resolution at the view centre, which holds across the sphere). The outline
+ * has a halo under it, like a measure line, so it shows over any basemap.
+ * Render it inside `MapOverlayLayer`.
  */
 export function AccuracyCircle({
   center,
@@ -43,13 +44,25 @@ export function AccuracyCircle({
     adapter.metresPerPixel(center.lat),
     MIN_ACCURACY_RADIUS_PX,
   );
+  const cx = roundPixel(x);
+  const cy = roundPixel(y);
+  const r = roundPixel(radius);
   return (
-    <circle
-      className={styles.accuracy}
-      cx={roundPixel(x)}
-      cy={roundPixel(y)}
-      r={roundPixel(radius)}
-      data-testid={testId}
-    />
+    <>
+      <circle
+        className={styles.accuracyHalo}
+        cx={cx}
+        cy={cy}
+        r={r}
+        data-testid={testId === undefined ? undefined : `${testId}-halo`}
+      />
+      <circle
+        className={styles.accuracy}
+        cx={cx}
+        cy={cy}
+        r={r}
+        data-testid={testId}
+      />
+    </>
   );
 }

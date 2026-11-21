@@ -158,6 +158,47 @@ test.describe("theme", () => {
     ).toBeNull();
   });
 
+  test("a reload keeps the basemap the address names, and a theme change after it resumes following the theme", async ({
+    page,
+    mapPage,
+  }) => {
+    await page.emulateMedia({ colorScheme: "dark" });
+    const styles = recordStyles(page);
+    await mapPage.goto();
+    await mapPage.focusMap();
+    await page.keyboard.press("+");
+    await expect.poll(() => mapPage.hashBasemap()).toBe(FIORD_BASEMAP_ID);
+
+    // The address names Fiord, so the reload opens on it, even in a light theme.
+    await page.emulateMedia({ colorScheme: "light" });
+    await expect
+      .poll(() => mapPage.hashBasemap())
+      .toBe(DEFAULT_VECTOR_BASEMAP_ID);
+    await page.evaluate(() => {
+      history.replaceState(
+        null,
+        "",
+        `${location.pathname}${location.search}#map=5.00/10.00000/20.00000&basemap=fiord`,
+      );
+    });
+    styles.length = 0;
+    await page.reload();
+    await mapPage.waitForMap();
+    expect(styles).toEqual([FIORD_BASEMAP_ID]);
+
+    // With nothing saved, changing the theme goes back to following it.
+    await page.emulateMedia({ colorScheme: "dark" });
+    await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
+    await page.emulateMedia({ colorScheme: "light" });
+    await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
+    await expect
+      .poll(() => styles)
+      .toEqual([FIORD_BASEMAP_ID, DEFAULT_VECTOR_BASEMAP_ID]);
+    expect(
+      await page.evaluate(() => localStorage.getItem("mapcairn:basemapId")),
+    ).toBeNull();
+  });
+
   test("a basemap the visitor chose stays through a theme change and a reload", async ({
     page,
     mapPage,

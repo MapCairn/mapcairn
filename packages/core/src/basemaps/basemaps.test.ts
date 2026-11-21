@@ -572,6 +572,21 @@ describe("the default for each theme", () => {
     expect(defaultBasemapFor(both, "light").id).toBe("fake-raster");
   });
 
+  it("treats a per-theme default set to undefined as left out, as a host that spreads optional config may pass it", () => {
+    const list = [FAKE_VECTOR_BASEMAP, FAKE_RASTER_BASEMAP];
+    const catalogue = createBasemapCatalogue(list, "fake-raster", {
+      light: undefined,
+      dark: undefined,
+    });
+    expect(defaultBasemapFor(catalogue, "dark").id).toBe("fake-raster");
+    const mixed = createBasemapCatalogue(list, "fake-vector", {
+      light: undefined,
+      dark: "fake-raster",
+    });
+    expect(defaultBasemapFor(mixed, "light").id).toBe("fake-vector");
+    expect(defaultBasemapFor(mixed, "dark").id).toBe("fake-raster");
+  });
+
   it("refuses a per-theme default that is not in the catalogue", () => {
     expect(() =>
       createBasemapCatalogue([FAKE_VECTOR_BASEMAP], "fake-vector", {

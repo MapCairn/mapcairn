@@ -63,7 +63,7 @@ describe("the reference host's basemaps", () => {
     expect(defaultBasemapFor(HOST_BASEMAP_CATALOGUE, "dark").id).toBe("fiord");
   });
 
-  it("opens an id the site does not offer on Bright, including the removed Satellite and Topographic", () => {
+  it("resolves an id the site does not offer to the catalogue's default, Bright, including the removed Satellite and Topographic (the viewer's theme default is chosen by `resolveBasemapFor`)", () => {
     for (const id of [
       "satellite",
       "topographic",

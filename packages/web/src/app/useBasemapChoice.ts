@@ -126,6 +126,15 @@ export function useBasemapChoice(
   // a save, so the stored value is read from the store, not from this render.
   const { settings: store } = useServices();
   const [linked, setLinked] = useState(linkedBasemapId);
+  // A link's basemap holds across a reload, but a visitor with no saved choice
+  // who changes the theme goes back to following it.
+  const [seenTheme, setSeenTheme] = useState(theme);
+  if (theme !== seenTheme) {
+    setSeenTheme(theme);
+    if (settings.basemapId === null && linked !== undefined) {
+      setLinked(undefined);
+    }
+  }
   const [pending, setPending] = useState<string | undefined>(undefined);
   const [failure, setFailure] = useState<BasemapFailure | null>(null);
   const { unavailable, markUnavailable, clear } = useBasemapAvailability();

@@ -633,4 +633,36 @@ describe("useBasemapChoice follows the theme until a basemap is chosen", () => {
     act(() => hook.result.current.unavailableNow(basemap("osm")));
     expect(services.fakes.settings.get().basemapId).toBe("positron");
   });
+
+  it("keeps a link's basemap while the theme is unchanged, and resumes following when the theme changes with no choice saved", () => {
+    const { services, hook } = setupFor("dark", { linked: "liberty" });
+    expect(hook.result.current.basemap.id).toBe("liberty");
+    act(() => services.fakes.theme.setSystemTheme("light"));
+    expect(hook.result.current.basemap.id).toBe("bright");
+    act(() => services.fakes.theme.setSystemTheme("dark"));
+    expect(hook.result.current.basemap.id).toBe("fiord");
+    expect(services.fakes.settings.get().basemapId).toBeNull();
+  });
+
+  it("keeps a link's basemap through a theme change when a basemap is saved", () => {
+    const { services, hook } = setupFor("dark", {
+      linked: "liberty",
+      stored: "positron",
+    });
+    act(() => services.fakes.theme.setSystemTheme("light"));
+    expect(hook.result.current.basemap.id).toBe("liberty");
+  });
+
+  it("saves the earlier basemap the map went back to when a follower's default is down and the person goes back, because the default cannot be drawn", () => {
+    const { services, hook } = setupFor("light");
+    act(() => services.fakes.theme.setSystemTheme("dark"));
+    act(() => hook.result.current.applied(basemap("fiord")));
+    // The previous basemap is Bright; Fiord, the default, is down.
+    act(() => hook.result.current.unavailableNow(basemap("fiord")));
+    expect(hook.result.current.basemap.id).toBe("bright");
+    act(() => hook.result.current.goBack());
+    expect(services.fakes.settings.get().basemapId).toBe("bright");
+    expect(hook.result.current.failure).toBeNull();
+    expect(hook.result.current.basemap.id).toBe("bright");
+  });
 });
