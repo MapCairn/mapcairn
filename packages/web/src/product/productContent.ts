@@ -133,8 +133,11 @@ export const COPY_CODE = {
   idle: "Copy code",
   copied: "Copied",
   failed: "Copy failed",
-  copiedMessage: "Code copied",
-  failedMessage: "Could not copy. Select the code and copy it manually.",
+  /** What is announced when a file copied, naming the file. */
+  copiedMessage: (file: string) => `Code copied, ${file}`,
+  /** What is announced when a file did not copy, naming it and saying what to do instead. */
+  failedMessage: (file: string) =>
+    `Could not copy ${file}. Select the code and copy it manually.`,
 } as const;
 
 /** The line under the hero's two buttons. */
@@ -190,11 +193,13 @@ export const SECTIONS: readonly Section[] = [
       {
         kind: "paragraph",
         text: [
-          "This is a whole React app in a Vite project: the map from the MapLibre adapter, the SDK's interface around it and a search box. Add the three lines of CSS below so the map has a height, and replace the project's ",
+          "This is a whole React app in a Vite project: the map from the MapLibre adapter, the SDK's interface around it and a search box. Add ",
+          { code: "src/page.css" },
+          ", a short style sheet, so the map has a height, and replace the project's ",
           { code: "index.html" },
           " and ",
           { code: "src/main.tsx" },
-          " with the other two files.",
+          " with the ones below.",
         ],
       },
       ...EMBED_EXAMPLE_FILES.map(
@@ -208,7 +213,7 @@ export const SECTIONS: readonly Section[] = [
       {
         kind: "paragraph",
         text: [
-          "The app imports only the SDK package, and the project's tests type-check this exact code the way an app outside the repository would. The map asks a public tile provider for its tiles once it mounts, so choose the basemap whose terms and privacy you accept.",
+          "The app imports the SDK only through its package, and the project's tests type-check this exact code the way an app outside the repository would. The map asks a public tile provider for its tiles once it mounts, so choose the basemap whose terms and privacy you accept.",
         ],
       },
       {
@@ -455,7 +460,7 @@ export const SECTIONS: readonly Section[] = [
             summary: "What does it send to third parties?",
             detail: [
               [
-                "The SDK sends nothing by itself: requests come from the adapters a host supplies, and only when a person asks. The reference site counts page views with Cloudflare Web Analytics, which is cookieless, and its browser contacts the map tile providers, the search and routing services when you use them, and a layer's provider when you turn it on, as ",
+                "The SDK sends nothing by itself, apart from the basemap: requests come from the adapters a host supplies, and only when a person asks. The reference site counts page views with Cloudflare Web Analytics, which is cookieless, and its browser contacts the map tile providers, the search and routing services when you use them, and a layer's provider when you turn it on, as ",
                 { text: "its privacy policy", href: "/privacy" },
                 " lists.",
               ],

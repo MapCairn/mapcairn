@@ -75,10 +75,13 @@ export function CopyCodeButton({
     }
     if (result.ok) {
       setOutcome({ state: "copied", attempt: click });
-      announce(COPY_CODE.copiedMessage, { keep: true });
+      announce(COPY_CODE.copiedMessage(label), { keep: true });
     } else {
       setOutcome({ state: "failed", attempt: click });
-      announce(COPY_CODE.failedMessage, { priority: "assertive", keep: true });
+      announce(COPY_CODE.failedMessage(label), {
+        priority: "assertive",
+        keep: true,
+      });
     }
   }
 
@@ -87,7 +90,6 @@ export function CopyCodeButton({
       type="button"
       className={styles.copyButton}
       data-state={state}
-      data-testid="copy-code"
       aria-label={`${COPY_CODE[state]}, ${label}`}
       onClick={copy}
     >

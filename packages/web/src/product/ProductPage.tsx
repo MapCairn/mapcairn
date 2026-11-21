@@ -142,11 +142,9 @@ function Disclosures({ items }: { readonly items: readonly Disclosure[] }) {
 /** One block of a section. */
 function BlockView({
   block,
-  sectionId,
   clipboard,
 }: {
   readonly block: Block;
-  readonly sectionId: string;
   readonly clipboard: ClipboardPort;
 }): ReactNode {
   switch (block.kind) {
@@ -190,7 +188,6 @@ function BlockView({
             tabIndex={0}
             role="region"
             aria-label={block.label}
-            data-testid={`${sectionId}-code`}
           >
             <code>
               {block.language === HIGHLIGHTED_LANGUAGE ? (
@@ -244,7 +241,6 @@ function SectionView({
           // biome-ignore lint/suspicious/noArrayIndexKey: a fixed list of blocks
           key={index}
           block={block}
-          sectionId={section.id}
           clipboard={clipboard}
         />
       ))}

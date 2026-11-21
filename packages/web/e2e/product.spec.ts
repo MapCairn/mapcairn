@@ -265,7 +265,7 @@ test.describe("the product page", () => {
         product.main.getByRole("button", { name: "Copied" }),
       ).toBeFocused();
       await expect(page.getByTestId("live-region-polite")).toHaveText(
-        "Code copied",
+        "Code copied, src/main.tsx",
       );
       const shown = await product.code.textContent();
       await expect.poll(() => copiedTexts(page)).toEqual([shown]);
@@ -295,9 +295,30 @@ test.describe("the product page", () => {
         product.main.getByRole("button", { name: "Copy failed" }),
       ).toBeFocused();
       await expect(page.getByTestId("live-region-assertive")).toHaveText(
-        "Could not copy. Select the code and copy it manually.",
+        "Could not copy src/main.tsx. Select the code and copy it manually.",
       );
       await expect.poll(() => copiedTexts(page)).toEqual([]);
+    });
+
+    test("copies index.html and src/page.css from their own buttons, each exactly as shown", async ({
+      page,
+    }) => {
+      await recordClipboard(page, { ok: true });
+      const product = new ProductPage(page);
+      await product.goto();
+      const shown: string[] = [];
+      for (const file of ["index.html", "src/page.css"]) {
+        await product.main
+          .getByRole("button", { name: `Copy code, ${file}` })
+          .click();
+        await expect(page.getByTestId("live-region-polite")).toHaveText(
+          `Code copied, ${file}`,
+        );
+        shown.push(
+          (await page.getByRole("region", { name: file }).textContent()) ?? "",
+        );
+      }
+      await expect.poll(() => copiedTexts(page)).toEqual(shown);
     });
   });
 

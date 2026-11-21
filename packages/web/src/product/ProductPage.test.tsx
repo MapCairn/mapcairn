@@ -495,6 +495,23 @@ describe("the embedding example", () => {
       "with the adapter passed in to draw the map; search shows sample results until you add a search adapter",
     );
     expect(embed.textContent).not.toContain("draw no map tiles");
+    expect(embed.textContent).toContain(
+      "Add src/page.css, a short style sheet, so the map has a height",
+    );
+    expect(embed.textContent).not.toContain("three lines");
+    expect(embed.textContent).not.toContain("other two files");
+    expect(embed.textContent).toContain(
+      "imports the SDK only through its package",
+    );
+  });
+});
+
+describe("what the page says the SDK sends", () => {
+  it("names the basemap as the one request the SDK's map makes by itself", () => {
+    renderPage();
+    expect(
+      screen.getByRole("region", { name: "Questions" }).textContent,
+    ).toContain("The SDK sends nothing by itself, apart from the basemap:");
   });
 });
 
@@ -535,7 +552,9 @@ describe("copying the embedding example", () => {
       await screen.findByRole("button", { name: "Copied, src/main.tsx" }),
     ).toBeInTheDocument();
     await waitFor(() =>
-      expect(liveRegions().polite).toHaveTextContent("Code copied"),
+      expect(liveRegions().polite).toHaveTextContent(
+        "Code copied, src/main.tsx",
+      ),
     );
     expect(liveRegions().assertive).toBeEmptyDOMElement();
     expect(document.activeElement).toBe(button);
@@ -627,7 +646,7 @@ describe("copying the embedding example", () => {
     ).toBeInTheDocument();
     await waitFor(() =>
       expect(liveRegions().assertive).toHaveTextContent(
-        "Could not copy. Select the code and copy it manually.",
+        "Could not copy src/main.tsx. Select the code and copy it manually.",
       ),
     );
     expect(document.activeElement).toBe(button);
@@ -650,6 +669,28 @@ describe("copying the embedding example", () => {
       await screen.findByRole("button", { name: "Copied, src/main.tsx" }),
     ).toBeInTheDocument();
     expect(clipboard.written).toEqual([MAIN_CODE]);
+  });
+
+  it("names the file in what it announces, for each of the three buttons", async () => {
+    renderPage();
+    for (const { name } of EMBED_EXAMPLE_FILES) {
+      fireEvent.click(
+        screen.getByRole("button", { name: `Copy code, ${name}` }),
+      );
+      await waitFor(() =>
+        expect(liveRegions().polite).toHaveTextContent(`Code copied, ${name}`),
+      );
+    }
+  });
+
+  it("leaves no duplicate test id on the three blocks and their buttons", () => {
+    const { container } = renderPage();
+    expect(
+      container.querySelectorAll("[data-testid='copy-code']"),
+    ).toHaveLength(0);
+    expect(container.querySelectorAll("[data-testid$='-code']")).toHaveLength(
+      0,
+    );
   });
 
   it("renders on the server with the button and no message", () => {
