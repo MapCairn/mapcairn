@@ -1170,6 +1170,20 @@ test.describe("the product page", () => {
           await page.evaluate(() => document.documentElement.scrollWidth),
         ).toBeLessThanOrEqual(390);
       });
+
+      test("still offer the hero's picture as a link to the live playground", async ({
+        page,
+      }) => {
+        await page.goto("/");
+        const link = page.getByTestId("plate-hero").getByRole("link", {
+          name: "Try it live: open this view in the playground",
+        });
+        await expect(link).toBeVisible();
+        await expect(link).toHaveAttribute(
+          "href",
+          "/map#map=13.00/-33.93650/18.40700",
+        );
+      });
     });
   });
 
