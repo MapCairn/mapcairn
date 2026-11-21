@@ -15,7 +15,6 @@ import {
   isUsedByExample,
   LICENCE_DUTY,
   namedImports,
-  relativeLinks,
   tagAttributes,
 } from "./markdownSupport";
 
@@ -418,7 +417,7 @@ describe("the release guide's steps for the stable version", () => {
     const [status = ""] = stableStatus(guide);
     expect(status).not.toMatch(/0\.2\.0|0\.1\.1/);
     expect(status).toContain(
-      "a patch release (the last number) is not meant to",
+      "so a `^0.1.0` range takes patch releases but not the next minor release.",
     );
   });
 });
@@ -427,7 +426,7 @@ describe("the licence guide", () => {
   const guide = readFileSync(path.join(REPO, "docs/guides/licence.md"), "utf8");
 
   it("stays short and says what the duty reaches in the same words as the READMEs", () => {
-    expect(guide.split("\n").length).toBeLessThan(150);
+    expect(guide.split("\n").length).toBeLessThan(90);
     expect(guide).toContain(
       "the corresponding source of the code you combine with the SDK and serve with it, under the same licence",
     );
@@ -438,14 +437,20 @@ describe("the licence guide", () => {
   });
 
   it("links only to files and headings that exist", () => {
-    for (const target of relativeLinks(guide)) {
-      expect(existsSync(path.join(REPO, "docs/guides", target)), target).toBe(
-        true,
-      );
+    const targets = [...guide.matchAll(/\]\(([^)\s]+)\)/g)].map(
+      (match) => match[1] ?? "",
+    );
+    expect(targets.length).toBeGreaterThan(0);
+    for (const target of targets) {
+      const [file = "", anchor] = target.split("#");
+      const found = path.join(REPO, "docs/guides", file);
+      expect(existsSync(found), target).toBe(true);
+      if (anchor !== undefined) {
+        expect(headingAnchors(readFileSync(found, "utf8")), target).toContain(
+          anchor,
+        );
+      }
     }
-    expect(
-      headingAnchors(readFileSync(path.join(REPO, "README.md"), "utf8")),
-    ).toContain("licence");
   });
 });
 
