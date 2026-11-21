@@ -158,6 +158,7 @@ export const headerBar = style([
   pageColumn,
   {
     display: "flex",
+    flexWrap: "wrap",
     alignItems: "center",
     justifyContent: "space-between",
     columnGap: tokens.space.sm,
@@ -193,10 +194,13 @@ export const brand = style({
   },
 });
 
-/** The header's links, in a row that never wraps: three short words. */
+/** The header's links, in a row that wraps only when the text is very large. */
 export const nav = style({
   display: "flex",
-  gap: tokens.space.xxs,
+  flexWrap: "wrap",
+  "@media": {
+    [ROOMY]: { columnGap: tokens.space.xxs },
+  },
   margin: 0,
   padding: 0,
   listStyle: "none",
@@ -207,7 +211,9 @@ export const navLink = style({
   display: "inline-flex",
   alignItems: "center",
   minHeight: tokens.size.minTarget,
-  paddingInline: tokens.space.xs,
+  minWidth: tokens.size.minTarget,
+  justifyContent: "center",
+  paddingInline: 0,
   borderRadius: tokens.radius.inner,
   color: tokens.color.accent,
   fontWeight: tokens.type.weight.semibold,
@@ -231,6 +237,7 @@ export const navLink = style({
         },
       },
     },
+    [ROOMY]: { paddingInline: tokens.space.xs },
     [FORCED]: { textDecoration: "underline" },
   },
 });
@@ -825,15 +832,16 @@ export const install = style({
 });
 
 /**
- * The choices in a row of quiet tabs, then the chosen command across the full
- * width under them, with the copy button in the same cell at its end. A grid
- * places them whatever the markup's order, which keeps each choice beside its
- * own command, and the button sits in the command's cell rather than over it.
+ * The choices in a row of quiet tabs that wraps at large text, then the chosen
+ * command across the full width under them, then the copy button's row, drawn
+ * back up into the command's end corner by a negative margin, so it sits in the
+ * command's box in flow, never positioned. `order` puts them in that sequence
+ * whatever the markup's, which keeps each choice beside its own command.
  */
 export const installRow = style({
-  display: "grid",
-  gridTemplateColumns: "repeat(4, auto) minmax(0, 1fr)",
-  alignItems: "end",
+  display: "flex",
+  flexWrap: "wrap",
+  alignItems: "flex-end",
   columnGap: tokens.space.xxs,
 });
 
@@ -851,7 +859,7 @@ export const installChoice = style({
   // The name and the radio share one cell, so the radio covers the tab.
   display: "inline-grid",
   placeItems: "center",
-  gridRow: 1,
+  order: 1,
   minHeight: tokens.size.minTarget,
   minWidth: tokens.size.minTarget,
   borderRadius: tokens.radius.inner,
@@ -919,8 +927,8 @@ export const installRadio = style({
 export const installCommand = style([
   codeBlock,
   {
-    gridRow: 2,
-    gridColumn: "1 / -1",
+    order: 2,
+    flexBasis: "100%",
     marginBlockStart: tokens.space.xxs,
     paddingInlineEnd: `calc(${CORNER_BUTTON} + ${tokens.space.xs})`,
     border: `1px solid ${tokens.color.hairline}`,
@@ -939,15 +947,19 @@ export const installCommand = style([
   },
 ]);
 
-/** The copy button's place: the end of the command's cell, centred on the command's first line. */
+/**
+ * The copy button's row, one button tall, pulled up by its own height and a
+ * hair so the button sits inside the command's end corner. It is there before
+ * the button arrives, so nothing moves when the script runs.
+ */
 export const installCopy = style({
-  gridRow: 2,
-  gridColumn: "1 / -1",
-  justifySelf: "end",
-  alignSelf: "start",
-  marginBlockStart: tokens.space.xxs,
+  order: 3,
+  flexBasis: "100%",
+  display: "flex",
+  justifyContent: "flex-end",
+  height: CORNER_BUTTON,
+  marginBlockStart: `calc(-1 * (${CORNER_BUTTON} + ${tokens.space.xxs}))`,
   paddingInlineEnd: tokens.space.xxs,
-  paddingBlockStart: tokens.space.xxs,
 });
 
 /** A keyword in the code example: the one accent. */
