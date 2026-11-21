@@ -121,10 +121,16 @@ export const DEEP_LINKS: readonly InlineLink[] = [
 /** The repository's pages on GitHub, which are not its front page. */
 const REPOSITORY_BLOB = `${SOURCE_REPOSITORY_URL}/blob/main`;
 
-/** The guide to embedding and extending the SDK, which the footer names Documentation. */
+/** The README's documentation section, the index of the guides, which the footer names Documentation. */
 export const DOCUMENTATION_LINK: InlineLink = {
   text: "Documentation",
-  href: `${REPOSITORY_BLOB}/docs/guides/extending.md`,
+  href: `${SOURCE_REPOSITORY_URL}#documentation`,
+};
+
+/** What a GIS application needs and what the SDK has, partly has or lacks: the answer on production readiness links it. */
+export const CAPABILITY_MATRIX_LINK: InlineLink = {
+  text: "capability matrix",
+  href: `${REPOSITORY_BLOB}/docs/guides/capability-matrix.md`,
 };
 
 /** What changed in each release. */
@@ -540,10 +546,10 @@ export const SECTIONS: readonly Section[] = [
               [
                 "The reference site runs on it in production, and every change passes the project's unit, browser and accessibility tests before it is merged. What it has and lacks today is in the ",
                 {
-                  text: "documentation on GitHub",
-                  href: DOCUMENTATION_LINK.href,
+                  text: "capability matrix",
+                  href: CAPABILITY_MATRIX_LINK.href,
                 },
-                ".",
+                " on GitHub.",
               ],
               [STATUS_LINE],
             ],
@@ -589,7 +595,7 @@ export const SECTIONS: readonly Section[] = [
                 "The SDK is AGPL-3.0-only, an open-source licence. If you distribute an app that includes the SDK, including by serving it to people's browsers, you must give them access to the corresponding source of the code you combine with the SDK and serve with it, under the same licence.",
               ],
               [
-                "If you modify the SDK and let people interact with your modified version over a network, you must give them access to its corresponding source. Keeping an app's source private while it is distributed with the SDK inside needs separate terms. A licence for closed-source use is not available yet. The SDK's own dependencies are permissively licensed.",
+                "If you modify the SDK and let people interact with your modified version over a network, you must give them access to its corresponding source. Keeping an app's source private while it is distributed with the SDK inside needs separate terms. A licence for closed-source use is not on offer yet. The SDK's own dependencies are permissively licensed.",
               ],
             ],
           },

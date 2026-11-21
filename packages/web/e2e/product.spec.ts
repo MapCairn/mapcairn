@@ -192,7 +192,7 @@ test.describe("the product page", () => {
     const product = new ProductPage(page);
     await product.goto();
     for (const [name, href] of [
-      ["Documentation", "/blob/main/docs/guides/extending.md"],
+      ["Documentation", "#documentation"],
       ["Release notes", "/releases"],
       ["Licence guide", "/blob/main/docs/guides/licence.md"],
       ["Security", "/blob/main/SECURITY.md"],
@@ -237,6 +237,51 @@ test.describe("the product page", () => {
     });
   }
 
+  for (const [width, beside] of [
+    [320, false],
+    [390, false],
+    [1440, true],
+  ] as const) {
+    test(`lays the legend out ${beside ? "as a key column beside the text" : "with the text full width under the symbol and name"} at ${width}px, with nothing clipped`, async ({
+      page,
+    }) => {
+      await page.setViewportSize({ width, height: 900 });
+      const product = new ProductPage(page);
+      await product.goto();
+      const boxes = await page.evaluate(() => {
+        const item = document.querySelector("main section ul li");
+        const rect = (selector: string) => {
+          const box = item?.querySelector(selector)?.getBoundingClientRect();
+          return {
+            left: box?.left ?? Number.NaN,
+            right: box?.right ?? Number.NaN,
+            top: box?.top ?? Number.NaN,
+            bottom: box?.bottom ?? Number.NaN,
+          };
+        };
+        const symbol = item?.firstElementChild?.getBoundingClientRect();
+        const name = item?.children[1]?.getBoundingClientRect();
+        const text = rect("p");
+        return {
+          symbol: { left: symbol?.left ?? 0, bottom: symbol?.bottom ?? 0 },
+          name: { left: name?.left ?? 0, top: name?.top ?? 0 },
+          text,
+          scrollWidth: document.documentElement.scrollWidth,
+        };
+      });
+      expect(boxes.text.right).toBeLessThanOrEqual(width);
+      expect(boxes.scrollWidth).toBeLessThanOrEqual(width);
+      if (beside) {
+        expect(boxes.text.left).toBeCloseTo(boxes.name.left, 0);
+        expect(boxes.text.left).toBeGreaterThan(boxes.symbol.left);
+      } else {
+        expect(boxes.text.left).toBeCloseTo(boxes.symbol.left, 0);
+        expect(boxes.text.top).toBeGreaterThanOrEqual(boxes.symbol.bottom);
+        expect(boxes.name.top).toBeLessThan(boxes.symbol.bottom);
+      }
+    });
+  }
+
   test("shows what you get open, as a legend, with no script", async ({
     page,
   }) => {
@@ -278,6 +323,9 @@ test.describe("the product page", () => {
       const forced = await rule(section);
       expect(forced.image).toBe("none");
       expect(forced.border).toBe("solid");
+      // The border is inside the box, so the rule keeps its 12px.
+      expect(forced.height).toBe(normal.height);
+      expect(forced.height).toBeCloseTo(12, 0);
     });
   }
 

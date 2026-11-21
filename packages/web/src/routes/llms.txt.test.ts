@@ -10,6 +10,7 @@ import {
   INSTALL_OPTIONS,
   NPM_ACTION,
   RELEASE_NOTES_LINK,
+  STATUS_LINE,
 } from "../product/productContent";
 import { productMarkdown } from "../product/productMarkdown";
 import { routePaths } from "../routePaths";
@@ -142,7 +143,7 @@ describe("/llms.txt", () => {
       ]),
     );
     expect(text).toContain("The licence allows commercial use");
-    expect(text).toContain("The SDK is before version 1.0");
+    expect(text).toContain(STATUS_LINE);
     expect(text).toContain(EXAMPLE_APP_LINK.href);
   });
 

@@ -366,7 +366,7 @@ function ProductFooter() {
       <p className={styles.footerLine}>
         MapCairn is open source under the AGPL-3.0.
       </p>
-      <nav aria-label="Footer">
+      <nav aria-label="Footer" className={styles.footerNav}>
         <ul className={styles.footerLinks}>
           <li>
             <a
@@ -394,6 +394,8 @@ function ProductFooter() {
               Mastodon
             </a>
           </li>
+        </ul>
+        <ul className={styles.footerLinks}>
           <li>
             <a className={styles.footerLink} href={PLAYGROUND_PATH}>
               Try the playground

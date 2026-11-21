@@ -402,6 +402,8 @@ export const section = style({
     "&::before": {
       content: '""',
       display: "block",
+      // The border-box keeps the rule 12 px tall with the forced-colours border added.
+      boxSizing: "border-box",
       height: RULE_HEIGHT,
       marginBlockStart: tokens.space.sm,
       marginBlockEnd: RULE_TO_HEADING,
@@ -762,13 +764,23 @@ export const legend = style({
   listStyle: "none",
 });
 
-/** One entry: the symbol in a column as wide as a control, its name and what it means beside it. */
+/**
+ * One entry. On a phone the symbol and the name share a row and what it means
+ * runs the full width beneath them, so the text keeps its measure; from the
+ * `ROOMY` width the symbol is a key column beside the name and the text.
+ */
 export const legendItem = style({
   display: "grid",
   gridTemplateColumns: `${tokens.size.control} minmax(0, 1fr)`,
   columnGap: tokens.space.md,
-  rowGap: tokens.space.xxs,
-  alignItems: "start",
+  rowGap: tokens.space.xs,
+  alignItems: "center",
+  "@media": {
+    [ROOMY]: {
+      rowGap: tokens.space.xxs,
+      alignItems: "start",
+    },
+  },
 });
 
 /**
@@ -777,7 +789,6 @@ export const legendItem = style({
  * the icon takes the system's text colour.
  */
 export const legendSymbol = style({
-  gridRow: "1 / span 2",
   display: "inline-flex",
   alignItems: "center",
   justifyContent: "center",
@@ -787,6 +798,7 @@ export const legendSymbol = style({
   backgroundColor: tokens.color.accentTint,
   color: tokens.color.accent,
   "@media": {
+    [ROOMY]: { gridRow: "1 / span 2" },
     [FORCED]: { color: "CanvasText" },
   },
 });
@@ -799,9 +811,13 @@ export const legendName = style({
 
 /** What an entry means: quieter than its name. */
 export const legendText = style({
+  gridColumn: "1 / -1",
   margin: 0,
   color: tokens.color.textMuted,
   textWrap: "pretty",
+  "@media": {
+    [ROOMY]: { gridColumn: "2" },
+  },
 });
 
 /** A list of disclosures, ruled apart. */
@@ -923,7 +939,14 @@ export const footer = style({
   },
 });
 
-/** The footer's links, wrapping onto as many rows as they need. */
+/** The footer's two groups of links, project links first and the site's own after, with a small gap between rows and groups. */
+export const footerNav = style({
+  display: "flex",
+  flexDirection: "column",
+  rowGap: tokens.space.xxs,
+});
+
+/** One group of the footer's links, wrapping onto as many rows as it needs. */
 export const footerLinks = style({
   display: "flex",
   flexWrap: "wrap",

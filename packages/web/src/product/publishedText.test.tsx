@@ -10,6 +10,7 @@ import { meta } from "../routes/product";
 import { EMBED_EXAMPLE_FILES } from "./embedExampleFiles";
 import { ProductPage } from "./ProductPage";
 import {
+  CAPABILITY_MATRIX_LINK,
   EXAMPLE_APP_LINK,
   INSTALL_OPTIONS,
   NPM_ACTION,
@@ -70,10 +71,16 @@ const COMMERCIAL_PHRASE = "allows commercial use";
 
 /** Every link into the repository, front page or deeper, as written in a text. */
 const REPOSITORY_LINK =
-  /https:\/\/github\.com\/MapCairn\/mapcairn[^\s)"'\]\\<>]*/g;
+  /(?:https?:\/\/)?(?:www\.)?github\.com\/MapCairn\/mapcairn[^\s)"'\]\\<>]*/gi;
 
 /** The repository's front page. */
 const FRONT_PAGE = "https://github.com/MapCairn/mapcairn";
+
+/** A link as compared: with its scheme, no `www.`, no trailing punctuation and in lower case. */
+function normalised(link: string): string {
+  const bare = link.replace(/^(?:https?:\/\/)?(?:www\.)?/i, "");
+  return `https://${bare.replace(/[.,;:]+$/, "")}`.toLowerCase();
+}
 
 /**
  * The pages of the repository the page may link, each for the reason an adopter
@@ -83,8 +90,12 @@ const FRONT_PAGE = "https://github.com/MapCairn/mapcairn";
  */
 const ALLOWED_PAGES: ReadonlyArray<readonly [string, string]> = [
   [
-    "https://github.com/MapCairn/mapcairn/blob/main/docs/guides/extending.md",
-    "the documentation: how to embed and extend the SDK",
+    "https://github.com/MapCairn/mapcairn#documentation",
+    "the documentation: the README's index of the guides",
+  ],
+  [
+    "https://github.com/MapCairn/mapcairn/blob/main/docs/guides/capability-matrix.md",
+    "the capability matrix: what the SDK has and lacks, which the production answer links",
   ],
   [
     "https://github.com/MapCairn/mapcairn/releases",
@@ -110,8 +121,12 @@ const ALLOWED_PAGES: ReadonlyArray<readonly [string, string]> = [
 
 /** The links a text makes into the repository that are neither its front page nor in the named set. */
 function unlistedRepositoryLinks(text: string): string[] {
-  const allowed = new Set([FRONT_PAGE, ...ALLOWED_PAGES.map(([url]) => url)]);
-  return (text.match(REPOSITORY_LINK) ?? []).filter((url) => !allowed.has(url));
+  const allowed = new Set(
+    [FRONT_PAGE, ...ALLOWED_PAGES.map(([url]) => url)].map(normalised),
+  );
+  return (text.match(REPOSITORY_LINK) ?? []).filter(
+    (url) => !allowed.has(normalised(url)),
+  );
 }
 
 /** How many times a text links the repository's front page. */
@@ -177,13 +192,23 @@ describe("links to the repository's front page", () => {
   });
 
   it.each([
-    "https://github.com/MapCairn/mapcairn#documentation",
     "https://github.com/MapCairn/mapcairn#licence",
+    "github.com/MapCairn/mapcairn/issues/1",
+    "http://www.github.com/MapCairn/mapcairn/pull/2",
+    "HTTPS://GITHUB.COM/MAPCAIRN/MAPCAIRN/Blob/main/README.md",
     "https://github.com/MapCairn/mapcairn/tree/main/src",
     "https://github.com/MapCairn/mapcairn/contribute",
     "https://github.com/MapCairn/mapcairn/blob/main/README.md",
   ])("refuses the deep link %s", (text) => {
     expect(unlistedRepositoryLinks(`[a](${text})`)).toEqual([text]);
+  });
+
+  it("reads an allowed link with its trailing punctuation, in any case or scheme, as the allowed link", () => {
+    expect(
+      unlistedRepositoryLinks(
+        "See HTTP://www.GitHub.com/mapcairn/mapcairn/discussions. And github.com/MapCairn/mapcairn,",
+      ),
+    ).toEqual([]);
   });
 
   it.each(ALLOWED_PAGES)("allows %s, for a reason: %s", (url) => {
@@ -192,7 +217,9 @@ describe("links to the repository's front page", () => {
 
   it("keeps the allowed set equal to the pages the content links", () => {
     expect(
-      [...REPOSITORY_PAGES, EXAMPLE_APP_LINK].map((link) => link.href).sort(),
+      [...REPOSITORY_PAGES, CAPABILITY_MATRIX_LINK, EXAMPLE_APP_LINK]
+        .map((link) => link.href)
+        .sort(),
     ).toEqual(ALLOWED_PAGES.map(([url]) => url).sort());
   });
 });

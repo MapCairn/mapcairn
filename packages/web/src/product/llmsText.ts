@@ -13,6 +13,7 @@ import {
   NPM_ACTION,
   RELEASE_NOTES_LINK,
   SECURITY_LINK,
+  STATUS_LINE,
 } from "./productContent";
 import { productMarkdown } from "./productMarkdown";
 
@@ -42,7 +43,7 @@ It is installed as one package, \`@mapcairn/sdk\`, with the package manager you 
 ${INSTALL_OPTIONS.map((option) => option.command).join("\n")}
 \`\`\`
 
-The package re-exports the interface, the logic, the hooks and the design tokens from its root, and the MapLibre adapter at \`@mapcairn/sdk/adapter-maplibre\`; \`maplibre-gl\` is a required peer, and the root never imports the engine. The individual packages (\`@mapcairn/core\`, \`@mapcairn/map\`, \`@mapcairn/react\`, \`@mapcairn/theme\` and \`@mapcairn/adapter-maplibre\`) are the advanced option, for a host that wants fewer dependencies. The source is on GitHub (linked below), with an example app in \`examples/embed\` (${EXAMPLE_APP_LINK.href}). The licence allows commercial use; keeping an app's source private while it is distributed with the SDK inside needs separate terms, and a licence for closed-source use is not on offer yet. The SDK is before version 1.0: a minor release can change the public API, and each release's notes name what to change.`;
+The package re-exports the interface, the logic, the hooks and the design tokens from its root, and the MapLibre adapter at \`@mapcairn/sdk/adapter-maplibre\`; \`maplibre-gl\` is a required peer, and the root never imports the engine. The individual packages (\`@mapcairn/core\`, \`@mapcairn/map\`, \`@mapcairn/react\`, \`@mapcairn/theme\` and \`@mapcairn/adapter-maplibre\`) are the advanced option, for a host that wants fewer dependencies. The source is on GitHub (linked below), with an example app in \`examples/embed\` (${EXAMPLE_APP_LINK.href}). The licence allows commercial use; keeping an app's source private while it is distributed with the SDK inside needs separate terms, and a licence for closed-source use is not on offer yet. ${STATUS_LINE}`;
 
 /** The playground's description, the same words its page renders for crawlers. */
 const PLAYGROUND_SUMMARY = EN_GB_CATALOGUE["host.map.summary"];

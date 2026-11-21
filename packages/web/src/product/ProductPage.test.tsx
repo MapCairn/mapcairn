@@ -28,7 +28,7 @@ import { EMBED_EXAMPLE_FILES } from "./embedExampleFiles";
 import { ProductPage } from "./ProductPage";
 import * as styles from "./ProductPage.css";
 import {
-  DOCUMENTATION_LINK,
+  CAPABILITY_MATRIX_LINK,
   HEADLINE,
   INSTALL_COMMAND,
   LEDE,
@@ -47,12 +47,15 @@ const NPM_PACKAGE = "https://www.npmjs.com/package/@mapcairn/sdk";
  * nothing else past the front page.
  */
 const FOOTER_REPOSITORY_PAGES = [
-  ["Documentation", `${REPO}/blob/main/docs/guides/extending.md`],
+  ["Documentation", `${REPO}#documentation`],
   ["Release notes", `${REPO}/releases`],
   ["Licence guide", `${REPO}/blob/main/docs/guides/licence.md`],
   ["Security", `${REPO}/blob/main/SECURITY.md`],
   ["Discussions", `${REPO}/discussions`],
 ] as const;
+
+/** The capability matrix, which the production answer links for what the SDK has and lacks. */
+const CAPABILITY_MATRIX = `${REPO}/blob/main/docs/guides/capability-matrix.md`;
 
 /** The example app, which the answer on how to use the SDK links. */
 const EXAMPLE_APP = `${REPO}/tree/main/examples/embed`;
@@ -352,10 +355,10 @@ describe("the product page stands on its own", () => {
     ).toHaveAttribute("href", `${REPO}/blob/main/docs/guides/licence.md`);
   });
 
-  it("keeps the sentence that a licence for closed-source use is not available yet, and says closed-source use needs separate terms", () => {
+  it("keeps the README's sentence that a licence for closed-source use is not on offer yet, and says closed-source use needs separate terms", () => {
     const { container } = renderPage();
     expect(container.textContent).toContain(
-      "A licence for closed-source use is not available yet.",
+      "A licence for closed-source use is not on offer yet.",
     );
     expect(container.textContent).toContain(
       "needs separate terms. A licence for closed-source use",
@@ -389,11 +392,11 @@ describe("the product page stands on its own", () => {
     );
   });
 
-  it("links the documentation on GitHub and the example app in the text instead of naming them", () => {
+  it("links the capability matrix and the example app in the text instead of naming them", () => {
     renderPage();
     expect(
-      screen.getByRole("link", { name: "documentation on GitHub" }),
-    ).toHaveAttribute("href", DOCUMENTATION_LINK.href);
+      screen.getByRole("link", { name: "capability matrix" }),
+    ).toHaveAttribute("href", CAPABILITY_MATRIX_LINK.href);
     expect(
       screen.getByRole("link", { name: "examples/embed" }),
     ).toHaveAttribute("href", EXAMPLE_APP);
@@ -450,6 +453,7 @@ describe("the product page stands on its own", () => {
     const named = new Set<string>([
       ...FOOTER_REPOSITORY_PAGES.map(([, href]) => href),
       EXAMPLE_APP,
+      CAPABILITY_MATRIX,
     ]);
     const hrefs = screen
       .getAllByRole("link")
@@ -463,7 +467,7 @@ describe("the product page stands on its own", () => {
           /^[/#]/.test(href),
         href,
       ).toBe(true);
-      expect(href).not.toMatch(/#(documentation|licence)$|\/contribute/);
+      expect(href).not.toMatch(/#licence$|\/contribute/);
     }
   });
 
