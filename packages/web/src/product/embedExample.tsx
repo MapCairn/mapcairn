@@ -2,8 +2,10 @@
 // Copyright MapCairn contributors
 /*
  * The embedding example the product page shows, from the first import on
- * (`EMBED_EXAMPLE_CODE` in `productContent.ts`). It is the README's "Embed a
- * map" example, character for character, and a test keeps the two equal. It is
+ * (`EMBED_EXAMPLE_CODE` in `productContent.ts`). The README's "Embed a map"
+ * `main.tsx` carries the same `MapScreen` and `Chrome`, character for
+ * character, and a test keeps them equal; the README's file adds the page's
+ * entry and the MapLibre adapter, which this page leaves on the fakes. It is
  * real code: typecheck compiles it against the SDK's entry points and
  * `embedExample.test.tsx` renders it, so the page cannot show code that does
  * not work.

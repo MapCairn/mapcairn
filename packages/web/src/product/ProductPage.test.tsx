@@ -356,10 +356,15 @@ describe("the product page stands on its own", () => {
 });
 
 describe("the embedding example", () => {
-  it("is the README's example, character for character", () => {
+  it("shares the README's interface code, character for character", () => {
     const embed = README.slice(README.indexOf("## Embed a map"));
-    const block = /```tsx\n([\s\S]*?)\n```/.exec(embed)?.[1];
-    expect(block).toBe(EMBED_EXAMPLE_CODE);
+    const block = /```tsx\n([\s\S]*?)\n```/.exec(embed)?.[1] ?? "";
+    const interfaceCode = EMBED_EXAMPLE_CODE.slice(
+      EMBED_EXAMPLE_CODE.indexOf("function MapScreen"),
+    );
+    expect(interfaceCode.startsWith("function MapScreen")).toBe(true);
+    expect(interfaceCode).toContain("function Chrome");
+    expect(block).toContain(interfaceCode);
   });
 
   it("starts at the first import, with no licence header or note", () => {

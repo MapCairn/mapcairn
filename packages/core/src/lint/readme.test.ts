@@ -16,6 +16,11 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import {
+  browserPolicy,
+  STYLE_ORIGIN,
+} from "../../../../scripts/release/browserLeg.mjs";
+import { BASEMAPS, DEFAULT_BASEMAP_ID } from "../basemaps/basemaps";
+import {
   fencedBlocks,
   isUsedByExample,
   namedImports,
@@ -41,6 +46,12 @@ const REPO = path.resolve(
 const README = readFileSync(path.join(REPO, "README.md"), "utf8");
 const EXAMPLE_SOURCE = "examples/embed/src";
 
+/** The umbrella's subpath for the MapLibre adapter, which `examples/embed` leaves on the fakes. */
+const ADAPTER_SUBPATH = "@mapcairn/sdk/adapter-maplibre";
+
+/** The line that gives a Vite project the types of its `?worker&url` and CSS imports. */
+const VITE_TYPES_LINE = '/// <reference types="vite/client" />';
+
 /** The TypeScript compiler's entry file, from the repository's own install. */
 const TSC = "node_modules/typescript/bin/tsc";
 
@@ -49,8 +60,11 @@ const TSC = "node_modules/typescript/bin/tsc";
  * the compiler's error lines (none when it type-checks). The block sits in a
  * scratch folder whose `node_modules` is the repository's, so each `@mapcairn`
  * import resolves through the package's own `exports`, to the source behind
- * the `@mapcairn/source` condition. The scratch folder declares what a Vite
- * app gets from `vite/client`: a `?worker&url` import and a plain CSS import.
+ * the `@mapcairn/source` condition. The scratch project declares nothing a
+ * Vite app gets from `vite/client` (a `?worker&url` import, a plain CSS
+ * import): the source brings it with its own `/// <reference types="vite/client" />`
+ * line, as a user's file does, so a source without the line fails as it
+ * would for a user.
  *
  * @param repo Absolute path of the repository root.
  * @param source The TypeScript to compile, as one module.
@@ -64,17 +78,13 @@ function typeCheckSnippet(repo: string, source: string): string[] {
       "junction",
     );
     mkdirSync(path.join(scratch, "src"));
-    writeFileSync(path.join(scratch, "src", "snippet.ts"), source);
-    writeFileSync(
-      path.join(scratch, "src", "env.d.ts"),
-      'declare module "*?worker&url" {\n  const url: string;\n  export default url;\n}\ndeclare module "*.css";\n',
-    );
+    writeFileSync(path.join(scratch, "src", "snippet.tsx"), source);
     writeFileSync(
       path.join(scratch, "tsconfig.json"),
       JSON.stringify({
         extends: path.join(repo, "tsconfig.base.json"),
         compilerOptions: { noEmit: true, types: [], jsx: "react-jsx" },
-        files: ["src/snippet.ts", "src/env.d.ts"],
+        files: ["src/snippet.tsx"],
       }),
     );
     try {
@@ -113,12 +123,13 @@ describe("README.md", () => {
   const examples = exampleSources();
   const exampleImports = examples.flatMap(namedImports);
 
-  it("imports only what examples/embed imports, from the same entry point", () => {
+  it("imports only what examples/embed imports, from the same entry point, except the adapter the type-check covers", () => {
     const imports = namedImports(snippet);
     expect(imports.length).toBeGreaterThan(0);
     const missing = imports
       .filter(
         ({ specifier, imported }) =>
+          specifier !== ADAPTER_SUBPATH &&
           !isUsedByExample(exampleImports, specifier, imported),
       )
       .map(({ specifier, imported }) => `${imported} from ${specifier}`);
@@ -132,41 +143,41 @@ describe("README.md", () => {
     expect(install).toEqual([
       "npm install @mapcairn/sdk@next react react-dom maplibre-gl\n",
     ]);
-    const [short = ""] = fencedBlocks(README, "ts");
-    expect(README.indexOf(short)).toBeLessThan(README.indexOf(snippet));
-    expect(
-      [...short.matchAll(/^import\s+"([^"]+\.css)";/gm)].map((m) => m[1]),
-    ).toEqual(["@mapcairn/sdk/styles.css"]);
-    const imports = namedImports(short);
-    expect(imports.length).toBeGreaterThan(0);
-    expect(
-      imports.filter(
-        ({ specifier, imported }) =>
-          specifier !== "@mapcairn/sdk" ||
-          !isUsedByExample(exampleImports, specifier, imported),
-      ),
-    ).toEqual([]);
-  });
-
-  it("shows the real-map adapter from the umbrella's subpath before the whole-app example, as one short block", () => {
-    const real = fencedBlocks(README, "ts").find((block) =>
-      block.includes("@mapcairn/sdk/adapter-maplibre"),
-    );
-    expect(real).toBeDefined();
-    expect(README.indexOf(real ?? "")).toBeLessThan(README.indexOf(snippet));
-    expect(real).toContain("createMapLibreMapAdapter");
-    expect(real).toContain("loadWorkerUrl");
-    expect(
-      namedImports(real ?? "").every(
-        ({ specifier }) =>
-          specifier === "@mapcairn/sdk" ||
-          specifier === "@mapcairn/sdk/adapter-maplibre",
-      ),
-    ).toBe(true);
-    expect(real).toContain(
-      "maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url",
+    expect(README.indexOf(install[0] ?? "")).toBeLessThan(
+      README.indexOf(snippet),
     );
     expect(README).toContain("`maplibre-gl` is a required peer");
+  });
+
+  it("is one whole main.tsx: the Vite types line first, the umbrella only, and the real adapter with its worker URL", () => {
+    expect(snippet.startsWith(`${VITE_TYPES_LINE}\n`)).toBe(true);
+    expect(
+      namedImports(snippet).every(
+        ({ specifier }) =>
+          !specifier.startsWith("@mapcairn/") ||
+          specifier === "@mapcairn/sdk" ||
+          specifier === ADAPTER_SUBPATH,
+      ),
+    ).toBe(true);
+    expect(snippet).toContain("createMapLibreMapAdapter");
+    expect(snippet).toContain("loadWorkerUrl");
+    expect(snippet).toContain(
+      "maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url",
+    );
+    expect(snippet).toContain('document.getElementById("root")');
+  });
+
+  it("shows the page and its style sheet that main.tsx names, with a height and no margin", () => {
+    const [html = ""] = fencedBlocks(README, "html");
+    const [css = ""] = fencedBlocks(README, "css");
+    expect(html).toContain('<div id="root"></div>');
+    expect(html).toContain('src="/src/main.tsx"');
+    expect(html).toContain('name="viewport"');
+    expect(snippet).toContain('import "./page.css";');
+    expect(css).toMatch(/html,\s*body,\s*#root\s*{[^}]*height:\s*100%/);
+    expect(css).toMatch(/html,\s*body,\s*#root\s*{[^}]*margin:\s*0/);
+    expect(README.indexOf(html)).toBeLessThan(README.indexOf(snippet));
+    expect(README.indexOf(css)).toBeLessThan(README.indexOf(snippet));
   });
 
   it(
@@ -183,12 +194,22 @@ describe("README.md", () => {
   );
 
   it(
-    "shows a real-map block that type-checks as an outside app would write it",
+    "shows a main.tsx that type-checks as an outside app would write it, with its own Vite types line",
     () => {
-      const real = fencedBlocks(README, "ts").find((block) =>
-        block.includes("@mapcairn/sdk/adapter-maplibre"),
-      );
-      expect(typeCheckSnippet(REPO, real ?? "")).toEqual([]);
+      expect(typeCheckSnippet(REPO, snippet)).toEqual([]);
+    },
+    COMPILE_TIMEOUT_MS,
+  );
+
+  it(
+    "fails the same main.tsx without the Vite types line, on the worker URL and the CSS import",
+    () => {
+      const errors = typeCheckSnippet(
+        REPO,
+        snippet.replace(`${VITE_TYPES_LINE}\n`, ""),
+      ).join("\n");
+      expect(errors).toContain("TS2307");
+      expect(errors).toContain("TS2882");
     },
     COMPILE_TIMEOUT_MS,
   );
@@ -198,29 +219,68 @@ describe("README.md", () => {
     expect(section).toContain("docs/guides/content-security-policy.md");
     expect(section).toContain("docs/guides/extending.md#show-a-real-map");
     expect(section).toMatch(/makes no request until/);
-    expect(section).toContain("`SDK packages` job");
-    expect(section).toContain(
-      "other bundlers and browsers have not been tried",
-    );
+    expect(section).toContain("a similar app, not from this file");
     expect(section).not.toContain("not yet shipped");
   });
 
-  it("imports the stylesheets as examples/embed does, or the one that stands for both", () => {
+  it("leaves what is tested, and the bundlers and browsers tried, to the extending guide, which says them", () => {
+    const guide = readFileSync(
+      path.join(REPO, "docs/guides/extending.md"),
+      "utf8",
+    );
+    const section = guide.slice(guide.indexOf("## Show a real map"));
+    expect(section).toContain("`SDK packages` job");
+    expect(section).toContain("other bundlers and browsers are not tried");
+    expect(section).toContain("builds a similar app");
+    expect(section).toContain("`MODULE_LEVEL_DIRECTIVE`");
+    expect(section).toContain("https://tiles.openfreemap.org");
+  });
+
+  it("names the default basemap's origin, the directives it needs and the harmless build warning", () => {
+    const section = README.slice(README.indexOf("## Embed a map"));
+    const basemap = BASEMAPS.find(({ id }) => id === DEFAULT_BASEMAP_ID);
+    expect(basemap?.source.kind).toBe("vector");
+    const origin = new URL(
+      basemap?.source.kind === "vector" ? basemap.source.styleUrl : "",
+    ).origin;
+    expect(section).toContain(`\`${origin}\``);
+    expect(section).toContain("`connect-src`");
+    expect(section).toContain("`img-src`");
+    expect(section).toContain(`\`${VITE_TYPES_LINE}\``);
+    expect(section).toContain("TS2307");
+    expect(section).toContain("TS2882");
+    expect(section).toContain("`MODULE_LEVEL_DIRECTIVE`");
+    expect(section).toContain("search shows sample results");
+    expect(section).toContain("The basemap catalogue's default");
+  });
+
+  it("gives one policy line whose directives are the ones the consumer check's browser leg runs under", () => {
+    const [policy = ""] = fencedBlocks(README, "text");
+    const basemap = BASEMAPS.find(({ id }) => id === DEFAULT_BASEMAP_ID);
+    const origin = new URL(
+      basemap?.source.kind === "vector" ? basemap.source.styleUrl : "",
+    ).origin;
+    const tested = browserPolicy().replaceAll(STYLE_ORIGIN, origin);
+    const directives = policy.trim().split("; ");
+    expect(directives).toContain(`img-src 'self' data: blob: ${origin}`);
+    expect(directives).toContain(`connect-src 'self' ${origin}`);
+    expect(directives).toContain("worker-src 'self' blob:");
+    expect(directives.length).toBeGreaterThan(5);
+    expect(
+      directives.filter((directive) => !tested.split("; ").includes(directive)),
+    ).toEqual([]);
+  });
+
+  it("imports the SDK's stylesheet, then the page's own, as examples/embed's main.tsx imports its two", () => {
     const stylesheets = [
       ...snippet.matchAll(/^import\s+"([^"]+\.css)";/gm),
     ].map((match) => match[1]);
+    expect(stylesheets).toEqual(["@mapcairn/sdk/styles.css", "./page.css"]);
     const main = readFileSync(
       path.join(REPO, EXAMPLE_SOURCE, "main.tsx"),
       "utf8",
     );
-    const umbrella = ["@mapcairn/sdk/styles.css"];
-    const packages = ["@mapcairn/theme/tokens.css", "@mapcairn/map/styles.css"];
-    expect([umbrella, packages]).toContainEqual(stylesheets);
-    if (stylesheets.join() === packages.join()) {
-      for (const stylesheet of stylesheets) {
-        expect(main).toContain(`import "${stylesheet}";`);
-      }
-    }
+    expect(main).toContain('import "./page.css";');
   });
 
   it("uses each SDK component with props the example also passes it", () => {
