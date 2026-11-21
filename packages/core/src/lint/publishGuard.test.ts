@@ -37,9 +37,10 @@ const REPO = path.resolve(
 const CHILD_TIMEOUT_MS = 30_000;
 
 /**
- * Reading and scanning every file that executes takes about a second alone,
- * and the wall clock grows with the load while other test runs share the
- * machine, so this scan keeps its own limit beside the case.
+ * Reading and scanning every file that executes takes about a second alone and
+ * 7 to 9 seconds under load with the rest of the lint folder, so 30 seconds is
+ * about three times the worst case seen. The scan keeps its own limit beside
+ * the case.
  */
 const SCAN_TIMEOUT_MS = 30_000;
 
@@ -92,6 +93,8 @@ describe("forbiddenInShellText", () => {
     ],
     ["with the executable name on Windows", "npm.cmd publish", "publish"],
     ["in capitals", "NPM.CMD publish", "publish"],
+    ["through changeset", "changeset publish", "publish"],
+    ["through changesets", "changesets publish", "publish"],
     ["by its folder", "/usr/local/bin/npm publish", "publish"],
     ["by a Windows folder", "C:\\nodejs\\NPM.CMD publish", "publish"],
     ["pinned to a version", "pnpm@10.0.0 publish", "publish"],
@@ -227,6 +230,7 @@ describe("forbiddenInScript", () => {
       'gh(["api", "repos/x/y/actions/runs/1/pending_deployments"]);',
     ],
     ["a shortened name", 'run("npm", ["pub"]);'],
+    ["a launcher in capitals", 'run("NPM.CMD", "publish");'],
   ])("finds %s", (_name, source) => {
     expect(inScript(source).length).toBeGreaterThan(0);
   });

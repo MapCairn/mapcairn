@@ -37,11 +37,12 @@ const REPO = path.resolve(
 const BUILT_PACKAGES: readonly string[] = BUILT_SDK_PACKAGES;
 
 /**
- * API Extractor type-checks a package and everything its declarations import,
- * which takes 1 to 7 seconds for a package when the machine is quiet (the
- * umbrella package, which re-exports the others, is the slowest). Alongside
- * the other lint tests it took up to 52 seconds, so the limit is well above
- * that and sits beside the case instead of in the global timeout.
+ * API Extractor type-checks a package and everything its declarations import.
+ * Alone that takes 0.7 to 7 seconds for a package (the umbrella package, which
+ * re-exports the others, is the slowest). Running with the other lint tests
+ * under load it took up to about 72 seconds, so 180 seconds is about two and a
+ * half times the worst case seen. The limit sits beside the case instead of in
+ * the global timeout.
  */
 const API_EXTRACTOR_TIMEOUT_MS = 180_000;
 
