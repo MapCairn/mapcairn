@@ -120,7 +120,7 @@ function withPre(base, pre, counter) {
  *
  * @param {object} input
  * @param {import("./semver.mjs").Version | null} input.last The newest release tag.
- * @param {ParsedCommit[]} input.commits Commits that touch the SDK packages since the last release (not prerelease) tag.
+ * @param {ParsedCommit[]} input.commits Commits that touch the SDK packages since the base: the last release tag that is not a prerelease, or for a later candidate (`pre` set, last tag a prerelease) the previous candidate.
  * @param {boolean} input.apiBreaking Whether the API reports show a likely breaking change.
  * @param {string | null} input.pre The prerelease identifier asked for.
  * @returns {NextVersion}
