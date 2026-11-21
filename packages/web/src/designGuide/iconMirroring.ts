@@ -29,6 +29,8 @@ const fixed = (reason: string): IconMirroring => ({
  * `mirrors`. DESIGN.md ("Right to left") has the rule.
  */
 export const ICON_MIRRORING: Readonly<Record<string, IconMirroring>> = {
+  Accessibility: fixed("A figure with open arms, not a direction."),
+  AppWindow: fixed("A window, drawn symmetric, not a direction."),
   ArrowLeft: mirrors("A back arrow points along the reading direction."),
   Bike: fixed("A pictogram of a thing, not a direction."),
   Car: fixed("A pictogram of a thing, not a direction."),
@@ -63,7 +65,9 @@ export const ICON_MIRRORING: Readonly<Record<string, IconMirroring>> = {
   Minus: fixed("A minus sign has no direction."),
   Navigation2: fixed("A map direction stays physical: the arrow points north."),
   Package: fixed("A parcel, not a direction."),
+  Palette: fixed("A painter's palette, not a direction."),
   Pentagon: fixed("A symmetric shape."),
+  Plug: fixed("A plug, not a direction."),
   Plus: fixed("A plus sign has no direction."),
   Redo2: mirrors("Redo points along the reading direction, away from undo."),
   RotateCw: fixed(
@@ -74,6 +78,7 @@ export const ICON_MIRRORING: Readonly<Record<string, IconMirroring>> = {
   Search: fixed("The magnifier is a pictogram, as DESIGN.md records."),
   Settings: fixed("A cog, not a direction."),
   Shapes: fixed("A group of shapes, not a direction."),
+  ShieldCheck: fixed("A shield with a tick, symmetric, not a direction."),
   Trash2: fixed("A bin, not a direction."),
   TriangleAlert: fixed("A warning sign, not a direction."),
   Undo2: mirrors("Undo points along the reading direction, back."),
