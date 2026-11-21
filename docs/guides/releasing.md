@@ -102,7 +102,7 @@ A job that runs third-party code on `main` can save an Actions cache entry that 
 
 The choice (issue 515): the workflows set `cache-mode`, GitHub's setting for the cache access a job's token gets (`read`, `write`, `write-only` or `none`), instead of relying on keys or on not using a cache action.
 
-- `release.yml` sets `cache-mode: none` for the whole workflow, so none of its four jobs can save or restore an entry. The `verify`, `github-release` and `npm` jobs, which hold the release permissions, restore nothing, and `check` saves nothing.
+- `release.yml` sets `cache-mode: none` for the whole workflow, so none of its five jobs can save or restore an entry. The `verify`, `github-release` and `npm` jobs, which hold the release permissions, restore nothing, and `check` saves nothing.
 - The `SDK packages` job in `ci.yml` sets `cache-mode: read`: it still restores the lockfile cache and cannot save one.
 - `scorecard.yml` sets `cache-mode: none`, because its job can mint an OIDC token and uses no cache.
 
