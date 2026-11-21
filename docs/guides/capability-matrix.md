@@ -205,13 +205,13 @@ The areas were drawn up from the public documentation of commercial and open-sou
 
 ## Developer experience
 
-| Capability                                                       | Status  | Evidence                                                                                                                                      | Tracked by |
-| ---------------------------------------------------------------- | ------- | --------------------------------------------------------------------------------------------------------------------------------------------- | ---------- |
-| Ports with fakes and shared contract suites, and coverage floors | has     | `packages/core/src/contracts`, `AGENTS.md`                                                                                                    | none       |
-| An example app and guides                                        | has     | `examples/embed`, `docs/guides`                                                                                                               | none       |
-| Packages published with generated API documentation              | partial | published to npm as release candidates (`next`), with an API report for each entry point in `packages/*/api`; no generated API reference site | [#1]       |
-| A documentation site                                             | lacks   | none                                                                                                                                          | [#199]     |
-| Component documentation for consumers                            | lacks   | none                                                                                                                                          | [#174]     |
+| Capability                                                       | Status  | Evidence                                                                                                                                    | Tracked by |
+| ---------------------------------------------------------------- | ------- | ------------------------------------------------------------------------------------------------------------------------------------------- | ---------- |
+| Ports with fakes and shared contract suites, and coverage floors | has     | `packages/core/src/contracts`, `AGENTS.md`                                                                                                  | none       |
+| An example app and guides                                        | has     | `examples/embed`, `docs/guides`                                                                                                             | none       |
+| Packages published with generated API documentation              | partial | published to npm, under `latest` from `0.1.0`, with an API report for each entry point in `packages/*/api`; no generated API reference site | [#1]       |
+| A documentation site                                             | lacks   | none                                                                                                                                        | [#199]     |
+| Component documentation for consumers                            | lacks   | none                                                                                                                                        | [#174]     |
 
 ## Proposed order for the SDK track
 
@@ -219,7 +219,7 @@ This is a proposal, not a promise. It orders the open issues by what unlocks the
 
 **Now: finish what is half built and open the way in**
 
-- [#1]: the packages are published to npm as release candidates (`next`), but until they also come with generated API documentation, a team has only the guides and the type declarations to read.
+- [#1]: the packages are published to npm, under `latest` from `0.1.0`, but until they also come with generated API documentation, a team has only the guides and the type declarations to read.
 - [#117] to [#119], [#121], [#122] (the rest of [#49]): the selection port and hook are built and nothing in the interface uses them yet.
 - [#146]: accessibility is the project's main claim, and the announcements have had automated checks only.
 

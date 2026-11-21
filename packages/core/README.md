@@ -6,14 +6,14 @@ Most apps should install [`@mapcairn/sdk`](https://github.com/MapCairn/mapcairn/
 
 It has no dependency on another MapCairn package, React, a map engine or a browser global, and it never reads the clock. Its runtime dependencies are the `@turf` maths libraries and the GeoJSON types.
 
-**Status:** a release candidate, for early adopters. The API is still settling, so a breaking change can land before `0.1.0`; the [changelog](https://github.com/MapCairn/mapcairn/blob/main/CHANGELOG.md) lists each one. Until `0.1.0`, add `@next` to every package name in the install commands below.
+**Status:** pre-1.0. While the version starts with `0.`, a minor release (the middle number) can contain a breaking change to the public API and a patch release (the last number) is not meant to, so a `^0.1.0` range takes patch releases but not the next minor release. The [changelog](https://github.com/MapCairn/mapcairn/blob/main/CHANGELOG.md) names each breaking change the release finds, and [what counts as the public API](https://github.com/MapCairn/mapcairn/blob/main/docs/guides/public-api.md) says what is covered.
 
 ## Install
 
 ```bash
-npm install @mapcairn/core@next
-pnpm add @mapcairn/core@next
-yarn add @mapcairn/core@next
+npm install @mapcairn/core
+pnpm add @mapcairn/core
+yarn add @mapcairn/core
 ```
 
 The package is ESM only: it has no `main` field and no CommonJS build. A TypeScript project needs `moduleResolution` set to `node16`, `nodenext` or `bundler`; `node10` is not supported.
