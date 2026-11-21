@@ -1,5 +1,9 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
+import { spawnSync } from "node:child_process";
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import path from "node:path";
 import { describe, expect, it } from "vitest";
 import {
   buildReport,
@@ -9,6 +13,7 @@ import {
   parseRegistryAnswer,
   parseReviewers,
   readIdentity,
+  readReleasedAsTagged,
   // @ts-expect-error The scripts are dependency-free JavaScript with JSDoc types.
 } from "../../../../scripts/release/check.mjs";
 
@@ -39,6 +44,7 @@ function ready(overrides: Facts = {}): Facts {
     privatePackages: [],
     changelog: { hasSection: true, findings: [] },
     tags: ["v0.0.1"],
+    releasedAsTagged: false,
     tarballs: NAMES.map((name) => ({
       name,
       files: 40,
@@ -230,10 +236,45 @@ describe("buildReport", () => {
     expect(blockers.length).toBe(1);
   });
 
-  it("blocks when the tag already exists", () => {
-    const { text, blockers } = report({ tags: ["v0.1.0-rc.1"] });
+  it("blocks when the tag already exists and the release notes were changed since it, as on a Release branch that did not bump the version", () => {
+    const { text, blockers } = report({
+      tags: ["v0.1.0-rc.1"],
+      releasedAsTagged: false,
+    });
     expect(text).toContain("v0.1.0-rc.1 is already tagged");
     expect(blockers.length).toBe(1);
+  });
+
+  describe("between releases, when the current version is tagged and CHANGELOG.md is as it was at the tag", () => {
+    const between = () =>
+      report({ tags: ["v0.1.0-rc.1"], releasedAsTagged: true });
+
+    it("is a notice and no blocker, so the exit is 0", () => {
+      const { text, blockers } = between();
+      expect(text).toContain(
+        "Tag: v0.1.0-rc.1 is already released; the next release needs a new version.",
+      );
+      expect(text).not.toContain("is already tagged");
+      expect(blockers).toEqual([]);
+    });
+
+    it("says in Left for you that nothing is needed yet, and does not say to fix problems", () => {
+      const { text } = between();
+      expect(text).toMatch(
+        /Left for you: nothing yet\. v0\.1\.0-rc\.1 is already released/,
+      );
+      expect(text).not.toContain("Fix the problems");
+    });
+
+    it("still blocks, with the usual line, when something else is wrong", () => {
+      const { text, blockers } = report({
+        tags: ["v0.1.0-rc.1"],
+        releasedAsTagged: true,
+        environment: { state: "missing" },
+      });
+      expect(blockers.join("\n")).toContain("npm environment");
+      expect(text).toMatch(/Left for you: Fix the problems above first\./);
+    });
   });
 
   it("blocks on a tarball problem and prints it", () => {
@@ -724,5 +765,82 @@ describe("readIdentity", () => {
       ],
     ]);
     expect(identity).toBe("limited");
+  });
+});
+
+describe("readReleasedAsTagged", () => {
+  const ok = { ok: true, stdout: "", stderr: "" };
+  const no = { ok: false, stdout: "", stderr: "" };
+
+  it("is true when the version is tagged, the tag is an ancestor of HEAD and CHANGELOG.md has not changed since it", () => {
+    const calls: string[][] = [];
+    const released = readReleasedAsTagged({
+      root: "/work",
+      version: "0.1.0-rc.3",
+      tags: ["v0.1.0-rc.2", "v0.1.0-rc.3"],
+      runGit: (args: string[]) => {
+        calls.push(args);
+        return ok;
+      },
+    });
+    expect(released).toBe(true);
+    expect(calls).toEqual([
+      ["merge-base", "--is-ancestor", "v0.1.0-rc.3", "HEAD"],
+      ["diff", "--quiet", "v0.1.0-rc.3", "--", "CHANGELOG.md"],
+    ]);
+  });
+
+  it("is false when the version is not tagged, without asking git", () => {
+    const runGit = () => {
+      throw new Error("git must not be called");
+    };
+    expect(
+      readReleasedAsTagged({
+        root: "/work",
+        version: "0.1.0-rc.3",
+        tags: ["v0.1.0-rc.2"],
+        runGit,
+      }),
+    ).toBe(false);
+    expect(
+      readReleasedAsTagged({ root: "/work", version: null, tags: [], runGit }),
+    ).toBe(false);
+  });
+
+  it("is false when the tag is not an ancestor of HEAD, or CHANGELOG.md changed since it", () => {
+    const input = {
+      root: "/work",
+      version: "0.1.0-rc.3",
+      tags: ["v0.1.0-rc.3"],
+    };
+    expect(readReleasedAsTagged({ ...input, runGit: () => no })).toBe(false);
+    expect(
+      readReleasedAsTagged({
+        ...input,
+        runGit: (args: string[]) => (args[0] === "diff" ? no : ok),
+      }),
+    ).toBe(false);
+  });
+
+  it("counts an uncommitted edit of CHANGELOG.md as a change since the tag, in a real repository", () => {
+    const root = mkdtempSync(path.join(tmpdir(), "release-check-"));
+    try {
+      const git = (...args: string[]) =>
+        spawnSync("git", args, { cwd: root, encoding: "utf8" });
+      git("init", "-q");
+      git("config", "user.email", "test@example.test");
+      git("config", "user.name", "Test");
+      git("config", "commit.gpgsign", "false");
+      writeFileSync(path.join(root, "CHANGELOG.md"), "## 0.1.0-rc.3\n");
+      git("add", "CHANGELOG.md");
+      git("commit", "-q", "-m", "release");
+      git("tag", "v0.1.0-rc.3");
+      const input = { root, version: "0.1.0-rc.3", tags: ["v0.1.0-rc.3"] };
+      expect(readReleasedAsTagged(input)).toBe(true);
+      writeFileSync(path.join(root, "CHANGELOG.md"), "## 0.1.0-rc.4\n");
+      expect(readReleasedAsTagged(input)).toBe(false);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
   });
 });

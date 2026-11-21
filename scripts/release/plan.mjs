@@ -81,7 +81,13 @@ function isBotAccount(author) {
 }
 
 /**
- * Plans the next release.
+ * Plans the next release. A candidate after the first (a prerelease planned
+ * while the last tag is a prerelease) is based on that last tag, the previous
+ * candidate, for both the pull requests and the API report comparison. Any
+ * other release is based on the last tag that is not a prerelease, or the
+ * start of the project when there is none. A stable release after candidates
+ * keeps that base for its notes and adds `sinceLastCandidate`, based on the
+ * last candidate.
  *
  * @param {object} input
  * @param {string | null} input.pre The prerelease identifier, such as `rc`.
@@ -95,7 +101,11 @@ export function planRelease({ pre, sources }) {
     tags.filter((entry) => !isPrerelease(entry.version)).at(-1) ?? null;
   const notices = [];
 
-  const since = lastStable?.tag ?? null;
+  const laterCandidate =
+    pre !== null && last !== null && isPrerelease(last.version);
+  const since = laterCandidate
+    ? (last?.tag ?? null)
+    : (lastStable?.tag ?? null);
   const commits = sdkCommitsSince(since, sources);
   const candidateBase =
     pre === null && last !== null && isPrerelease(last.version)
@@ -125,7 +135,11 @@ export function planRelease({ pre, sources }) {
     apiBreaking,
     pre,
   });
-  if (last !== null && isPrerelease(last.version)) {
+  if (laterCandidate) {
+    notices.push(
+      `The notes cover changes since ${since}, the previous candidate.`,
+    );
+  } else if (last !== null && isPrerelease(last.version)) {
     notices.push(
       `The notes cover everything since ${since ?? "the start"}, the last tag that is not a prerelease${candidateBase === null ? "" : `; sinceLastCandidate covers the changes since ${candidateBase}`}.`,
     );

@@ -359,17 +359,55 @@ describe("planRelease", () => {
     ).toBeNull();
   });
 
-  it("reads the commits since the last tag that is not a prerelease", () => {
+  it("uses the previous candidate as the base for a candidate after the first, and says so", () => {
     const { sources, seenTags } = fakeSources({
-      tags: ["v0.1.0", "v0.2.0-rc.1"],
+      tags: ["v0.1.0-rc.1", "v0.1.0-rc.2"],
+      commits: [{ subject: "fix(map): a thing (#2)" }],
+      pulls: { 2: {} },
+    });
+    const plan = planRelease({ pre: "rc", sources });
+    expect(seenTags).toEqual(["v0.1.0-rc.2"]);
+    expect(plan).toMatchObject({
+      lastTag: "v0.1.0-rc.2",
+      notesSince: "v0.1.0-rc.2",
+      version: "0.1.0-rc.3",
+    });
+    expect(plan.notices.join(" ")).toContain(
+      "since v0.1.0-rc.2, the previous candidate",
+    );
+  });
+
+  it("compares the API reports with the previous candidate, not with the project start", () => {
+    const { sources } = fakeSources({
+      tags: ["v0.1.0-rc.1", "v0.1.0-rc.2"],
+      commits: [{ subject: "feat(core): widen a type (#2)" }],
+      pulls: { 2: {} },
+      after: REPORT_AFTER,
+    });
+    const plan = planRelease({ pre: "rc", sources });
+    expect(plan.apiChanges).toHaveLength(1);
+    expect(plan.notices.join(" ")).not.toContain(
+      "API reports are not compared",
+    );
+  });
+
+  it("reads the commits since the last stable tag for the first candidate after a release", () => {
+    const { sources, seenTags } = fakeSources({
+      tags: ["v0.1.0"],
     });
     const plan = planRelease({ pre: "rc", sources });
     expect(seenTags).toEqual(["v0.1.0"]);
     expect(plan).toMatchObject({
-      lastTag: "v0.2.0-rc.1",
+      lastTag: "v0.1.0",
       notesSince: "v0.1.0",
-      version: "0.2.0-rc.2",
     });
+  });
+
+  it("scans from the start of the project for the first candidate when there is no tag", () => {
+    const { sources, seenTags } = fakeSources({});
+    const plan = planRelease({ pre: "rc", sources });
+    expect(seenTags).toEqual([null]);
+    expect(plan).toMatchObject({ lastTag: null, notesSince: null });
   });
 
   it("gives no version when nothing since the last tag asks for a release", () => {
