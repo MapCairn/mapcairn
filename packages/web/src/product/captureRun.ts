@@ -139,8 +139,8 @@ const DEGREES_TOLERANCE = 0.00001;
 
 /**
  * Fails when the map's own view, read at capture time, is not the one the
- * collar is drawn from, so a collar can never label a picture that shows
- * another place.
+ * table and the picture's words name, so the words can never describe a
+ * picture that shows another place.
  */
 export function checkView(
   subject: CaptureSubject,
@@ -154,7 +154,7 @@ export function checkView(
     Math.abs(reported.lng - longitude) <= DEGREES_TOLERANCE;
   if (!agrees) {
     throw new Error(
-      `The ${subject.id} picture shows ${JSON.stringify(reported)}, not ${JSON.stringify(subject.view)}: its collar would be wrong.`,
+      `The ${subject.id} picture shows ${JSON.stringify(reported)}, not ${JSON.stringify(subject.view)}: its words would be wrong.`,
     );
   }
 }

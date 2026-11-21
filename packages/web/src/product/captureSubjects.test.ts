@@ -3,6 +3,7 @@
 import { existsSync, readFileSync, statSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
+import { projectToPixel } from "./captureProjection";
 import {
   CAPTURE_SCALE,
   CAPTURE_SUBJECTS,
@@ -13,7 +14,6 @@ import {
   measuredReadout,
   TOTAL_BUDGET_BYTES,
 } from "./captureSubjects";
-import { plateGeometry, projectToPixel } from "./plateGeometry";
 import { PLATES } from "./productContent";
 
 /** The folder the pictures are committed to, beside the page's code. */
@@ -82,53 +82,45 @@ describe("the capture subjects", () => {
     }
   });
 
-  it("measure a hero line whose two ends lie inside the picture, clear of the edges", () => {
-    const hero = captureSubject("hero");
-    if (hero.arrangement.kind !== "measure") {
-      throw new Error("The hero measures a line.");
-    }
-    for (const place of hero.arrangement.line) {
-      const { x, y } = projectToPixel(
-        { ...hero.view, width: hero.width, height: hero.height },
-        place.latitude,
-        place.longitude,
-      );
-      expect(x).toBeGreaterThan(0);
-      expect(x).toBeLessThan(hero.width);
-      expect(y).toBeGreaterThan(0);
-      expect(y).toBeLessThan(hero.height);
-    }
-  });
-
-  it("give every subject a collar of a few ticks on each edge", () => {
+  it("measure a line whose two ends lie inside each picture, clear of the edges", () => {
     for (const subject of CAPTURE_SUBJECTS) {
-      const { longitudeTicks, latitudeTicks } = plateGeometry({
-        ...subject.view,
-        width: subject.width,
-        height: subject.height,
-      });
-      expect(longitudeTicks.length).toBeGreaterThanOrEqual(2);
-      expect(latitudeTicks.length).toBeGreaterThanOrEqual(2);
+      for (const place of subject.arrangement.line) {
+        const { x, y } = projectToPixel(
+          { ...subject.view, width: subject.width, height: subject.height },
+          place.latitude,
+          place.longitude,
+        );
+        expect(x).toBeGreaterThan(0);
+        expect(x).toBeLessThan(subject.width);
+        expect(y).toBeGreaterThan(0);
+        expect(y).toBeLessThan(subject.height);
+      }
     }
   });
 
-  it("give each subject its own byte budget, and a kind of arrangement, in its row", () => {
+  it("show one view at two sizes, so the phone and the wide screen see the same place and line", () => {
+    const [narrow, wide] = CAPTURE_SUBJECTS;
+    expect(narrow?.id).toBe("hero");
+    expect(wide?.id).toBe("heroWide");
+    expect(wide?.view).toEqual(narrow?.view);
+    expect(wide?.arrangement).toEqual(narrow?.arrangement);
+    expect(wide?.width).toBeGreaterThan(narrow?.width ?? 0);
+  });
+
+  it("give each subject its own byte budget in its row, the wide picture the larger", () => {
     for (const subject of CAPTURE_SUBJECTS) {
       expect(subject.budgetBytes).toBeGreaterThan(0);
-      expect(["measure", "basemap-picker"]).toContain(subject.arrangement.kind);
     }
-    expect(captureSubject("hero").budgetBytes).toBeGreaterThan(
-      captureSubject("basemaps").budgetBytes,
+    expect(captureSubject("heroWide").budgetBytes).toBeGreaterThan(
+      captureSubject("hero").budgetBytes,
     );
   });
 
-  it("read a length only from a subject that measures one", () => {
-    expect(measuredReadout("hero")).toBe("3.42 km");
-    expect(() => measuredReadout("basemaps")).toThrow("measures nothing");
-  });
-
-  it("say in the hero's description the length its picture measures", () => {
-    expect(PLATES.hero.description).toContain(measuredReadout("hero"));
+  it("say in each picture's description the length it measures", () => {
+    for (const { id } of CAPTURE_SUBJECTS) {
+      expect(measuredReadout(id)).toBe("3.42 km");
+      expect(PLATES[id].description).toContain(measuredReadout(id));
+    }
   });
 });
 

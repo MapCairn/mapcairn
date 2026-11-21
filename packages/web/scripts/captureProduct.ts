@@ -31,8 +31,8 @@
  * Chromium's own encoder in a blank page, so no image library joins the
  * dependencies. The quality drops until the file fits its byte budget. Before
  * the shot the script reads the view the map reports and the length the line
- * reads, and stops if either differs from the table, so the collar and the
- * words cannot describe another picture.
+ * reads, and stops if either differs from the table, so the words cannot
+ * describe another picture.
  */
 import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
@@ -47,6 +47,7 @@ import { MapPage } from "../e2e/pages/MapPage";
 import { catalogueText } from "../e2e/support/language";
 import { collapseCredits } from "../e2e/support/states";
 import { TOUR_VERSION } from "../src/app/tourVersion";
+import { projectToPixel } from "../src/product/captureProjection";
 import {
   baseUrl,
   type CaptureOptions,
@@ -62,13 +63,11 @@ import {
 import {
   CAPTURE_SCALE,
   CAPTURE_THEMES,
-  type CaptureArrangement,
   type CaptureSubject,
   type CaptureTheme,
   captureAddress,
   captureFileName,
 } from "../src/product/captureSubjects";
-import { projectToPixel } from "../src/product/plateGeometry";
 
 const OUTPUT_DIR = fileURLToPath(
   new URL("../src/product/captures", import.meta.url),
@@ -83,9 +82,6 @@ const RECORDED_HOST = /^https:\/\/tiles\.openfreemap\.org\//;
 
 /** The fixed "now" a capture's clock starts from, so nothing in the picture depends on the day. */
 const CLOCK_START = new Date("2026-06-01T10:00:00Z");
-
-/** The sheet detent the basemap picker's words say: half open. */
-const PICKER_DETENT = "half";
 
 /** Refuses a request that leaves the machine, so a replay contacts nobody; a recording lets the basemap's requests through to be recorded. */
 async function refuseOutsideRequests(context: BrowserContext): Promise<void> {
@@ -162,8 +158,8 @@ async function openContext(
 async function measureLine(
   mapPage: MapPage,
   subject: CaptureSubject,
-  arrangement: Extract<CaptureArrangement, { kind: "measure" }>,
 ): Promise<void> {
+  const { arrangement } = subject;
   await mapPage.startMeasuring();
   const box = await mapPage.host.boundingBox();
   if (box === null) {
@@ -179,46 +175,13 @@ async function measureLine(
   checkReadout(subject, (await mapPage.measureReadout.textContent())?.trim());
 }
 
-/** Opens Map options, checks it is half open, and brings the chosen basemap's tile into view with every preview drawn. */
-async function showBasemapPicker(mapPage: MapPage): Promise<void> {
-  await mapPage.openMapOptions();
-  const detent = await mapPage.detent();
-  if (detent !== PICKER_DETENT) {
-    throw new Error(
-      `The sheet is at "${detent}", but the picture's words say it is ${PICKER_DETENT} open.`,
-    );
-  }
-  await mapPage.basemapPicker
-    .getByRole("radio", { checked: true })
-    .scrollIntoViewIfNeeded();
-  await mapPage.page.waitForFunction(() =>
-    [...document.images].every((image) => image.complete),
-  );
-}
-
-/** Gets the page into the state a subject's arrangement says. */
-async function arrange(
-  mapPage: MapPage,
-  subject: CaptureSubject,
-): Promise<void> {
-  const { arrangement } = subject;
-  switch (arrangement.kind) {
-    case "measure":
-      await measureLine(mapPage, subject, arrangement);
-      return;
-    case "basemap-picker":
-      await showBasemapPicker(mapPage);
-      return;
-  }
-}
-
-/** Opens the playground over the view, arranges it, checks the view and takes the PNG. */
+/** Opens the playground over the view, measures the line, checks the view and takes the PNG. */
 async function shoot(page: Page, subject: CaptureSubject, theme: CaptureTheme) {
   await page.clock.install({ time: CLOCK_START });
   const mapPage = new MapPage(page, catalogueText(null));
   await mapPage.goto(captureAddress(subject, theme));
   await collapseCredits(mapPage);
-  await arrange(mapPage, subject);
+  await measureLine(mapPage, subject);
   await mapPage.waitForMap();
   checkView(subject, await mapPage.hashView());
   return page.screenshot({ type: "png" });
