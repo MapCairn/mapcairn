@@ -10,7 +10,7 @@ MapLibre GL JS is the only map engine. The app follows ports and adapters, descr
 
 The published host runs on Cloudflare Workers. It has no accounts and no tracking beyond cookieless page views. Client error reports are logged as described in `PRIVACY.md`.
 
-The repository, `packages/web` and the SDK packages (`core`, `map`, `react`, `theme`, `adapter-maplibre` and `sdk`) are AGPL-3.0-only, and each SDK package carries its own `LICENSE` file. A licence for closed-source use is not on offer yet, but other terms can be discussed with the author, so the SDK packages must not contain anything that needs a licence agreement of its own, such as a provider's terms or non-commercial data. That holds for their dependencies too: `npm run lint` fails when a production dependency of any of the six SDK packages (`SDK_PACKAGES` in `scripts/sdkPackages.mjs`), direct or transitive, has a licence that is not on the permissive list in `scripts/sdkLicences.allowlist.json`. `packages/web` and `examples/embed` are not held to it.
+The repository, `packages/web` and the SDK packages (`core`, `map`, `react`, `theme`, `adapter-maplibre` and `sdk`) are AGPL-3.0-only, and each SDK package carries its own `LICENSE` file. The SDK packages must not contain anything that needs a licence agreement of its own, such as a provider's terms or non-commercial data. That holds for their dependencies too: `npm run lint` fails when a production dependency of any of the six SDK packages (`SDK_PACKAGES` in `scripts/sdkPackages.mjs`), direct or transitive, has a licence that is not on the permissive list in `scripts/sdkLicences.allowlist.json`. `packages/web` and `examples/embed` are not held to it.
 
 ## Read before you change
 
