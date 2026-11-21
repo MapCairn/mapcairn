@@ -69,8 +69,7 @@ and your IP address. As you type, the text so far is also sent to Photon, a
 search-as-you-type geocoding service that komoot runs on OpenStreetMap data, to
 suggest places. A request goes out each time you pause after typing at least
 three characters, so one search can send several partial versions of it, and
-Photon may log them with your IP address. Your browser sends no cookies and no
-referrer with these requests. Picking a suggestion sends nothing more, and if
+Photon may log them with your IP address. Your browser sends no cookies with these requests. A search or an address lookup sent to Nominatim also carries this site's address as the referrer: the address of the site only, not the page you are on or the map position, because the service asks for one. The suggestions sent to Photon carry no referrer. Picking a suggestion sends nothing more, and if
 suggestions stop working, Enter and the Search button still search through
 Nominatim. A search that is only a
 pair of coordinates is read in your browser and is not sent to the geocoder;
@@ -102,8 +101,7 @@ turns them on.
 
 Dropping a pin sends nothing. A pin's address is looked up only when you press
 Look up address on the pin. That sends the pin's position, rounded to about
-11 m, to OpenStreetMap's Nominatim service, which may log it with your IP
-address.
+11 m, to OpenStreetMap's Nominatim service, which may log it with your IP address and this site's address as the referrer.
 
 ## Routes and travel-time areas
 

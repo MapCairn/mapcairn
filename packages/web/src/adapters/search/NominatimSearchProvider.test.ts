@@ -159,6 +159,20 @@ describe("NominatimSearchProvider", () => {
     expect(call?.init?.headers).toEqual({ Accept: "application/json" });
   });
 
+  it("sends no cookies and only the site's origin as the referrer, on a search and a reverse lookup", async () => {
+    const { scripted, provider } = setup();
+    await provider.search("Table Mountain");
+    await provider.reverse({ lat: -33.9, lng: 18.4 });
+    expect(scripted.calls).toHaveLength(2);
+    for (const call of scripted.calls) {
+      expect(call.init).toMatchObject({
+        credentials: "omit",
+        referrerPolicy: "strict-origin",
+      });
+      expect(call.init?.referrer).toBeUndefined();
+    }
+  });
+
   it("honours a limit, a bias box, country codes, an endpoint and a default limit", async () => {
     const { scripted, provider } = setup({
       countryCodes: "za",

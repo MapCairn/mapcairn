@@ -99,7 +99,11 @@ describe("PrivacyPage", () => {
     );
     expect(text).toContain("komoot");
     expect(text).toContain("at least three characters");
-    expect(text).toContain("no cookies and no referrer");
+    expect(text).toContain("sends no cookies with these requests");
+    expect(text).toContain(
+      "A search or an address lookup sent to Nominatim also carries this site's address as the referrer: the address of the site only, not the page you are on or the map position",
+    );
+    expect(text).toContain("The suggestions sent to Photon carry no referrer");
     expect(text).toContain("Enter and the Search button still search");
   });
 
