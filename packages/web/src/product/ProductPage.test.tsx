@@ -32,10 +32,12 @@ import {
   INSTALL_COMMAND,
   LEDE,
   lineToText,
+  NPM_PACKAGE_URL,
 } from "./productContent";
 
 const REPO = "https://github.com/MapCairn/mapcairn";
 const MASTODON = "https://en.osm.town/@mapcairn";
+const NPM_PACKAGE = "https://www.npmjs.com/package/@mapcairn/sdk";
 
 /** The README, whose embedding example the page shows. */
 const README = readFileSync(
@@ -149,6 +151,16 @@ describe("the product page stands on its own", () => {
     expect(embed.textContent).toContain("advanced option");
   });
 
+  it("installs the umbrella from the default npm tag, as the README does, with no tag after the package name", async () => {
+    expect(INSTALL_COMMAND).toBe(
+      "npm install @mapcairn/sdk react react-dom maplibre-gl",
+    );
+    expect(README).toContain(INSTALL_COMMAND);
+    expect(await markdownLoader().text()).not.toContain("@next");
+    expect(await llmsLoader().text()).not.toContain("@next");
+    expect(await fullLoader().text()).not.toContain("@next");
+  });
+
   it("puts the install command and the advanced option into /llms.txt", async () => {
     const text = await llmsLoader().text();
     expect(text).toContain(INSTALL_COMMAND);
@@ -176,7 +188,7 @@ describe("the product page stands on its own", () => {
     expect(code.querySelector("[style]")).toBeNull();
   });
 
-  it("offers the two actions once, in the hero, View on GitHub first", () => {
+  it("offers three actions once, in the hero: View on GitHub first, then the playground and the npm package", () => {
     renderPage();
     const main = screen.getByRole("main");
     expect(
@@ -185,8 +197,35 @@ describe("the product page stands on its own", () => {
     expect(
       within(main).getByRole("link", { name: "Try the playground" }),
     ).toHaveAttribute("href", "/map");
-    expect(within(main).getAllByRole("link")[0]).toHaveAccessibleName(
-      "View on GitHub",
+    expect(
+      within(main).getByRole("link", { name: "View on npm" }),
+    ).toHaveAttribute("href", NPM_PACKAGE);
+    expect(NPM_PACKAGE_URL).toBe(NPM_PACKAGE);
+    expect(
+      within(main)
+        .getAllByRole("link")
+        .slice(0, 3)
+        .map((link) => link.textContent),
+    ).toEqual(["View on GitHub", "Try the playground", "View on npm"]);
+  });
+
+  it("links to npm from exactly one place, the hero, and nowhere else", () => {
+    renderPage();
+    const npm = screen
+      .getAllByRole("link")
+      .filter((link) =>
+        (link.getAttribute("href") ?? "").startsWith("https://www.npmjs.com/"),
+      );
+    expect(npm).toHaveLength(1);
+    expect(screen.getByRole("main")).toContainElement(npm[0] ?? null);
+  });
+
+  it("links to the npm package from /index.md and /llms-full.txt too", async () => {
+    expect(await markdownLoader().text()).toContain(
+      `[View on npm](${NPM_PACKAGE})`,
+    );
+    expect(await fullLoader().text()).toContain(
+      `[View on npm](${NPM_PACKAGE})`,
     );
   });
 
@@ -280,14 +319,17 @@ describe("the product page stands on its own", () => {
     expect(link).toHaveAttribute("rel", "me");
   });
 
-  it("links only to the repository's front page, the Mastodon profile or this site: no Markdown file, folder, section or contributing page", () => {
+  it("links only to the repository's front page, the package page, the Mastodon profile or this site: no Markdown file, folder, section or contributing page", () => {
     renderPage();
     const hrefs = screen
       .getAllByRole("link")
       .map((link) => link.getAttribute("href") ?? "");
     for (const href of hrefs) {
       expect(
-        href === REPO || href === MASTODON || /^[/#]/.test(href),
+        href === REPO ||
+          href === NPM_PACKAGE ||
+          href === MASTODON ||
+          /^[/#]/.test(href),
         href,
       ).toBe(true);
       expect(href).not.toMatch(/\.md(#.*)?$/);

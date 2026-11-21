@@ -16,14 +16,13 @@ import embedExampleSource from "./embedExample.tsx?raw";
  * Evergreen by design: it describes what the SDK is and how it is built, not
  * counts, versions, dates, plans or what is in progress, so a change to the SDK
  * normally needs nothing here. What is current lives in the repository's
- * documentation. The one exception is `INSTALL_COMMAND`, which carries `@next`
- * until `0.1.0`.
+ * documentation.
  *
  * Links: the repository from exactly two places, the hero's View on GitHub and
- * the footer's Source code, the project's Mastodon profile from the footer (with
- * `rel="me"`), and otherwise only this site's own pages. Never a
- * Markdown file, an issue, a pull request or a milestone, and no second way to
- * the repository: the big button is enough.
+ * the footer's Source code, the package on npm from the hero's View on npm, the
+ * project's Mastodon profile from the footer (with `rel="me"`), and otherwise
+ * only this site's own pages. Never a Markdown file, an issue, a pull request or
+ * a milestone, and no second way to the repository: the big button is enough.
  */
 
 /** A link inside a block of text. Paths starting with `/` are on this site. */
@@ -99,6 +98,15 @@ export const PLAYGROUND_ACTION: InlineLink = {
   href: PLAYGROUND_PATH,
 };
 
+/** The umbrella package's page on npm. */
+export const NPM_PACKAGE_URL = "https://www.npmjs.com/package/@mapcairn/sdk";
+
+/** The package's page on npm, offered after the playground and never as the primary action. */
+export const NPM_ACTION: InlineLink = {
+  text: "View on npm",
+  href: NPM_PACKAGE_URL,
+};
+
 /** The page title, for the tab, search results and link previews. */
 export const PRODUCT_TITLE =
   "MapCairn | Open-source SDK for accessible map applications";
@@ -114,12 +122,11 @@ export const LEDE: Line = [
 
 /**
  * The install command the page leads with: the umbrella package and its three
- * peers. It is the one place the page names npm or a dist-tag. Until `0.1.0`
- * the packages are published under `next` only, so the command says `@next`;
- * drop the tag here, in the README and in the package READMEs together.
+ * peers, from npm's default tag, the same line as the README's. With the link
+ * to the package (`NPM_ACTION`), it is the one place the page names npm.
  */
 export const INSTALL_COMMAND =
-  "npm install @mapcairn/sdk@next react react-dom maplibre-gl";
+  "npm install @mapcairn/sdk react react-dom maplibre-gl";
 
 /** The copy button's words beside a code example, and what it announces. */
 export const COPY_CODE = {

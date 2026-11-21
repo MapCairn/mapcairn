@@ -2,7 +2,7 @@
 // Copyright MapCairn contributors
 import type { ClipboardPort } from "@mapcairn/core";
 import { Icon, LiveRegionProvider, SkipLink } from "@mapcairn/map";
-import { ChevronDown, CodeXml, Compass, Heart } from "lucide-react";
+import { ChevronDown, CodeXml, Compass, Heart, Package } from "lucide-react";
 import type { ReactNode } from "react";
 import { Brand } from "../app/Brand";
 import { DOCUMENT_SCROLL } from "../app/documentScroll";
@@ -25,6 +25,7 @@ import {
   type Inline,
   LEDE,
   type Line,
+  NPM_ACTION,
   PLAYGROUND_ACTION,
   SECTIONS,
   type Section,
@@ -82,7 +83,7 @@ function HighlightedCode({ source }: { readonly source: string }) {
   );
 }
 
-/** The two actions, the same size: View on GitHub first and filled, Try the playground beside it. */
+/** The three actions, the same size: View on GitHub first and filled, then Try the playground and View on npm. */
 function Actions() {
   return (
     <div className={styles.actions}>
@@ -101,6 +102,14 @@ function Actions() {
       >
         <Icon icon={Compass} />
         {PLAYGROUND_ACTION.text}
+      </a>
+      <a
+        className={styles.secondaryAction}
+        href={NPM_ACTION.href}
+        data-testid="action-npm"
+      >
+        <Icon icon={Package} />
+        {NPM_ACTION.text}
       </a>
     </div>
   );
@@ -255,7 +264,7 @@ function ProductHeader() {
   );
 }
 
-/** The hero: the pitch, the two actions, and the survey sheet beside them. */
+/** The hero: the pitch, the three actions, and the survey sheet beside them. */
 function Hero() {
   return (
     <div className={styles.hero}>
@@ -325,7 +334,7 @@ function ProductFooter() {
 }
 
 /**
- * The product page at `/`: the pitch and the two actions, the embedding
+ * The product page at `/`: the pitch and the three actions, the embedding
  * example, what you get, the playground, when it fits and the questions, with
  * View on GitHub as the first action and the playground one link away from
  * anywhere on the page.
@@ -335,7 +344,8 @@ function ProductFooter() {
  *   and its own markup requests nothing from another site (in production the
  *   host adds its cookieless page-view counter, as on every page). It links
  *   to the repository from exactly two places, the hero's View on GitHub and
- *   the footer's Source code, the footer's Mastodon profile (`rel="me"`), and
+ *   the footer's Source code, to the package on npm from the hero's View on
+ *   npm, to the footer's Mastodon profile (`rel="me"`), and
  *   otherwise only to this site: never a
  *   Markdown file, an issue, a pull request or a milestone.
  *   Its first element is the inline script that sends an old map link

@@ -359,6 +359,21 @@ describe("README.md", () => {
     expect(contributing).not.toMatch(/may agree other licence terms/);
   });
 
+  it("shows the GitHub Release and the npm version badges with the others, each linking to its page", () => {
+    const badges = README.slice(
+      README.indexOf("# MapCairn"),
+      README.indexOf("**MapCairn is an open-source"),
+    );
+    expect(badges).toContain(
+      "[![GitHub Release](https://img.shields.io/github/v/release/MapCairn/mapcairn)](https://github.com/MapCairn/mapcairn/releases)",
+    );
+    expect(badges).toContain(
+      "[![npm version](https://img.shields.io/npm/v/@mapcairn/sdk)](https://www.npmjs.com/package/@mapcairn/sdk)",
+    );
+    expect(badges).toContain("[![CI]");
+    expect(badges).toContain("[![Licence: AGPL-3.0-only]");
+  });
+
   it("shows the install command under the intro, before the screenshot, with the requirements and a link to Embed a map beside it", () => {
     const intro = README.indexOf("This repository also holds the playground");
     const install = README.indexOf(

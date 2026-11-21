@@ -8,14 +8,14 @@ import { loader as llmsLoader } from "../routes/llms.txt";
 import { loader as fullLoader } from "../routes/llms-full.txt";
 import { meta } from "../routes/product";
 import { ProductPage } from "./ProductPage";
-import { INSTALL_COMMAND } from "./productContent";
+import { INSTALL_COMMAND, NPM_ACTION } from "./productContent";
 
 /*
  * The rules every text the product page publishes keeps: the page itself, its
  * structured data, `/index.md`, `/llms.txt` and `/llms-full.txt`. They link to
  * no issue, pull request or milestone and cite none by number, say nothing
- * about npm beyond `INSTALL_COMMAND` (with its `@next`, the one allowed exception), never mention commercial terms, and hold no fact that is true
- * only today (a percentage, a "coming soon"), so the page stays true as the
+ * about npm beyond `INSTALL_COMMAND` and the link to the package (`NPM_ACTION`),
+ * never mention commercial terms, and hold no fact that is true only today (a percentage, a "coming soon"), so the page stays true as the
  * SDK changes.
  */
 
@@ -72,9 +72,14 @@ describe.each(SOURCES)("%s", (_name, read) => {
     expect(await read()).not.toMatch(REPOSITORY_DEEP_LINK);
   });
 
-  it("says nothing about npm beyond the install command, and nothing about commercial terms", async () => {
+  it("says nothing about npm beyond the install command and the link to the package, and nothing about commercial terms", async () => {
     const text = await read();
-    expect(text.replaceAll(INSTALL_COMMAND, "")).not.toMatch(/npm/i);
+    expect(
+      text
+        .replaceAll(INSTALL_COMMAND, "")
+        .replaceAll(NPM_ACTION.href, "")
+        .replaceAll(NPM_ACTION.text, ""),
+    ).not.toMatch(/npm/i);
     expect(text).not.toMatch(/commercial/i);
   });
 
