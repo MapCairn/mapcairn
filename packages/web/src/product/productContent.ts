@@ -14,7 +14,7 @@ import {
   type CaptureSubjectId,
   type CaptureTheme,
   captureSubject,
-  HERO_READOUT,
+  measuredReadout,
 } from "./captureSubjects";
 import { EMBED_EXAMPLE_FILES } from "./embedExampleFiles";
 
@@ -327,12 +327,12 @@ export interface PlateText {
 /**
  * The words of each picture, which are captures of the running playground
  * (`captureSubjects.ts`). The capture script checks the length the hero's
- * picture measures against `HERO_READOUT`, so what the description says is
+ * picture measures against the subject's `readout`, so what the description says is
  * what the picture shows.
  */
 export const PLATES: Readonly<Record<CaptureSubjectId, PlateText>> = {
   hero: {
-    description: `The MapCairn playground over Cape Town with the Measure tool open: a line of ${HERO_READOUT} measured from the slopes of Lion's Head to the city centre, with its length and the Distance and Area choices in the toolbar.`,
+    description: `The MapCairn playground over Cape Town with the Measure tool open: a line of ${measuredReadout("hero")} measured from the slopes of Lion's Head to the city centre, with its length and the Distance and Area choices in the toolbar.`,
     caption: "The playground, measuring across Cape Town.",
   },
   basemaps: {

@@ -35,6 +35,21 @@ export interface CapturePlace {
   readonly longitude: number;
 }
 
+/**
+ * What the page is made to show before the picture is taken: a line measured
+ * between two places, tapped in order, whose length the picture reads; or
+ * Map options open on the basemap picker.
+ */
+export type CaptureArrangement =
+  | {
+      readonly kind: "measure";
+      /** The two ends of the line, tapped in this order. */
+      readonly line: readonly [CapturePlace, CapturePlace];
+      /** The length the line reads, which the subject's words state and the script checks. */
+      readonly readout: string;
+    }
+  | { readonly kind: "basemap-picker" };
+
 /** One thing a capture shows, and how it is taken. */
 export interface CaptureSubject {
   readonly id: CaptureSubjectId;
@@ -47,6 +62,10 @@ export interface CaptureSubject {
   readonly phone: boolean;
   /** The basemap each theme's picture is taken over. */
   readonly basemaps: Readonly<Record<CaptureTheme, CaptureBasemapId>>;
+  /** What the page is made to show first. */
+  readonly arrangement: CaptureArrangement;
+  /** The most bytes either theme's picture may take. */
+  readonly budgetBytes: number;
 }
 
 /**
@@ -61,15 +80,6 @@ const BY_THEME: Readonly<Record<CaptureTheme, CaptureBasemapId>> = {
   dark: "fiord",
 };
 
-/** The two ends of the line the hero measures, tapped in this order: the summit of Lion's Head, and then the city bowl (the first tap puts a panel over the lower left, where the summit lies). */
-export const HERO_LINE: readonly [CapturePlace, CapturePlace] = [
-  { latitude: -33.9355, longitude: 18.3893 },
-  { latitude: -33.9249, longitude: 18.4241 },
-];
-
-/** The length the hero's measured line reads, which its alt text and the script both state. */
-export const HERO_READOUT = "3.42 km";
-
 /** Every subject, in the order the page shows them. */
 export const CAPTURE_SUBJECTS: readonly CaptureSubject[] = [
   {
@@ -79,6 +89,16 @@ export const CAPTURE_SUBJECTS: readonly CaptureSubject[] = [
     height: 520,
     phone: false,
     basemaps: BY_THEME,
+    // Tapped from the summit first: the first tap puts a panel over the lower left, where the summit lies.
+    arrangement: {
+      kind: "measure",
+      line: [
+        { latitude: -33.9355, longitude: 18.3893 },
+        { latitude: -33.9249, longitude: 18.4241 },
+      ],
+      readout: "3.42 km",
+    },
+    budgetBytes: 60 * 1024,
   },
   {
     id: "basemaps",
@@ -87,17 +107,13 @@ export const CAPTURE_SUBJECTS: readonly CaptureSubject[] = [
     height: 720,
     phone: true,
     basemaps: BY_THEME,
+    arrangement: { kind: "basemap-picker" },
+    budgetBytes: 48 * 1024,
   },
 ];
 
 /** The picture is captured at this many device pixels for each CSS pixel, so its text is sharp. */
 export const CAPTURE_SCALE = 2;
-
-/** The most bytes the hero's picture may take; the page's other pictures take less. */
-export const HERO_BUDGET_BYTES = 60 * 1024;
-
-/** The most bytes any other picture may take. */
-export const PICTURE_BUDGET_BYTES = 48 * 1024;
 
 /** The most bytes all the pictures may take together, the page's whole added weight. */
 export const TOTAL_BUDGET_BYTES = 300 * 1024;
@@ -128,7 +144,11 @@ export function captureAddress(
   return `#map=${zoom.toFixed(2)}/${latitude.toFixed(5)}/${longitude.toFixed(5)}&basemap=${subject.basemaps[theme]}`;
 }
 
-/** The most bytes the picture of a subject may take. */
-export function captureBudgetBytes(id: CaptureSubjectId): number {
-  return id === "hero" ? HERO_BUDGET_BYTES : PICTURE_BUDGET_BYTES;
+/** The length a subject's measured line reads; a subject that measures nothing is a mistake in the caller. */
+export function measuredReadout(id: CaptureSubjectId): string {
+  const { arrangement } = captureSubject(id);
+  if (arrangement.kind !== "measure") {
+    throw new Error(`Capture subject ${id} measures nothing.`);
+  }
+  return arrangement.readout;
 }

@@ -8,11 +8,9 @@ import {
   CAPTURE_SUBJECTS,
   CAPTURE_THEMES,
   captureAddress,
-  captureBudgetBytes,
   captureFileName,
   captureSubject,
-  HERO_LINE,
-  HERO_READOUT,
+  measuredReadout,
   TOTAL_BUDGET_BYTES,
 } from "./captureSubjects";
 import { plateGeometry, projectToPixel } from "./plateGeometry";
@@ -86,7 +84,10 @@ describe("the capture subjects", () => {
 
   it("measure a hero line whose two ends lie inside the picture, clear of the edges", () => {
     const hero = captureSubject("hero");
-    for (const place of HERO_LINE) {
+    if (hero.arrangement.kind !== "measure") {
+      throw new Error("The hero measures a line.");
+    }
+    for (const place of hero.arrangement.line) {
       const { x, y } = projectToPixel(
         { ...hero.view, width: hero.width, height: hero.height },
         place.latitude,
@@ -111,8 +112,23 @@ describe("the capture subjects", () => {
     }
   });
 
+  it("give each subject its own byte budget, and a kind of arrangement, in its row", () => {
+    for (const subject of CAPTURE_SUBJECTS) {
+      expect(subject.budgetBytes).toBeGreaterThan(0);
+      expect(["measure", "basemap-picker"]).toContain(subject.arrangement.kind);
+    }
+    expect(captureSubject("hero").budgetBytes).toBeGreaterThan(
+      captureSubject("basemaps").budgetBytes,
+    );
+  });
+
+  it("read a length only from a subject that measures one", () => {
+    expect(measuredReadout("hero")).toBe("3.42 km");
+    expect(() => measuredReadout("basemaps")).toThrow("measures nothing");
+  });
+
   it("say in the hero's description the length its picture measures", () => {
-    expect(PLATES.hero.description).toContain(HERO_READOUT);
+    expect(PLATES.hero.description).toContain(measuredReadout("hero"));
   });
 });
 
@@ -129,9 +145,7 @@ describe("the committed pictures", () => {
           width: subject.width * CAPTURE_SCALE,
           height: subject.height * CAPTURE_SCALE,
         });
-        expect(bytes.length).toBeLessThanOrEqual(
-          captureBudgetBytes(subject.id),
-        );
+        expect(bytes.length).toBeLessThanOrEqual(subject.budgetBytes);
       });
     }
   }

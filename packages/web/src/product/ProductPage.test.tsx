@@ -698,6 +698,13 @@ describe("the pictures", () => {
       expect(links.map((link) => link.getAttribute("href"))).toEqual(
         credits.map((credit) => credit.href),
       );
+      // Pinned, so a change to a definition's link is seen here and in ATTRIBUTIONS.md.
+      expect(links.map((link) => link.getAttribute("href"))).toEqual([
+        "https://www.openstreetmap.org/copyright",
+        "https://openfreemap.org",
+        "https://openmaptiles.org",
+        "https://maplibre.org",
+      ]);
       expect(plate(id)).toHaveTextContent(PLATES[id].caption);
     }
   });
