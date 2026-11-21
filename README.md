@@ -16,6 +16,12 @@
 
 This repository also holds the playground, a reference site built from the SDK's packages.
 
+```bash
+npm install @mapcairn/sdk@next react react-dom maplibre-gl
+```
+
+That needs React 19, `maplibre-gl` 6.18 or later and an ESM bundler that handles CSS imports (tested with Vite), and a TypeScript `moduleResolution` of `bundler`, `node16` or `nodenext`. [Embed a map](#embed-a-map) shows a whole app.
+
 <p>
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="docs/images/playground-dark.png">
@@ -25,15 +31,11 @@ This repository also holds the playground, a reference site built from the SDK's
 
 The playground in its light and dark themes, with the earthquakes layer on and a distance measured. Map data and tile credits are in [`ATTRIBUTIONS.md`](ATTRIBUTIONS.md).
 
-**Status:** a release candidate, for early adopters. The packages are on npm under the `next` tag, which is why the install line below says `@next` until `0.1.0`. The API is still settling, so a breaking change can land before `0.1.0`; the [changelog](CHANGELOG.md) lists each one. [`docs/guides/releasing.md`](docs/guides/releasing.md) describes how a release is made.
+**Status:** a release candidate, for early adopters. The packages are on npm under the `next` tag, which is why the install line above says `@next` until `0.1.0`. The API is still settling, so a breaking change can land before `0.1.0`; the [changelog](CHANGELOG.md) lists each one. [`docs/guides/releasing.md`](docs/guides/releasing.md) describes how a release is made.
 
 ## Embed a map
 
-Install `@mapcairn/sdk`. It is the one package most apps need: it holds the whole SDK, with one stylesheet and two import paths, the interface from the root and the MapLibre adapter that draws the map from a subpath. React is a peer dependency and `maplibre-gl` is a required peer, because the adapter needs the engine, so a strict package manager wants both listed:
-
-```bash
-npm install @mapcairn/sdk@next react react-dom maplibre-gl
-```
+The install command at the top of this page installs `@mapcairn/sdk`. It is the one package most apps need: it holds the whole SDK, with one stylesheet and two import paths, the interface from the root and the MapLibre adapter that draws the map from a subpath. React is a peer dependency and `maplibre-gl` is a required peer, because the adapter needs the engine, so a strict package manager wants both listed in that command.
 
 `@mapcairn/sdk` re-exports `core`, `map`, `react` and `theme` from its root, and the MapLibre adapter at `@mapcairn/sdk/adapter-maplibre`. Its root never imports the engine, so an app that does not import the subpath carries none. Its stylesheet is the three the packages ship, in order: tokens, the map's, the engine's. The individual packages are the advanced option, for a host that wants fewer dependencies: `core` has no React or browser dependency, `theme` installs without the interface, and the adapter is a package of its own (see [Packages](#packages)). [`packages/sdk/README.md`](packages/sdk/README.md) lists the entry points and says how to keep one copy of a package when you also list it directly.
 
@@ -254,9 +256,9 @@ It is not the right choice today if you need:
 
 A map renderer on its own leaves every interface decision to you, which is the better choice when your interface has little in common with a map application. The [capability matrix](docs/guides/capability-matrix.md) lists what MapCairn has, partly has and lacks, with the issue for each gap that has one, and [`ROADMAP.md`](ROADMAP.md) says what comes next.
 
-## Quick start
+## Run the playground from source
 
-You need Node 24 or newer and npm 11 or newer.
+This is for working on MapCairn itself, not for using it in an app. You need Node 24 or newer and npm 11 or newer, which the repository's `engines` require.
 
 ```bash
 git clone https://github.com/MapCairn/mapcairn.git

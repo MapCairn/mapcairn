@@ -22,6 +22,7 @@ import {
 import { BASEMAPS, DEFAULT_BASEMAP_ID } from "../basemaps/basemaps";
 import {
   fencedBlocks,
+  headingAnchors,
   isUsedByExample,
   LICENCE_DUTY,
   namedImports,
@@ -352,6 +353,48 @@ describe("README.md", () => {
     );
     expect(contributing).toContain("(docs/guides/licence.md)");
     expect(contributing).not.toMatch(/may agree other licence terms/);
+  });
+
+  it("shows the install command under the intro, before the screenshot, with the requirements and a link to Embed a map beside it", () => {
+    const intro = README.indexOf("This repository also holds the playground");
+    const install = README.indexOf(
+      "npm install @mapcairn/sdk@next react react-dom maplibre-gl",
+    );
+    const screenshot = README.indexOf("docs/images/playground-light.png");
+    expect(intro).toBeGreaterThan(-1);
+    expect(install).toBeGreaterThan(intro);
+    expect(install).toBeLessThan(screenshot);
+    const beside = README.slice(install, screenshot);
+    for (const requirement of [
+      "React 19",
+      "`maplibre-gl` 6.18 or later",
+      "Vite",
+      "`bundler`, `node16` or `nodenext`",
+      "(#embed-a-map)",
+    ]) {
+      expect(beside, requirement).toContain(requirement);
+    }
+  });
+
+  it("names the requirements as the SDK's manifest and README state them", () => {
+    const manifest = JSON.parse(
+      readFileSync(path.join(REPO, "packages/sdk/package.json"), "utf8"),
+    ) as { readonly peerDependencies: Record<string, string> };
+    expect(manifest.peerDependencies["react"]).toMatch(/^\^19\./);
+    expect(manifest.peerDependencies["maplibre-gl"]).toBe("^6.18.0");
+  });
+
+  it("calls the repository checkout steps what they are, not a quick start", () => {
+    expect(README).toContain("\n## Run the playground from source\n");
+    expect(README).not.toMatch(/quick start/i);
+  });
+
+  it("links to headings of its own that exist", () => {
+    const anchors = headingAnchors(README);
+    const missing = [...README.matchAll(/\]\(#([^)\s]+)\)/g)]
+      .map((match) => match[1] ?? "")
+      .filter((anchor) => !anchors.includes(anchor));
+    expect(missing).toEqual([]);
   });
 
   it("says where to ask a question and where to report a problem", () => {
