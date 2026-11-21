@@ -627,6 +627,40 @@ const DEPENDENCIES = Object.fromEntries(
   ]),
 );
 
+/** The packages a step's `for name in ...; do` loop visits first, in order. */
+function packageOrderOf(jobName: string, stepName: string): string[] {
+  const script = stepScript(
+    jobLinesOf(
+      readFileSync(path.join(REPO, RELEASE_WORKFLOW), "utf8"),
+      jobName,
+    ).join("\n"),
+    stepName,
+  );
+  const loop = /for name in ([^;\n]+); do/.exec(script);
+  expect(loop, stepName).not.toBeNull();
+  return (loop?.[1] ?? "").trim().split(/\s+/);
+}
+
+describe("the order the publishing steps visit the packages in", () => {
+  for (const [jobName, stepName] of [
+    [NPM_JOB, "Publish the packages"],
+    ["rehearse", "Dry-run the publishing"],
+  ]) {
+    it(`lists exactly the six packages in ${jobName}, each after everything it depends on, which the single-pass skip needs`, () => {
+      const order = packageOrderOf(jobName, stepName);
+      expect([...order].sort()).toEqual(Object.keys(DEPENDENCIES).sort());
+      for (const [name, dependencies] of Object.entries(DEPENDENCIES)) {
+        for (const dependency of dependencies) {
+          expect(
+            order.indexOf(dependency.replace("@mapcairn/", "")),
+            `${dependency} before ${name}`,
+          ).toBeLessThan(order.indexOf(name));
+        }
+      }
+    });
+  }
+});
+
 describe.skipIf(process.platform === "win32")(
   "the publishing step of the npm job, run with a fake npm and a fake registry",
   () => {
