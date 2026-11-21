@@ -583,8 +583,27 @@ export const installChoice = style({
       textDecorationThickness: "2px",
     },
     "&:has(input:focus-visible)": focusRing,
+    "&:active": {
+      ...actionPressed,
+      borderColor: tokens.color.accent,
+      backgroundColor: tokens.color.accentTint,
+    },
   },
   "@media": {
+    // The pill's own focus is its radio's, so the ring is kept as on the copy button.
+    [HOVER]: {
+      selectors: {
+        "&:hover:not(:has(input:focus-visible)):not(:active)": {
+          transform: LIFT,
+          boxShadow: tokens.shadow.floating,
+          borderColor: tokens.color.accent,
+          backgroundColor: tokens.color.accentTint,
+        },
+      },
+    },
+    [HOVER_FORCED]: {
+      selectors: { "&:hover": { textDecoration: "underline" } },
+    },
     [FORCED]: {
       selectors: {
         "&:has(input:checked)": { borderColor: "Highlight" },
@@ -615,20 +634,31 @@ export const installCommand = style([
   {
     order: 2,
     flexBasis: "100%",
-    display: "none",
-    selectors: {
-      [`${installOption}:has(input:checked) > &`]: { display: "block" },
+    // Without `:has()` every command shows, each in its named region, so none is lost.
+    "@supports": {
+      "selector(:has(*))": {
+        display: "none",
+        selectors: {
+          [`${installOption}:has(input:checked) > &`]: { display: "block" },
+        },
+      },
     },
   },
 ]);
 
-/** The row for the copy button: always reserved, so the page does not move when the button arrives. */
+/**
+ * The row for the copy button: reserved, so the page does not move when the
+ * button arrives, and gone where scripts do not run, since no button comes.
+ */
 export const installCopy = style({
   order: 3,
   flexBasis: "100%",
   display: "flex",
   justifyContent: "flex-end",
   minHeight: tokens.size.control,
+  "@media": {
+    "(scripting: none)": { display: "none" },
+  },
 });
 
 /** A keyword in the code example: the one accent. */

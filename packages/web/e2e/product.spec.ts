@@ -331,6 +331,20 @@ test.describe("the product page", () => {
       }
     });
 
+    test("keep a row for the copy button once the page runs, so nothing moves when it arrives", async ({
+      page,
+    }) => {
+      const product = new ProductPage(page);
+      await product.goto();
+      await expect(page.getByTestId("install-copy-row")).toBeVisible();
+      const row = await page.getByTestId("install-copy-row").boundingBox();
+      const button = await product.installCopy(COMMANDS.npm).boundingBox();
+      expect(button?.y ?? 0).toBeGreaterThanOrEqual(row?.y ?? 0);
+      expect((button?.y ?? 0) + (button?.height ?? 0)).toBeLessThanOrEqual(
+        (row?.y ?? 0) + (row?.height ?? 0) + 1,
+      );
+    });
+
     test("say what the SDK needs under the block", async ({ page }) => {
       const product = new ProductPage(page);
       await product.goto();
@@ -423,6 +437,113 @@ test.describe("the product page", () => {
       await expect.poll(() => copiedTexts(page)).toEqual([]);
     });
 
+    test("mark the chosen manager with an underline as well as a tint, and only that one", async ({
+      page,
+    }) => {
+      const product = new ProductPage(page);
+      await product.goto();
+      for (const chosen of MANAGERS) {
+        await product.installChoice(chosen).click();
+        await page.mouse.move(0, 0);
+        for (const manager of MANAGERS) {
+          const { textDecorationLine } = await interactionStyle(
+            product.installPill(manager),
+          );
+          expect(textDecorationLine, `${manager} while ${chosen}`).toBe(
+            manager === chosen ? "underline" : "none",
+          );
+        }
+      }
+    });
+
+    test("show the chosen manager's edge in the system colour in forced colours", async ({
+      page,
+    }) => {
+      await page.emulateMedia({ forcedColors: "active" });
+      const product = new ProductPage(page);
+      await product.goto();
+      const edges = (manager: string) =>
+        product
+          .installPill(manager)
+          .evaluate((element) => getComputedStyle(element).borderTopColor);
+      const chosen = await edges("npm");
+      const other = await edges("pnpm");
+      expect(chosen).not.toBe(other);
+    });
+
+    test("answer a press with the pressed look", async ({ page }) => {
+      const product = new ProductPage(page);
+      await product.goto();
+      const pill = product.installPill("yarn");
+      const resting = await interactionStyle(pill);
+      await pill.hover();
+      await page.mouse.down();
+      const pressed = await interactionStyle(pill);
+      await page.mouse.up();
+      expect(pressed.transform).not.toBe(resting.transform);
+      expect(pressed.backgroundColor).not.toBe(resting.backgroundColor);
+    });
+
+    test("hide the other commands only where the browser can tell which manager is chosen", async ({
+      page,
+    }) => {
+      const product = new ProductPage(page);
+      await product.goto();
+      // Without `:has()` the rule that hides must not apply, so every command shows.
+      const hidesOutsideSupports = await product
+        .installCommand("npm")
+        .evaluate((element) => {
+          const classes = [...element.classList];
+          const hides = (rule: CSSStyleRule) =>
+            rule.style.display === "none" &&
+            classes.some((name) => rule.selectorText === `.${name}`);
+          const outside = [...document.styleSheets]
+            .flatMap((sheet) => [...sheet.cssRules])
+            .filter(
+              (rule): rule is CSSStyleRule => rule instanceof CSSStyleRule,
+            );
+          const inside = [...document.styleSheets]
+            .flatMap((sheet) => [...sheet.cssRules])
+            .filter(
+              (rule): rule is CSSSupportsRule =>
+                rule instanceof CSSSupportsRule,
+            )
+            .flatMap((rule) => [...rule.cssRules])
+            .filter(
+              (rule): rule is CSSStyleRule => rule instanceof CSSStyleRule,
+            );
+          return {
+            outside: outside.some(hides),
+            inside: inside.some(hides),
+          };
+        });
+      expect(hidesOutsideSupports).toEqual({ outside: false, inside: true });
+    });
+
+    test("copy the manager chosen before the page's script ran", async ({
+      page,
+    }) => {
+      await recordClipboard(page, { ok: true });
+      let release: () => void = () => {};
+      const held = new Promise<void>((resolve) => {
+        release = resolve;
+      });
+      await page.route("**/*.js", async (route) => {
+        await held;
+        await route.continue();
+      });
+      const product = new ProductPage(page);
+      await page.goto("/", { waitUntil: "commit" });
+      await expect(product.headline).toBeVisible();
+      await product.installChoice("pnpm").click();
+      await expect(product.installCommand("pnpm")).toBeVisible();
+      release();
+      const button = product.installCopy(COMMANDS.pnpm);
+      await button.click();
+      await expect.poll(() => copiedTexts(page)).toEqual([COMMANDS.pnpm]);
+      await expect(product.installChoice("pnpm")).toBeChecked();
+    });
+
     test("remember nothing in the browser", async ({ page }) => {
       const product = new ProductPage(page);
       await product.goto();
@@ -457,6 +578,8 @@ test.describe("the product page", () => {
       );
       await expect(product.installCommand("npm")).toBeHidden();
       await expect(product.installGroup.getByRole("button")).toHaveCount(0);
+      // The row kept for the button takes no room where scripts do not run.
+      await expect(page.getByTestId("install-copy-row")).toBeHidden();
     });
   });
 
@@ -509,6 +632,7 @@ test.describe("the product page", () => {
         product.heroNpm,
         product.headerPlayground,
         product.copyCode,
+        product.installPill("pnpm"),
       ]) {
         const resting = await interactionStyle(target);
         await target.hover();
@@ -550,6 +674,12 @@ test.describe("the product page", () => {
       expect(
         (await interactionStyle(product.heroGitHub)).textDecorationLine,
       ).toBe("underline");
+      const pill = product.installPill("pnpm");
+      expect((await interactionStyle(pill)).textDecorationLine).toBe("none");
+      await pill.hover();
+      expect((await interactionStyle(pill)).textDecorationLine).toBe(
+        "underline",
+      );
     });
 
     // Forced colours paint a Canvas backplate behind text, so an action

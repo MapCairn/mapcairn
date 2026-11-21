@@ -58,6 +58,13 @@ export class ProductPage {
     return this.installGroup.getByRole("radio", { name: manager, exact: true });
   }
 
+  /** The pill that holds one package manager's radio, which carries the chosen and hover looks. */
+  installPill(manager: string): Locator {
+    return this.installGroup.locator("label", { hasText: manager }).filter({
+      has: this.page.getByRole("radio", { name: manager, exact: true }),
+    });
+  }
+
   /** The install command of one package manager, shown only while that manager is chosen. */
   installCommand(manager: string): Locator {
     return this.installGroup.getByRole("region", {

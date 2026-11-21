@@ -10,8 +10,8 @@ import {
   waitFor,
   within,
 } from "@testing-library/react";
-import { renderToStaticMarkup } from "react-dom/server";
-import { describe, expect, it } from "vitest";
+import { renderToStaticMarkup, renderToString } from "react-dom/server";
+import { describe, expect, it, vi } from "vitest";
 import { loader as markdownLoader } from "../routes/index.md";
 import { loader as llmsLoader } from "../routes/llms.txt";
 import { loader as fullLoader } from "../routes/llms-full.txt";
@@ -163,7 +163,7 @@ describe("the install block on the page", () => {
   it("copies the manager chosen before the page ran", async () => {
     const container = document.createElement("div");
     document.body.append(container);
-    container.innerHTML = renderToStaticMarkup(
+    container.innerHTML = renderToString(
       <ProductPage clipboard={new FakeClipboard()} />,
     );
     const earlyChoice = container.querySelector<HTMLInputElement>(
@@ -205,18 +205,25 @@ describe("the install block on the page", () => {
     expect(screen.getByText(INSTALL_COMMAND)).toBeInTheDocument();
   });
 
-  it("stores nothing and sends nothing when a manager is chosen", () => {
-    const setItem = Storage.prototype.setItem;
-    let writes = 0;
-    Storage.prototype.setItem = () => {
-      writes += 1;
-    };
+  it("stores nothing and sends nothing when a manager is chosen or copied", async () => {
+    const stored = vi.spyOn(Storage.prototype, "setItem");
+    const sent = vi.spyOn(globalThis, "fetch");
+    const cookies = document.cookie;
     try {
       render(<ProductPage clipboard={new FakeClipboard()} />);
       fireEvent.click(screen.getByRole("radio", { name: "bun" }));
-      expect(writes).toBe(0);
+      fireEvent.click(
+        await screen.findByRole("button", {
+          name: /^Copy code, bun add/,
+        }),
+      );
+      await screen.findByRole("button", { name: /^Copied, bun add/ });
+      expect(stored).not.toHaveBeenCalled();
+      expect(sent).not.toHaveBeenCalled();
+      expect(document.cookie).toBe(cookies);
     } finally {
-      Storage.prototype.setItem = setItem;
+      stored.mockRestore();
+      sent.mockRestore();
     }
   });
 });

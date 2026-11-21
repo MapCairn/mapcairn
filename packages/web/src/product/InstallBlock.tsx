@@ -74,7 +74,7 @@ export function InstallBlock({ label, options, clipboard }: InstallBlockProps) {
             </pre>
           </div>
         ))}
-        <div className={styles.installCopy}>
+        <div className={styles.installCopy} data-testid="install-copy-row">
           {running && command !== undefined && (
             <CopyCodeButton
               code={command}

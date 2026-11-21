@@ -31,8 +31,11 @@ const VOLATILE =
 function pageText(): string {
   const { container } = render(<ProductPage clipboard={new FakeClipboard()} />);
   // The install block's choices are the package managers' names, npm among them.
+  const managers = INSTALL_OPTIONS.map(({ manager }) => manager);
   for (const choice of container.querySelectorAll("fieldset label")) {
-    choice.remove();
+    if (managers.includes(choice.textContent ?? "")) {
+      choice.remove();
+    }
   }
   const hrefs = [...container.querySelectorAll("a")].map(
     (link) => link.getAttribute("href") ?? "",
