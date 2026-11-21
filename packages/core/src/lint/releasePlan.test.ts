@@ -505,9 +505,17 @@ describe("planRelease", () => {
     expect(plan.notices.join(" ")).toContain("write access");
   });
 
-  it("names what a person must read for, which no check sees", () => {
+  it("names what a person must do by hand, without saying that no check sees a message key", () => {
     const { sources } = fakeSources({});
-    expect(planRelease({ pre: null, sources }).reviewByHand).toHaveLength(2);
+    const items: string[] = planRelease({ pre: null, sources }).reviewByHand;
+    expect(items).toHaveLength(2);
+    const keys = items.find((item) => item.includes("message key"));
+    expect(keys).toContain("API report names");
+    expect(keys).toContain("lost X and gained Y");
+    expect(keys).toContain("release notes");
+    expect(keys).toContain("translate");
+    expect(keys).not.toMatch(/no check|no script/i);
+    expect(items.some((item) => item.includes("stored format"))).toBe(true);
   });
 });
 

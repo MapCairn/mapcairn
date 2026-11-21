@@ -42,11 +42,11 @@ export const COMPATIBILITY_FILES = [
 ];
 
 /**
- * Changes no check sees, so a person reads for them in the Release pull
+ * What a person still does by hand in the Release pull
  * request (`docs/guides/public-api.md`).
  */
 export const REVIEW_BY_HAND = [
-  "A message key removed or renamed (list the new keys in the notes so a host can translate them).",
+  "Removed or renamed message keys: the API report names them (a rename shows as lost X and gained Y); write them into the release notes and list the new keys so a host can translate them.",
   "A stored format changed: the values the SDK keeps through the settings port.",
 ];
 
