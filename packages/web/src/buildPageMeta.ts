@@ -10,18 +10,19 @@ import type { JsonLdNode } from "./structuredData";
 
 /**
  * The link preview images, each 1200 by 630 and drawn by the project itself
- * (`scripts/generateSdkOgImage.ts` draws the SDK's card for the product page,
- * and `scripts/generateOgImage.ts` the map's card for the playground and the
- * pages around it).
+ * in one survey sheet look (`src/product/shareCard.ts`): the product page's
+ * card (`scripts/generateSdkOgImage.ts`) and the playground's, for the map and
+ * the pages around it (`scripts/generateOgImage.ts`). Their alt text says the
+ * words on the card and what the sheet shows.
  */
 export const PREVIEW_IMAGES = {
   product: {
     path: "/og-sdk.png",
-    alt: "MapCairn: an open-source SDK for accessible map applications, over contour lines and a cairn.",
+    alt: "MapCairn: accessible map interfaces for the public. An open-source React SDK for public-interest maps, beside a survey sheet of contour lines with a pin, a measured line and a cairn.",
   },
   map: {
     path: "/og-image.png",
-    alt: "MapCairn: an interactive map with search, basemaps and measuring.",
+    alt: "The MapCairn playground: search places, compare basemaps and measure distances or areas, beside a survey sheet of contour lines with a pin, a measured line and a cairn.",
   },
 } as const;
 
