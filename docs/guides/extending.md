@@ -469,6 +469,8 @@ The Directions tool appears only when `services.routing` exists, and the SDK shi
 3. Register it as `routing` in `createServices()`. Nothing else in the app names it.
 4. Allow its origin in `connect-src` in `packages/web/public/_headers` and `constants/securityHeaders.ts`, name the service on the privacy page and in `PRIVACY.md` and `ATTRIBUTIONS.md`, and pass its credit and a note about what a request sends to the Directions panel (`ROUTING_CREDITS` and `ROUTING_NOTE` in `packages/web/src/constants/routingCredits.ts`).
 
+The SDK ships no routing provider and carries none of these terms. The reference site uses the public Valhalla server run by FOSSGIS, under [its usage terms](https://fossgis.de/arbeitsgruppen/osm-server/nutzungsbedingungen) (in German), and that server needs: OpenStreetMap attribution and a link to <https://www.openstreetmap.org/fixthemap>, no more than one request a second, a contact address for the site, a User-Agent that identifies the application (an unmodified browser's is enough) and, where possible, a Referer. It may not be used for bulk downloads or by a high-traffic site, commercial use is allowed only when routing is not a substantial part of the offering, and it has no availability guarantee and may change or end without notice. A host that is commercial, has high traffic or needs the service to stay up should run its own [Valhalla](https://github.com/valhalla/valhalla) (MIT licensed) or pay for a routing service, and pass that address as `endpoint` to `ValhallaRoutingProvider`, or write its own adapter.
+
 Leave `routing` out and the Directions button, panel and overlays are never mounted, so a host without a service carries no dead controls.
 
 ## Write a search provider
