@@ -64,7 +64,6 @@ export const ICON_MIRRORING: Readonly<Record<string, IconMirroring>> = {
   MapPinned: fixed("A pin, not a direction."),
   Minus: fixed("A minus sign has no direction."),
   Navigation2: fixed("A map direction stays physical: the arrow points north."),
-  Package: fixed("A parcel, not a direction."),
   Palette: fixed("A painter's palette, not a direction."),
   Pentagon: fixed("A symmetric shape."),
   Plug: fixed("A plug, not a direction."),

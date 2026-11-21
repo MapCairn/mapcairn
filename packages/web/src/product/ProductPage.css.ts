@@ -5,8 +5,8 @@ import { globalStyle, style } from "@vanilla-extract/css";
 
 /*
  * The product page: calm and in one reading column, set like a survey sheet.
- * The hero carries the pitch, the three actions and the survey sheet beside
- * them; every section below is a graticule rule (a ruler's ticks, in the
+ * The hero carries the pitch, the install block, the actions and the survey sheet
+ * beside them; every section below is a graticule rule (a ruler's ticks, in the
  * blue of the survey marks), a heading and a few short blocks, with the detail
  * one tap away in native disclosures, except what you get, which is a legend
  * and always shown. Mobile first: one column at 320 px; from the `wide` width
@@ -267,16 +267,36 @@ export const lede = style({
   color: tokens.color.textMuted,
 });
 
-/** The three actions, the same height and side by side where there is room, stacked on a narrow phone. */
+/**
+ * The actions: the one button, then the row of two links. On a phone the button
+ * is the full width and the links sit at either end of the row under it; from
+ * the roomy width the button and the links share one line.
+ */
 export const actions = style({
-  display: "grid",
-  gridTemplateColumns: "minmax(0, 1fr)",
+  display: "flex",
+  flexDirection: "column",
   gap: tokens.space.xs,
   "@media": {
     [ROOMY]: {
-      display: "flex",
+      flexDirection: "row",
       flexWrap: "wrap",
+      alignItems: "center",
+      columnGap: tokens.space.lg,
     },
+  },
+});
+
+/** The two links: at either end of their row on a phone, side by side from the roomy width. */
+export const heroLinks = style({
+  display: "flex",
+  flexWrap: "wrap",
+  justifyContent: "space-between",
+  gap: tokens.space.md,
+  margin: 0,
+  padding: 0,
+  listStyle: "none",
+  "@media": {
+    [ROOMY]: { justifyContent: "flex-start" },
   },
 });
 
@@ -346,33 +366,8 @@ export const primaryAction = style({
   },
 });
 
-/** The secondary actions: Try the playground and View on npm. Under a pointer it also takes the accent tint and edge. */
-export const secondaryAction = style({
-  ...action,
-  border: `1px solid ${tokens.color.controlBoundary}`,
-  backgroundColor: tokens.color.surfaceRaised,
-  color: tokens.color.text,
-  selectors: {
-    "&:focus-visible": focusRing,
-    "&:active": {
-      ...actionPressed,
-      borderColor: tokens.color.accent,
-      backgroundColor: tokens.color.accentTint,
-    },
-  },
-  "@media": {
-    [HOVER]: {
-      selectors: {
-        ...actionHover,
-        "&:hover": {
-          borderColor: tokens.color.accent,
-          backgroundColor: tokens.color.accentTint,
-        },
-      },
-    },
-    ...actionHoverForced,
-  },
-});
+/** A link of the hero's row: the header link's look. */
+export const heroLink = style([navLink]);
 
 /** The quiet line under the actions. */
 export const note = style({
@@ -712,6 +707,8 @@ export const installCommand = style([
   {
     order: 2,
     flexBasis: "100%",
+    // The command wraps at its spaces instead of scrolling sideways, so a phone shows all of it.
+    whiteSpace: "pre-wrap",
     // Without `:has()` every command shows, each in its named region, so none is lost.
     "@supports": {
       "selector(:has(*))": {
