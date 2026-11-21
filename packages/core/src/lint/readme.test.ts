@@ -15,6 +15,10 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
+import {
+  browserPolicy,
+  STYLE_ORIGIN,
+} from "../../../../scripts/release/browserLeg.mjs";
 import { BASEMAPS, DEFAULT_BASEMAP_ID } from "../basemaps/basemaps";
 import {
   fencedBlocks,
@@ -215,11 +219,21 @@ describe("README.md", () => {
     expect(section).toContain("docs/guides/content-security-policy.md");
     expect(section).toContain("docs/guides/extending.md#show-a-real-map");
     expect(section).toMatch(/makes no request until/);
-    expect(section).toContain("`SDK packages` job");
-    expect(section).toContain(
-      "other bundlers and browsers have not been tried",
-    );
+    expect(section).toContain("a similar app, not from this file");
     expect(section).not.toContain("not yet shipped");
+  });
+
+  it("leaves what is tested, and the bundlers and browsers tried, to the extending guide, which says them", () => {
+    const guide = readFileSync(
+      path.join(REPO, "docs/guides/extending.md"),
+      "utf8",
+    );
+    const section = guide.slice(guide.indexOf("## Show a real map"));
+    expect(section).toContain("`SDK packages` job");
+    expect(section).toContain("other bundlers and browsers are not tried");
+    expect(section).toContain("builds a similar app");
+    expect(section).toContain("`MODULE_LEVEL_DIRECTIVE`");
+    expect(section).toContain("https://tiles.openfreemap.org");
   });
 
   it("names the default basemap's origin, the directives it needs and the harmless build warning", () => {
@@ -236,6 +250,25 @@ describe("README.md", () => {
     expect(section).toContain("TS2307");
     expect(section).toContain("TS2882");
     expect(section).toContain("`MODULE_LEVEL_DIRECTIVE`");
+    expect(section).toContain("search shows sample results");
+    expect(section).toContain("The basemap catalogue's default");
+  });
+
+  it("gives one policy line whose directives are the ones the consumer check's browser leg runs under", () => {
+    const [policy = ""] = fencedBlocks(README, "text");
+    const basemap = BASEMAPS.find(({ id }) => id === DEFAULT_BASEMAP_ID);
+    const origin = new URL(
+      basemap?.source.kind === "vector" ? basemap.source.styleUrl : "",
+    ).origin;
+    const tested = browserPolicy().replaceAll(STYLE_ORIGIN, origin);
+    const directives = policy.trim().split("; ");
+    expect(directives).toContain(`img-src 'self' data: blob: ${origin}`);
+    expect(directives).toContain(`connect-src 'self' ${origin}`);
+    expect(directives).toContain("worker-src 'self' blob:");
+    expect(directives.length).toBeGreaterThan(5);
+    expect(
+      directives.filter((directive) => !tested.split("; ").includes(directive)),
+    ).toEqual([]);
   });
 
   it("imports the SDK's stylesheet, then the page's own, as examples/embed's main.tsx imports its two", () => {
