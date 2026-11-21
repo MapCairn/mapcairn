@@ -21,6 +21,7 @@ import {
 import { useMap } from "../../host";
 import { useMessages, usePreferences } from "../../services";
 import { IconButton } from "../../ui";
+import { isSitePath, isWebAddress } from "../../ui/linkAddress";
 import { CHROME_GAP_PX } from "../chromeSpacing";
 import * as styles from "./Attribution.css";
 
@@ -31,6 +32,15 @@ import * as styles from "./Attribution.css";
  * @internal
  */
 export const ATTRIBUTION_INTRO_MS = 5000;
+
+/**
+ * The longest the host may hold the credits' first showing back (`introHeld`),
+ * counted from the map starting. After it the credits show even if the other
+ * card is still on screen, so a visitor who never answers it still sees them.
+ *
+ * @internal
+ */
+export const ATTRIBUTION_HOLD_MAX_MS = 30_000;
 
 /**
  * How long the credits take to fade out after their first showing.
@@ -145,12 +155,37 @@ function useSettled(open: boolean): boolean {
 
 const NO_CREDITS: readonly LayerAttribution[] = [];
 
+/** A link to a page of the host's own, such as its About page. */
+export interface AttributionAboutLink {
+  /** A path on the host's site (`/about`) or an http or https address. Any other address is left out. */
+  readonly href: string;
+  /** A name that says where the link goes. */
+  readonly label: string;
+}
+
 /** Props for {@link Attribution}. */
 export interface AttributionProps {
   /** The active basemap. Its credits, plus the engine's, are listed. */
   readonly basemap: BasemapDefinition;
   /** Credits of the data layers that are on, listed after the map's own. */
   readonly layerCredits?: readonly LayerAttribution[];
+  /**
+   * Holds the first showing back while the host has another card on the map
+   * (its first-visit tour), so the two are not on screen together. The host
+   * decides when that matters, for instance by layout. The hold ends by
+   * itself on the first zoom the person makes, the first time the map moves,
+   * or after {@link ATTRIBUTION_HOLD_MAX_MS}, and the credits then show for
+   * the full time. The button opens them at any moment, and opening them
+   * counts as the first showing.
+   */
+  readonly introHeld?: boolean;
+  /**
+   * A link to the host's About page, listed after the credits, so a visitor
+   * who arrives on the map from a shared link can find the product behind it.
+   * The credits button is on every screen, so the link is always one press
+   * away. It opens in the same tab.
+   */
+  readonly aboutLink?: AttributionAboutLink;
 }
 
 /**
@@ -166,7 +201,9 @@ export interface AttributionProps {
  *   makes, the map moving, a press outside it) or after
  *   {@link ATTRIBUTION_INTRO_MS}, whichever comes first, fading out unless
  *   reduced motion is on. Focus moving into it during that time keeps it
- *   open as if the person had opened it.
+ *   open as if the person had opened it. A host with another card on the map
+ *   (its first-visit tour) holds the first showing back with `introHeld`, and
+ *   it starts, for the full time, when the hold ends.
  *
  *   After that it behaves as a popover the person opens. It opens above the
  *   bottom row, clear of the readout beside the button; where it starts a gap
@@ -187,8 +224,14 @@ export interface AttributionProps {
 export function Attribution({
   basemap,
   layerCredits = NO_CREDITS,
+  introHeld: hostHold = false,
+  aboutLink,
 }: AttributionProps) {
   const { adapter, view, onUserZoom } = useMap();
+  // True once a hold has ended by itself: it never starts again.
+  const [holdEnded, setHoldEnded] = useState(false);
+  const introHeld = hostHold && !holdEnded;
+  const heldOnView = useRef<ViewState | null>(null);
   const { reducedMotion } = usePreferences();
   const [open, setOpen] = useState(false);
   // True while the credits show by themselves after the map started.
@@ -250,6 +293,7 @@ export function Attribution({
       return;
     }
     openedOnView.current = view;
+    introShown.current = true;
     setPlacement("above");
     setIntro(false);
     setFading(false);
@@ -257,9 +301,10 @@ export function Attribution({
     setOpenRequest((count) => count + 1);
   };
 
-  // Shown once, when the map has started: before that there is no map to credit.
+  // Shown once, when the map has started and no other card holds it back:
+  // before that there is no map to credit.
   useEffect(() => {
-    if (adapter === null || introShown.current) {
+    if (adapter === null || introHeld || introShown.current) {
       return;
     }
     introShown.current = true;
@@ -268,7 +313,33 @@ export function Attribution({
     setOpen(true);
     setIntro(true);
     setIntroStarted(true);
-  }, [adapter, view]);
+  }, [adapter, view, introHeld]);
+
+  // A hold ends at the first user zoom, the first move of the map or the
+  // longest wait, counted from when the map started.
+  useEffect(() => {
+    if (!introHeld || adapter === null) {
+      heldOnView.current = null;
+      return;
+    }
+    const timer = setTimeout(() => setHoldEnded(true), ATTRIBUTION_HOLD_MAX_MS);
+    const unsubscribe = onUserZoom(() => setHoldEnded(true));
+    return () => {
+      clearTimeout(timer);
+      unsubscribe();
+    };
+  }, [introHeld, adapter, onUserZoom]);
+
+  useEffect(() => {
+    if (!introHeld || adapter === null) {
+      return;
+    }
+    if (heldOnView.current === null) {
+      heldOnView.current = view;
+    } else if (!sameView(view, heldOnView.current)) {
+      setHoldEnded(true);
+    }
+  }, [introHeld, adapter, view]);
 
   useEffect(() => {
     if (!intro) {
@@ -387,6 +458,7 @@ export function Attribution({
       ref={rootRef}
       data-chrome="attribution"
       data-intro-started={introStarted ? "true" : undefined}
+      data-intro-held={introHeld && !introStarted ? "true" : undefined}
       className={styles.root}
       onKeyDown={onKeyDown}
       onFocus={onFocus}
@@ -425,6 +497,14 @@ export function Attribution({
               )}
             </li>
           ))}
+          {aboutLink &&
+          (isSitePath(aboutLink.href) || isWebAddress(aboutLink.href)) ? (
+            <li className={styles.about}>
+              <a href={aboutLink.href} className={styles.link}>
+                {aboutLink.label}
+              </a>
+            </li>
+          ) : null}
         </ul>
       </section>
     </div>

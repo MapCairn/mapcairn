@@ -150,6 +150,7 @@ export type MessageKey =
   | "announce.detailShown"
   | "announce.detailError"
   | "announce.searchResults"
+  | "announce.searchPicked"
   | "announce.coordinateResult"
   | "announce.noResults"
   | "announce.suggestions"
@@ -699,6 +700,7 @@ export type MessageKey =
   | "host.notes.pinLookup"
   | "host.notes.routing"
   | "host.credits.fixTheMap"
+  | "host.credits.about"
   | "host.title.map"
   | "privacy.title"
   | "privacy.updated"
@@ -733,7 +735,8 @@ export type MessageKey =
   | "host.about.text"
   | "host.about.link"
   | "host.about.product"
-  | "host.map.summary";
+  | "host.map.summary"
+  | "host.map.noScript";
 
 /**
  * A host's own translatable definition text: a host-defined catalogue `key`
@@ -873,6 +876,7 @@ interface MessageParamOverrides {
   readonly "announce.showingFeature": { readonly title: string };
   readonly "announce.detailShown": { readonly title: string };
   readonly "announce.searchResults": { readonly count: number };
+  readonly "announce.searchPicked": { readonly label: string };
   readonly "announce.coordinateResult": {
     readonly results: string;
     readonly label: string;

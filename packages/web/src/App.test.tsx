@@ -1547,7 +1547,7 @@ describe("zoom", () => {
 });
 
 describe("search", () => {
-  it("flies to a chosen result", async () => {
+  it("flies to the only result without a list", async () => {
     vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
     const services = createFakeServices();
     services.fakes.search.setDefaultResults([CAPE_TOWN]);
@@ -1558,7 +1558,7 @@ describe("search", () => {
     );
     await renderApp(services);
     const input = screen.getByRole("combobox", { name: "Search places" });
-    fireEvent.focus(input);
+    act(() => input.focus());
     fireEvent.change(input, { target: { value: "Cape" } });
     await act(async () => {
       fireEvent.keyDown(input, { key: "Enter" });
@@ -1567,7 +1567,8 @@ describe("search", () => {
     // here but they never reach the provider.
     expect(services.fakes.search.searchCalls).toHaveLength(1);
     expect(services.fakes.search.searchCalls[0]?.options?.bias).toBeUndefined();
-    fireEvent.click(screen.getByRole("option", { name: /Cape Town/ }));
+    // One result, so Enter goes straight to it: no list to click.
+    expect(screen.queryByRole("option")).toBeNull();
     expectNear(adapter(services).getView().center, CAPE_TOWN.centre);
     expect(adapter(services).getView().zoom).toBe(14);
   });

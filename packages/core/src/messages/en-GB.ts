@@ -178,6 +178,7 @@ export const EN_GB_CATALOGUE: Record<MessageKey, string> = {
   "announce.detailShown": "Affected area of {title} shown on the map.",
   "announce.detailError": "The affected area could not load. Try again.",
   "announce.searchResults": "{count} result|{count} results",
+  "announce.searchPicked": "Showing {label} on the map.",
   "announce.coordinateResult": "{results}, {label}",
   "announce.noResults": "No results",
   "announce.suggestions": "{count} suggestion|{count} suggestions",
@@ -828,6 +829,7 @@ export const EN_GB_CATALOGUE: Record<MessageKey, string> = {
   "host.notes.routing":
     "Nothing is sent until you ask. Get route sends the stops and the way of travelling, and a travel time area sends the first stop, with your IP address and this site's address as the referrer, to the Valhalla routing service run by FOSSGIS. It uses OpenStreetMap data.",
   "host.credits.fixTheMap": "Fix the map",
+  "host.credits.about": "About MapCairn",
   "host.title.map": "Interactive map",
   "privacy.title": "Privacy policy",
   "privacy.updated": "Last updated: {date}",
@@ -875,6 +877,8 @@ export const EN_GB_CATALOGUE: Record<MessageKey, string> = {
     "This site is open source software, released under the AGPL-3.0 licence.",
   "host.about.link": "View the source code and licence on GitHub",
   "host.about.product": "About MapCairn, the SDK behind this map",
+  "host.map.noScript":
+    "The map needs JavaScript. You can still read about MapCairn, its source code and its privacy policy.",
   "host.map.summary":
     "The MapCairn playground is an interactive map built with the MapCairn SDK. Search for places or coordinates, measure distances and areas, draw and export shapes, compare basemaps and turn on open data layers.",
 };

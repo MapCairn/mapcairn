@@ -15,10 +15,12 @@ import {
   type ResizeObserverStub,
   renderChrome,
   stubResizeObserver,
+  testChromeLayout,
   testMapContext,
 } from "../MapChrome/chromeTestHarness";
 import {
   ATTRIBUTION_FADE_MS,
+  ATTRIBUTION_HOLD_MAX_MS,
   ATTRIBUTION_INTRO_MS,
   Attribution,
 } from "./Attribution";
@@ -720,6 +722,171 @@ describe("Attribution on first load", () => {
     expect(button()).toHaveAttribute("aria-expanded", "false");
   });
 
+  it("waits while another card holds it back, then shows them once for the full time", () => {
+    vi.useFakeTimers();
+    const { rerenderChrome } = renderChrome(
+      <Attribution basemap={BASEMAP} introHeld />,
+    );
+    expect(button()).toHaveAttribute("aria-expanded", "false");
+    expect(button().closest("[data-chrome]")).not.toHaveAttribute(
+      "data-intro-started",
+    );
+    // The held time does not count against the five seconds.
+    act(() => {
+      vi.advanceTimersByTime(ATTRIBUTION_INTRO_MS * 3);
+    });
+    expect(button()).toHaveAttribute("aria-expanded", "false");
+
+    rerenderChrome(<Attribution basemap={BASEMAP} introHeld={false} />);
+    expect(button()).toHaveAttribute("aria-expanded", "true");
+    act(() => {
+      vi.advanceTimersByTime(ATTRIBUTION_INTRO_MS - 1);
+    });
+    expect(button()).toHaveAttribute("aria-expanded", "true");
+    act(() => {
+      vi.advanceTimersByTime(1);
+    });
+    expect(button()).toHaveAttribute("aria-expanded", "false");
+  });
+
+  it("holds in the side-panel layout too: the host decides by layout, not the credits", () => {
+    renderChrome(<Attribution basemap={BASEMAP} introHeld />, {
+      layout: testChromeLayout({ layout: "panel" }),
+    });
+    expect(button()).toHaveAttribute("aria-expanded", "false");
+  });
+
+  it("says it is held while it waits, and not once it has started", () => {
+    const { rerenderChrome, container } = renderChrome(
+      <Attribution basemap={BASEMAP} introHeld />,
+    );
+    const root = container.querySelector('[data-chrome="attribution"]');
+    expect(root).toHaveAttribute("data-intro-held", "true");
+    expect(root).not.toHaveAttribute("data-intro-started");
+    rerenderChrome(<Attribution basemap={BASEMAP} introHeld={false} />);
+    expect(root).not.toHaveAttribute("data-intro-held");
+    expect(root).toHaveAttribute("data-intro-started", "true");
+  });
+
+  it("is not held when the host holds nothing", () => {
+    const { container } = renderChrome(<Attribution basemap={BASEMAP} />);
+    expect(
+      container.querySelector('[data-chrome="attribution"]'),
+    ).not.toHaveAttribute("data-intro-held");
+  });
+
+  describe("the hold ends by itself", () => {
+    it("on the first zoom the person makes", () => {
+      vi.useFakeTimers();
+      const { map, userZoom } = mountedMap();
+      renderChrome(<Attribution basemap={BASEMAP} introHeld />, { map });
+      expect(button()).toHaveAttribute("aria-expanded", "false");
+      userZoom();
+      expect(button()).toHaveAttribute("aria-expanded", "true");
+    });
+
+    it("when the map moves", () => {
+      vi.useFakeTimers();
+      const { rerenderChrome } = renderChrome(
+        <Attribution basemap={BASEMAP} introHeld />,
+      );
+      expect(button()).toHaveAttribute("aria-expanded", "false");
+      rerenderChrome(<Attribution basemap={BASEMAP} introHeld />, {
+        map: testMapContext({ view: { ...DEFAULT_FAKE_VIEW, zoom: 5 } }),
+      });
+      expect(button()).toHaveAttribute("aria-expanded", "true");
+    });
+
+    it("but not when the map reports the same view again, as after a resize", () => {
+      vi.useFakeTimers();
+      const { rerenderChrome } = renderChrome(
+        <Attribution basemap={BASEMAP} introHeld />,
+      );
+      rerenderChrome(<Attribution basemap={BASEMAP} introHeld />, {
+        map: testMapContext({ view: { ...DEFAULT_FAKE_VIEW } }),
+      });
+      expect(button()).toHaveAttribute("aria-expanded", "false");
+    });
+
+    it("after the longest it may wait, however long the other card stays", () => {
+      vi.useFakeTimers();
+      renderChrome(<Attribution basemap={BASEMAP} introHeld />);
+      act(() => {
+        vi.advanceTimersByTime(ATTRIBUTION_HOLD_MAX_MS - 1);
+      });
+      expect(button()).toHaveAttribute("aria-expanded", "false");
+      act(() => {
+        vi.advanceTimersByTime(1);
+      });
+      expect(button()).toHaveAttribute("aria-expanded", "true");
+      act(() => {
+        vi.advanceTimersByTime(ATTRIBUTION_INTRO_MS);
+      });
+      expect(button()).toHaveAttribute("aria-expanded", "false");
+    });
+
+    it("and the intro still runs once: a hold that comes back later does not repeat it", () => {
+      vi.useFakeTimers();
+      const { rerenderChrome } = renderChrome(
+        <Attribution basemap={BASEMAP} introHeld />,
+      );
+      act(() => {
+        vi.advanceTimersByTime(
+          ATTRIBUTION_HOLD_MAX_MS + ATTRIBUTION_INTRO_MS * 2,
+        );
+      });
+      rerenderChrome(<Attribution basemap={BASEMAP} introHeld={false} />);
+      rerenderChrome(<Attribution basemap={BASEMAP} introHeld />);
+      act(() => {
+        vi.advanceTimersByTime(ATTRIBUTION_HOLD_MAX_MS * 2);
+      });
+      expect(button()).toHaveAttribute("aria-expanded", "false");
+    });
+
+    it("never starts a timer while the map has not started", () => {
+      vi.useFakeTimers();
+      const { rerenderChrome } = renderChrome(
+        <Attribution basemap={BASEMAP} introHeld />,
+        { map: SETTLED },
+      );
+      act(() => {
+        vi.advanceTimersByTime(ATTRIBUTION_HOLD_MAX_MS * 2);
+      });
+      rerenderChrome(<Attribution basemap={BASEMAP} introHeld />, {
+        map: testMapContext(),
+      });
+      expect(button()).toHaveAttribute("aria-expanded", "false");
+      act(() => {
+        vi.advanceTimersByTime(ATTRIBUTION_HOLD_MAX_MS);
+      });
+      expect(button()).toHaveAttribute("aria-expanded", "true");
+    });
+  });
+
+  it("counts as shown when the person opens it while it is held back, so releasing the hold does not show it again", () => {
+    vi.useFakeTimers();
+    const { rerenderChrome } = renderChrome(
+      <Attribution basemap={BASEMAP} introHeld />,
+    );
+    expect(open()).toBeVisible();
+    fireEvent.click(button());
+    expect(button()).toHaveAttribute("aria-expanded", "false");
+    rerenderChrome(<Attribution basemap={BASEMAP} introHeld={false} />);
+    expect(button()).toHaveAttribute("aria-expanded", "false");
+  });
+
+  it("does not hold back a first showing that has begun", () => {
+    vi.useFakeTimers();
+    const { rerenderChrome } = renderChrome(<Attribution basemap={BASEMAP} />);
+    expect(button()).toHaveAttribute("aria-expanded", "true");
+    rerenderChrome(<Attribution basemap={BASEMAP} introHeld />);
+    expect(button()).toHaveAttribute("aria-expanded", "true");
+    act(() => {
+      vi.advanceTimersByTime(ATTRIBUTION_INTRO_MS);
+    });
+    expect(button()).toHaveAttribute("aria-expanded", "false");
+  });
+
   it("stays open when the person opens it themselves", () => {
     vi.useFakeTimers();
     renderChrome(<Attribution basemap={BASEMAP} />);
@@ -733,6 +900,82 @@ describe("Attribution on first load", () => {
     expect(document.activeElement).toBe(
       screen.getByRole("link", { name: "OpenStreetMap contributors" }),
     );
+  });
+});
+
+describe("Attribution about link", () => {
+  const ABOUT = { href: "/", label: "About MapCairn" };
+
+  it("lists the host's own page after the credits, as a plain link", () => {
+    renderChrome(<Attribution basemap={BASEMAP} aboutLink={ABOUT} />, {
+      map: SETTLED,
+    });
+    const region = open();
+    const links = Array.from(region.querySelectorAll("a"));
+    const about = links.at(-1);
+    expect(about).toHaveTextContent("About MapCairn");
+    expect(about).toHaveAttribute("href", "/");
+    expect(about).not.toHaveAttribute("target");
+    expect(links.length).toBeGreaterThan(1);
+    expect(
+      screen.getByRole("link", { name: "OpenStreetMap contributors" }),
+    ).toBeInTheDocument();
+  });
+
+  it("is reachable by Tab after the last credit", () => {
+    renderChrome(<Attribution basemap={BASEMAP} aboutLink={ABOUT} />, {
+      map: SETTLED,
+    });
+    const region = open();
+    const order = Array.from(region.querySelectorAll("a")).map(
+      (link) => link.textContent,
+    );
+    expect(order.indexOf("About MapCairn")).toBe(order.length - 1);
+  });
+
+  it("stays open while it is pressed, as a press inside the popover does", () => {
+    renderChrome(<Attribution basemap={BASEMAP} aboutLink={ABOUT} />, {
+      map: SETTLED,
+    });
+    const region = open();
+    fireEvent.pointerDown(screen.getByRole("link", { name: "About MapCairn" }));
+    expect(region).toBeVisible();
+  });
+
+  it("accepts an address on another site too", () => {
+    renderChrome(
+      <Attribution
+        basemap={BASEMAP}
+        aboutLink={{ href: "https://example.org/about", label: "About us" }}
+      />,
+      { map: SETTLED },
+    );
+    open();
+    expect(screen.getByRole("link", { name: "About us" })).toHaveAttribute(
+      "href",
+      "https://example.org/about",
+    );
+  });
+
+  it.each(["javascript:alert(1)", "//example.org", "about"])(
+    "leaves out an address that is not a site path or a web address: %s",
+    (href) => {
+      renderChrome(
+        <Attribution
+          basemap={BASEMAP}
+          aboutLink={{ href, label: "About us" }}
+        />,
+        { map: SETTLED },
+      );
+      open();
+      expect(screen.queryByRole("link", { name: "About us" })).toBeNull();
+    },
+  );
+
+  it("adds nothing when the host gives none", () => {
+    renderChrome(<Attribution basemap={BASEMAP} />, { map: SETTLED });
+    open();
+    expect(screen.queryByRole("link", { name: "About MapCairn" })).toBeNull();
   });
 });
 

@@ -2,6 +2,7 @@
 // Copyright MapCairn contributors
 import { TILE_LAYER_SLOW_MS } from "@mapcairn/adapter-maplibre";
 import {
+  ATTRIBUTION_HOLD_MAX_MS,
   IDENTIFY_FEEDBACK_MS,
   LONG_PRESS_DELAY_MS,
   SCALE_BAR_IDLE_MS,
@@ -18,6 +19,7 @@ describe("the browser tests' copies of the app's timers", () => {
   // absence check pass before the timer fired.
   it("match the constants in the app", () => {
     expect({
+      ATTRIBUTION_HOLD_MAX_MS: e2eTimers.ATTRIBUTION_HOLD_MAX_MS,
       CONNECTION_SETTLE_MS: e2eTimers.CONNECTION_SETTLE_MS,
       IDENTIFY_FEEDBACK_MS: e2eTimers.IDENTIFY_FEEDBACK_MS,
       LONG_PRESS_DELAY_MS: e2eTimers.LONG_PRESS_DELAY_MS,
@@ -26,6 +28,7 @@ describe("the browser tests' copies of the app's timers", () => {
       SUGGEST_DEBOUNCE_MS: e2eTimers.SUGGEST_DEBOUNCE_MS,
       TILE_LAYER_SLOW_MS: e2eTimers.TILE_LAYER_SLOW_MS,
     }).toEqual({
+      ATTRIBUTION_HOLD_MAX_MS,
       CONNECTION_SETTLE_MS,
       IDENTIFY_FEEDBACK_MS,
       LONG_PRESS_DELAY_MS,

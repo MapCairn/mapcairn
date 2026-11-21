@@ -245,7 +245,7 @@ export interface ThemeValues {
 }
 
 const lightColour: ColourRoles = {
-  surface: "oklch(1 0 0 / 0.82)",
+  surface: "oklch(1 0 0 / 0.92)",
   surfaceRaised: "oklch(1 0 0 / 0.94)",
   text: neutral[900],
   textMuted: neutral[700],
@@ -272,7 +272,7 @@ const lightColour: ColourRoles = {
 };
 
 const darkColour: ColourRoles = {
-  surface: "oklch(0.19 0.008 250 / 0.8)",
+  surface: "oklch(0.19 0.008 250 / 0.92)",
   surfaceRaised: "oklch(0.25 0.009 250 / 0.88)",
   text: neutral[50],
   textMuted: neutral[300],

@@ -20,4 +20,34 @@ export const mapPlaceholder = style({
       backgroundColor: tokens.color.mapGlobeSpace,
     },
   },
+  "@media": {
+    // The notice that the map needs scripts sits in the middle of the placeholder.
+    "(scripting: none)": { display: "grid", placeItems: "center" },
+  },
+});
+
+/**
+ * Wraps the placeholder's loading text and decorative chrome. It takes no box
+ * of its own, so the skeleton lays out as if it were the placeholder's child.
+ * Where scripts do not run the map never loads and the controls never come
+ * alive, so neither the text nor the controls are drawn.
+ */
+export const placeholderChrome = style({
+  display: "contents",
+  "@media": {
+    "(scripting: none)": { display: "none" },
+  },
+});
+
+/**
+ * Hides the skip link where scripts do not run: it leads to a map that will
+ * not start. The doubled class outranks the link's own rules whatever order
+ * the stylesheets load in.
+ */
+export const hiddenWithoutScripts = style({
+  "@media": {
+    "(scripting: none)": {
+      selectors: { "&&": { display: "none" } },
+    },
+  },
 });

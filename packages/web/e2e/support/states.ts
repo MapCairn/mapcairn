@@ -69,16 +69,27 @@ export const CREDITS_COLLAPSE_TIMEOUT_MS = 10_000;
 const CREDITS_FADE_CHECK_MS = 1_000;
 
 /**
- * Waits for the credits' first showing to start. They begin collapsed, before
- * the map exists, so a collapsed button would otherwise pass a check for
- * "collapsed" too early.
+ * Waits for the credits' first showing to start, or to be held. They begin
+ * collapsed, before the map exists, so a collapsed button would otherwise pass
+ * a check for "collapsed" too early. While the first-visit tour is on screen
+ * the app holds the showing back and says so (`data-intro-held`); that counts
+ * as settled, because the credits stay collapsed until the tour is answered,
+ * the map is zoomed or moved, or the longest wait is over.
  */
 async function waitForCreditsIntro(mapPage: MapPage): Promise<void> {
-  await expect(
-    mapPage.page.locator('[data-chrome="attribution"]'),
-  ).toHaveAttribute("data-intro-started", "true", {
-    timeout: CREDITS_COLLAPSE_TIMEOUT_MS,
-  });
+  await expect
+    .poll(
+      () =>
+        mapPage.page.evaluate(() => {
+          const credits = document.querySelector('[data-chrome="attribution"]');
+          return (
+            credits?.hasAttribute("data-intro-started") === true ||
+            credits?.hasAttribute("data-intro-held") === true
+          );
+        }),
+      { timeout: CREDITS_COLLAPSE_TIMEOUT_MS },
+    )
+    .toBe(true);
 }
 
 /** Expects the button to say the credits are collapsed and the popover to be hidden. */

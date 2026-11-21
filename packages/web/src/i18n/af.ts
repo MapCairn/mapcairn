@@ -185,6 +185,7 @@ export const AF_CATALOGUE: Record<MessageKey, string> = {
   "announce.detailShown": "Geraakte gebied van {title} op die kaart gewys.",
   "announce.detailError": "Die geraakte gebied kon nie laai nie. Probeer weer.",
   "announce.searchResults": "{count} resultaat|{count} resultate",
+  "announce.searchPicked": "{label} word op die kaart gewys.",
   "announce.coordinateResult": "{results}, {label}",
   "announce.noResults": "Geen resultate",
   "announce.suggestions": "{count} voorstel|{count} voorstelle",
@@ -847,6 +848,7 @@ export const AF_CATALOGUE: Record<MessageKey, string> = {
   "host.notes.routing":
     "Niks word gestuur voordat jy dit vra nie. Kry roete stuur die stoppe en die manier van reis, en 'n reistydgebied stuur die eerste stop, saam met jou IP-adres en hierdie webwerf se adres as die verwyser, na die Valhalla-roetediens wat FOSSGIS bedryf. Dit gebruik OpenStreetMap-data.",
   "host.credits.fixTheMap": "Maak die kaart reg",
+  "host.credits.about": "Oor MapCairn",
   "host.title.map": "Interaktiewe kaart",
   "privacy.title": "Privaatheidsbeleid",
   "privacy.updated": "Laas opgedateer: {date}",
@@ -894,6 +896,8 @@ export const AF_CATALOGUE: Record<MessageKey, string> = {
     "Hierdie webwerf is oopbronsagteware wat onder die AGPL-3.0-lisensie vrygestel word.",
   "host.about.link": "Kyk na die bronkode en lisensie op GitHub",
   "host.about.product": "Oor MapCairn, die SDK agter hierdie kaart",
+  "host.map.noScript":
+    "Die kaart het JavaScript nodig. Jy kan steeds oor MapCairn, die bronkode en die privaatheidsbeleid lees.",
   "host.map.summary":
     "Die MapCairn-speelgrond is 'n interaktiewe kaart wat met die MapCairn-SDK gebou is. Soek plekke of koördinate, meet afstande en oppervlaktes, teken en voer vorms uit, vergelyk basiskaarte en skakel oop datalae aan.",
 };
