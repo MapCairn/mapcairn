@@ -176,13 +176,110 @@ test.describe("the product page", () => {
   }) => {
     const product = new ProductPage(page);
     await product.goto();
-    const repository = page.locator('a[href^="https://github.com/"]');
+    const repository = page.locator(
+      'a[href="https://github.com/MapCairn/mapcairn"]',
+    );
     await expect(repository).toHaveCount(2);
     await expect(product.header.locator('a[href^="https://"]')).toHaveCount(0);
     await expect(
       product.footer.getByRole("link", { name: "Source code" }),
     ).toHaveAttribute("href", "https://github.com/MapCairn/mapcairn");
   });
+
+  test("links the documentation, release notes, licence guide, security policy and Discussions from the footer", async ({
+    page,
+  }) => {
+    const product = new ProductPage(page);
+    await product.goto();
+    for (const [name, href] of [
+      ["Documentation", "/blob/main/docs/guides/extending.md"],
+      ["Release notes", "/releases"],
+      ["Licence guide", "/blob/main/docs/guides/licence.md"],
+      ["Security", "/blob/main/SECURITY.md"],
+      ["Discussions", "/discussions"],
+    ] as const) {
+      const link = product.footer.getByRole("link", { name });
+      await expect(link).toHaveAttribute(
+        "href",
+        `https://github.com/MapCairn/mapcairn${href}`,
+      );
+      expect((await link.boundingBox())?.height).toBeGreaterThanOrEqual(44);
+    }
+  });
+
+  for (const viewport of VIEWPORTS) {
+    test(`sets no text of the page below 13px at ${viewport.width}px (the survey sheet's labels, in SVG, are the known exception)`, async ({
+      page,
+    }) => {
+      await page.setViewportSize(viewport);
+      const product = new ProductPage(page);
+      await product.goto();
+      const small = await page.evaluate(() => {
+        const found: string[] = [];
+        for (const element of document.querySelectorAll(
+          "header *, main *, footer *",
+        )) {
+          const hasText = [...element.childNodes].some(
+            (node) =>
+              node.nodeType === Node.TEXT_NODE && node.textContent?.trim(),
+          );
+          if (!hasText || element instanceof SVGElement) {
+            continue;
+          }
+          const size = Number.parseFloat(getComputedStyle(element).fontSize);
+          if (size < 13) {
+            found.push(`${element.tagName} ${size}px`);
+          }
+        }
+        return found;
+      });
+      expect(small).toEqual([]);
+    });
+  }
+
+  test("shows what you get open, as a legend, with no script", async ({
+    page,
+  }) => {
+    const product = new ProductPage(page);
+    await product.goto();
+    const you = page.getByRole("region", { name: "What you get" });
+    await expect(you.locator("details")).toHaveCount(0);
+    const items = you.getByRole("listitem");
+    await expect(items).toHaveCount(6);
+    for (const item of await items.all()) {
+      await expect(item.locator("p")).toBeVisible();
+    }
+  });
+
+  for (const viewport of VIEWPORTS) {
+    test(`sets a graticule rule on each section at ${viewport.width}px, and a plain line in forced colours`, async ({
+      page,
+    }) => {
+      await page.setViewportSize(viewport);
+      const product = new ProductPage(page);
+      await product.goto();
+      const rule = (selector: string) =>
+        page.evaluate((sel) => {
+          const style = getComputedStyle(
+            document.querySelector(sel) as Element,
+            "::before",
+          );
+          return {
+            image: style.backgroundImage,
+            border: style.borderBlockEndStyle,
+            height: Number.parseFloat(style.height),
+          };
+        }, selector);
+      const section = "main > section";
+      const normal = await rule(section);
+      expect(normal.image).toContain("repeating-linear-gradient");
+      expect(normal.height).toBeGreaterThan(0);
+      await page.emulateMedia({ forcedColors: "active" });
+      const forced = await rule(section);
+      expect(forced.image).toBe("none");
+      expect(forced.border).toBe("solid");
+    });
+  }
 
   for (const viewport of VIEWPORTS) {
     test(`keeps Playground in the header at ${viewport.width}px`, async ({

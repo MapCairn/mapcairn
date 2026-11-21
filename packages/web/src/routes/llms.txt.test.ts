@@ -4,7 +4,13 @@ import { existsSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
 import { SITE_URL } from "../constants/siteConfig";
-import { INSTALL_OPTIONS, NPM_ACTION } from "../product/productContent";
+import {
+  DISCUSSIONS_LINK,
+  EXAMPLE_APP_LINK,
+  INSTALL_OPTIONS,
+  NPM_ACTION,
+  RELEASE_NOTES_LINK,
+} from "../product/productContent";
 import { productMarkdown } from "../product/productMarkdown";
 import { routePaths } from "../routePaths";
 import routes from "../routes";
@@ -37,7 +43,18 @@ function expectResolves(target: string): void {
       return;
     }
   }
-  if (target === NPM_ACTION.href) {
+  if (target === EXAMPLE_APP_LINK.href) {
+    expect(existsSync(path.join(REPO_ROOT, "examples/embed")), target).toBe(
+      true,
+    );
+    return;
+  }
+  // Pages on GitHub that are not files: the repository's own release and discussion pages.
+  if (
+    [NPM_ACTION.href, RELEASE_NOTES_LINK.href, DISCUSSIONS_LINK.href].includes(
+      target,
+    )
+  ) {
     return;
   }
   expect(target, "a link outside the site and the repository").toMatch(
@@ -102,6 +119,31 @@ describe("/llms.txt", () => {
     for (const target of targets) {
       expectResolves(target);
     }
+  });
+
+  it("lists the licence guide, the public API guide and the changelog among the documents", async () => {
+    const text = await loader().text();
+    for (const file of [
+      "docs/guides/licence.md",
+      "docs/guides/public-api.md",
+      "CHANGELOG.md",
+    ]) {
+      expect(text).toContain(`(${RAW_PREFIX}${file})`);
+    }
+  });
+
+  it("links the release notes, the security policy and Discussions, and says the licence allows commercial use and the SDK is before 1.0", async () => {
+    const text = await loader().text();
+    expect(linkTargets(text)).toEqual(
+      expect.arrayContaining([
+        RELEASE_NOTES_LINK.href,
+        DISCUSSIONS_LINK.href,
+        `${BLOB_PREFIX}SECURITY.md`,
+      ]),
+    );
+    expect(text).toContain("The licence allows commercial use");
+    expect(text).toContain("The SDK is before version 1.0");
+    expect(text).toContain(EXAMPLE_APP_LINK.href);
   });
 
   it("links to each target once", async () => {

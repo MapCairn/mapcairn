@@ -6,7 +6,14 @@ import {
   SITE_URL,
   SOURCE_REPOSITORY_URL,
 } from "../constants/siteConfig";
-import { INSTALL_OPTIONS, NPM_ACTION } from "./productContent";
+import {
+  DISCUSSIONS_LINK,
+  EXAMPLE_APP_LINK,
+  INSTALL_OPTIONS,
+  NPM_ACTION,
+  RELEASE_NOTES_LINK,
+  SECURITY_LINK,
+} from "./productContent";
 import { productMarkdown } from "./productMarkdown";
 
 /*
@@ -35,7 +42,7 @@ It is installed as one package, \`@mapcairn/sdk\`, with the package manager you 
 ${INSTALL_OPTIONS.map((option) => option.command).join("\n")}
 \`\`\`
 
-The package re-exports the interface, the logic, the hooks and the design tokens from its root, and the MapLibre adapter at \`@mapcairn/sdk/adapter-maplibre\`; \`maplibre-gl\` is a required peer, and the root never imports the engine. The individual packages (\`@mapcairn/core\`, \`@mapcairn/map\`, \`@mapcairn/react\`, \`@mapcairn/theme\` and \`@mapcairn/adapter-maplibre\`) are the advanced option, for a host that wants fewer dependencies. The source is on GitHub (linked below), with an example app in \`examples/embed\`.`;
+The package re-exports the interface, the logic, the hooks and the design tokens from its root, and the MapLibre adapter at \`@mapcairn/sdk/adapter-maplibre\`; \`maplibre-gl\` is a required peer, and the root never imports the engine. The individual packages (\`@mapcairn/core\`, \`@mapcairn/map\`, \`@mapcairn/react\`, \`@mapcairn/theme\` and \`@mapcairn/adapter-maplibre\`) are the advanced option, for a host that wants fewer dependencies. The source is on GitHub (linked below), with an example app in \`examples/embed\` (${EXAMPLE_APP_LINK.href}). The licence allows commercial use; keeping an app's source private while it is distributed with the SDK inside needs separate terms, and a licence for closed-source use is not on offer yet. The SDK is before version 1.0: a minor release can change the public API, and each release's notes name what to change.`;
 
 /** The playground's description, the same words its page renders for crawlers. */
 const PLAYGROUND_SUMMARY = EN_GB_CATALOGUE["host.map.summary"];
@@ -61,6 +68,21 @@ const DOCUMENTS: readonly (readonly [string, string, string])[] = [
     "Content Security Policy",
     "docs/guides/content-security-policy.md",
     "the directives a page hosting the SDK needs, and why",
+  ],
+  [
+    "Licence guide",
+    "docs/guides/licence.md",
+    "what the AGPL-3.0 means for an app that uses the SDK, and when closed-source use needs separate terms",
+  ],
+  [
+    "Public API",
+    "docs/guides/public-api.md",
+    "what counts as the public API of the six packages, and how a change to it is reported",
+  ],
+  [
+    "Changelog",
+    "CHANGELOG.md",
+    "what changed in each release, and what to change when you upgrade",
   ],
   [
     "Translating the SDK",
@@ -111,7 +133,10 @@ ${docs}
 ## Policies and source
 
 - [Privacy policy](${SITE_URL}/privacy): what the reference site stores and sends, and to whom.
-- [Source code](${SOURCE_REPOSITORY_URL}): the repository, open source under the AGPL-3.0.
+- [Source code](${SOURCE_REPOSITORY_URL}): the repository, open source under the AGPL-3.0, which allows commercial use.
+- [${RELEASE_NOTES_LINK.text}](${RELEASE_NOTES_LINK.href}): what changed in each release.
+- [${SECURITY_LINK.text}](${SECURITY_LINK.href}): how to report a vulnerability.
+- [${DISCUSSIONS_LINK.text}](${DISCUSSIONS_LINK.href}): questions and answers in public.
 - [${NPM_ACTION.text}](${NPM_ACTION.href}): the package page of \`@mapcairn/sdk\`.
 
 ## Optional

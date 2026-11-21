@@ -66,6 +66,10 @@ function block(item: Block): string {
             `### ${summary}\n\n${detail.map(lineToMarkdown).join("\n\n")}`,
         )
         .join("\n\n");
+    case "legend":
+      return item.items
+        .map(({ name, text }) => `### ${name}\n\n${lineToMarkdown(text)}`)
+        .join("\n\n");
     case "deepLinks":
       return linkList(item.links);
   }

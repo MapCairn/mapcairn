@@ -4,11 +4,15 @@ import { focusRing, tokens } from "@mapcairn/theme";
 import { globalStyle, style } from "@vanilla-extract/css";
 
 /*
- * The product page: calm and in one reading column. The hero carries the
- * pitch, the three actions and the survey sheet beside them; every section
- * below is a heading and a few short blocks, with the detail one tap away in
- * native disclosures. Mobile first: one column at 320 px; from the `wide`
- * width the hero puts the art beside its words. Tokens only.
+ * The product page: calm and in one reading column, set like a survey sheet.
+ * The hero carries the pitch, the three actions and the survey sheet beside
+ * them; every section below is a graticule rule (a ruler's ticks, in the
+ * blue of the survey marks), a heading and a few short blocks, with the detail
+ * one tap away in native disclosures, except what you get, which is a legend
+ * and always shown. Mobile first: one column at 320 px; from the `wide` width
+ * the hero puts the art beside its words. The type is the large step for
+ * reading, the title step for section headings and the small step for
+ * captions, never below 13 px. Tokens only.
  */
 
 /** From here the hero puts its art beside its words. */
@@ -31,6 +35,24 @@ const PAGE_WIDTH = "60rem";
 
 /** The space between sections: two of the largest steps. */
 const SECTION_SPACE = `calc(${tokens.space.xl} * 2)`;
+
+/**
+ * A section's top, the largest step in all: the space above its rule, the rule
+ * and the space between the rule and its heading, which add up to one
+ * `space.xl`, so the rule sits on its heading like a ruler on a line.
+ */
+const RULE_HEIGHT = tokens.space.sm;
+
+/** The space between a section's rule and its heading. */
+const RULE_TO_HEADING = tokens.space.xs;
+
+/** The distance between the rule's ticks, and a long tick every fifth. */
+const TICK_PITCH = tokens.size.control;
+const LONG_TICK_PITCH = `calc(${TICK_PITCH} * 5)`;
+
+/** How wide a tick is: a long one is twice a short one. */
+const TICK_WIDTH = "1px";
+const LONG_TICK_WIDTH = "2px";
 
 /*
  * Interaction states. Hover shows only where a pointer can hover, so a touch
@@ -363,14 +385,48 @@ export const note = style({
 /** One section: a heading and a few blocks, in the reading column, with room around it. Neighbours' padding adds up to two of the largest steps between them. */
 export const section = style({
   ...pageColumn,
-  paddingBlock: tokens.space.xl,
+  paddingBlockStart: 0,
+  paddingBlockEnd: tokens.space.xl,
   display: "flex",
   flexDirection: "column",
   alignItems: "stretch",
   scrollMarginBlockStart: tokens.space.md,
+  selectors: {
+    /*
+     * The graticule rule: a baseline with a short tick every 48 px and a long
+     * one every 240 px, all of it decoration, in flow so it takes its own
+     * height. The ticks are the blue of the survey marks, a graphic colour that
+     * keeps 3:1 on the page in both themes; the pattern is the same read from
+     * either end, so it needs no mirrored copy.
+     */
+    "&::before": {
+      content: '""',
+      display: "block",
+      height: RULE_HEIGHT,
+      marginBlockStart: tokens.space.sm,
+      marginBlockEnd: RULE_TO_HEADING,
+      backgroundRepeat: "no-repeat",
+      backgroundPosition: "0 100%",
+      backgroundSize: `100% 100%, 100% ${tokens.space.xs}, 100% 1px`,
+      backgroundImage: [
+        `repeating-linear-gradient(90deg, ${tokens.color.mapMeasureLine} 0 ${LONG_TICK_WIDTH}, transparent ${LONG_TICK_WIDTH} ${LONG_TICK_PITCH})`,
+        `repeating-linear-gradient(90deg, ${tokens.color.mapMeasureLine} 0 ${TICK_WIDTH}, transparent ${TICK_WIDTH} ${TICK_PITCH})`,
+        `linear-gradient(${tokens.color.controlBoundary}, ${tokens.color.controlBoundary})`,
+      ].join(", "),
+    },
+  },
   "@media": {
     [WIDE]: {
       paddingInline: tokens.space.xl,
+    },
+    /* Forced colours repaint no background image, so the rule is a plain line in the system's text colour. */
+    [FORCED]: {
+      selectors: {
+        "&::before": {
+          backgroundImage: "none",
+          borderBlockEnd: "1px solid CanvasText",
+        },
+      },
     },
   },
 });
@@ -387,11 +443,13 @@ export const sectionHeading = style({
   lineHeight: tokens.type.title.lineHeight,
   letterSpacing: tokens.type.title.tracking,
   fontWeight: tokens.type.weight.semibold,
+  textWrap: "balance",
 });
 
 /** A paragraph. */
 export const paragraph = style({
   margin: 0,
+  textWrap: "pretty",
 });
 
 /** A subheading inside a section. */
@@ -692,6 +750,58 @@ export const codeMuted = style({
 /** A component or type name in the code example: the heavier weight, not a second colour. */
 export const codeName = style({
   fontWeight: tokens.type.weight.semibold,
+});
+
+/** The legend: one entry for each thing you get, with no card, border or shadow around it. */
+export const legend = style({
+  display: "flex",
+  flexDirection: "column",
+  gap: tokens.space.lg,
+  margin: 0,
+  padding: 0,
+  listStyle: "none",
+});
+
+/** One entry: the symbol in a column as wide as a control, its name and what it means beside it. */
+export const legendItem = style({
+  display: "grid",
+  gridTemplateColumns: `${tokens.size.control} minmax(0, 1fr)`,
+  columnGap: tokens.space.md,
+  rowGap: tokens.space.xxs,
+  alignItems: "start",
+});
+
+/**
+ * An entry's symbol: its icon in the accent on the accent tint, as a map's key
+ * draws a symbol beside its words. In forced colours the tint is dropped, and
+ * the icon takes the system's text colour.
+ */
+export const legendSymbol = style({
+  gridRow: "1 / span 2",
+  display: "inline-flex",
+  alignItems: "center",
+  justifyContent: "center",
+  width: tokens.size.control,
+  height: tokens.size.control,
+  borderRadius: tokens.radius.control,
+  backgroundColor: tokens.color.accentTint,
+  color: tokens.color.accent,
+  "@media": {
+    [FORCED]: { color: "CanvasText" },
+  },
+});
+
+/** An entry's name: the semibold weight at the reading size. */
+export const legendName = style({
+  fontWeight: tokens.type.weight.semibold,
+  textWrap: "balance",
+});
+
+/** What an entry means: quieter than its name. */
+export const legendText = style({
+  margin: 0,
+  color: tokens.color.textMuted,
+  textWrap: "pretty",
 });
 
 /** A list of disclosures, ruled apart. */
