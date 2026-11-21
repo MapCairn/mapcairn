@@ -57,6 +57,16 @@ The screenshots and the recording in `docs/images/` are captures of the live ref
 | ------------------------------------------------------------------------------------------------ | ---------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `playground-light.png`, `playground-dark.png`, `playground-demo.gif`, `playground-demo-dark.gif` | OpenFreeMap vector tiles and styles, the Earthquakes layer | © OpenMapTiles, Data from OpenStreetMap (© OpenStreetMap contributors, [ODbL](https://opendatacommons.org/licenses/odbl/)), OpenFreeMap, MapLibre, U.S. Geological Survey |
 
+### Product page pictures
+
+The two pictures on the product page at `/` (`packages/web/src/product/captures`, a light and a dark file for each) are captures of the reference site's playground, taken by `packages/web/scripts/captureProduct.ts` (`docs/guides/product-captures.md`). They show the Bright basemap (light) and the Fiord basemap (dark) from OpenFreeMap over Cape Town, with no data layer on. The page carries the credits under each picture, in the words and links of the basemap definitions, and links no other source for them:
+
+| Image                                                                            | Shows                                          | Credit                                                                                                                                                           |
+| -------------------------------------------------------------------------------- | ---------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `hero-light.webp`, `hero-dark.webp`, `basemaps-light.webp`, `basemaps-dark.webp` | OpenFreeMap vector tiles and styles, Cape Town | © OpenStreetMap contributors, OpenFreeMap, OpenMapTiles, MapLibre (the credits the map shows; data under the [ODbL](https://opendatacommons.org/licenses/odbl/)) |
+
+The pictures are retaken with the script, never edited by hand, and keep this table in step with the basemap definitions.
+
 ## Place search
 
 Place search and reverse geocoding use [OpenStreetMap Nominatim](https://nominatim.org), with © OpenStreetMap contributors attribution. Suggestions as you type in the search box use [Photon](https://photon.komoot.io), a geocoder run by komoot on OpenStreetMap data, with © OpenStreetMap contributors attribution under the [Open Database Licence](https://opendatacommons.org/licenses/odbl/).

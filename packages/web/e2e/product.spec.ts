@@ -1061,6 +1061,202 @@ test.describe("the product page", () => {
     }
   }
 
+  test.describe("the pictures of the playground", () => {
+    /** The capture of each plate, by its subject: its CSS size, which the picture's file is twice. */
+    const PLATES = [
+      { id: "hero", width: 400, height: 520 },
+      { id: "basemaps", width: 390, height: 720 },
+    ] as const;
+
+    /** Scrolls down the page a screen at a time, so every lazy picture that is drawn is fetched, and waits for each to finish. */
+    async function scrollThroughPage(page: Page): Promise<void> {
+      await page.evaluate(async () => {
+        const step = window.innerHeight;
+        for (let y = 0; y < document.documentElement.scrollHeight; y += step) {
+          window.scrollTo(0, y);
+          await new Promise((resolve) => setTimeout(resolve, 50));
+        }
+      });
+      await page.waitForFunction(() =>
+        [...document.images]
+          .filter((image) => getComputedStyle(image).display !== "none")
+          .every((image) => image.complete),
+      );
+    }
+
+    for (const width of [390, 820, 1440]) {
+      for (const colorScheme of ["light", "dark"] as const) {
+        test(`fetches only the pictures of the ${colorScheme} theme at ${width}px, shifts nothing, asks no other site and never scrolls sideways`, async ({
+          page,
+        }) => {
+          await page.setViewportSize({ width, height: 900 });
+          await page.emulateMedia({ colorScheme });
+          const requests: string[] = [];
+          page.on("request", (request) => requests.push(request.url()));
+          await page.addInitScript(() => {
+            const shifts: number[] = [];
+            Object.assign(window, { __layoutShifts: shifts });
+            new PerformanceObserver((list) => {
+              for (const entry of list.getEntries()) {
+                const shift = entry as PerformanceEntry & {
+                  value: number;
+                  hadRecentInput: boolean;
+                };
+                if (!shift.hadRecentInput) {
+                  shifts.push(shift.value);
+                }
+              }
+            }).observe({ type: "layout-shift", buffered: true });
+          });
+          const product = new ProductPage(page);
+          await product.goto();
+          await scrollThroughPage(page);
+
+          const pictures = requests
+            .map((url) => new URL(url).pathname)
+            .filter((path) => /\.webp$/.test(path));
+          const other = colorScheme === "light" ? "dark" : "light";
+          for (const { id } of PLATES) {
+            expect(
+              pictures.filter((path) => path.includes(`${id}-${colorScheme}`)),
+              `the ${colorScheme} ${id} picture`,
+            ).toHaveLength(1);
+            expect(
+              pictures.filter((path) => path.includes(`${id}-${other}`)),
+              `the ${other} ${id} picture, which is not drawn`,
+            ).toHaveLength(0);
+          }
+          const origin = new URL(page.url()).origin;
+          expect(
+            requests.filter((url) => new URL(url).origin !== origin),
+            "requests to another origin",
+          ).toEqual([]);
+          const shifted = await page.evaluate(() =>
+            (
+              (window as unknown as { __layoutShifts: number[] })
+                .__layoutShifts ?? []
+            ).reduce((sum, value) => sum + value, 0),
+          );
+          expect(shifted).toBe(0);
+          expect(
+            await page.evaluate(() => document.documentElement.scrollWidth),
+          ).toBeLessThanOrEqual(width);
+        });
+      }
+    }
+
+    for (const { id, width: capture, height } of PLATES) {
+      test(`draws the ${id} picture no larger than it was taken, whole, with the collar's labels inside its sheet, at 1440px`, async ({
+        page,
+      }) => {
+        await page.setViewportSize({ width: 1440, height: 900 });
+        const product = new ProductPage(page);
+        await product.goto();
+        const figure = page.getByTestId(`plate-${id}`);
+        await figure.scrollIntoViewIfNeeded();
+        const image = figure.getByRole("img");
+        await expect(image).toBeVisible();
+        const shown = await image.boundingBox();
+        expect(shown?.width).toBeLessThanOrEqual(capture);
+        // The picture keeps its shape at any width.
+        expect((shown?.width ?? 0) / (shown?.height ?? 1)).toBeCloseTo(
+          capture / height,
+          1,
+        );
+        await expect
+          .poll(() =>
+            image.evaluate((element: HTMLImageElement) => element.naturalWidth),
+          )
+          .toBe(capture * 2);
+        const outside = await figure.evaluate((element) => {
+          const sheet = element.getBoundingClientRect();
+          return [...element.querySelectorAll("svg text")].filter((label) => {
+            const box = label.getBoundingClientRect();
+            return (
+              box.left < sheet.left - 1 ||
+              box.right > sheet.right + 1 ||
+              box.top < sheet.top - 1 ||
+              box.bottom > sheet.bottom + 1
+            );
+          }).length;
+        });
+        expect(outside).toBe(0);
+        // The collar's labels keep the small step's 13px.
+        const sizes = await figure.evaluate((element) =>
+          [...element.querySelectorAll("svg text")].map((label) =>
+            Number.parseFloat(getComputedStyle(label).fontSize),
+          ),
+        );
+        for (const size of sizes) {
+          expect(size).toBeGreaterThanOrEqual(13);
+        }
+      });
+    }
+
+    test("follows a theme chosen on the page, whatever the system prefers", async ({
+      page,
+    }) => {
+      await page.emulateMedia({ colorScheme: "light" });
+      const product = new ProductPage(page);
+      await product.goto();
+      await page.evaluate(() => {
+        document.documentElement.dataset.theme = "dark";
+      });
+      const figure = page.getByTestId("plate-hero");
+      await figure.scrollIntoViewIfNeeded();
+      await expect(figure.getByRole("img")).toHaveAttribute(
+        "alt",
+        /dark theme/,
+      );
+      await expect(figure.getByRole("img")).toHaveCount(1);
+    });
+
+    test("credits the map beside each picture with links to the credited pages", async ({
+      page,
+    }) => {
+      const product = new ProductPage(page);
+      await product.goto();
+      for (const { id } of PLATES) {
+        const figure = page.getByTestId(`plate-${id}`);
+        const credits = figure.getByText("Map credits:");
+        await expect(credits).toContainText("OpenStreetMap contributors");
+        await expect(credits).toContainText("OpenFreeMap");
+        await expect(
+          credits.getByRole("link", { name: "© OpenStreetMap contributors" }),
+        ).toHaveAttribute("href", "https://www.openstreetmap.org/copyright");
+      }
+    });
+
+    test.describe("without a script", () => {
+      test.use({ javaScriptEnabled: false });
+
+      test("still show each picture, whole, with its credits, and never scroll sideways", async ({
+        page,
+      }) => {
+        await page.setViewportSize({ width: 390, height: 900 });
+        await page.goto("/");
+        for (const { id } of PLATES) {
+          const figure = page.getByTestId(`plate-${id}`);
+          const image = figure.locator("img:visible");
+          await expect(image).toHaveCount(1);
+          await image.scrollIntoViewIfNeeded();
+          await expect
+            .poll(() =>
+              image.evaluate(
+                (element: HTMLImageElement) =>
+                  element.complete && element.naturalWidth > 0,
+              ),
+            )
+            .toBe(true);
+          await expect(figure.getByText("Map credits:")).toBeVisible();
+        }
+        expect(
+          await page.evaluate(() => document.documentElement.scrollWidth),
+        ).toBeLessThanOrEqual(390);
+      });
+    });
+  });
+
   test.describe("with motion on", () => {
     test.use({ reducedMotion: "no-preference" });
 

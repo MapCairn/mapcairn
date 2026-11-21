@@ -1,9 +1,21 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
 import {
+  type BasemapAttributionEntry,
+  buildAttribution,
+  getBasemap,
+} from "@mapcairn/core";
+import {
   PLAYGROUND_PATH,
   SOURCE_REPOSITORY_URL,
 } from "../constants/siteConfig";
+import {
+  CAPTURE_BASEMAP_NAMES,
+  type CaptureSubjectId,
+  type CaptureTheme,
+  captureSubject,
+  HERO_READOUT,
+} from "./captureSubjects";
 import { EMBED_EXAMPLE_FILES } from "./embedExampleFiles";
 
 /*
@@ -86,6 +98,7 @@ export type Block =
     }
   | { readonly kind: "details"; readonly items: readonly Disclosure[] }
   | { readonly kind: "legend"; readonly items: readonly LegendItem[] }
+  | { readonly kind: "plate"; readonly id: CaptureSubjectId }
   | { readonly kind: "deepLinks"; readonly links: readonly InlineLink[] };
 
 /** One package manager and the command that installs the SDK with it. */
@@ -303,6 +316,80 @@ export function faqEntries(): { question: string; answer: string }[] {
     }));
 }
 
+/** The words of one picture. */
+export interface PlateText {
+  /** What the picture shows, apart from its theme and basemap: the start of its alt text and what `/index.md` says in its place. */
+  readonly description: string;
+  /** The line under the picture, before its basemaps and credits. */
+  readonly caption: string;
+}
+
+/**
+ * The words of each picture, which are captures of the running playground
+ * (`captureSubjects.ts`). The capture script checks the length the hero's
+ * picture measures against `HERO_READOUT`, so what the description says is
+ * what the picture shows.
+ */
+export const PLATES: Readonly<Record<CaptureSubjectId, PlateText>> = {
+  hero: {
+    description: `The MapCairn playground over Cape Town with the Measure tool open: a line of ${HERO_READOUT} measured from the slopes of Lion's Head to the city centre, with its length and the Distance and Area choices in the toolbar.`,
+    caption: "The playground, measuring across Cape Town.",
+  },
+  basemaps: {
+    description:
+      "The MapCairn playground on a phone, over Cape Town, with the Map options sheet half open on its Basemap picker, which offers Bright, Liberty, Positron and more, with one chosen.",
+    caption: "Map options on a phone, over the same view.",
+  },
+};
+
+/**
+ * The alt text of a picture: what it shows, then the basemap and the theme it
+ * is drawn in, so the picture for each theme says what is in it.
+ */
+export function plateAlt(id: CaptureSubjectId, theme: CaptureTheme): string {
+  const basemap = CAPTURE_BASEMAP_NAMES[captureSubject(id).basemaps[theme]];
+  return `${PLATES[id].description} The map is drawn over the ${basemap} basemap, in the ${theme} theme.`;
+}
+
+/** The basemaps a picture is drawn over, by theme, in words for its caption. */
+export function plateBasemaps(id: CaptureSubjectId): string {
+  const { basemaps } = captureSubject(id);
+  return `The basemap is ${CAPTURE_BASEMAP_NAMES[basemaps.light]} in the light theme and ${CAPTURE_BASEMAP_NAMES[basemaps.dark]} in the dark theme.`;
+}
+
+/**
+ * The credits that go with a picture: those the map itself shows for each
+ * basemap it is drawn over, from the basemap's definition in the SDK, so they
+ * cannot differ from the playground's own. Each credit appears once.
+ */
+export function plateCredits(
+  id: CaptureSubjectId,
+): readonly BasemapAttributionEntry[] {
+  const credits = Object.values(captureSubject(id).basemaps).flatMap(
+    (basemapId) => {
+      const basemap = getBasemap(basemapId);
+      if (basemap === undefined) {
+        throw new Error(`No basemap ${basemapId}.`);
+      }
+      return buildAttribution(basemap);
+    },
+  );
+  return credits.filter(
+    (credit, index) =>
+      credits.findIndex((other) => other.text === credit.text) === index,
+  );
+}
+
+/** What leads the credits under a picture. */
+export const PLATE_CREDITS_LEAD = "Map credits:";
+
+/** The credits of a picture as plain words, for `/index.md` and `/llms-full.txt`. */
+export function plateCreditsText(id: CaptureSubjectId): string {
+  return `${PLATE_CREDITS_LEAD} ${plateCredits(id)
+    .map((credit) => credit.text)
+    .join(", ")}.`;
+}
+
 /** The page's sections, in reading order. */
 export const SECTIONS: readonly Section[] = [
   {
@@ -417,6 +504,7 @@ export const SECTIONS: readonly Section[] = [
         kind: "paragraph",
         text: ["What a map renderer leaves to you, built and tested."],
       },
+      { kind: "plate", id: "basemaps" },
       {
         kind: "legend",
         items: [

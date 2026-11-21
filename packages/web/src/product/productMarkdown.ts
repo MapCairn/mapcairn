@@ -11,7 +11,9 @@ import {
   LEDE,
   type Line,
   NPM_ACTION,
+  PLATES,
   PLAYGROUND_ACTION,
+  plateCreditsText,
   SECTIONS,
   type Section,
 } from "./productContent";
@@ -71,6 +73,8 @@ function block(item: Block): string {
       return item.items
         .map(({ name, text }) => `### ${name}\n\n${lineToMarkdown(text)}`)
         .join("\n\n");
+    case "plate":
+      return `${PLATES[item.id].description} ${plateCreditsText(item.id)}`;
     case "deepLinks":
       return linkList(item.links);
   }
@@ -93,6 +97,7 @@ export function productMarkdown(): string {
     block(HERO_INSTALL),
     ACTIONS,
     lineToMarkdown(HERO_NOTE),
+    block({ kind: "plate", id: "hero" }),
     ...SECTIONS.map(section),
   ].join("\n\n")}\n`;
 }
