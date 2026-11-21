@@ -12,8 +12,15 @@ import { mkdtempSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { chromium } from "@playwright/test";
+// Read from the source file, not the `@mapcairn/theme` barrel, because the barrel
+// loads vanilla-extract style files that only the Vite plugin can evaluate.
+import { accent, themeValues } from "../../theme/src/tokenValues";
 import { OG_IMAGE_HEIGHT, OG_IMAGE_WIDTH } from "../src/constants/siteConfig";
-import { type ShareCardWords, shareCardHtml } from "../src/product/shareCard";
+import {
+  type ShareCardWords,
+  shareCardHtml,
+  shareCardInks,
+} from "../src/product/shareCard";
 
 const FONT_PATH = fileURLToPath(
   import.meta.resolve(
@@ -38,10 +45,14 @@ export async function renderShareCard(
   const htmlPath = join(tempDir, "card.html");
   writeFileSync(
     htmlPath,
-    shareCardHtml(words, {
-      fontUrl: pathToFileURL(FONT_PATH).href,
-      markUrl: pathToFileURL(MARK_PATH).href,
-    }),
+    shareCardHtml(
+      words,
+      {
+        fontUrl: pathToFileURL(FONT_PATH).href,
+        markUrl: pathToFileURL(MARK_PATH).href,
+      },
+      shareCardInks({ roles: themeValues.light.opaque, accent }),
+    ),
   );
   const browser = await chromium.launch(
     process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH

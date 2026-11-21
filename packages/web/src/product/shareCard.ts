@@ -1,9 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
-// Read from the source file, not the `@mapcairn/theme` barrel, because the barrel
-// loads vanilla-extract style files that only the Vite plugin can evaluate, and
-// `scripts/generateSdkOgImage.ts` runs under `tsx`.
-import { accent, themeValues } from "../../../theme/src/tokenValues";
 import { STONES } from "../app/cairnStones";
 import {
   OG_IMAGE_HEIGHT,
@@ -71,17 +67,47 @@ export interface ShareCardAssets {
   readonly markUrl: string;
 }
 
-const colour = themeValues.light.opaque;
+/** Every colour on the cards. */
+export interface ShareCardInks {
+  readonly paper: string;
+  readonly text: string;
+  readonly muted: string;
+  readonly link: string;
+  readonly mark: string;
+  readonly neatline: string;
+}
 
-/** Every colour on the cards: the light theme's own values, and no other. */
-export const SHARE_CARD_INKS = {
-  paper: colour.pageBackground,
-  text: colour.text,
-  muted: colour.textMuted,
-  link: accent[700],
-  mark: accent[600],
-  neatline: colour.controlBoundary,
-} as const;
+/** The theme values the cards' inks are taken from. */
+export interface ShareCardTheme {
+  readonly roles: {
+    readonly pageBackground: string;
+    readonly text: string;
+    readonly textMuted: string;
+    readonly controlBoundary: string;
+  };
+  readonly accent: Readonly<Record<600 | 700, string>>;
+}
+
+/**
+ * The cards' inks from the light theme's own values, and no other: the paper,
+ * the text, the muted text, the link ink, the survey marks (the logo's blue)
+ * and the neatline. The values are passed in because the theme's barrel cannot
+ * be loaded by `tsx` (it holds vanilla-extract style files), so the generator
+ * reads `tokenValues.ts` itself and the test reads the barrel.
+ */
+export function shareCardInks({
+  roles,
+  accent,
+}: ShareCardTheme): ShareCardInks {
+  return {
+    paper: roles.pageBackground,
+    text: roles.text,
+    muted: roles.textMuted,
+    link: accent[700],
+    mark: accent[600],
+    neatline: roles.controlBoundary,
+  };
+}
 
 /** Where everything stands on the 1200 by 630 card, in pixels. */
 export const SHARE_CARD_LAYOUT = {
@@ -170,28 +196,28 @@ export function shareCardLabels(): readonly ShareCardLabel[] {
 }
 
 /** The cairn's stones, in the marks' blue, with the paper's halo between them. */
-function cairn(): string {
+function cairn(inks: ShareCardInks): string {
   const stones = STONES.map(
     ({ points, offset }) =>
-      `<g transform="${offset ?? ""}"><polygon points="${points}" fill="${SHARE_CARD_INKS.paper}" stroke="${SHARE_CARD_INKS.paper}" stroke-width="40" stroke-linejoin="round"/><polygon points="${points}" fill="${SHARE_CARD_INKS.mark}" stroke="${SHARE_CARD_INKS.mark}" stroke-width="16" stroke-linejoin="round"/></g>`,
+      `<g transform="${offset ?? ""}"><polygon points="${points}" fill="${inks.paper}" stroke="${inks.paper}" stroke-width="40" stroke-linejoin="round"/><polygon points="${points}" fill="${inks.mark}" stroke="${inks.mark}" stroke-width="16" stroke-linejoin="round"/></g>`,
   ).join("");
   return `<g transform="${CAIRN_TRANSFORM}">${stones}</g>`;
 }
 
 /** The contours, the measured line, the cairn and the pin, in the crop's view box. */
-function plateArt(): string {
+function plateArt(inks: ShareCardInks): string {
   const { box } = shareCardCrop();
   const contours = CONTOURS.map(
     ({ index, d }) =>
-      `<path d="${d}" fill="none" stroke="${SHARE_CARD_INKS.muted}" stroke-opacity="${index ? 0.6 : 0.3}" stroke-width="${index ? 2 : 1.25}" vector-effect="non-scaling-stroke" stroke-linejoin="round"/>`,
+      `<path d="${d}" fill="none" stroke="${inks.muted}" stroke-opacity="${index ? 0.6 : 0.3}" stroke-width="${index ? 2 : 1.25}" vector-effect="non-scaling-stroke" stroke-linejoin="round"/>`,
   ).join("");
-  const line = `<line x1="${MEASURE.from.x}" y1="${MEASURE.from.y}" x2="${MEASURE.to.x}" y2="${MEASURE.to.y}" stroke="${SHARE_CARD_INKS.mark}" stroke-width="3" vector-effect="non-scaling-stroke" stroke-dasharray="7 6" stroke-linecap="round"/>`;
-  const pin = `<g transform="translate(${PIN_TIP.x} ${PIN_TIP.y})"><path d="${PIN_PATH}" fill="${SHARE_CARD_INKS.mark}" stroke="${SHARE_CARD_INKS.paper}" stroke-width="2" vector-effect="non-scaling-stroke"/><circle cx="${PIN_HEAD.cx}" cy="${PIN_HEAD.cy}" r="${PIN_HEAD.r}" fill="${SHARE_CARD_INKS.paper}"/></g>`;
-  return `<svg viewBox="${box.left} ${box.top} ${box.right - box.left} ${box.bottom - box.top}" width="${SHARE_CARD_LAYOUT.plate.width}" height="${SHARE_CARD_LAYOUT.plate.height}" aria-hidden="true">${contours}${line}${cairn()}${pin}</svg>`;
+  const line = `<line x1="${MEASURE.from.x}" y1="${MEASURE.from.y}" x2="${MEASURE.to.x}" y2="${MEASURE.to.y}" stroke="${inks.mark}" stroke-width="3" vector-effect="non-scaling-stroke" stroke-dasharray="7 6" stroke-linecap="round"/>`;
+  const pin = `<g transform="translate(${PIN_TIP.x} ${PIN_TIP.y})"><path d="${PIN_PATH}" fill="${inks.mark}" stroke="${inks.paper}" stroke-width="2" vector-effect="non-scaling-stroke"/><circle cx="${PIN_HEAD.cx}" cy="${PIN_HEAD.cy}" r="${PIN_HEAD.r}" fill="${inks.paper}"/></g>`;
+  return `<svg viewBox="${box.left} ${box.top} ${box.right - box.left} ${box.bottom - box.top}" width="${SHARE_CARD_LAYOUT.plate.width}" height="${SHARE_CARD_LAYOUT.plate.height}" aria-hidden="true">${contours}${line}${cairn(inks)}${pin}</svg>`;
 }
 
 /** The grid's ticks inside the plate's top and start edges, where the sheet's grid lines cross the crop. */
-function plateTicks(): string {
+function plateTicks(inks: ShareCardInks): string {
   const { box } = shareCardCrop();
   const { plate, tickLength, tickWidth } = SHARE_CARD_LAYOUT;
   const east = EASTINGS.filter(({ at }) => at > box.left && at < box.right).map(
@@ -206,7 +232,7 @@ function plateTicks(): string {
     const y = onPlate({ x: box.left, y: at }).y;
     return `<line x1="0" y1="${y}" x2="${tickLength}" y2="${y}"/>`;
   });
-  return `<svg width="${plate.width}" height="${plate.height}" aria-hidden="true" stroke="${SHARE_CARD_INKS.muted}" stroke-width="${tickWidth}">${[...east, ...north].join("")}</svg>`;
+  return `<svg width="${plate.width}" height="${plate.height}" aria-hidden="true" stroke="${inks.muted}" stroke-width="${tickWidth}">${[...east, ...north].join("")}</svg>`;
 }
 
 /** Words as text in markup. */
@@ -232,10 +258,12 @@ const URL_LABEL = SITE_URL.replace(/^https?:\/\//, "");
  * screenshot.
  * @param words - The headline and the lede, the only parts that differ.
  * @param assets - The font and the brand mark, as URLs the browser can load.
+ * @param inks - The colours, from {@link shareCardInks}.
  */
 export function shareCardHtml(
   words: ShareCardWords,
   assets: ShareCardAssets,
+  inks: ShareCardInks,
 ): string {
   const { margin, plate, headlineSize, ledeSize, figureSize, markSize } =
     SHARE_CARD_LAYOUT;
@@ -256,8 +284,8 @@ export function shareCardHtml(
     overflow: hidden;
     width: ${OG_IMAGE_WIDTH}px;
     height: ${OG_IMAGE_HEIGHT}px;
-    background: ${SHARE_CARD_INKS.paper};
-    color: ${SHARE_CARD_INKS.text};
+    background: ${inks.paper};
+    color: ${inks.text};
     font-family: "IBM Plex Sans Variable", sans-serif;
   }
   .words {
@@ -272,8 +300,8 @@ export function shareCardHtml(
   .brand { display: flex; align-items: center; gap: 20px; font-size: ${SHARE_CARD_LAYOUT.brandSize}px; font-weight: 600; letter-spacing: -0.01em; }
   .brand img { display: block; width: ${markSize}px; height: ${markSize}px; border-radius: 22%; }
   h1 { margin-top: 48px; font-size: ${headlineSize}px; line-height: 1.08; letter-spacing: -0.025em; font-weight: 600; text-wrap: balance; }
-  .lede { margin-top: 28px; font-size: ${ledeSize}px; line-height: 1.35; color: ${SHARE_CARD_INKS.muted}; text-wrap: balance; }
-  .url { margin-top: auto; padding-top: 24px; font-size: ${figureSize + 4}px; font-weight: 600; color: ${SHARE_CARD_INKS.link}; }
+  .lede { margin-top: 28px; font-size: ${ledeSize}px; line-height: 1.35; color: ${inks.muted}; text-wrap: balance; }
+  .url { margin-top: auto; padding-top: 24px; font-size: ${figureSize + 4}px; font-weight: 600; color: ${inks.link}; }
   .plate {
     position: absolute;
     left: ${plate.left}px;
@@ -286,14 +314,14 @@ export function shareCardHtml(
     content: "";
     position: absolute;
     inset: 0;
-    border: ${SHARE_CARD_LAYOUT.neatlineWidth}px solid ${SHARE_CARD_INKS.neatline};
+    border: ${SHARE_CARD_LAYOUT.neatlineWidth}px solid ${inks.neatline};
   }
   .plate svg { position: absolute; left: 0; top: 0; display: block; }
   .figure {
     position: absolute;
     padding: 0 6px;
-    background: ${SHARE_CARD_INKS.paper};
-    color: ${SHARE_CARD_INKS.text};
+    background: ${inks.paper};
+    color: ${inks.text};
     font-size: ${figureSize}px;
     font-weight: 600;
     line-height: 1.3;
@@ -310,7 +338,7 @@ export function shareCardHtml(
     <p class="lede">${escapeText(words.lede)}</p>
     <p class="url">${URL_LABEL}</p>
   </div>
-  <div class="plate">${plateArt()}${plateTicks()}${shareCardLabels().map(labelHtml).join("")}</div>
+  <div class="plate">${plateArt(inks)}${plateTicks(inks)}${shareCardLabels().map(labelHtml).join("")}</div>
 </body>
 </html>`;
 }

@@ -6,7 +6,7 @@ import { contrastRatio, parseColour, tokenValues } from "@mapcairn/theme";
 import { describe, expect, it } from "vitest";
 import { PREVIEW_IMAGES } from "../buildPageMeta";
 import { HEADLINE } from "../product/productContent";
-import { PLAYGROUND_CARD, SHARE_CARD_INKS } from "../product/shareCard";
+import { PLAYGROUND_CARD, shareCardInks } from "../product/shareCard";
 import { BRAND_COLOUR } from "./brandColour";
 import { OG_IMAGE_HEIGHT, OG_IMAGE_WIDTH } from "./siteConfig";
 
@@ -29,7 +29,12 @@ describe("the brand colour", () => {
   });
 
   it("is the mark colour of the link preview cards", () => {
-    const card = parseColour(SHARE_CARD_INKS.mark);
+    const card = parseColour(
+      shareCardInks({
+        roles: tokenValues.themeValues.light.opaque,
+        accent: tokenValues.accent,
+      }).mark,
+    );
     for (const channel of ["r", "g", "b"] as const) {
       expect(Math.abs(brand[channel] - card[channel])).toBeLessThanOrEqual(1);
     }
