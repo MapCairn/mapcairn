@@ -9,6 +9,7 @@ import {
   type Inline,
   LEDE,
   type Line,
+  NPM_ACTION,
   PLAYGROUND_ACTION,
   SECTIONS,
   type Section,
@@ -42,8 +43,8 @@ function linkList(links: readonly { text: string; href: string }[]): string {
     .join("\n");
 }
 
-/** The two actions, as a list of links. */
-const ACTIONS = linkList([GITHUB_ACTION, PLAYGROUND_ACTION]);
+/** The three actions, as a list of links. */
+const ACTIONS = linkList([GITHUB_ACTION, PLAYGROUND_ACTION, NPM_ACTION]);
 
 /** One block as Markdown. */
 function block(item: Block): string {

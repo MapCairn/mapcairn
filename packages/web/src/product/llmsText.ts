@@ -6,7 +6,7 @@ import {
   SITE_URL,
   SOURCE_REPOSITORY_URL,
 } from "../constants/siteConfig";
-import { INSTALL_COMMAND } from "./productContent";
+import { INSTALL_COMMAND, NPM_ACTION } from "./productContent";
 import { productMarkdown } from "./productMarkdown";
 
 /*
@@ -106,6 +106,7 @@ ${docs}
 
 - [Privacy policy](${SITE_URL}/privacy): what the reference site stores and sends, and to whom.
 - [Source code](${SOURCE_REPOSITORY_URL}): the repository, open source under the AGPL-3.0.
+- [${NPM_ACTION.text}](${NPM_ACTION.href}): the package page of \`@mapcairn/sdk\`.
 
 ## Optional
 

@@ -5,7 +5,7 @@ import { globalStyle, style } from "@vanilla-extract/css";
 
 /*
  * The product page: calm and in one reading column. The hero carries the
- * pitch, the two actions and the survey sheet beside them; every section
+ * pitch, the three actions and the survey sheet beside them; every section
  * below is a heading and a few short blocks, with the detail one tap away in
  * native disclosures. Mobile first: one column at 320 px; from the `wide`
  * width the hero puts the art beside its words. Tokens only.
@@ -14,7 +14,7 @@ import { globalStyle, style } from "@vanilla-extract/css";
 /** From here the hero puts its art beside its words. */
 const WIDE = "screen and (min-width: 56rem)";
 
-/** From here the two actions sit side by side. */
+/** From here the actions sit side by side, wrapping onto a second row when they do not fit. */
 const ROOMY = "screen and (min-width: 30rem)";
 
 /** The reading width of the sections, about 65 characters of the large type. */
@@ -245,20 +245,21 @@ export const lede = style({
   color: tokens.color.textMuted,
 });
 
-/** The two actions, side by side and the same size, stacked on a narrow phone. */
+/** The three actions, the same height and side by side where there is room, stacked on a narrow phone. */
 export const actions = style({
   display: "grid",
   gridTemplateColumns: "minmax(0, 1fr)",
   gap: tokens.space.xs,
   "@media": {
     [ROOMY]: {
-      gridTemplateColumns: "repeat(2, minmax(0, max-content))",
+      display: "flex",
+      flexWrap: "wrap",
     },
   },
 });
 
 /**
- * What both actions share: a 48 px target, the icon and the words centred.
+ * What the actions share: a 48 px target, the icon and the words centred.
  * Under a pointer an action rises a hair onto the floating shadow; pressed, it
  * settles and shrinks a little.
  */
@@ -323,7 +324,7 @@ export const primaryAction = style({
   },
 });
 
-/** The secondary action: Try the playground. Under a pointer it also takes the accent tint and edge. */
+/** The secondary actions: Try the playground and View on npm. Under a pointer it also takes the accent tint and edge. */
 export const secondaryAction = style({
   ...action,
   border: `1px solid ${tokens.color.controlBoundary}`,

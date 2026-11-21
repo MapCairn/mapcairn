@@ -4,7 +4,7 @@ import { existsSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
 import { SITE_URL } from "../constants/siteConfig";
-import { INSTALL_COMMAND } from "../product/productContent";
+import { INSTALL_COMMAND, NPM_ACTION } from "../product/productContent";
 import { productMarkdown } from "../product/productMarkdown";
 import { routePaths } from "../routePaths";
 import routes from "../routes";
@@ -37,9 +37,20 @@ function expectResolves(target: string): void {
       return;
     }
   }
+  if (target === NPM_ACTION.href) {
+    return;
+  }
   expect(target, "a link outside the site and the repository").toMatch(
     /^https:\/\/github\.com\/MapCairn\/mapcairn$/,
   );
+}
+
+/** A text with the install command and the link to the npm package taken out. */
+function withoutNpmLink(text: string): string {
+  return text
+    .replaceAll(INSTALL_COMMAND, "")
+    .replaceAll(NPM_ACTION.href, "")
+    .replaceAll(NPM_ACTION.text, "");
 }
 
 describe("/llms.txt", () => {
@@ -68,17 +79,16 @@ describe("/llms.txt", () => {
     );
   });
 
-  it("says what MapCairn is not and how to use it today, and leads with the install command and nothing else about npm", async () => {
+  it("says what MapCairn is not and how to use it today, and leads with the install command and says nothing else about npm but the link to the package", async () => {
     const text = await loader().text();
     expect(text).toContain(
       "It is not a hosted service, a dataset or a GIS analysis engine",
     );
     expect(text).toContain(INSTALL_COMMAND);
     expect(text).toContain("advanced option");
-    expect(text.replaceAll(INSTALL_COMMAND, "")).not.toMatch(/npm/i);
-    expect(
-      (await fullLoader().text()).replaceAll(INSTALL_COMMAND, ""),
-    ).not.toMatch(/npm/i);
+    expect(text).toContain(`[${NPM_ACTION.text}](${NPM_ACTION.href})`);
+    expect(withoutNpmLink(text)).not.toMatch(/npm/i);
+    expect(withoutNpmLink(await fullLoader().text())).not.toMatch(/npm/i);
   });
 
   it("links only to pages the site serves and files the repository has", async () => {

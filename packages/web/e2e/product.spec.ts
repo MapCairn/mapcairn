@@ -150,7 +150,7 @@ test.describe("the product page", () => {
     });
   });
 
-  test("makes View on GitHub the first action, beside Try the playground", async ({
+  test("makes View on GitHub the first action, beside Try the playground and View on npm", async ({
     page,
   }) => {
     const product = new ProductPage(page);
@@ -161,8 +161,14 @@ test.describe("the product page", () => {
     );
     const github = await product.heroGitHub.boundingBox();
     const playground = await product.heroPlayground.boundingBox();
+    const npm = await product.heroNpm.boundingBox();
+    await expect(product.heroNpm).toHaveAttribute(
+      "href",
+      "https://www.npmjs.com/package/@mapcairn/sdk",
+    );
     expect(github?.height).toBeGreaterThanOrEqual(44);
     expect(playground?.height).toBe(github?.height);
+    expect(npm?.height).toBe(github?.height);
   });
 
   test("links to the repository from the hero's button and the footer's Source code only", async ({
@@ -341,6 +347,7 @@ test.describe("the product page", () => {
       await product.goto();
       for (const target of [
         product.heroPlayground,
+        product.heroNpm,
         product.headerPlayground,
         product.copyCode,
       ]) {
@@ -407,6 +414,7 @@ test.describe("the product page", () => {
       const actions = [
         product.heroGitHub,
         product.heroPlayground,
+        product.heroNpm,
         product.copyCode,
       ];
       const readable = async (action: Locator) => {

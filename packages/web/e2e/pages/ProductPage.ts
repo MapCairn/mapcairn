@@ -19,6 +19,7 @@ export class ProductPage {
   readonly headerPlayground: Locator;
   readonly heroGitHub: Locator;
   readonly heroPlayground: Locator;
+  readonly heroNpm: Locator;
   readonly code: Locator;
   /** The embedding example's copy button, before it has copied. */
   readonly copyCode: Locator;
@@ -39,6 +40,7 @@ export class ProductPage {
     this.heroPlayground = this.main.getByRole("link", {
       name: "Try the playground",
     });
+    this.heroNpm = this.main.getByRole("link", { name: "View on npm" });
     this.code = page.getByRole("region", { name: "Embedding example" });
     this.copyCode = this.main.getByRole("button", { name: "Copy code" });
   }
