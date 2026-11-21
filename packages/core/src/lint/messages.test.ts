@@ -147,6 +147,7 @@ const EXPECTED_PLACEHOLDERS: Record<MessageKey, readonly string[]> = {
   "announce.detailShown": ["title"],
   "announce.detailError": [],
   "announce.searchResults": ["count"],
+  "announce.searchPicked": ["label"],
   "announce.coordinateResult": ["results", "label"],
   "announce.noResults": [],
   "announce.suggestions": ["count"],

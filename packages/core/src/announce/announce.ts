@@ -434,6 +434,15 @@ export function announceSearchResults(count: number): Message {
 }
 
 /**
+ * Announced when a search finds exactly one place and the map goes to it
+ * without a list to choose from. It names the place, which the count would
+ * not.
+ */
+export function announceSearchPicked(label: string): Message {
+  return message("announce.searchPicked", { label });
+}
+
+/**
  * Announced when a search is answered by one pair of coordinates. It names the
  * place, so a second pair is never mistaken for a repeat of the first.
  */

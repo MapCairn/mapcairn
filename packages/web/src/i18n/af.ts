@@ -185,6 +185,7 @@ export const AF_CATALOGUE: Record<MessageKey, string> = {
   "announce.detailShown": "Geraakte gebied van {title} op die kaart gewys.",
   "announce.detailError": "Die geraakte gebied kon nie laai nie. Probeer weer.",
   "announce.searchResults": "{count} resultaat|{count} resultate",
+  "announce.searchPicked": "{label} word op die kaart gewys.",
   "announce.coordinateResult": "{results}, {label}",
   "announce.noResults": "Geen resultate",
   "announce.suggestions": "{count} voorstel|{count} voorstelle",

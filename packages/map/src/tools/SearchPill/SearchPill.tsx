@@ -88,7 +88,10 @@ function keepFocus(event: MouseEvent) {
  *   text field. When an option is active they also hand visual focus back to
  *   the text box (the active option is cleared), as the pattern describes.
  * - Enter selects the active option. With no active option it submits the
- *   text, or reopens the list when it already holds that text's results.
+ *   text, or reopens the list when it already holds that text's results. A
+ *   search that finds exactly one place goes to it without a list: the box
+ *   shows its label, the map moves and the announcement names the place.
+ *   Several results open the list as before.
  * - Escape closes the list. With the list already closed, a second Escape
  *   clears the text, and a third reaches the page (closing the surface).
  *
@@ -105,12 +108,24 @@ export function SearchPill({
   onFocus,
   onBlur,
 }: SearchPillProps) {
-  const search = useSearch({ getBias });
   const { t } = useMessages();
-  const { query, state } = search;
   const [pickedLabel, setPickedLabel] = useState<string | null>(null);
   const [listOpen, setListOpen] = useState(false);
   const [focused, setFocused] = useState(false);
+  const [active, setActive] = useState<{
+    readonly results: readonly SearchResult[];
+    readonly index: number;
+  } | null>(null);
+
+  /** The box shows the result's label, the list is shut, and the host goes to the place. */
+  const take = (result: SearchResult) => {
+    setPickedLabel(result.label);
+    setListOpen(false);
+    setActive(null);
+    onSelect(result);
+  };
+  const search = useSearch({ getBias, onPick: take });
+  const { query, state } = search;
   const suggestions = useSuggestions(
     query,
     focused && state.status === "idle" && query !== pickedLabel,
@@ -119,10 +134,6 @@ export function SearchPill({
   const inputRef = useRef<HTMLInputElement | null>(null);
   const registerFocus = useFocusTarget("search");
   const results = listedOptions(state, suggestions);
-  const [active, setActive] = useState<{
-    readonly results: readonly SearchResult[];
-    readonly index: number;
-  } | null>(null);
 
   // The active option belongs to one list of results; a new list resets it.
   const activeIndex =
@@ -145,10 +156,7 @@ export function SearchPill({
 
   const select = (result: SearchResult) => {
     search.settle(result.label);
-    setPickedLabel(result.label);
-    setListOpen(false);
-    setActive(null);
-    onSelect(result);
+    take(result);
   };
 
   const handleChange = (event: ChangeEvent<HTMLInputElement>) => {

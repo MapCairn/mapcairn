@@ -150,6 +150,7 @@ export type MessageKey =
   | "announce.detailShown"
   | "announce.detailError"
   | "announce.searchResults"
+  | "announce.searchPicked"
   | "announce.coordinateResult"
   | "announce.noResults"
   | "announce.suggestions"
@@ -874,6 +875,7 @@ interface MessageParamOverrides {
   readonly "announce.showingFeature": { readonly title: string };
   readonly "announce.detailShown": { readonly title: string };
   readonly "announce.searchResults": { readonly count: number };
+  readonly "announce.searchPicked": { readonly label: string };
   readonly "announce.coordinateResult": {
     readonly results: string;
     readonly label: string;

@@ -4,6 +4,7 @@ import {
   announceCoordinateResult,
   announceNoResults,
   announceSearchError,
+  announceSearchPicked,
   announceSearchResults,
   type Bounds,
   coordinateSearchResult,
@@ -43,6 +44,14 @@ export interface UseSearchOptions {
    * search, which can show where the person is, so its privacy text must say so.
    */
   readonly getBias?: () => Bounds | undefined;
+  /**
+   * Takes the result when a search finds exactly one place, so Enter goes
+   * straight to it instead of opening a list of one. The box then shows the
+   * place's label with nothing to choose, and the announcement says where the
+   * map went, not how many results there were. Several results still become a
+   * list, and without this option a single result does too.
+   */
+  readonly onPick?: (result: SearchResult) => void;
 }
 
 /** What {@link useSearch} returns. */
@@ -97,13 +106,17 @@ const IDLE: SearchState = { status: "idle" };
  * not repeated for consecutive searches until the box has been emptied or
  * Retry is pressed.
  */
-export function useSearch({ getBias }: UseSearchOptions = {}): UseSearch {
+export function useSearch({
+  getBias,
+  onPick,
+}: UseSearchOptions = {}): UseSearch {
   const provider = useSearchProvider();
   const announce = useAnnounce();
   const providerRef = useLatestRef(provider);
   const announceRef = useLatestRef(announce);
   const messagesRef = useLatestRef(useMessages());
   const getBiasRef = useLatestRef(getBias);
+  const onPickRef = useLatestRef(onPick);
 
   const [query, setQueryState] = useState("");
   const [state, setState] = useState<SearchState>(IDLE);
@@ -130,12 +143,37 @@ export function useSearch({ getBias }: UseSearchOptions = {}): UseSearch {
     [announceRef],
   );
 
+  /**
+   * Takes the only result: the box shows its label, there is no list, and
+   * the announcement names the place. It is said every time, because the
+   * person pressed Enter and expects to hear that it worked.
+   */
+  const pickOnly = useCallback(
+    (result: SearchResult, pick: (result: SearchResult) => void) => {
+      queryRef.current = result.label;
+      setQueryState(result.label);
+      setState(IDLE);
+      lastAnnounced.current = null;
+      announceRef.current(announceSearchPicked(result.label), {
+        priority: "polite",
+      });
+      pick(result);
+    },
+    [announceRef],
+  );
+
   const showResults = useCallback(
     (results: readonly SearchResult[], message: Message) => {
+      const only = results.length === 1 ? results[0] : undefined;
+      const pick = onPickRef.current;
+      if (only && pick) {
+        pickOnly(only, pick);
+        return;
+      }
       setState({ status: "results", results });
       announceOnce(message, "polite");
     },
-    [announceOnce],
+    [announceOnce, onPickRef, pickOnly],
   );
 
   const run = useCallback(

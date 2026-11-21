@@ -178,6 +178,7 @@ export const EN_GB_CATALOGUE: Record<MessageKey, string> = {
   "announce.detailShown": "Affected area of {title} shown on the map.",
   "announce.detailError": "The affected area could not load. Try again.",
   "announce.searchResults": "{count} result|{count} results",
+  "announce.searchPicked": "Showing {label} on the map.",
   "announce.coordinateResult": "{results}, {label}",
   "announce.noResults": "No results",
   "announce.suggestions": "{count} suggestion|{count} suggestions",

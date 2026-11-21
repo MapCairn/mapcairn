@@ -49,6 +49,7 @@ import {
   announceRoutingCancelled,
   announceRoutingError,
   announceSearchError,
+  announceSearchPicked,
   announceSearchResults,
   announceSelectionCleared,
   announceSelectionFull,
@@ -102,6 +103,12 @@ describe("search announcements", () => {
 
   it("says when there are none", () => {
     expect(english(announceNoResults())).toBe("No results");
+  });
+
+  it("names the place the map went to when a search found only one", () => {
+    expect(english(announceSearchPicked("Cape Town"))).toBe(
+      "Showing Cape Town on the map.",
+    );
   });
 
   it("counts suggestions with the right plural", () => {

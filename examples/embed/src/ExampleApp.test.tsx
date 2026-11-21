@@ -47,9 +47,17 @@ describe("ExampleApp", () => {
     );
     fireEvent.click(screen.getByRole("button", { name: "Search" }));
 
-    expect(
-      await screen.findByRole("option", { name: /Cairn Hollow/ }),
-    ).toBeTruthy();
+    // One place matches, so the search goes to it: no list, and the box names it.
+    await waitFor(() => {
+      expect(
+        (
+          screen.getByRole("combobox", {
+            name: "Search places",
+          }) as HTMLInputElement
+        ).value,
+      ).toMatch(/Cairn Hollow/);
+    });
+    expect(screen.queryByRole("option")).toBeNull();
   });
 
   it("says when its search finds nothing", async () => {
