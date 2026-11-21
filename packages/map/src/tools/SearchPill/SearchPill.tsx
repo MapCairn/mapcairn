@@ -109,6 +109,7 @@ export function SearchPill({
   onBlur,
 }: SearchPillProps) {
   const { t } = useMessages();
+  const inputRef = useRef<HTMLInputElement | null>(null);
   const [pickedLabel, setPickedLabel] = useState<string | null>(null);
   const [listOpen, setListOpen] = useState(false);
   const [focused, setFocused] = useState(false);
@@ -124,14 +125,26 @@ export function SearchPill({
     setActive(null);
     onSelect(result);
   };
-  const search = useSearch({ getBias, onPick: take });
+  /**
+   * Goes to the only result of a search, but only while the box still has
+   * focus: a person who has moved on to another control is not pulled back by
+   * an answer that arrives late, and sees the list instead.
+   */
+  const takeIfFocused = (result: SearchResult): boolean => {
+    const input = inputRef.current;
+    if (input === null || input.ownerDocument.activeElement !== input) {
+      return false;
+    }
+    take(result);
+    return true;
+  };
+  const search = useSearch({ getBias, onPick: takeIfFocused });
   const { query, state } = search;
   const suggestions = useSuggestions(
     query,
     focused && state.status === "idle" && query !== pickedLabel,
   );
   const listboxId = useId();
-  const inputRef = useRef<HTMLInputElement | null>(null);
   const registerFocus = useFocusTarget("search");
   const results = listedOptions(state, suggestions);
 

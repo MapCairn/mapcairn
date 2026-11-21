@@ -236,7 +236,7 @@ describe("useSearch", () => {
 
   describe("with a host that takes the only result", () => {
     it("picks a search that finds exactly one result: calls onPick, fills the box with its label and goes idle", async () => {
-      const onPick = vi.fn();
+      const onPick = vi.fn(() => true);
       const { result, services } = setup({ onPick });
       services.fakes.search.setResults("cape", [CAPE_TOWN]);
       await searchFor(result, "cape");
@@ -247,7 +247,7 @@ describe("useSearch", () => {
     });
 
     it("says where the map went, once, instead of the count", async () => {
-      const { result, services } = setup({ onPick: vi.fn() });
+      const { result, services } = setup({ onPick: vi.fn(() => true) });
       services.fakes.search.setResults("cape", [CAPE_TOWN]);
       await searchFor(result, "cape");
       expect(polite()).toBe("Showing Cape Town on the map.");
@@ -258,7 +258,7 @@ describe("useSearch", () => {
     });
 
     it("announces a repeat of the same pick again, so the person hears it worked", async () => {
-      const onPick = vi.fn();
+      const onPick = vi.fn(() => true);
       const { result, services } = setup({ onPick });
       services.fakes.search.setResults("cape", [CAPE_TOWN]);
       await searchFor(result, "cape");
@@ -270,7 +270,7 @@ describe("useSearch", () => {
     });
 
     it("leaves several results as a list and says the count", async () => {
-      const onPick = vi.fn();
+      const onPick = vi.fn(() => true);
       const { result, services } = setup({ onPick });
       services.fakes.search.setResults("cape", [CAPE_TOWN, CAPRICORN]);
       await searchFor(result, "cape");
@@ -283,7 +283,7 @@ describe("useSearch", () => {
     });
 
     it("leaves no results as no results", async () => {
-      const onPick = vi.fn();
+      const onPick = vi.fn(() => true);
       const { result } = setup({ onPick });
       await searchFor(result, "zzzz");
       expect(onPick).not.toHaveBeenCalled();
@@ -291,8 +291,22 @@ describe("useSearch", () => {
       expect(polite()).toBe("No results");
     });
 
+    it("shows a list of one when the host declines the pick, and says the count", async () => {
+      const onPick = vi.fn(() => false);
+      const { result, services } = setup({ onPick });
+      services.fakes.search.setResults("cape", [CAPE_TOWN]);
+      await searchFor(result, "cape");
+      expect(onPick).toHaveBeenCalledWith(CAPE_TOWN);
+      expect(result.current.query).toBe("cape");
+      expect(result.current.state).toEqual({
+        status: "results",
+        results: [CAPE_TOWN],
+      });
+      expect(polite()).toBe("1 result");
+    });
+
     it("picks a coordinate pair, which is one result, and names the place", async () => {
-      const onPick = vi.fn();
+      const onPick = vi.fn(() => true);
       const { result, services } = setup({ onPick });
       await searchFor(result, "-26.2041, 28.0473");
       expect(services.fakes.search.searchCalls).toHaveLength(0);
@@ -304,7 +318,7 @@ describe("useSearch", () => {
     });
 
     it("picks after Retry finds the one result", async () => {
-      const onPick = vi.fn();
+      const onPick = vi.fn(() => true);
       const { result, services } = setup({ onPick });
       services.fakes.search.failWith("offline");
       await searchFor(result, "cape");
@@ -319,7 +333,7 @@ describe("useSearch", () => {
     });
 
     it("does not pick a result for text that changed while the search was running", async () => {
-      const onPick = vi.fn();
+      const onPick = vi.fn(() => true);
       const { result, services } = setup({ onPick });
       services.fakes.search.setResults("cape", [CAPE_TOWN]);
       act(() => result.current.setQuery("cape"));

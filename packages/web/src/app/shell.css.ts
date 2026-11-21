@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
 import { MAP_SHAPE_ATTRIBUTE } from "@mapcairn/core";
-import { tokens, zLayer } from "@mapcairn/theme";
-import { globalStyle, style } from "@vanilla-extract/css";
+import { tokens } from "@mapcairn/theme";
+import { style } from "@vanilla-extract/css";
 
 /**
  * The server-rendered stand-in for the map: the map's own background colour,
@@ -21,33 +21,8 @@ export const mapPlaceholder = style({
     },
   },
   "@media": {
-    "(scripting: none)": { gridArea: "1 / 1" },
-  },
-});
-
-/**
- * The page's header. Where scripts do not run it holds the notice that the
- * map needs them, which this centres over the placeholder: header and
- * placeholder share the page's one grid cell, the header on top. Everywhere
- * else it is an ordinary block.
- */
-export const mapHeader = style({
-  "@media": {
-    "(scripting: none)": {
-      gridArea: "1 / 1",
-      placeSelf: "center",
-      zIndex: zLayer("mapOverlay"),
-      maxWidth: "100%",
-    },
-  },
-});
-
-globalStyle(`body:has(> ${mapHeader})`, {
-  "@media": {
-    "(scripting: none)": {
-      display: "grid",
-      gridTemplate: "minmax(0, 1fr) / minmax(0, 1fr)",
-    },
+    // The notice that the map needs scripts sits in the middle of the placeholder.
+    "(scripting: none)": { display: "grid", placeItems: "center" },
   },
 });
 

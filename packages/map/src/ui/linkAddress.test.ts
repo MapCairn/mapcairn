@@ -31,6 +31,10 @@ describe("isSitePath", () => {
   it.each([
     "//example.org",
     "/\\example.org",
+    "/\t/example.org",
+    "/\r/example.org",
+    "/\n/example.org",
+    "/about\u0000",
     "https://example.org",
     "about",
     "",

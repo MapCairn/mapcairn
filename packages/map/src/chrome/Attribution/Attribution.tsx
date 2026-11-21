@@ -23,7 +23,6 @@ import { useMessages, usePreferences } from "../../services";
 import { IconButton } from "../../ui";
 import { isSitePath, isWebAddress } from "../../ui/linkAddress";
 import { CHROME_GAP_PX } from "../chromeSpacing";
-import { useChromeLayout } from "../layoutContext";
 import * as styles from "./Attribution.css";
 
 /**
@@ -33,6 +32,15 @@ import * as styles from "./Attribution.css";
  * @internal
  */
 export const ATTRIBUTION_INTRO_MS = 5000;
+
+/**
+ * The longest the host may hold the credits' first showing back (`introHeld`),
+ * counted from the map starting. After it the credits show even if the other
+ * card is still on screen, so a visitor who never answers it still sees them.
+ *
+ * @internal
+ */
+export const ATTRIBUTION_HOLD_MAX_MS = 30_000;
 
 /**
  * How long the credits take to fade out after their first showing.
@@ -163,11 +171,12 @@ export interface AttributionProps {
   readonly layerCredits?: readonly LayerAttribution[];
   /**
    * Holds the first showing back while the host has another card on the map
-   * (its first-visit tour), in the bottom-sheet layout only, where the two
-   * would cover much of a phone's map together. The side-panel layout puts
-   * them in different corners, so it ignores the hold. The credits show once
-   * the hold ends, for the full time. The button opens them at any moment,
-   * and opening them counts as the first showing.
+   * (its first-visit tour), so the two are not on screen together. The host
+   * decides when that matters, for instance by layout. The hold ends by
+   * itself on the first zoom the person makes, the first time the map moves,
+   * or after {@link ATTRIBUTION_HOLD_MAX_MS}, and the credits then show for
+   * the full time. The button opens them at any moment, and opening them
+   * counts as the first showing.
    */
   readonly introHeld?: boolean;
   /**
@@ -219,8 +228,10 @@ export function Attribution({
   aboutLink,
 }: AttributionProps) {
   const { adapter, view, onUserZoom } = useMap();
-  const { layout } = useChromeLayout();
-  const introHeld = hostHold && layout === "sheet";
+  // True once a hold has ended by itself: it never starts again.
+  const [holdEnded, setHoldEnded] = useState(false);
+  const introHeld = hostHold && !holdEnded;
+  const heldOnView = useRef<ViewState | null>(null);
   const { reducedMotion } = usePreferences();
   const [open, setOpen] = useState(false);
   // True while the credits show by themselves after the map started.
@@ -303,6 +314,32 @@ export function Attribution({
     setIntro(true);
     setIntroStarted(true);
   }, [adapter, view, introHeld]);
+
+  // A hold ends at the first user zoom, the first move of the map or the
+  // longest wait, counted from when the map started.
+  useEffect(() => {
+    if (!introHeld || adapter === null) {
+      heldOnView.current = null;
+      return;
+    }
+    const timer = setTimeout(() => setHoldEnded(true), ATTRIBUTION_HOLD_MAX_MS);
+    const unsubscribe = onUserZoom(() => setHoldEnded(true));
+    return () => {
+      clearTimeout(timer);
+      unsubscribe();
+    };
+  }, [introHeld, adapter, onUserZoom]);
+
+  useEffect(() => {
+    if (!introHeld || adapter === null) {
+      return;
+    }
+    if (heldOnView.current === null) {
+      heldOnView.current = view;
+    } else if (!sameView(view, heldOnView.current)) {
+      setHoldEnded(true);
+    }
+  }, [introHeld, adapter, view]);
 
   useEffect(() => {
     if (!intro) {
@@ -421,6 +458,7 @@ export function Attribution({
       ref={rootRef}
       data-chrome="attribution"
       data-intro-started={introStarted ? "true" : undefined}
+      data-intro-held={introHeld && !introStarted ? "true" : undefined}
       className={styles.root}
       onKeyDown={onKeyDown}
       onFocus={onFocus}

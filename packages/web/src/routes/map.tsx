@@ -15,7 +15,6 @@ import { MAP_REGION_ID } from "../app/initialView";
 import { NoScriptNotice } from "../app/NoScriptNotice";
 import {
   hiddenWithoutScripts,
-  mapHeader,
   mapPlaceholder,
   placeholderChrome,
 } from "../app/shell.css";
@@ -82,20 +81,11 @@ export const links: LinksFunction = () => [
 /**
  * What the playground is, for a crawler or a model that reads the server's
  * HTML without running the app: one paragraph in the page header, hidden on
- * screen and read by assistive technology after the page heading, and, when
- * scripts do not run, a notice that the map needs them with links to the
- * product page, the source and the privacy policy.
+ * screen and read by assistive technology after the page heading.
  */
 function PlaygroundSummary() {
   const { t } = useMessages();
-  return (
-    <>
-      <VisuallyHidden as="p">{t("host.map.summary", {})}</VisuallyHidden>
-      <noscript>
-        <NoScriptNotice />
-      </noscript>
-    </>
-  );
+  return <VisuallyHidden as="p">{t("host.map.summary", {})}</VisuallyHidden>;
 }
 
 /**
@@ -118,7 +108,7 @@ export default function MapRoute() {
   return (
     <>
       <SkipLink targetId={MAP_REGION_ID} className={hiddenWithoutScripts} />
-      <header className={mapHeader}>
+      <header>
         <VisuallyHidden as="h1">MapCairn</VisuallyHidden>
         <PlaygroundSummary />
       </header>
@@ -130,6 +120,9 @@ export default function MapRoute() {
             id={MAP_REGION_ID}
             data-testid="map-placeholder"
           >
+            <noscript>
+              <NoScriptNotice />
+            </noscript>
             <div className={placeholderChrome}>
               <VisuallyHidden>{t("app.loadingMap", {})}</VisuallyHidden>
               <ChromeSkeleton

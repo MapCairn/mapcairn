@@ -53,10 +53,14 @@ test.describe("map credits", () => {
     await expect(about).toHaveText("About MapCairn");
     await expect(about).toHaveAttribute("href", "/");
 
-    await page.keyboard.press("Tab");
-    await page.keyboard.press("Tab");
-    await page.keyboard.press("Tab");
-    await page.keyboard.press("Tab");
+    // Tab on through the credits until the About link has focus, however many there are.
+    const creditCount = await links.count();
+    for (let presses = 0; presses < creditCount; presses += 1) {
+      if (await about.evaluate((link) => link === document.activeElement)) {
+        break;
+      }
+      await page.keyboard.press("Tab");
+    }
     await expect(about).toBeFocused();
     await page.keyboard.press("Enter");
     await expect(page).toHaveURL(/\/$/);

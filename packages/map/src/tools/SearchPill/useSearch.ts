@@ -48,10 +48,12 @@ export interface UseSearchOptions {
    * Takes the result when a search finds exactly one place, so Enter goes
    * straight to it instead of opening a list of one. The box then shows the
    * place's label with nothing to choose, and the announcement says where the
-   * map went, not how many results there were. Several results still become a
-   * list, and without this option a single result does too.
+   * map went, not how many results there were. It returns `false` to decline
+   * (the person has moved on from the box, say), and the result then shows as
+   * a list. Several results always become a list, and without this option a
+   * single result does too.
    */
-  readonly onPick?: (result: SearchResult) => void;
+  readonly onPick?: (result: SearchResult) => boolean;
 }
 
 /** What {@link useSearch} returns. */
@@ -149,7 +151,13 @@ export function useSearch({
    * person pressed Enter and expects to hear that it worked.
    */
   const pickOnly = useCallback(
-    (result: SearchResult, pick: (result: SearchResult) => void) => {
+    (
+      result: SearchResult,
+      pick: (result: SearchResult) => boolean,
+    ): boolean => {
+      if (!pick(result)) {
+        return false;
+      }
       queryRef.current = result.label;
       setQueryState(result.label);
       setState(IDLE);
@@ -157,7 +165,7 @@ export function useSearch({
       announceRef.current(announceSearchPicked(result.label), {
         priority: "polite",
       });
-      pick(result);
+      return true;
     },
     [announceRef],
   );
@@ -166,8 +174,7 @@ export function useSearch({
     (results: readonly SearchResult[], message: Message) => {
       const only = results.length === 1 ? results[0] : undefined;
       const pick = onPickRef.current;
-      if (only && pick) {
-        pickOnly(only, pick);
+      if (only && pick && pickOnly(only, pick)) {
         return;
       }
       setState({ status: "results", results });

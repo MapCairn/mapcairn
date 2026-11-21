@@ -49,7 +49,7 @@ test.describe("the map page without scripts", () => {
     ).toHaveCount(0);
   });
 
-  test("reads as a short page: the heading, what the playground is, the notice", async ({
+  test("reads as a short page: the banner names the page, the main landmark holds the notice and its links", async ({
     page,
   }) => {
     await page.goto("/map");
@@ -58,8 +58,10 @@ test.describe("the map page without scripts", () => {
       "MapCairn",
     );
     await expect(banner).toContainText("The MapCairn playground is");
-    await expect(banner.getByTestId("no-script-notice")).toBeVisible();
-    await expect(banner.getByRole("link")).toHaveCount(3);
+    await expect(banner.getByRole("link")).toHaveCount(0);
+    const main = page.getByRole("main");
+    await expect(main.getByTestId("no-script-notice")).toBeVisible();
+    await expect(main.getByRole("link")).toHaveCount(3);
   });
 
   test("keeps the notice inside a phone's width", async ({ page }) => {

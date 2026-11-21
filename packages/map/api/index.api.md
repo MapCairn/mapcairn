@@ -172,6 +172,9 @@ export function Attribution(input: AttributionProps): JSX.Element;
 export const ATTRIBUTION_FADE_MS = 200;
 
 // @internal
+export const ATTRIBUTION_HOLD_MAX_MS = 30000;
+
+// @internal
 export const ATTRIBUTION_INTRO_MS = 5000;
 
 // @public
@@ -1842,7 +1845,7 @@ export function useSearch(input?: UseSearchOptions): UseSearch;
 // @public
 export interface UseSearchOptions {
     readonly getBias?: () => Bounds | undefined;
-    readonly onPick?: (result: SearchResult) => void;
+    readonly onPick?: (result: SearchResult) => boolean;
 }
 
 // @public

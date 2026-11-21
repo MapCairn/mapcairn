@@ -1506,7 +1506,7 @@ describe("search", () => {
     );
     await renderApp(services);
     const input = screen.getByRole("combobox", { name: "Search places" });
-    fireEvent.focus(input);
+    act(() => input.focus());
     fireEvent.change(input, { target: { value: "Cape" } });
     await act(async () => {
       fireEvent.keyDown(input, { key: "Enter" });

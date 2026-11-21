@@ -70,9 +70,7 @@ describe("map route server render", () => {
   it("has the hidden page heading and a map-coloured placeholder", () => {
     // The heading sits in a banner landmark, so no page content is outside a
     // landmark (axe best-practice rule "region").
-    expect(html).toMatch(
-      /<header class="[^"]+"><h1 class="[^"]+">MapCairn<\/h1>/,
-    );
+    expect(html).toMatch(/<header><h1 class="[^"]+">MapCairn<\/h1>/);
     expect(html).toMatch(/<main class="[^"]+" aria-busy="true"/);
     expect(html).toContain('data-testid="map-placeholder"');
   });
@@ -84,6 +82,19 @@ describe("map route server render", () => {
     );
     expect(header).toContain(
       "The MapCairn playground is an interactive map built with the MapCairn SDK.",
+    );
+  });
+
+  it("puts the no-script notice inside the main landmark, so it is not empty, and not in the banner", () => {
+    const header = html.slice(
+      html.indexOf("<header"),
+      html.indexOf("</header>"),
+    );
+    const main = html.slice(html.indexOf("<main"), html.indexOf("</main>"));
+    expect(header).not.toContain("<noscript>");
+    expect(main).toContain("<noscript>");
+    expect(main.indexOf("<noscript>")).toBeLessThan(
+      main.indexOf('data-testid="chrome-skeleton"'),
     );
   });
 
