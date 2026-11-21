@@ -315,6 +315,10 @@ function exactForbiddenCommandOf(word) {
  * The program a shell word names: quotes, `$`, `%` and braces removed, the
  * folder and a script or executable extension dropped.
  *
+ * It may only trim the ends of the word or keep a stretch of it, never decode
+ * it or remove text from the middle: the shortcut in `isLauncher` relies on the
+ * result being a substring of the lower-cased word.
+ *
  * @param {string} word
  * @returns {string}
  */
@@ -335,6 +339,13 @@ function programName(word) {
  * @returns {boolean}
  */
 function isLauncher(word) {
+  // The program name is a stretch of the word, lower-cased, so a word that
+  // holds no launcher's name cannot be one. Most strings in a source file are
+  // prose or markup, and skipping the clean-up for them saves most of the scan.
+  const lower = word.toLowerCase();
+  if (![...LAUNCHERS].some((name) => lower.includes(name))) {
+    return false;
+  }
   return LAUNCHERS.has(programName(word));
 }
 
