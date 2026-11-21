@@ -322,6 +322,288 @@ test.describe("the product page", () => {
     });
   });
 
+  test.describe("the install commands", () => {
+    const COMMANDS = {
+      npm: "npm install @mapcairn/sdk react react-dom maplibre-gl",
+      pnpm: "pnpm add @mapcairn/sdk react react-dom maplibre-gl",
+      yarn: "yarn add @mapcairn/sdk react react-dom maplibre-gl",
+      bun: "bun add @mapcairn/sdk react react-dom maplibre-gl",
+    } as const;
+    const MANAGERS = Object.keys(COMMANDS) as (keyof typeof COMMANDS)[];
+
+    test("show the npm command first, and one command at a time as each manager is chosen", async ({
+      page,
+    }) => {
+      const product = new ProductPage(page);
+      await product.goto();
+      await expect(product.installChoice("npm")).toBeChecked();
+      for (const chosen of MANAGERS) {
+        await product.installChoice(chosen).click();
+        await expect(product.installChoice(chosen)).toBeChecked();
+        for (const manager of MANAGERS) {
+          const command = product.installCommand(manager);
+          if (manager === chosen) {
+            await expect(command).toBeVisible();
+            await expect(command).toHaveText(COMMANDS[manager]);
+          } else {
+            await expect(command).toBeHidden();
+          }
+        }
+      }
+    });
+
+    test("keep a row for the copy button once the page runs, so nothing moves when it arrives", async ({
+      page,
+    }) => {
+      const product = new ProductPage(page);
+      await product.goto();
+      await expect(page.getByTestId("install-copy-row")).toBeVisible();
+      const row = await page.getByTestId("install-copy-row").boundingBox();
+      const button = await product.installCopy("npm").boundingBox();
+      expect(button?.y ?? 0).toBeGreaterThanOrEqual(row?.y ?? 0);
+      expect((button?.y ?? 0) + (button?.height ?? 0)).toBeLessThanOrEqual(
+        (row?.y ?? 0) + (row?.height ?? 0) + 1,
+      );
+    });
+
+    test("say what the SDK needs under the block", async ({ page }) => {
+      const product = new ProductPage(page);
+      await product.goto();
+      await expect(
+        product.main.getByText(
+          "Needs React 19, maplibre-gl 6.18 or later and a bundler that handles CSS imports.",
+        ),
+      ).toBeVisible();
+    });
+
+    test("are chosen with the arrow keys, which follow the reading direction", async ({
+      page,
+    }) => {
+      const product = new ProductPage(page);
+      await product.goto();
+      await product.installChoice("npm").focus();
+      await page.keyboard.press("ArrowRight");
+      await expect(product.installChoice("pnpm")).toBeChecked();
+      await expect(product.installChoice("pnpm")).toBeFocused();
+      await expect(product.installCommand("pnpm")).toBeVisible();
+      await page.keyboard.press("ArrowLeft");
+      await expect(product.installChoice("npm")).toBeChecked();
+      // The page is left to right by decision; a right-to-left group reverses the keys.
+      await product.installGroup.evaluate((group) => {
+        group.setAttribute("dir", "rtl");
+      });
+      await product.installChoice("npm").focus();
+      await page.keyboard.press("ArrowLeft");
+      await expect(product.installChoice("pnpm")).toBeChecked();
+      await page.keyboard.press("ArrowRight");
+      await expect(product.installChoice("npm")).toBeChecked();
+    });
+
+    test("take one tab stop, then the command and the copy button, with a target of at least 44 px for each manager", async ({
+      page,
+    }) => {
+      await page.setViewportSize({ width: 320, height: 568 });
+      const product = new ProductPage(page);
+      await product.goto();
+      for (const manager of MANAGERS) {
+        const box = await product.installChoice(manager).boundingBox();
+        expect(box?.width ?? 0, manager).toBeGreaterThanOrEqual(44);
+        expect(box?.height ?? 0, manager).toBeGreaterThanOrEqual(44);
+      }
+      const copy = await product.installCopy("npm").boundingBox();
+      expect(copy?.height ?? 0).toBeGreaterThanOrEqual(44);
+      await product.installChoice("pnpm").click();
+      await product.installChoice("pnpm").focus();
+      await page.keyboard.press("Tab");
+      await expect(product.installCommand("pnpm")).toBeFocused();
+      await page.keyboard.press("Tab");
+      await expect(product.installCopy("pnpm")).toBeFocused();
+    });
+
+    test("copy the chosen manager's command, say Copied and announce it", async ({
+      page,
+    }) => {
+      await recordClipboard(page, { ok: true });
+      const product = new ProductPage(page);
+      await product.goto();
+      await product.installChoice("bun").click();
+      await product.installCopy("bun").click();
+      await expect(
+        product.installGroup.getByRole("button", {
+          name: "Copied, bun install command",
+        }),
+      ).toBeFocused();
+      await expect(page.getByTestId("live-region-polite")).toHaveText(
+        "Code copied, bun install command",
+      );
+      await expect.poll(() => copiedTexts(page)).toEqual([COMMANDS.bun]);
+      // The embedding example's own button is a different button.
+      await expect(product.copyCode).toBeVisible();
+    });
+
+    test("say when the browser refuses, and leave the command selectable", async ({
+      page,
+    }) => {
+      await recordClipboard(page, { ok: false });
+      const product = new ProductPage(page);
+      await product.goto();
+      await product.installCopy("npm").click();
+      await expect(page.getByTestId("live-region-assertive")).toHaveText(
+        "Could not copy npm install command. Select the code and copy it manually.",
+      );
+      const selectable = await product
+        .installCommand("npm")
+        .evaluate((element) => getComputedStyle(element).userSelect);
+      expect(selectable).not.toBe("none");
+      await expect.poll(() => copiedTexts(page)).toEqual([]);
+    });
+
+    test("mark the chosen manager with an underline as well as a tint, and only that one", async ({
+      page,
+    }) => {
+      const product = new ProductPage(page);
+      await product.goto();
+      for (const chosen of MANAGERS) {
+        await product.installChoice(chosen).click();
+        await page.mouse.move(0, 0);
+        for (const manager of MANAGERS) {
+          const { textDecorationLine } = await interactionStyle(
+            product.installPill(manager),
+          );
+          expect(textDecorationLine, `${manager} while ${chosen}`).toBe(
+            manager === chosen ? "underline" : "none",
+          );
+        }
+      }
+    });
+
+    test("show the chosen manager's edge in the system colour in forced colours", async ({
+      page,
+    }) => {
+      await page.emulateMedia({ forcedColors: "active" });
+      const product = new ProductPage(page);
+      await product.goto();
+      const edges = (manager: string) =>
+        product
+          .installPill(manager)
+          .evaluate((element) => getComputedStyle(element).borderTopColor);
+      const chosen = await edges("npm");
+      const other = await edges("pnpm");
+      expect(chosen).not.toBe(other);
+    });
+
+    test("answer a press with the pressed look", async ({ page }) => {
+      const product = new ProductPage(page);
+      await product.goto();
+      const pill = product.installPill("yarn");
+      const resting = await interactionStyle(pill);
+      await pill.hover();
+      await page.mouse.down();
+      const pressed = await interactionStyle(pill);
+      await page.mouse.up();
+      expect(pressed.transform).not.toBe(resting.transform);
+      expect(pressed.backgroundColor).not.toBe(resting.backgroundColor);
+    });
+
+    test("hide the other commands only where the browser can tell which manager is chosen", async ({
+      page,
+    }) => {
+      const product = new ProductPage(page);
+      await product.goto();
+      // Without `:has()` the rule that hides must not apply, so every command shows.
+      const hidesOutsideSupports = await product
+        .installCommand("npm")
+        .evaluate((element) => {
+          const classes = [...element.classList];
+          const hides = (rule: CSSStyleRule) =>
+            rule.style.display === "none" &&
+            classes.some((name) => rule.selectorText === `.${name}`);
+          const outside = [...document.styleSheets]
+            .flatMap((sheet) => [...sheet.cssRules])
+            .filter(
+              (rule): rule is CSSStyleRule => rule instanceof CSSStyleRule,
+            );
+          const inside = [...document.styleSheets]
+            .flatMap((sheet) => [...sheet.cssRules])
+            .filter(
+              (rule): rule is CSSSupportsRule =>
+                rule instanceof CSSSupportsRule,
+            )
+            .flatMap((rule) => [...rule.cssRules])
+            .filter(
+              (rule): rule is CSSStyleRule => rule instanceof CSSStyleRule,
+            );
+          return {
+            outside: outside.some(hides),
+            inside: inside.some(hides),
+          };
+        });
+      expect(hidesOutsideSupports).toEqual({ outside: false, inside: true });
+    });
+
+    test("copy the manager chosen before the page's script ran", async ({
+      page,
+    }) => {
+      await recordClipboard(page, { ok: true });
+      let release: () => void = () => {};
+      const held = new Promise<void>((resolve) => {
+        release = resolve;
+      });
+      await page.route("**/*.js", async (route) => {
+        await held;
+        await route.continue();
+      });
+      const product = new ProductPage(page);
+      await page.goto("/", { waitUntil: "commit" });
+      await expect(product.headline).toBeVisible();
+      await product.installChoice("pnpm").click();
+      await expect(product.installCommand("pnpm")).toBeVisible();
+      release();
+      const button = product.installCopy("pnpm");
+      await button.click();
+      await expect.poll(() => copiedTexts(page)).toEqual([COMMANDS.pnpm]);
+      await expect(product.installChoice("pnpm")).toBeChecked();
+    });
+
+    test("remember nothing in the browser", async ({ page }) => {
+      const product = new ProductPage(page);
+      await product.goto();
+      const stored = () =>
+        page.evaluate(() => [
+          ...Object.entries(localStorage),
+          ...Object.entries(sessionStorage),
+        ]);
+      const before = await stored();
+      const cookies = await page.context().cookies();
+      await product.installChoice("yarn").click();
+      expect(await stored()).toEqual(before);
+      expect(await page.context().cookies()).toEqual(cookies);
+    });
+  });
+
+  test.describe("the install commands without a script", () => {
+    test.use({ javaScriptEnabled: false });
+
+    test("show the npm command, let the radios choose another and offer no dead copy button", async ({
+      page,
+    }) => {
+      const product = new ProductPage(page);
+      await page.goto("/");
+      await expect(product.installCommand("npm")).toHaveText(
+        "npm install @mapcairn/sdk react react-dom maplibre-gl",
+      );
+      await expect(product.installCommand("pnpm")).toBeHidden();
+      await product.installChoice("pnpm").click();
+      await expect(product.installCommand("pnpm")).toHaveText(
+        "pnpm add @mapcairn/sdk react react-dom maplibre-gl",
+      );
+      await expect(product.installCommand("npm")).toBeHidden();
+      await expect(product.installGroup.getByRole("button")).toHaveCount(0);
+      // The row kept for the button takes no room where scripts do not run.
+      await expect(page.getByTestId("install-copy-row")).toBeHidden();
+    });
+  });
+
   test.describe("buttons and links answer the pointer", () => {
     test("an action rises under a pointer and shrinks a little when pressed", async ({
       page,
@@ -371,6 +653,7 @@ test.describe("the product page", () => {
         product.heroNpm,
         product.headerPlayground,
         product.copyCode,
+        product.installPill("pnpm"),
       ]) {
         const resting = await interactionStyle(target);
         await target.hover();
@@ -412,6 +695,12 @@ test.describe("the product page", () => {
       expect(
         (await interactionStyle(product.heroGitHub)).textDecorationLine,
       ).toBe("underline");
+      const pill = product.installPill("pnpm");
+      expect((await interactionStyle(pill)).textDecorationLine).toBe("none");
+      await pill.hover();
+      expect((await interactionStyle(pill)).textDecorationLine).toBe(
+        "underline",
+      );
     });
 
     // Forced colours paint a Canvas backplate behind text, so an action

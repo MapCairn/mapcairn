@@ -59,8 +59,19 @@ export type Block =
       readonly language: string;
       readonly code: string;
     }
+  | {
+      readonly kind: "install";
+      readonly label: string;
+      readonly options: readonly InstallOption[];
+    }
   | { readonly kind: "details"; readonly items: readonly Disclosure[] }
   | { readonly kind: "deepLinks"; readonly links: readonly InlineLink[] };
+
+/** One package manager and the command that installs the SDK with it. */
+export interface InstallOption {
+  readonly manager: string;
+  readonly command: string;
+}
 
 /** A section of the page: an h2 and its blocks. */
 export interface Section {
@@ -120,13 +131,44 @@ export const LEDE: Line = [
   "MapCairn is an open-source React SDK for teams building public-interest maps, such as open data and hazard maps. It gives you the whole interface around a MapLibre map, open data layers written as data, and every service behind a small interface you can replace.",
 ];
 
+/** The umbrella package and its three peers, as every package manager is asked to add them. */
+const INSTALL_PACKAGES = "@mapcairn/sdk react react-dom maplibre-gl";
+
 /**
  * The install command the page leads with: the umbrella package and its three
  * peers, from npm's default tag, the same line as the README's. With the link
- * to the package (`NPM_ACTION`), it is the one place the page names npm.
+ * to the package (`NPM_ACTION`) and the names of the package managers in
+ * `INSTALL_OPTIONS`, it is the one place the page names npm.
  */
-export const INSTALL_COMMAND =
-  "npm install @mapcairn/sdk react react-dom maplibre-gl";
+export const INSTALL_COMMAND = `npm install ${INSTALL_PACKAGES}`;
+
+/** The install command for each package manager, npm first. */
+export const INSTALL_OPTIONS: readonly InstallOption[] = [
+  { manager: "npm", command: INSTALL_COMMAND },
+  { manager: "pnpm", command: `pnpm add ${INSTALL_PACKAGES}` },
+  { manager: "yarn", command: `yarn add ${INSTALL_PACKAGES}` },
+  { manager: "bun", command: `bun add ${INSTALL_PACKAGES}` },
+];
+
+/** What the SDK needs, from the umbrella package's `peerDependencies`; a test keeps the two in step. */
+export const INSTALL_REQUIREMENTS: Line = [
+  "Needs React 19, ",
+  { code: "maplibre-gl" },
+  " 6.18 or later and a bundler that handles CSS imports.",
+];
+
+/** The accessible name of the region that holds one manager's command. */
+export function installCommandLabel(manager: string): string {
+  return `Install command for ${manager}`;
+}
+
+/** What a copy button names when it copies one manager's command, in its name and its announcements. */
+export function installCopyLabel(manager: string): string {
+  return `${manager} install command`;
+}
+
+/** The group's accessible name, the install block's label. */
+export const INSTALL_GROUP_LABEL = "Package manager";
 
 /** The copy button's words beside a code example, and what it announces. */
 export const COPY_CODE = {
@@ -183,13 +225,17 @@ export const SECTIONS: readonly Section[] = [
         text: [
           "Install ",
           { code: "@mapcairn/sdk" },
-          ", the one package most apps need, with its peers: ",
-          { code: INSTALL_COMMAND },
-          ". Its root holds the interface, and the MapLibre adapter that draws the map is at the subpath ",
+          ", the one package most apps need, with its peers. Its root holds the interface, and the MapLibre adapter that draws the map is at the subpath ",
           { code: "@mapcairn/sdk/adapter-maplibre" },
           ".",
         ],
       },
+      {
+        kind: "install",
+        label: INSTALL_GROUP_LABEL,
+        options: INSTALL_OPTIONS,
+      },
+      { kind: "paragraph", text: INSTALL_REQUIREMENTS },
       {
         kind: "paragraph",
         text: [
