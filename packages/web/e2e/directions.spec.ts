@@ -6,7 +6,11 @@ import type { MapPage } from "./pages/MapPage";
 import { axeViolations } from "./support/a11y";
 import { GEOCODER_SEARCH_PATTERN } from "./support/network";
 import { mockRoutingService, type RoutingScript } from "./support/routing";
-import { viewportDetails, waitForStableLayout } from "./support/states";
+import {
+  collapseCredits,
+  viewportDetails,
+  waitForStableLayout,
+} from "./support/states";
 import { settleFrames } from "./support/timers";
 
 /*
@@ -84,6 +88,7 @@ for (const viewport of VIEWPORTS) {
     () => {
       test.use({
         viewport: { width: viewport.width, height: viewport.height },
+        fastCredits: true,
       });
 
       let routing: RoutingScript;
@@ -173,9 +178,13 @@ for (const viewport of VIEWPORTS) {
           name: "Fix the map",
         });
         await mapPage.goto(START);
+        await collapseCredits(mapPage);
         await openDirections(mapPage);
         await addTwoStopsAtCentre(page, mapPage);
         await mapPage.creditsButton.click();
+        await expect(
+          mapPage.creditsRegion.getByRole("link", { name: "OpenMapTiles" }),
+        ).toBeVisible();
         await expect(fixTheMap).toHaveCount(0);
         await page.keyboard.press("Escape");
 

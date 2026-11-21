@@ -223,8 +223,8 @@ function ChromeContent({ app, map, background }: ChromeContentProps) {
           layerCredits={
             app.directions.result
               ? [
-                  ...app.layers.credits,
                   ...routingCredits(messages.t("host.credits.fixTheMap", {})),
+                  ...app.layers.credits,
                 ]
               : app.layers.credits
           }
