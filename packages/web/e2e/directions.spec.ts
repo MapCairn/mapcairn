@@ -165,6 +165,29 @@ for (const viewport of VIEWPORTS) {
         ).toHaveCount(1);
       });
 
+      test("links to Fix the map in the credits only while a result is on the map", async ({
+        page,
+        mapPage,
+      }) => {
+        const fixTheMap = mapPage.creditsRegion.getByRole("link", {
+          name: "Fix the map",
+        });
+        await mapPage.goto(START);
+        await openDirections(mapPage);
+        await addTwoStopsAtCentre(page, mapPage);
+        await mapPage.creditsButton.click();
+        await expect(fixTheMap).toHaveCount(0);
+        await page.keyboard.press("Escape");
+
+        await getRoute(page).click();
+        await expect(page.getByTestId("directions-result")).toBeVisible();
+        await mapPage.creditsButton.click();
+        await expect(fixTheMap).toHaveAttribute(
+          "href",
+          "https://www.openstreetmap.org/fixthemap",
+        );
+      });
+
       test("sends the chosen travel mode", async ({ page, mapPage }) => {
         await mapPage.goto(START);
         await openDirections(mapPage);
