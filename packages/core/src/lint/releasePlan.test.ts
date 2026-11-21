@@ -41,6 +41,8 @@ function fakeSources(options: {
   deletions?: Array<{ path: string; deletedLines: number }>;
 }) {
   const seenTags: Array<string | null> = [];
+  const reportTags: Array<string | null> = [];
+  const deletionTags: string[] = [];
   const lookedUp: number[] = [];
   const pullRequest = (number: number) => {
     lookedUp.push(number);
@@ -59,6 +61,8 @@ function fakeSources(options: {
   };
   return {
     seenTags,
+    reportTags,
+    deletionTags,
     lookedUp,
     sources: {
       tags: () => options.tags ?? [],
@@ -82,6 +86,7 @@ function fakeSources(options: {
       writeAccess: () =>
         options.writers === null ? null : new Set(options.writers ?? []),
       reports: (tag: string | null) => {
+        reportTags.push(tag);
         const text =
           tag === null
             ? (options.after ?? REPORT_BEFORE)
@@ -92,7 +97,10 @@ function fakeSources(options: {
             file === "packages/core/api/index.api.md" ? text : null,
         };
       },
-      compatibilityDeletions: () => options.deletions ?? [],
+      compatibilityDeletions: (tag: string) => {
+        deletionTags.push(tag);
+        return options.deletions ?? [];
+      },
     },
   };
 }
@@ -265,6 +273,64 @@ describe("planRelease", () => {
     expect(plan.sinceLastCandidate.pullRequests).toMatchObject([
       { number: 2, title: "Widen a type" },
     ]);
+  });
+
+  it("compares the candidate part with the candidate as the before side", () => {
+    const { sources, reportTags, deletionTags } = fakeSources({
+      tags: ["v0.1.0-rc.1", "v0.1.0-rc.2"],
+      after: REPORT_AFTER,
+      deletions: [
+        {
+          path: "packages/core/src/urlHash/sharedLinks.test.ts",
+          deletedLines: 2,
+        },
+      ],
+    });
+    const plan = planRelease({ pre: null, sources });
+    expect(reportTags).toEqual(["v0.1.0-rc.2", null]);
+    expect(deletionTags).toEqual(["v0.1.0-rc.2"]);
+    expect(plan.sinceLastCandidate.compatibilityChanges).toMatchObject([
+      {
+        path: "packages/core/src/urlHash/sharedLinks.test.ts",
+        likelyBreaking: true,
+      },
+    ]);
+  });
+
+  it("points the notices at sinceLastCandidate and counts its likely breaking changes", () => {
+    const { sources } = fakeSources({
+      tags: ["v0.1.0-rc.1"],
+      before: REPORT_AFTER,
+      after: REPORT_BEFORE,
+    });
+    const notices = planRelease({ pre: null, sources }).notices.join("\n");
+    expect(notices).toContain(
+      "There is no stable release yet, so the notes part compares no API reports; sinceLastCandidate compares them against v0.1.0-rc.1.",
+    );
+    expect(notices).toContain(
+      "sinceLastCandidate covers the changes since v0.1.0-rc.1",
+    );
+    expect(notices).toContain("1 likely breaking API change since v0.1.0-rc.1");
+    expect(notices).not.toContain("There is no earlier release");
+  });
+
+  it("looks a pull request up once and reports an unreadable one once when both lists hold it", () => {
+    const { sources, lookedUp } = fakeSources({
+      tags: ["v0.1.0-rc.1"],
+      commits: [
+        { subject: "fix(core): lost (#8)" },
+        { subject: "fix(core): seen (#9)" },
+      ],
+      pulls: { 9: {} },
+    });
+    const plan = planRelease({ pre: null, sources });
+    expect(
+      plan.notices.filter(
+        (notice: string) => notice === "Could not read pull request #8.",
+      ),
+    ).toHaveLength(1);
+    expect(lookedUp.filter((number) => number === 9)).toHaveLength(1);
+    expect(plan.sinceLastCandidate.pullRequests).toHaveLength(2);
   });
 
   it("keeps the notes base at the last stable tag and adds the candidate base beside it", () => {
