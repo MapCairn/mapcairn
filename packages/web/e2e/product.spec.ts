@@ -176,13 +176,158 @@ test.describe("the product page", () => {
   }) => {
     const product = new ProductPage(page);
     await product.goto();
-    const repository = page.locator('a[href^="https://github.com/"]');
+    const repository = page.locator(
+      'a[href="https://github.com/MapCairn/mapcairn"]',
+    );
     await expect(repository).toHaveCount(2);
     await expect(product.header.locator('a[href^="https://"]')).toHaveCount(0);
     await expect(
       product.footer.getByRole("link", { name: "Source code" }),
     ).toHaveAttribute("href", "https://github.com/MapCairn/mapcairn");
   });
+
+  test("links the documentation, release notes, licence guide, security policy and Discussions from the footer", async ({
+    page,
+  }) => {
+    const product = new ProductPage(page);
+    await product.goto();
+    for (const [name, href] of [
+      ["Documentation", "#documentation"],
+      ["Release notes", "/releases"],
+      ["Licence guide", "/blob/main/docs/guides/licence.md"],
+      ["Security", "/blob/main/SECURITY.md"],
+      ["Discussions", "/discussions"],
+    ] as const) {
+      const link = product.footer.getByRole("link", { name });
+      await expect(link).toHaveAttribute(
+        "href",
+        `https://github.com/MapCairn/mapcairn${href}`,
+      );
+      expect((await link.boundingBox())?.height).toBeGreaterThanOrEqual(44);
+    }
+  });
+
+  for (const viewport of VIEWPORTS) {
+    test(`sets no text of the page below 13px at ${viewport.width}px (the survey sheet's labels, in SVG, are the known exception)`, async ({
+      page,
+    }) => {
+      await page.setViewportSize(viewport);
+      const product = new ProductPage(page);
+      await product.goto();
+      const small = await page.evaluate(() => {
+        const found: string[] = [];
+        for (const element of document.querySelectorAll(
+          "header *, main *, footer *",
+        )) {
+          const hasText = [...element.childNodes].some(
+            (node) =>
+              node.nodeType === Node.TEXT_NODE && node.textContent?.trim(),
+          );
+          if (!hasText || element instanceof SVGElement) {
+            continue;
+          }
+          const size = Number.parseFloat(getComputedStyle(element).fontSize);
+          if (size < 13) {
+            found.push(`${element.tagName} ${size}px`);
+          }
+        }
+        return found;
+      });
+      expect(small).toEqual([]);
+    });
+  }
+
+  for (const [width, beside] of [
+    [320, false],
+    [390, false],
+    [1440, true],
+  ] as const) {
+    test(`lays the legend out ${beside ? "as a key column beside the text" : "with the text full width under the symbol and name"} at ${width}px, with nothing clipped`, async ({
+      page,
+    }) => {
+      await page.setViewportSize({ width, height: 900 });
+      const product = new ProductPage(page);
+      await product.goto();
+      const boxes = await page.evaluate(() => {
+        const item = document.querySelector("main section ul li");
+        const rect = (selector: string) => {
+          const box = item?.querySelector(selector)?.getBoundingClientRect();
+          return {
+            left: box?.left ?? Number.NaN,
+            right: box?.right ?? Number.NaN,
+            top: box?.top ?? Number.NaN,
+            bottom: box?.bottom ?? Number.NaN,
+          };
+        };
+        const symbol = item?.firstElementChild?.getBoundingClientRect();
+        const name = item?.children[1]?.getBoundingClientRect();
+        const text = rect("p");
+        return {
+          symbol: { left: symbol?.left ?? 0, bottom: symbol?.bottom ?? 0 },
+          name: { left: name?.left ?? 0, top: name?.top ?? 0 },
+          text,
+          scrollWidth: document.documentElement.scrollWidth,
+        };
+      });
+      expect(boxes.text.right).toBeLessThanOrEqual(width);
+      expect(boxes.scrollWidth).toBeLessThanOrEqual(width);
+      if (beside) {
+        expect(boxes.text.left).toBeCloseTo(boxes.name.left, 0);
+        expect(boxes.text.left).toBeGreaterThan(boxes.symbol.left);
+      } else {
+        expect(boxes.text.left).toBeCloseTo(boxes.symbol.left, 0);
+        expect(boxes.text.top).toBeGreaterThanOrEqual(boxes.symbol.bottom);
+        expect(boxes.name.top).toBeLessThan(boxes.symbol.bottom);
+      }
+    });
+  }
+
+  test("shows what you get open, as a legend, with no script", async ({
+    page,
+  }) => {
+    const product = new ProductPage(page);
+    await product.goto();
+    const you = page.getByRole("region", { name: "What you get" });
+    await expect(you.locator("details")).toHaveCount(0);
+    const items = you.getByRole("listitem");
+    await expect(items).toHaveCount(6);
+    for (const item of await items.all()) {
+      await expect(item.locator("p")).toBeVisible();
+    }
+  });
+
+  for (const viewport of VIEWPORTS) {
+    test(`sets a graticule rule on each section at ${viewport.width}px, and a plain line in forced colours`, async ({
+      page,
+    }) => {
+      await page.setViewportSize(viewport);
+      const product = new ProductPage(page);
+      await product.goto();
+      const rule = (selector: string) =>
+        page.evaluate((sel) => {
+          const style = getComputedStyle(
+            document.querySelector(sel) as Element,
+            "::before",
+          );
+          return {
+            image: style.backgroundImage,
+            border: style.borderBlockEndStyle,
+            height: Number.parseFloat(style.height),
+          };
+        }, selector);
+      const section = "main > section";
+      const normal = await rule(section);
+      expect(normal.image).toContain("repeating-linear-gradient");
+      expect(normal.height).toBeGreaterThan(0);
+      await page.emulateMedia({ forcedColors: "active" });
+      const forced = await rule(section);
+      expect(forced.image).toBe("none");
+      expect(forced.border).toBe("solid");
+      // The border is inside the box, so the rule keeps its 12px.
+      expect(forced.height).toBe(normal.height);
+      expect(forced.height).toBeCloseTo(12, 0);
+    });
+  }
 
   for (const viewport of VIEWPORTS) {
     test(`keeps Playground in the header at ${viewport.width}px`, async ({

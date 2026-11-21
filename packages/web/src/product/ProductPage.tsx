@@ -2,7 +2,19 @@
 // Copyright MapCairn contributors
 import type { ClipboardPort } from "@mapcairn/core";
 import { Icon, LiveRegionProvider, SkipLink } from "@mapcairn/map";
-import { ChevronDown, CodeXml, Compass, Heart, Package } from "lucide-react";
+import {
+  Accessibility,
+  AppWindow,
+  ChevronDown,
+  CodeXml,
+  Compass,
+  Heart,
+  Layers,
+  Package,
+  Palette,
+  Plug,
+  ShieldCheck,
+} from "lucide-react";
 import type { ReactNode } from "react";
 import { Brand } from "../app/Brand";
 import { DOCUMENT_SCROLL } from "../app/documentScroll";
@@ -25,9 +37,12 @@ import {
   HERO_NOTE,
   type Inline,
   LEDE,
+  type LegendIcon,
+  type LegendItem,
   type Line,
   NPM_ACTION,
   PLAYGROUND_ACTION,
+  REPOSITORY_PAGES,
   SECTIONS,
   type Section,
 } from "./productContent";
@@ -140,6 +155,39 @@ function Disclosures({ items }: { readonly items: readonly Disclosure[] }) {
   );
 }
 
+/** The Lucide icon each legend item is drawn with. */
+const LEGEND_ICONS: Readonly<Record<LegendIcon, typeof Layers>> = {
+  interface: AppWindow,
+  layers: Layers,
+  accessible: Accessibility,
+  private: ShieldCheck,
+  ports: Plug,
+  design: Palette,
+};
+
+/**
+ * A legend: what the SDK gives, set out like the key of a map, an icon in a
+ * fixed column beside each name and its meaning. Always shown, so a skimmer
+ * and a page without scripts see the content and not only headings.
+ */
+function Legend({ items }: { readonly items: readonly LegendItem[] }) {
+  return (
+    <ul className={styles.legend}>
+      {items.map(({ icon, name, text }) => (
+        <li key={name} className={styles.legendItem}>
+          <span className={styles.legendSymbol}>
+            <Icon icon={LEGEND_ICONS[icon]} />
+          </span>
+          <span className={styles.legendName}>{name}</span>
+          <p className={styles.legendText}>
+            <Text line={text} />
+          </p>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
 /** One block of a section. */
 function BlockView({
   block,
@@ -210,6 +258,8 @@ function BlockView({
       );
     case "details":
       return <Disclosures items={block.items} />;
+    case "legend":
+      return <Legend items={block.items} />;
     case "deepLinks":
       return (
         <ul className={styles.deepLinks} data-testid="playground-deep-links">
@@ -305,7 +355,7 @@ function Hero() {
   );
 }
 
-/** The footer: where the project is made, the licence, the source, the playground and the privacy policy. */
+/** The footer: where the project is made, the licence, the source and the pages an adopter looks for next, the playground and the privacy policy. */
 function ProductFooter() {
   return (
     <footer className={styles.footer}>
@@ -316,7 +366,7 @@ function ProductFooter() {
       <p className={styles.footerLine}>
         MapCairn is open source under the AGPL-3.0.
       </p>
-      <nav aria-label="Footer">
+      <nav aria-label="Footer" className={styles.footerNav}>
         <ul className={styles.footerLinks}>
           <li>
             <a
@@ -327,6 +377,13 @@ function ProductFooter() {
               Source code
             </a>
           </li>
+          {REPOSITORY_PAGES.map(({ text, href }) => (
+            <li key={href}>
+              <a className={styles.footerLink} href={href}>
+                {text}
+              </a>
+            </li>
+          ))}
           <li>
             <a
               className={styles.footerLink}
@@ -337,6 +394,8 @@ function ProductFooter() {
               Mastodon
             </a>
           </li>
+        </ul>
+        <ul className={styles.footerLinks}>
           <li>
             <a className={styles.footerLink} href={PLAYGROUND_PATH}>
               Try the playground
@@ -363,11 +422,13 @@ function ProductFooter() {
  *   clipboard it is given,
  *   and its own markup requests nothing from another site (in production the
  *   host adds its cookieless page-view counter, as on every page). It links
- *   to the repository from exactly two places, the hero's View on GitHub and
- *   the footer's Source code, to the package on npm from the hero's View on
- *   npm, to the footer's Mastodon profile (`rel="me"`), and
- *   otherwise only to this site: never a
- *   Markdown file, an issue, a pull request or a milestone.
+ *   to the repository's front page from exactly two places, the hero's View
+ *   on GitHub and the footer's Source code, to the short named set of pages in
+ *   it (`REPOSITORY_PAGES`, in the footer, with the documentation again in the
+ *   production answer and the example app in "How do I use it?"), to the
+ *   package on npm from the hero's View on npm, to the footer's Mastodon
+ *   profile (`rel="me"`), and otherwise only to this site: never an issue, a
+ *   pull request or a milestone.
  *   Its first element is the inline script that sends an old map link
  *   (`/#map=...`) on to the playground before the page paints. It is English
  *   only, by decision, so it sets `lang="en-GB"` on its own root whatever

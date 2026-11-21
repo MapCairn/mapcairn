@@ -28,16 +28,37 @@ import { EMBED_EXAMPLE_FILES } from "./embedExampleFiles";
 import { ProductPage } from "./ProductPage";
 import * as styles from "./ProductPage.css";
 import {
+  CAPABILITY_MATRIX_LINK,
   HEADLINE,
   INSTALL_COMMAND,
   LEDE,
   lineToText,
   NPM_PACKAGE_URL,
+  REPOSITORY_PAGES,
 } from "./productContent";
 
 const REPO = "https://github.com/MapCairn/mapcairn";
 const MASTODON = "https://en.osm.town/@mapcairn";
 const NPM_PACKAGE = "https://www.npmjs.com/package/@mapcairn/sdk";
+
+/**
+ * The pages of the repository the footer links, in its order, each with the
+ * reason an adopter looks for it. Issue #639 allowed this named set, and
+ * nothing else past the front page.
+ */
+const FOOTER_REPOSITORY_PAGES = [
+  ["Documentation", `${REPO}#documentation`],
+  ["Release notes", `${REPO}/releases`],
+  ["Licence guide", `${REPO}/blob/main/docs/guides/licence.md`],
+  ["Security", `${REPO}/blob/main/SECURITY.md`],
+  ["Discussions", `${REPO}/discussions`],
+] as const;
+
+/** The capability matrix, which the production answer links for what the SDK has and lacks. */
+const CAPABILITY_MATRIX = `${REPO}/blob/main/docs/guides/capability-matrix.md`;
+
+/** The example app, which the answer on how to use the SDK links. */
+const EXAMPLE_APP = `${REPO}/tree/main/examples/embed`;
 
 /** The README, whose embedding example the page shows. */
 const README = readFileSync(
@@ -105,16 +126,26 @@ describe("the product page stands on its own", () => {
     ]);
   });
 
-  it("lists at most six things you get, each one line, with the detail one tap away and in the page", () => {
+  it("shows what you get as a legend that is always open: at most six things, each with an icon, a short name and its meaning", () => {
     renderPage();
-    const items = within(section("What you get")).getAllByRole("group");
+    const you = section("What you get");
+    expect(you.querySelector("details")).toBeNull();
+    const items = within(you).getAllByRole("listitem");
     expect(items.length).toBeLessThanOrEqual(6);
     for (const item of items) {
-      expect(item.tagName).toBe("DETAILS");
-      const summary = item.querySelector("summary");
-      expect(summary?.textContent?.length).toBeLessThan(45);
+      const icon = item.querySelector("svg");
+      expect(icon).toHaveAttribute("aria-hidden", "true");
+      const name = item.querySelector(`.${styles.legendName}`);
+      expect(name?.textContent?.length).toBeLessThan(45);
       expect(item.querySelector("p")?.textContent?.length).toBeGreaterThan(60);
     }
+  });
+
+  it("puts what you get in /index.md as headings with their text, as it did when they opened", async () => {
+    const markdown = await markdownLoader().text();
+    expect(markdown).toContain(
+      "### A finished map interface\n\nSearch by place or by coordinates",
+    );
   });
 
   it("names the SDK's packages, one line each, one tap away", () => {
@@ -251,13 +282,11 @@ describe("the product page stands on its own", () => {
     );
   });
 
-  it("links to the repository from exactly two places: the hero's button and the footer's Source code", () => {
+  it("links to the repository's front page from exactly two places: the hero's button and the footer's Source code", () => {
     renderPage();
     const github = screen
       .getAllByRole("link")
-      .filter((link) =>
-        (link.getAttribute("href") ?? "").startsWith("https://github.com/"),
-      );
+      .filter((link) => link.getAttribute("href") === REPO);
     expect(github.map((link) => link.textContent)).toEqual([
       "View on GitHub",
       "Source code",
@@ -306,9 +335,71 @@ describe("the product page stands on its own", () => {
     );
   });
 
-  it("states the licence as open source under the AGPL-3.0", () => {
+  it("states the licence as open source under the AGPL-3.0, which allows commercial use", () => {
     const { container } = renderPage();
-    expect(container.textContent).toContain("Open source under the AGPL-3.0");
+    expect(container.textContent).toContain(
+      "Open source under the AGPL-3.0, which allows commercial use.",
+    );
+  });
+
+  it("answers what it costs with nothing, that the licence allows commercial use, and a link to the licence guide", () => {
+    renderPage();
+    const answer = screen.getByText(/^Nothing: it is open source/, {
+      selector: "p",
+    });
+    expect(answer).toHaveTextContent(
+      "Nothing: it is open source under the AGPL-3.0, which allows commercial use.",
+    );
+    expect(
+      within(answer).getByRole("link", { name: "licence guide" }),
+    ).toHaveAttribute("href", `${REPO}/blob/main/docs/guides/licence.md`);
+  });
+
+  it("keeps the README's sentence that a licence for closed-source use is not on offer yet, and says closed-source use needs separate terms", () => {
+    const { container } = renderPage();
+    expect(container.textContent).toContain(
+      "A licence for closed-source use is not on offer yet.",
+    );
+    expect(container.textContent).toContain(
+      "needs separate terms. A licence for closed-source use",
+    );
+  });
+
+  it("says in See it working what the playground adds, and where its services' terms apply", () => {
+    renderPage();
+    const see = section("See it working");
+    expect(see).toHaveTextContent(
+      "its search, directions and data layers are this site's adapters and definitions",
+    );
+    expect(see).toHaveTextContent(
+      "Nominatim for search and the FOSSGIS Valhalla server for directions",
+    );
+    expect(see).toHaveTextContent(
+      "not meant for other sites' production traffic",
+    );
+    expect(see).toHaveTextContent(
+      "Your app supplies its own providers. The SDK ships the interface, the MapLibre adapter and in-memory fakes.",
+    );
+  });
+
+  it("says in the production answer that it is before 1.0, and that each release's notes name what to change", () => {
+    renderPage();
+    const production = screen.getByText(/^The reference site runs on it/, {
+      selector: "p",
+    });
+    expect(production.nextElementSibling).toHaveTextContent(
+      "It is before version 1.0: a minor release can change the public API, and each release's notes name what to change.",
+    );
+  });
+
+  it("links the capability matrix and the example app in the text instead of naming them", () => {
+    renderPage();
+    expect(
+      screen.getByRole("link", { name: "capability matrix" }),
+    ).toHaveAttribute("href", CAPABILITY_MATRIX_LINK.href);
+    expect(
+      screen.getByRole("link", { name: "examples/embed" }),
+    ).toHaveAttribute("href", EXAMPLE_APP);
   });
 
   it("ends with a quiet line that says where it is made, then the licence and its links, and nothing else", () => {
@@ -326,10 +417,26 @@ describe("the product page stands on its own", () => {
         .map((link) => link.textContent),
     ).toEqual([
       "Source code",
+      "Documentation",
+      "Release notes",
+      "Licence guide",
+      "Security",
+      "Discussions",
       "Mastodon",
       "Try the playground",
       "Privacy policy",
     ]);
+  });
+
+  it("links the footer's pages of the repository to the named set and nowhere else in it", () => {
+    renderPage();
+    const footer = within(screen.getByRole("contentinfo"));
+    for (const [name, href] of FOOTER_REPOSITORY_PAGES) {
+      expect(footer.getByRole("link", { name })).toHaveAttribute("href", href);
+    }
+    expect(REPOSITORY_PAGES.map((link) => [link.text, link.href])).toEqual(
+      FOOTER_REPOSITORY_PAGES.map((page) => [...page]),
+    );
   });
 
   it("links the footer's Mastodon entry to the project profile with rel=me so the profile can verify the site", () => {
@@ -341,23 +448,26 @@ describe("the product page stands on its own", () => {
     expect(link).toHaveAttribute("rel", "me");
   });
 
-  it("links only to the repository's front page, the package page, the Mastodon profile or this site: no Markdown file, folder, section or contributing page", () => {
+  it("links only to the repository's front page, the named set of its pages (and the example app), the package page, the Mastodon profile or this site: no other file, folder, section or contributing page", () => {
     renderPage();
+    const named = new Set<string>([
+      ...FOOTER_REPOSITORY_PAGES.map(([, href]) => href),
+      EXAMPLE_APP,
+      CAPABILITY_MATRIX,
+    ]);
     const hrefs = screen
       .getAllByRole("link")
       .map((link) => link.getAttribute("href") ?? "");
     for (const href of hrefs) {
       expect(
         href === REPO ||
+          named.has(href) ||
           href === NPM_PACKAGE ||
           href === MASTODON ||
           /^[/#]/.test(href),
         href,
       ).toBe(true);
-      expect(href).not.toMatch(/\.md(#.*)?$/);
-      expect(href).not.toMatch(
-        /#(documentation|licence)$|\/tree\/|\/contribute/,
-      );
+      expect(href).not.toMatch(/#licence$|\/contribute/);
     }
   });
 
