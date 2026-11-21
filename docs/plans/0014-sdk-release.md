@@ -1,6 +1,6 @@
 # 0014: Release the SDK packages on GitHub and npm
 
-Status: proposed. Tracking issue: [#1](https://github.com/MapCairn/mapcairn/issues/1).
+Status: in progress: `0.1.0-rc.1` to `0.1.0-rc.3` are published under `next`, and `0.1.0` under `latest` and the generated API reference are not done. Tracking issue: [#1](https://github.com/MapCairn/mapcairn/issues/1).
 
 ## Goal
 

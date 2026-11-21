@@ -1,6 +1,6 @@
 # 0015: One umbrella package for the SDK
 
-Status: in progress: slice 1 is merged, and slice 2 (the release set, the consumer check and the documents) is in review. Tracking issue: [#538](https://github.com/MapCairn/mapcairn/issues/538).
+Status: done: both slices are merged and `@mapcairn/sdk` was released with `0.1.0-rc.3`. Tracking issue: [#538](https://github.com/MapCairn/mapcairn/issues/538).
 
 ## Goal
 
@@ -108,14 +108,14 @@ Each step is one pull request. `Part of #538` unless another issue is named.
 
 1. **One package list, [#540](https://github.com/MapCairn/mapcairn/issues/540).** Make `SDK_PACKAGES` the source for the lint tests, `check.mjs`, `ci.yml`, `release.yml`, `depcruise.mjs` and `sdkLicences.mjs`, with its completeness test. It must separate the packages that are released from the ones that exist, so slice 1 can add a private `sdk` without joining the release set. Files: the scripts and workflows named above, `packages/core/src/lint/`.
 2. **Per-package registry gate, [#539](https://github.com/MapCairn/mapcairn/issues/539).** Make the registry gate per package: the `npm` job reads each package, publishes the ones npm has, and fails naming one it does not ("Trusted publishing" below). `verifyRelease.mjs` loses `readRegistryState` and the `on-npm` output, and `package-state` prints `published`, `missing` or `new`. Files: `scripts/release/verifyRelease.mjs`, `check.mjs`, `.github/workflows/release.yml`, `docs/guides/releasing.md`, `docs/plans/0014-sdk-release.md`, tests. It touches the workflow changed in #536, so it follows that.
-3. **Slice 1, private `packages/sdk` (this issue, #538). In progress: its pull request is open.** After the `rc.2` Release pull request merges (see "Timing and slices"):
+3. **Slice 1, private `packages/sdk` (this issue, #538). Merged.** After the `rc.2` Release pull request merges (see "Timing and slices"):
    1. The failing tests above (drift checks, list entries, dependency-cruiser cases).
    2. `packages/sdk`: `package.json` (exact ranges on the four, peers, `sideEffects`, `files: ["dist", "!dist/.built"]`, the same metadata as the four, `"private": true`), `src/index.ts` and one file per subpath, `src/styles.css`, `tsconfig.json`, `LICENSE`, `README.md` with its `**Status:**` line, the SPDX header on each source file.
    3. The Vite config with the SDK's 95% coverage thresholds, and the tree-shaking measurement on `examples/embed`.
    4. Build: `sdk` last in `SDK_BUILD_ORDER`. `buildPackage.mjs` copies the stylesheet and must not treat a `.css` export with no `.css.ts` sources as a compiled stylesheet. Spike how API Extractor reports star re-exports, then `npm run api:update` and commit `packages/sdk/api/`.
    5. Boundaries: `.dependency-cruiser.cjs`, `scripts/depcruise.mjs`, `scripts/sdkLicences.mjs`.
    6. A real `npm install` for the new workspace with the lockfile, then `npm ci --ignore-scripts` in a disposable clone.
-4. **Slice 2, [#541](https://github.com/MapCairn/mapcairn/issues/541). In progress: its pull request is open.** After steps 1 and 2 and the `rc.2` merge:
+4. **Slice 2, [#541](https://github.com/MapCairn/mapcairn/issues/541). Merged.** After steps 1 and 2 and the `rc.2` merge:
    1. The failing tests: the five-package release tests, the `packCheck` ceiling and the consumer-check leg.
    2. `sdk` joins `SDK_PACKAGES`, `PACKAGES`, `SIZE_CEILINGS`, the `release.yml` loops, the `notesCheck` patterns, the `ci.yml` filter and the `check.mjs` sentence; `private` comes off.
    3. The documents under "Documents to update".
