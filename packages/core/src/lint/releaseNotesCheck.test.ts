@@ -1045,12 +1045,22 @@ describe("published text", () => {
     /** Below this a timing is noise, so it is not divided into. */
     const NOISE_MS = 20;
 
+    /**
+     * Milliseconds of CPU time the process has used. Unlike a wall clock it
+     * does not count the time the process waits for a core, so a busy machine
+     * inflates one of the two timings and not the other far less often.
+     */
+    function cpuMs(): number {
+      const { user, system } = process.cpuUsage();
+      return (user + system) / 1000;
+    }
+
     function bestOfThree(text: string): number {
       let best = Number.POSITIVE_INFINITY;
       for (let run = 0; run < 3; run += 1) {
-        const started = performance.now();
+        const started = cpuMs();
         checkChangelog(text);
-        best = Math.min(best, performance.now() - started);
+        best = Math.min(best, cpuMs() - started);
       }
       return best;
     }
