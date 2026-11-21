@@ -1,7 +1,11 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
 import { describe, expect, it } from "vitest";
-import { isUsedByExample, type NamedImport } from "./markdownSupport";
+import {
+  headingAnchors,
+  isUsedByExample,
+  type NamedImport,
+} from "./markdownSupport";
 
 function known(specifier: string, imported: string): NamedImport {
   return { specifier, imported, local: imported, typeOnly: false };
@@ -48,5 +52,29 @@ describe("isUsedByExample", () => {
         "MapChrome",
       ),
     ).toBe(false);
+  });
+});
+
+describe("headingAnchors", () => {
+  it("gives each heading the anchor GitHub gives it", () => {
+    expect(
+      headingAnchors("# A title\n\n## Theme the SDK (with `colours`)\n"),
+    ).toEqual(["a-title", "theme-the-sdk-with-colours"]);
+  });
+
+  it("keeps an underscore and a hyphen, and drops other punctuation", () => {
+    expect(headingAnchors("## snake_case - and: more!")).toEqual([
+      "snake_case---and-more",
+    ]);
+  });
+
+  it("ignores a comment line inside a fenced code block", () => {
+    expect(
+      headingAnchors("## Real\n\n```bash\n# not a heading\n```\n"),
+    ).toEqual(["real"]);
+  });
+
+  it("ignores a hash that is not followed by a space", () => {
+    expect(headingAnchors("#tag\n####### seven")).toEqual([]);
   });
 });

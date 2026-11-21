@@ -8,7 +8,7 @@
 # MapCairn
 
 [![CI](https://github.com/MapCairn/mapcairn/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/MapCairn/mapcairn/actions/workflows/ci.yml)
-[![Licence: AGPL-3.0](https://img.shields.io/badge/licence-AGPL--3.0-blue)](LICENSE)
+[![Licence: AGPL-3.0-only](https://img.shields.io/badge/licence-AGPL--3.0--only-blue)](LICENSE)
 [![OpenSSF Best Practices](https://www.bestpractices.dev/projects/16543/badge)](https://www.bestpractices.dev/projects/16543)
 [![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/MapCairn/mapcairn/badge)](https://scorecard.dev/viewer/?uri=github.com/MapCairn/mapcairn)
 
@@ -261,6 +261,7 @@ Most apps install only `@mapcairn/sdk`. The packages inside it are published on 
 | [`DESIGN.md`](DESIGN.md)                                                             | Tokens, layout slots, accessibility contracts and the lint rules                                           |
 | [`docs/guides/public-api.md`](docs/guides/public-api.md)                             | What counts as the SDK's public API beyond its exports, the API reports and how a change is classed        |
 | [`docs/guides/extending.md`](docs/guides/extending.md)                               | Embedding the SDK, and adding a basemap, each kind of data layer, a search or routing provider, an adapter |
+| [`docs/guides/licence.md`](docs/guides/licence.md)                                   | What the AGPL means for your project, for people who know MIT, Apache-2.0 and GPL-3.0                      |
 | [`docs/guides/translate-the-sdk.md`](docs/guides/translate-the-sdk.md)               | Another language, a choice of languages, translating definitions, your own message-format library          |
 | [`docs/guides/serving-layers.md`](docs/guides/serving-layers.md)                     | Which layer kind to serve from your own server, what each costs, and OGC API Features, WMS and WMTS layers |
 | [`docs/guides/content-security-policy.md`](docs/guides/content-security-policy.md)   | The Content Security Policy a page hosting the SDK needs, and why                                          |
@@ -286,10 +287,10 @@ Everyone is welcome to use the coding agent they prefer, and the same rules in [
 
 ## Licence
 
-MapCairn is licensed under [AGPL-3.0-only](LICENSE), which allows commercial use, and each SDK package (`packages/core`, `packages/map`, `packages/react`, `packages/theme`, `packages/adapter-maplibre` and `packages/sdk`) carries its own copy. If you distribute an app that includes the SDK, or let people interact with a modified version over a network, you must offer them the corresponding source under the same licence.
+MapCairn is licensed under [AGPL-3.0-only](LICENSE), an open-source licence that allows commercial use, and each SDK package (`packages/core`, `packages/map`, `packages/react`, `packages/theme`, `packages/adapter-maplibre` and `packages/sdk`) carries its own copy. If you distribute an app that includes the SDK, including by serving it to people's browsers, you must offer them the corresponding source of the whole app under the same licence. If you modify the SDK and let people interact with your modified version over a network, you must offer them its corresponding source. A licence for closed-source use is not on offer yet. [What the licence means for your project](docs/guides/licence.md) says it in plain words and is not legal advice.
 
 The SDK packages depend only on permissively licensed packages (MIT, BSD, Apache-2.0, ISC and similar), and `npm run lint` fails when a new production dependency of one has any other licence.
 
-The author welcomes conversations about other terms for closed-source use. A licence for closed-source use is not on offer yet, and any that is agreed would go towards the continued development of MapCairn. Contact the author at [mapcairn@timothybrits.co.za](mailto:mapcairn@timothybrits.co.za).
+The author welcomes conversations about other terms for closed-source use. Any licence for closed-source use that is agreed would go towards the continued development of MapCairn. Contact the author at [mapcairn@timothybrits.co.za](mailto:mapcairn@timothybrits.co.za).
 
 See [`ATTRIBUTIONS.md`](ATTRIBUTIONS.md) for software and basemap credits and [`PRIVACY.md`](PRIVACY.md) for the privacy policy.

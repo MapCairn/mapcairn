@@ -53,7 +53,7 @@ In the repository, the token set and the contrast checks live in `src/tokens.css
 
 ## Licence
 
-`@mapcairn/theme` is licensed under AGPL-3.0-only, which allows commercial use, and the [licence text](https://github.com/MapCairn/mapcairn/blob/main/packages/theme/LICENSE) comes with the package. If you distribute an app that includes it, or let people interact with a modified version over a network, you must offer them the corresponding source under the same licence. A licence for closed-source use is not on offer yet. The SDK packages depend only on permissively licensed packages. The [licence section of the repository README](https://github.com/MapCairn/mapcairn#licence) says more, including how to discuss other terms for closed-source use.
+`@mapcairn/theme` is licensed under AGPL-3.0-only, an open-source licence that allows commercial use, and the [licence text](https://github.com/MapCairn/mapcairn/blob/main/packages/theme/LICENSE) comes with the package. If you distribute an app that includes the SDK, including by serving it to people's browsers, you must offer them the corresponding source of the whole app under the same licence. If you modify the SDK and let people interact with your modified version over a network, you must offer them its corresponding source. A licence for closed-source use is not on offer yet. [What the licence means for your project](https://github.com/MapCairn/mapcairn/blob/main/docs/guides/licence.md) says it in plain words and is not legal advice. The SDK packages depend only on permissively licensed packages. The [licence section of the repository README](https://github.com/MapCairn/mapcairn#licence) says more, including how to discuss other terms for closed-source use.
 
 ## Contributing and changes
 

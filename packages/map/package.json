@@ -1,7 +1,7 @@
 {
   "name": "@mapcairn/map",
   "version": "0.1.0-rc.3",
-  "description": "The accessible React map interface of MapCairn: chrome, sheet, search, measure, draw and layers panels",
+  "description": "The accessible React map interface of MapCairn: map controls, panels, search, measure and draw tools",
   "license": "AGPL-3.0-only",
   "repository": {
     "type": "git",

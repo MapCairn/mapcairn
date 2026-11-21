@@ -18,6 +18,7 @@ import { describe, expect, it } from "vitest";
 import {
   fencedBlocks,
   isUsedByExample,
+  LICENCE_DUTY,
   namedImports,
   relativeLinks,
   tagAttributes,
@@ -268,13 +269,29 @@ describe("README.md", () => {
   it("describes the licence as allowing commercial use and offering the source, not publishing it", () => {
     const section = README.slice(README.indexOf("\n## Licence"));
     expect(section).toContain("AGPL-3.0-only");
-    expect(section).toContain("allows commercial use");
-    expect(section).toMatch(/must offer them the corresponding source/);
-    expect(section).toMatch(/not on offer yet/);
+    expect(section).toContain(
+      "an open-source licence that allows commercial use",
+    );
+    expect(section).toContain(LICENCE_DUTY);
     expect(section).not.toMatch(/publish the corresponding source/);
+    expect(section).toContain("(docs/guides/licence.md)");
     const start = README.indexOf("## When MapCairn fits");
     const fits = README.slice(start, README.indexOf("\n## ", start + 1));
     expect(fits).not.toMatch(/can publish its source/);
+  });
+
+  it("names the licence AGPL-3.0-only as the manifests do, in the badge and in the other documents that state it", () => {
+    expect(README).toContain("[![Licence: AGPL-3.0-only]");
+    for (const doc of ["CONTRIBUTING.md", "GOVERNANCE.md"]) {
+      const text = readFileSync(path.join(REPO, doc), "utf8");
+      expect(text, doc).not.toMatch(/AGPL-3\.0(?!-only)/);
+    }
+    const contributing = readFileSync(
+      path.join(REPO, "CONTRIBUTING.md"),
+      "utf8",
+    );
+    expect(contributing).toContain("(docs/guides/licence.md)");
+    expect(contributing).not.toMatch(/may agree other licence terms/);
   });
 
   it("says where to ask a question and where to report a problem", () => {

@@ -139,3 +139,31 @@ export function isUsedByExample(
         (specifier === UMBRELLA && known.specifier.startsWith("@mapcairn/"))),
   );
 }
+
+/**
+ * The anchors GitHub gives the headings of a Markdown text: the heading
+ * lower-cased, everything but letters, digits, spaces, hyphens and
+ * underscores dropped, spaces joined with hyphens. A line inside a fenced
+ * code block is not a heading.
+ */
+export function headingAnchors(markdown: string): string[] {
+  const prose = markdown.replace(/^```[\s\S]*?^```/gm, "");
+  return prose
+    .split("\n")
+    .filter((line) => /^#{1,6} /.test(line))
+    .map((line) =>
+      line
+        .replace(/^#+ /, "")
+        .toLowerCase()
+        .replace(/[^\p{L}\p{N} _-]/gu, "")
+        .replace(/ /g, "-"),
+    );
+}
+
+/**
+ * What every README and the product page say a person must do when the SDK
+ * is part of what they ship, in the same words. The product page keeps its
+ * own wording of the last sentence (its tests refuse the word "offer").
+ */
+export const LICENCE_DUTY =
+  "If you distribute an app that includes the SDK, including by serving it to people's browsers, you must offer them the corresponding source of the whole app under the same licence. If you modify the SDK and let people interact with your modified version over a network, you must offer them its corresponding source. A licence for closed-source use is not on offer yet.";
