@@ -5,6 +5,7 @@ import {
   type Block,
   GITHUB_ACTION,
   HEADLINE,
+  HERO_INSTALL,
   HERO_NOTE,
   type Inline,
   LEDE,
@@ -43,7 +44,7 @@ function linkList(links: readonly { text: string; href: string }[]): string {
     .join("\n");
 }
 
-/** The three actions, as a list of links. */
+/** The actions, as a list of links. */
 const ACTIONS = linkList([GITHUB_ACTION, PLAYGROUND_ACTION, NPM_ACTION]);
 
 /** One block as Markdown. */
@@ -89,6 +90,7 @@ export function productMarkdown(): string {
   return `${[
     `# ${HEADLINE}`,
     lineToMarkdown(LEDE),
+    block(HERO_INSTALL),
     ACTIONS,
     lineToMarkdown(HERO_NOTE),
     ...SECTIONS.map(section),

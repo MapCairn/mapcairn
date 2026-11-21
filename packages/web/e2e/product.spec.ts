@@ -150,7 +150,7 @@ test.describe("the product page", () => {
     });
   });
 
-  test("makes View on GitHub the first action, beside Try the playground and View on npm", async ({
+  test("makes View on GitHub the one button, with Try the playground and View on npm as links in a row", async ({
     page,
   }) => {
     const product = new ProductPage(page);
@@ -159,17 +159,44 @@ test.describe("the product page", () => {
       "href",
       "https://github.com/MapCairn/mapcairn",
     );
-    const github = await product.heroGitHub.boundingBox();
-    const playground = await product.heroPlayground.boundingBox();
-    const npm = await product.heroNpm.boundingBox();
     await expect(product.heroNpm).toHaveAttribute(
       "href",
       "https://www.npmjs.com/package/@mapcairn/sdk",
     );
-    expect(github?.height).toBeGreaterThanOrEqual(44);
-    expect(playground?.height).toBe(github?.height);
-    expect(npm?.height).toBe(github?.height);
+    const github = await product.heroGitHub.boundingBox();
+    const playground = await product.heroPlayground.boundingBox();
+    const npm = await product.heroNpm.boundingBox();
+    expect(github?.height).toBeGreaterThanOrEqual(48);
+    expect(playground?.height).toBeGreaterThanOrEqual(44);
+    expect(npm?.height).toBeGreaterThanOrEqual(44);
+    expect(playground?.y).toBe(npm?.y);
+    expect(playground?.x).toBeLessThan(npm?.x ?? 0);
   });
+
+  for (const [width, height] of [
+    [390, 844],
+    [820, 1180],
+    [1440, 900],
+  ] as const) {
+    test(`shows the install command and View on GitHub in the first screen at ${width}px, with the whole command readable and no sideways scroll`, async ({
+      page,
+    }) => {
+      await page.setViewportSize({ width, height });
+      const product = new ProductPage(page);
+      await product.goto();
+      await expect(product.installCommand("npm")).toBeInViewport();
+      await expect(product.heroGitHub).toBeInViewport();
+      await expect(product.heroPlayground).toBeInViewport();
+      const fit = await product.installCommand("npm").evaluate((pre) => ({
+        wraps: getComputedStyle(pre).whiteSpace,
+        clipped: pre.scrollWidth > pre.clientWidth,
+        page: document.documentElement.scrollWidth,
+      }));
+      expect(fit.wraps).toBe("pre-wrap");
+      expect(fit.clipped).toBe(false);
+      expect(fit.page).toBeLessThanOrEqual(width);
+    });
+  }
 
   test("links to the repository from the hero's button and the footer's Source code only", async ({
     page,
@@ -786,7 +813,7 @@ test.describe("the product page", () => {
       await page.mouse.up();
     });
 
-    test("the secondary action, the header link and the copy button take the accent tint under a pointer", async ({
+    test("the hero links, the header link and the copy button take the accent tint under a pointer", async ({
       page,
       isMobile,
     }) => {
@@ -805,6 +832,20 @@ test.describe("the product page", () => {
         const hovered = await interactionStyle(target);
         expect(hovered.backgroundColor).not.toBe(resting.backgroundColor);
         await page.mouse.move(0, 0);
+      }
+    });
+
+    test("in forced colours the hero's two links stay visible and underlined", async ({
+      page,
+    }) => {
+      await page.emulateMedia({ forcedColors: "active" });
+      const product = new ProductPage(page);
+      await product.goto();
+      for (const link of [product.heroPlayground, product.heroNpm]) {
+        await expect(link).toBeVisible();
+        const style = await interactionStyle(link);
+        expect(style.textDecorationLine).toContain("underline");
+        expect(style.color).not.toBe(style.backgroundColor);
       }
     });
 
@@ -866,12 +907,8 @@ test.describe("the product page", () => {
         probe.remove();
         return colour;
       });
-      const actions = [
-        product.heroGitHub,
-        product.heroPlayground,
-        product.heroNpm,
-        product.copyCode,
-      ];
+      // The two links have no fill of their own: their label sits on the page, which is Canvas.
+      const actions = [product.heroGitHub, product.copyCode];
       const readable = async (action: Locator) => {
         const style = await interactionStyle(action);
         expect(style.backgroundColor).toBe(canvas);

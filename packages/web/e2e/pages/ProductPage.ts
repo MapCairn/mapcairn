@@ -2,9 +2,8 @@
 // Copyright MapCairn contributors
 import { expect, type Locator, type Page } from "@playwright/test";
 
-/** The product page's h1, which says what teams can build with MapCairn. */
-export const PRODUCT_HEADLINE =
-  "Build accessible, privacy-respecting map applications for the public";
+/** The product page's h1, which says what MapCairn makes and for whom. */
+export const PRODUCT_HEADLINE = "Accessible map interfaces for the public";
 
 /**
  * The product page at `/`, located by role and accessible name. It is English

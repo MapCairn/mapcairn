@@ -10,7 +10,6 @@ import {
   Compass,
   Heart,
   Layers,
-  Package,
   Palette,
   Plug,
   ShieldCheck,
@@ -34,6 +33,7 @@ import {
   type Disclosure,
   GITHUB_ACTION,
   HEADLINE,
+  HERO_INSTALL,
   HERO_NOTE,
   type Inline,
   LEDE,
@@ -102,7 +102,11 @@ function HighlightedCode({ source }: { readonly source: string }) {
   );
 }
 
-/** The three actions, the same size: View on GitHub first and filled, then Try the playground and View on npm. */
+/**
+ * The actions: View on GitHub as the one button, then the playground and the
+ * npm package as two links in a row, the first at the start and the second at
+ * the end where the row has the width.
+ */
 function Actions() {
   return (
     <div className={styles.actions}>
@@ -114,22 +118,26 @@ function Actions() {
         <Icon icon={CodeXml} />
         {GITHUB_ACTION.text}
       </a>
-      <a
-        className={styles.secondaryAction}
-        href={PLAYGROUND_ACTION.href}
-        data-testid="action-playground"
-      >
-        <Icon icon={Compass} />
-        {PLAYGROUND_ACTION.text}
-      </a>
-      <a
-        className={styles.secondaryAction}
-        href={NPM_ACTION.href}
-        data-testid="action-npm"
-      >
-        <Icon icon={Package} />
-        {NPM_ACTION.text}
-      </a>
+      <ul className={styles.heroLinks}>
+        <li>
+          <a
+            className={styles.heroLink}
+            href={PLAYGROUND_ACTION.href}
+            data-testid="action-playground"
+          >
+            {PLAYGROUND_ACTION.text}
+          </a>
+        </li>
+        <li>
+          <a
+            className={styles.heroLink}
+            href={NPM_ACTION.href}
+            data-testid="action-npm"
+          >
+            {NPM_ACTION.text}
+          </a>
+        </li>
+      </ul>
     </div>
   );
 }
@@ -334,8 +342,8 @@ function ProductHeader() {
   );
 }
 
-/** The hero: the pitch, the three actions, and the survey sheet beside them. */
-function Hero() {
+/** The hero: the pitch, the install block as its main action, the links, and the survey sheet beside them. */
+function Hero({ clipboard }: { readonly clipboard: ClipboardPort }) {
   return (
     <div className={styles.hero}>
       <div className={styles.heroText}>
@@ -343,6 +351,11 @@ function Hero() {
         <p className={styles.lede}>
           <Text line={LEDE} />
         </p>
+        <InstallBlock
+          label={HERO_INSTALL.label}
+          options={HERO_INSTALL.options}
+          clipboard={clipboard}
+        />
         <Actions />
         <p className={styles.note}>
           <Text line={HERO_NOTE} />
@@ -413,10 +426,10 @@ function ProductFooter() {
 }
 
 /**
- * The product page at `/`: the pitch and the three actions, the embedding
- * example, what you get, the playground, when it fits and the questions, with
- * View on GitHub as the first action and the playground one link away from
- * anywhere on the page.
+ * The product page at `/`: the pitch, the install block, View on GitHub as the
+ * one button with the playground and npm links under it, the embedding example,
+ * what you get, the playground, when it fits and the questions, with the
+ * playground one link away from anywhere on the page.
  *
  * @remarks Server-rendered: it loads no map code and no service but the
  *   clipboard it is given,
@@ -457,7 +470,7 @@ export function ProductPage({
         <SkipLink targetId={MAIN_ID}>Skip to content</SkipLink>
         <ProductHeader />
         <main id={MAIN_ID} tabIndex={-1} className={styles.main}>
-          <Hero />
+          <Hero clipboard={clipboard} />
           {SECTIONS.map((section) => (
             <SectionView
               key={section.id}

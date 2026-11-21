@@ -29,6 +29,7 @@ import { ProductPage } from "./ProductPage";
 import * as styles from "./ProductPage.css";
 import {
   CAPABILITY_MATRIX_LINK,
+  faqEntries,
   HEADLINE,
   INSTALL_COMMAND,
   LEDE,
@@ -93,7 +94,7 @@ describe("the product page stands on its own", () => {
     const headings = screen.getAllByRole("heading", { level: 1 });
     expect(headings).toHaveLength(1);
     expect(headings[0]).toHaveTextContent(
-      "Build accessible, privacy-respecting map applications for the public",
+      "Accessible map interfaces for the public",
     );
   });
 
@@ -103,8 +104,38 @@ describe("the product page stands on its own", () => {
       .nextElementSibling as HTMLElement;
     expect(lede.tagName).toBe("P");
     expect(lede).toHaveTextContent(
-      "MapCairn is an open-source React SDK for teams building public-interest maps, such as open data and hazard maps.",
+      "MapCairn is an open-source React SDK for public-interest maps",
     );
+    expect(lede.textContent?.match(/\.(\s|$)/g)).toHaveLength(1);
+    expect(lede).toHaveTextContent("WCAG 2.2 AA as the target");
+    expect(lede).toHaveTextContent(
+      "by default, nothing requested beyond the basemap until a person asks, unless a host turns on search suggestions",
+    );
+  });
+
+  it("points no answer at a section that lacks the install block, on the page, in /index.md and in /llms-full.txt", async () => {
+    const answers = faqEntries().map(({ answer }) => answer);
+    for (const answer of answers) {
+      expect(answer).not.toMatch(/\b(first|embed\w*|above) section\b/i);
+    }
+    const pointer = answers.find((answer) =>
+      answer.includes("the command at the top of the page"),
+    );
+    expect(pointer).toBeDefined();
+    renderPage();
+    const group = screen.getByRole("group", { name: "Package manager" });
+    const first = document.querySelector("main section") as HTMLElement;
+    expect(
+      group.compareDocumentPosition(first) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    for (const text of [
+      await markdownLoader().text(),
+      await fullLoader().text(),
+    ]) {
+      expect(text).toContain("the command at the top of the page");
+      expect(text.indexOf(INSTALL_COMMAND)).toBeLessThan(text.indexOf("\n## "));
+      expect(text).not.toMatch(/as the first section shows/);
+    }
   });
 
   it("puts the same hero at the top of /index.md and in /llms-full.txt", async () => {
@@ -162,10 +193,28 @@ describe("the product page stands on its own", () => {
     }
   });
 
+  it("puts the install block in the hero, between the lede and the actions, and not again in the embedding section", () => {
+    renderPage();
+    const h1 = screen.getByRole("heading", { level: 1 });
+    const group = screen.getByRole("group", { name: "Package manager" });
+    expect(h1.parentElement).toContainElement(group);
+    expect(section("Embed a map").querySelector("fieldset")).toBeNull();
+    expect(
+      (h1.nextElementSibling as HTMLElement).compareDocumentPosition(group) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    const github = within(screen.getByRole("main")).getByRole("link", {
+      name: "View on GitHub",
+    });
+    expect(
+      group.compareDocumentPosition(github) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+  });
+
   it("leads with the umbrella's install command, ahead of the example and of any single package", () => {
     renderPage();
     const embed = section("Embed a map");
-    const install = within(embed).getByText(INSTALL_COMMAND);
+    const install = screen.getByText(INSTALL_COMMAND);
     expect(install.tagName).toBe("CODE");
     const example = within(embed).getByRole("region", { name: "index.html" });
     expect(
@@ -260,6 +309,23 @@ describe("the product page stands on its own", () => {
         .slice(0, 3)
         .map((link) => link.textContent),
     ).toEqual(["View on GitHub", "Try the playground", "View on npm"]);
+  });
+
+  it("offers View on GitHub as the one button and the playground and npm as two links in a row under it", () => {
+    renderPage();
+    const main = within(screen.getByRole("main"));
+    const github = main.getByRole("link", { name: "View on GitHub" });
+    const playground = main.getByRole("link", { name: "Try the playground" });
+    const npm = main.getByRole("link", { name: "View on npm" });
+    expect(github.className).toContain(styles.primaryAction);
+    const row = playground.closest("ul") as HTMLElement;
+    expect(row).not.toBeNull();
+    expect(within(row).getAllByRole("link")).toEqual([playground, npm]);
+    expect(row).not.toContainElement(github);
+    expect(playground.className).not.toContain(styles.primaryAction);
+    expect(
+      github.compareDocumentPosition(row) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
   });
 
   it("links to npm from exactly one place, the hero, and nowhere else", () => {

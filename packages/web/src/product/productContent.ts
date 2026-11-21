@@ -182,7 +182,7 @@ export const GITHUB_ACTION: InlineLink = {
   href: SOURCE_REPOSITORY_URL,
 };
 
-/** The secondary action, wherever the page offers it. */
+/** The playground link, a plain link in the hero's row under the button and again in the footer. */
 export const PLAYGROUND_ACTION: InlineLink = {
   text: "Try the playground",
   href: PLAYGROUND_PATH,
@@ -201,13 +201,12 @@ export const NPM_ACTION: InlineLink = {
 export const PRODUCT_TITLE =
   "MapCairn | Open-source SDK for accessible map applications";
 
-/** The page's one h1: what a team can build with MapCairn, and for whom. */
-export const HEADLINE =
-  "Build accessible, privacy-respecting map applications for the public";
+/** The page's one h1: what MapCairn makes, and for whom. */
+export const HEADLINE = "Accessible map interfaces for the public";
 
-/** The short paragraph under the h1: what MapCairn is, who it is for and what it gives them. */
+/** The sentence under the h1: what MapCairn is and what it promises, with the page's own hedge on the target and on what is requested. */
 export const LEDE: Line = [
-  "MapCairn is an open-source React SDK for teams building public-interest maps, such as open data and hazard maps. It gives you the whole interface around a MapLibre map, open data layers written as data, and every service behind a small interface you can replace.",
+  "MapCairn is an open-source React SDK for public-interest maps: the whole interface around a MapLibre map, with WCAG 2.2 AA as the target and, by default, nothing requested beyond the basemap until a person asks, unless a host turns on search suggestions.",
 ];
 
 /** The umbrella package and its three peers, as every package manager is asked to add them. */
@@ -249,6 +248,13 @@ export function installCopyLabel(manager: string): string {
 /** The group's accessible name, the install block's label. */
 export const INSTALL_GROUP_LABEL = "Package manager";
 
+/** The hero's install block: a command for each package manager, the first chosen. */
+export const HERO_INSTALL: Extract<Block, { kind: "install" }> = {
+  kind: "install",
+  label: INSTALL_GROUP_LABEL,
+  options: INSTALL_OPTIONS,
+};
+
 /** The copy button's words beside a code example, and what it announces. */
 export const COPY_CODE = {
   idle: "Copy code",
@@ -261,7 +267,7 @@ export const COPY_CODE = {
     `Could not copy ${file}. Select the code and copy it manually.`,
 } as const;
 
-/** The line under the hero's three actions. */
+/** The line under the hero's button and links. */
 export const HERO_NOTE: Line = [
   "Open source under the AGPL-3.0, which allows commercial use. Contributions are welcome.",
 ];
@@ -306,17 +312,12 @@ export const SECTIONS: readonly Section[] = [
       {
         kind: "paragraph",
         text: [
-          "Install ",
+          "The command at the top of the page installs ",
           { code: "@mapcairn/sdk" },
           ", the one package most apps need, with its peers. Its root holds the interface, and the MapLibre adapter that draws the map is at the subpath ",
           { code: "@mapcairn/sdk/adapter-maplibre" },
           ".",
         ],
-      },
-      {
-        kind: "install",
-        label: INSTALL_GROUP_LABEL,
-        options: INSTALL_OPTIONS,
       },
       { kind: "paragraph", text: INSTALL_REQUIREMENTS },
       {
@@ -534,7 +535,7 @@ export const SECTIONS: readonly Section[] = [
               [
                 "Install ",
                 { code: "@mapcairn/sdk" },
-                ", as the first section shows. Or start from the example app in ",
+                ", as the command at the top of the page shows. Or start from the example app in ",
                 { text: "examples/embed", href: EXAMPLE_APP_LINK.href },
                 " in the source on GitHub, which uses the SDK only through its public entry points. The playground shows the whole SDK working.",
               ],
