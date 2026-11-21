@@ -698,6 +698,7 @@ export type MessageKey =
   | "host.notes.privacy"
   | "host.notes.pinLookup"
   | "host.notes.routing"
+  | "host.credits.fixTheMap"
   | "host.title.map"
   | "privacy.title"
   | "privacy.updated"

@@ -695,6 +695,7 @@ const EXPECTED_PLACEHOLDERS: Record<MessageKey, readonly string[]> = {
   "host.notes.privacy": [],
   "host.notes.pinLookup": [],
   "host.notes.routing": [],
+  "host.credits.fixTheMap": [],
   "host.title.map": [],
   "privacy.title": [],
   "privacy.updated": ["date"],
