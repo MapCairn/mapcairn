@@ -17,7 +17,7 @@
 This repository also holds the playground, a reference site built from the SDK's packages.
 
 ```bash
-npm install @mapcairn/sdk@next react react-dom maplibre-gl
+npm install @mapcairn/sdk react react-dom maplibre-gl
 ```
 
 That needs React 19, `maplibre-gl` 6.18 or later and an ESM bundler that handles CSS imports (tested with Vite), and a TypeScript `moduleResolution` of `bundler`, `node16` or `nodenext`. [Embed a map](#embed-a-map) shows a whole app.
@@ -31,7 +31,7 @@ That needs React 19, `maplibre-gl` 6.18 or later and an ESM bundler that handles
 
 The playground in its light and dark themes, with the earthquakes layer on and a distance measured. Map data and tile credits are in [`ATTRIBUTIONS.md`](ATTRIBUTIONS.md).
 
-**Status:** a release candidate, for early adopters. The packages are on npm under the `next` tag, which is why the install line above says `@next` until `0.1.0`. The API is still settling, so a breaking change can land before `0.1.0`; the [changelog](CHANGELOG.md) lists each one. [`docs/guides/releasing.md`](docs/guides/releasing.md) describes how a release is made.
+**Status:** pre-1.0. While the version starts with `0.`, a minor release (the middle number) can contain a breaking change to the public API and a patch release (the last number) is not meant to, so a `^0.1.0` range takes patch releases but not the next minor release. The [changelog](CHANGELOG.md) names each breaking change the release finds, and [what counts as the public API](docs/guides/public-api.md) says what is covered.
 
 ## Embed a map
 

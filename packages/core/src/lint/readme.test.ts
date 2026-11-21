@@ -143,7 +143,7 @@ describe("README.md", () => {
       block.includes("@mapcairn/sdk"),
     );
     expect(install).toEqual([
-      "npm install @mapcairn/sdk@next react react-dom maplibre-gl\n",
+      "npm install @mapcairn/sdk react react-dom maplibre-gl\n",
     ]);
     expect(README.indexOf(install[0] ?? "")).toBeLessThan(
       README.indexOf(snippet),
@@ -362,7 +362,7 @@ describe("README.md", () => {
   it("shows the install command under the intro, before the screenshot, with the requirements and a link to Embed a map beside it", () => {
     const intro = README.indexOf("This repository also holds the playground");
     const install = README.indexOf(
-      "npm install @mapcairn/sdk@next react react-dom maplibre-gl",
+      "npm install @mapcairn/sdk react react-dom maplibre-gl",
     );
     const screenshot = README.indexOf("docs/images/playground-light.png");
     expect(intro).toBeGreaterThan(-1);

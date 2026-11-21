@@ -1,6 +1,6 @@
 {
   "name": "@mapcairn/theme",
-  "version": "0.1.0-rc.3",
+  "version": "0.1.0",
   "description": "MapCairn's typed design tokens, light and dark themes, and contrast checks; plain CSS, no plugin needed",
   "license": "AGPL-3.0-only",
   "repository": {

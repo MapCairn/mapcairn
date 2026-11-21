@@ -4,14 +4,14 @@ The MapLibre GL JS adapter for MapCairn's `MapAdapter` port, and the styles that
 
 Most apps should install [`@mapcairn/sdk`](https://github.com/MapCairn/mapcairn/tree/main/packages/sdk) instead, which has this package already: it re-exports it at `@mapcairn/sdk/adapter-maplibre`, and its root stays free of the map engine. Install `@mapcairn/adapter-maplibre` on its own as the advanced option, for a host that wants fewer dependencies.
 
-**Status:** a release candidate, for early adopters. The API is still settling, so a breaking change can land before `0.1.0`; the [changelog](https://github.com/MapCairn/mapcairn/blob/main/CHANGELOG.md) lists each one. Until `0.1.0`, add `@next` to the package name in the install commands below.
+**Status:** pre-1.0. While the version starts with `0.`, a minor release (the middle number) can contain a breaking change to the public API and a patch release (the last number) is not meant to, so a `^0.1.0` range takes patch releases but not the next minor release. The [changelog](https://github.com/MapCairn/mapcairn/blob/main/CHANGELOG.md) names each breaking change the release finds, and [what counts as the public API](https://github.com/MapCairn/mapcairn/blob/main/docs/guides/public-api.md) says what is covered.
 
 ## Install
 
 ```bash
-npm install @mapcairn/adapter-maplibre@next maplibre-gl
-pnpm add @mapcairn/adapter-maplibre@next maplibre-gl
-yarn add @mapcairn/adapter-maplibre@next maplibre-gl
+npm install @mapcairn/adapter-maplibre maplibre-gl
+pnpm add @mapcairn/adapter-maplibre maplibre-gl
+yarn add @mapcairn/adapter-maplibre maplibre-gl
 ```
 
 `maplibre-gl` is a peer dependency, so the app chooses the engine version (`^6.18.0`).

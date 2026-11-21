@@ -61,7 +61,7 @@ The same check then repeats the render, the three `tsc` runs, the plain Vite bui
 
 CI runs both in the `SDK packages` job, which is a required check on `main`, and the weekly Repeatable build compares the `dist` folders and the tarballs of two clean builds.
 
-The package READMEs are written for the npm page, which shows each one away from the repository. They install the package with npm, pnpm and yarn side by side, hold one **Status** line that says the packages are a release candidate (the `0.1.0` release changes it), and link to the repository only by absolute URL, because a relative link means nothing on npm. `packages/core/src/lint/packageReadmes.test.ts` checks this, and that the code in them imports only what `examples/embed` imports. The `repository.url` is `git+https://github.com/MapCairn/mapcairn.git`: npm's trusted publishing requires it to match the GitHub repository exactly, so a fork that publishes must change it.
+The package READMEs are written for the npm page, which shows each one away from the repository. They install the package with npm, pnpm and yarn side by side, hold one **Status** line that says what a `0.x` version promises (the text is in `docs/guides/releasing.md`, "The first release", step 4), and link to the repository only by absolute URL, because a relative link means nothing on npm. `packages/core/src/lint/packageReadmes.test.ts` checks this, and that the code in them imports only what `examples/embed` imports. The `repository.url` is `git+https://github.com/MapCairn/mapcairn.git`: npm's trusted publishing requires it to match the GitHub repository exactly, so a fork that publishes must change it.
 
 ## The report of the exports
 

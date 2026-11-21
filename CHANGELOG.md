@@ -4,6 +4,64 @@ What changed in each release of the SDK packages: `@mapcairn/core`, `@mapcairn/m
 
 Each entry says what you can now do and what to change when you upgrade, grouped by what it means for someone using the SDK. The same text is the body of the GitHub Release. The style guide is in `docs/guides/releasing.md`.
 
+## 0.1.0 (2026-11-21)
+
+This is MapCairn's first release. MapCairn is an open-source SDK for maps that serve the public: open data maps, hazard maps and the other maps a council, a research group or a community puts in front of people. It gives you the whole interface around a map, on MapLibre GL JS, React and a set of typed design tokens, so your team can spend its time on the data instead. The repository also holds the playground, a reference site built from these same packages.
+
+### What is new
+
+**One install.** For most apps, `@mapcairn/sdk` is the only MapCairn package you need:
+
+```bash
+npm install @mapcairn/sdk react react-dom maplibre-gl
+```
+
+It needs React 19 and `maplibre-gl` 6.18 or later. One stylesheet, `@mapcairn/sdk/styles.css`, brings in the tokens, the interface and the engine's styles. The interface comes from `@mapcairn/sdk` and the MapLibre adapter from `@mapcairn/sdk/adapter-maplibre`, so an app that never imports the adapter carries no map engine. The [quick start in the README](https://github.com/MapCairn/mapcairn/blob/main/README.md#embed-a-map) is a whole app in three files.
+
+**Six packages, released together.** They share one version and one changelog.
+
+- `@mapcairn/sdk`: everything below, from one name. It has no code of its own.
+- `@mapcairn/core`: the ports (the small interfaces every service sits behind), the pure logic, the basemap definitions, and an in-memory fake and a shared contract suite for each port. No React and no browser globals.
+- `@mapcairn/map`: the map interface, `MapView` and the services provider.
+- `@mapcairn/react`: generic React hooks.
+- `@mapcairn/theme`: the typed design tokens for the light and dark themes, and their contrast checks.
+- `@mapcairn/adapter-maplibre`: the MapLibre GL JS adapter and its engine styles, with `maplibre-gl` as a peer dependency.
+
+The single packages are the advanced option, for a host that wants fewer dependencies or only one piece, such as `@mapcairn/core` on its own in a test.
+
+**A finished map interface.** Out of the box you get:
+
+- a choice of basemaps, on a flat map or a globe;
+- place search, with suggestions as you type if the host turns them on;
+- measuring distance and area, and drawing and editing points, lines, polygons and circles;
+- importing and exporting shapes as GeoJSON, CSV and WKT, and links that share the view, the basemap, the layers and the shapes;
+- data layers written as data (feeds, raster and vector tiles, heatmaps, and queries for what is in view), with the key, the feature card and the list built for you;
+- a pin, whose address is looked up only when someone asks;
+- saving the map as an image;
+- zoom, compass and locate controls, and a bottom sheet that becomes a side panel on a wide screen.
+
+You can test all of it without WebGL or a network, on the fakes, and check an adapter of your own against the same contract suite as the fake.
+
+**Your own colours, checked.** `createThemeStylesheet` gives the interface your colours for its 14 colour roles, in light and dark, and refuses a theme that falls below WCAG 2.2 AA. `checkThemeContrast` tells you why. The [theming guide](https://github.com/MapCairn/mapcairn/blob/main/docs/guides/extending.md#theme-the-sdk-with-your-own-colours) walks through it.
+
+**English, Afrikaans, and your language.** Every word of the interface is looked up by key in a message catalogue. The SDK ships British English and the reference site adds Afrikaans. A host can supply a catalogue for any other language, written left to right or right to left, and the layout mirrors to match. The [translation guide](https://github.com/MapCairn/mapcairn/blob/main/docs/guides/translate-the-sdk.md) says what the SDK supplies and what a host supplies.
+
+**Directions, through a routing provider you choose.** Routes and travel-time areas go through a `RoutingProvider` that the host passes in. The SDK ships none and carries no provider's terms. The playground uses the public Valhalla server run by the FOSSGIS community, a shared service for light use under its own usage terms, with no promise that it stays up. A commercial or busy site should run its own Valhalla or pay for a routing service. [Add a routing provider](https://github.com/MapCairn/mapcairn/blob/main/docs/guides/extending.md#add-a-routing-provider) has the details.
+
+**Accessible.** WCAG 2.2 AA is the target, in both themes. Every gesture has a keyboard or single-tap equivalent, focus is always visible, and changes on the map are announced to screen readers through one live region. Automated accessibility checks run on every pull request.
+
+**Private by default.** The SDK has no accounts and no tracking. Apart from the basemap's tiles, nothing is requested until a person asks: a layer loads when it is turned on, a search when it is submitted, an address or a route when one is asked for. Search suggestions are the one exception, and only if the host turns them on, because they send the text typed so far. The panels that tell people what is sent take the host's own words. The reference site has no tracking beyond cookieless page views, and [its privacy policy](https://github.com/MapCairn/mapcairn/blob/main/PRIVACY.md) says plainly what each provider receives, including that place search and routing receive the site's address as the referrer, because their terms ask for one.
+
+**Open source.** MapCairn is licensed under AGPL-3.0-only, an open-source licence that allows commercial use. If you distribute an app that includes the SDK, including by serving it to people's browsers, you must offer them the corresponding source of the code you combine with the SDK and serve with it, under the same licence. If you modify the SDK and let people interact with your modified version over a network, you must offer them its corresponding source. [What the licence means for your project](https://github.com/MapCairn/mapcairn/blob/main/docs/guides/licence.md) explains it in plain words. A licence for closed-source use is not on offer yet. Every production dependency of the SDK packages has a permissive licence, and the lint checks that on every change.
+
+**Where it stands.** `0.1.0` is for early adopters. While the version starts with `0.`, a minor release can contain a breaking change to the public API and a patch release is not meant to, so a `^0.1.0` range takes patch releases but not the next minor release. Each release's notes name the breaking changes it finds, and [what counts as the public API](https://github.com/MapCairn/mapcairn/blob/main/docs/guides/public-api.md) says what is covered. Some things are not here yet: there is no generated API reference site, so the guides and the type declarations are what you read; no map engine but MapLibre; no tilt, terrain or 3D buildings; no mounting without React; no clustering of dense points and no offline use. The [capability matrix](https://github.com/MapCairn/mapcairn/blob/main/docs/guides/capability-matrix.md) lists what MapCairn has, partly has and lacks.
+
+**Where to ask, report and help.** Ask a question in [Discussions](https://github.com/MapCairn/mapcairn/discussions), and report a bug in the [issue tracker](https://github.com/MapCairn/mapcairn/issues). Report a security problem privately, as [`SECURITY.md`](https://github.com/MapCairn/mapcairn/blob/main/SECURITY.md) explains, not in an issue. To contribute, [`CONTRIBUTING.md`](https://github.com/MapCairn/mapcairn/blob/main/CONTRIBUTING.md) has the checks and conventions, and a first pull request asks you to agree to the [contributor licence agreement](https://github.com/MapCairn/mapcairn/blob/main/CLA.md).
+
+### Thanks
+
+Thank you for reading this far and for giving MapCairn a try. If it helps you put a useful map in front of the public, tell us about it in Discussions: that is how the next release gets better.
+
 ## 0.1.0-rc.3 (2026-11-21)
 
 ### What is new
