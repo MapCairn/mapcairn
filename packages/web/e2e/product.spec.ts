@@ -359,7 +359,7 @@ test.describe("the product page", () => {
       await product.goto();
       await expect(page.getByTestId("install-copy-row")).toBeVisible();
       const row = await page.getByTestId("install-copy-row").boundingBox();
-      const button = await product.installCopy(COMMANDS.npm).boundingBox();
+      const button = await product.installCopy("npm").boundingBox();
       expect(button?.y ?? 0).toBeGreaterThanOrEqual(row?.y ?? 0);
       expect((button?.y ?? 0) + (button?.height ?? 0)).toBeLessThanOrEqual(
         (row?.y ?? 0) + (row?.height ?? 0) + 1,
@@ -410,14 +410,14 @@ test.describe("the product page", () => {
         expect(box?.width ?? 0, manager).toBeGreaterThanOrEqual(44);
         expect(box?.height ?? 0, manager).toBeGreaterThanOrEqual(44);
       }
-      const copy = await product.installCopy(COMMANDS.npm).boundingBox();
+      const copy = await product.installCopy("npm").boundingBox();
       expect(copy?.height ?? 0).toBeGreaterThanOrEqual(44);
       await product.installChoice("pnpm").click();
       await product.installChoice("pnpm").focus();
       await page.keyboard.press("Tab");
       await expect(product.installCommand("pnpm")).toBeFocused();
       await page.keyboard.press("Tab");
-      await expect(product.installCopy(COMMANDS.pnpm)).toBeFocused();
+      await expect(product.installCopy("pnpm")).toBeFocused();
     });
 
     test("copy the chosen manager's command, say Copied and announce it", async ({
@@ -427,14 +427,14 @@ test.describe("the product page", () => {
       const product = new ProductPage(page);
       await product.goto();
       await product.installChoice("bun").click();
-      await product.installCopy(COMMANDS.bun).click();
+      await product.installCopy("bun").click();
       await expect(
         product.installGroup.getByRole("button", {
-          name: `Copied, ${COMMANDS.bun}`,
+          name: "Copied, bun install command",
         }),
       ).toBeFocused();
       await expect(page.getByTestId("live-region-polite")).toHaveText(
-        `Code copied, ${COMMANDS.bun}`,
+        "Code copied, bun install command",
       );
       await expect.poll(() => copiedTexts(page)).toEqual([COMMANDS.bun]);
       // The embedding example's own button is a different button.
@@ -447,9 +447,9 @@ test.describe("the product page", () => {
       await recordClipboard(page, { ok: false });
       const product = new ProductPage(page);
       await product.goto();
-      await product.installCopy(COMMANDS.npm).click();
+      await product.installCopy("npm").click();
       await expect(page.getByTestId("live-region-assertive")).toHaveText(
-        `Could not copy ${COMMANDS.npm}. Select the code and copy it manually.`,
+        "Could not copy npm install command. Select the code and copy it manually.",
       );
       const selectable = await product
         .installCommand("npm")
@@ -559,7 +559,7 @@ test.describe("the product page", () => {
       await product.installChoice("pnpm").click();
       await expect(product.installCommand("pnpm")).toBeVisible();
       release();
-      const button = product.installCopy(COMMANDS.pnpm);
+      const button = product.installCopy("pnpm");
       await button.click();
       await expect.poll(() => copiedTexts(page)).toEqual([COMMANDS.pnpm]);
       await expect(product.installChoice("pnpm")).toBeChecked();

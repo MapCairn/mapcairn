@@ -162,6 +162,11 @@ export function installCommandLabel(manager: string): string {
   return `Install command for ${manager}`;
 }
 
+/** What a copy button names when it copies one manager's command, in its name and its announcements. */
+export function installCopyLabel(manager: string): string {
+  return `${manager} install command`;
+}
+
 /** The group's accessible name, the install block's label. */
 export const INSTALL_GROUP_LABEL = "Package manager";
 

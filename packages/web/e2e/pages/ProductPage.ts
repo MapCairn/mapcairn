@@ -71,10 +71,10 @@ export class ProductPage {
     });
   }
 
-  /** The install block's copy button, named for the command it copies. */
-  installCopy(command: string): Locator {
+  /** The install block's copy button, named for the manager's command it copies. */
+  installCopy(manager: string): Locator {
     return this.installGroup.getByRole("button", {
-      name: `Copy code, ${command}`,
+      name: `Copy code, ${manager} install command`,
     });
   }
 

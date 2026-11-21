@@ -5,7 +5,11 @@ import { VisuallyHidden } from "@mapcairn/map";
 import { useEffect, useId, useRef, useState } from "react";
 import { CopyCodeButton } from "./CopyCodeButton";
 import * as styles from "./ProductPage.css";
-import { type InstallOption, installCommandLabel } from "./productContent";
+import {
+  type InstallOption,
+  installCommandLabel,
+  installCopyLabel,
+} from "./productContent";
 
 /** Props for {@link InstallBlock}. */
 export interface InstallBlockProps {
@@ -43,7 +47,7 @@ export function InstallBlock({ label, options, clipboard }: InstallBlockProps) {
     setRunning(true);
   }, []);
 
-  const command = options.find((option) => option.manager === chosen)?.command;
+  const current = options.find((option) => option.manager === chosen);
 
   return (
     <fieldset ref={group} className={styles.install}>
@@ -75,10 +79,10 @@ export function InstallBlock({ label, options, clipboard }: InstallBlockProps) {
           </div>
         ))}
         <div className={styles.installCopy} data-testid="install-copy-row">
-          {running && command !== undefined && (
+          {running && current !== undefined && (
             <CopyCodeButton
-              code={command}
-              label={command}
+              code={current.command}
+              label={installCopyLabel(current.manager)}
               clipboard={clipboard}
             />
           )}

@@ -135,7 +135,7 @@ describe("the install block on the page", () => {
     render(<ProductPage clipboard={new FakeClipboard()} />);
     expect(
       await within(installGroup()).findByRole("button", {
-        name: `Copy code, ${INSTALL_COMMAND}`,
+        name: "Copy code, npm install command",
       }),
     ).toBeInTheDocument();
   });
@@ -147,7 +147,7 @@ describe("the install block on the page", () => {
       render(<ProductPage clipboard={clipboard} />);
       fireEvent.click(screen.getByRole("radio", { name: manager }));
       const button = await within(installGroup()).findByRole("button", {
-        name: `Copy code, ${command}`,
+        name: `Copy code, ${manager} install command`,
       });
       fireEvent.click(button);
       await waitFor(() => expect(clipboard.written).toEqual([command]));
@@ -156,7 +156,7 @@ describe("the install block on the page", () => {
       );
       expect(
         within(installGroup()).getByRole("button", {
-          name: `Copied, ${command}`,
+          name: `Copied, ${manager} install command`,
         }),
       ).toBeInTheDocument();
     },
@@ -179,7 +179,7 @@ describe("the install block on the page", () => {
       hydrateRoot(container, <ProductPage clipboard={clipboard} />);
     });
     const button = await within(container).findByRole("button", {
-      name: "Copy code, yarn add @mapcairn/sdk react react-dom maplibre-gl",
+      name: "Copy code, yarn install command",
     });
     fireEvent.click(button);
     await waitFor(() =>
@@ -196,12 +196,12 @@ describe("the install block on the page", () => {
     render(<ProductPage clipboard={clipboard} />);
     fireEvent.click(
       await within(installGroup()).findByRole("button", {
-        name: `Copy code, ${INSTALL_COMMAND}`,
+        name: "Copy code, npm install command",
       }),
     );
     await waitFor(() =>
       expect(screen.getByTestId("live-region-assertive")).toHaveTextContent(
-        `Could not copy ${INSTALL_COMMAND}. Select the code and copy it manually.`,
+        "Could not copy npm install command. Select the code and copy it manually.",
       ),
     );
     expect(screen.getByText(INSTALL_COMMAND)).toBeInTheDocument();
@@ -216,11 +216,11 @@ describe("the install block on the page", () => {
       fireEvent.click(screen.getByRole("radio", { name: "bun" }));
       fireEvent.click(
         await within(installGroup()).findByRole("button", {
-          name: /^Copy code, bun add/,
+          name: "Copy code, bun install command",
         }),
       );
       await within(installGroup()).findByRole("button", {
-        name: /^Copied, bun add/,
+        name: "Copied, bun install command",
       });
       expect(stored).not.toHaveBeenCalled();
       expect(sent).not.toHaveBeenCalled();
