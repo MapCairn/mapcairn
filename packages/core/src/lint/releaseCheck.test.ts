@@ -1,5 +1,9 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
+import { spawnSync } from "node:child_process";
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import path from "node:path";
 import { describe, expect, it } from "vitest";
 import {
   buildReport,
@@ -782,7 +786,7 @@ describe("readReleasedAsTagged", () => {
     expect(released).toBe(true);
     expect(calls).toEqual([
       ["merge-base", "--is-ancestor", "v0.1.0-rc.3", "HEAD"],
-      ["diff", "--quiet", "v0.1.0-rc.3", "HEAD", "--", "CHANGELOG.md"],
+      ["diff", "--quiet", "v0.1.0-rc.3", "--", "CHANGELOG.md"],
     ]);
   });
 
@@ -816,5 +820,27 @@ describe("readReleasedAsTagged", () => {
         runGit: (args: string[]) => (args[0] === "diff" ? no : ok),
       }),
     ).toBe(false);
+  });
+
+  it("counts an uncommitted edit of CHANGELOG.md as a change since the tag, in a real repository", () => {
+    const root = mkdtempSync(path.join(tmpdir(), "release-check-"));
+    try {
+      const git = (...args: string[]) =>
+        spawnSync("git", args, { cwd: root, encoding: "utf8" });
+      git("init", "-q");
+      git("config", "user.email", "test@example.test");
+      git("config", "user.name", "Test");
+      git("config", "commit.gpgsign", "false");
+      writeFileSync(path.join(root, "CHANGELOG.md"), "## 0.1.0-rc.3\n");
+      git("add", "CHANGELOG.md");
+      git("commit", "-q", "-m", "release");
+      git("tag", "v0.1.0-rc.3");
+      const input = { root, version: "0.1.0-rc.3", tags: ["v0.1.0-rc.3"] };
+      expect(readReleasedAsTagged(input)).toBe(true);
+      writeFileSync(path.join(root, "CHANGELOG.md"), "## 0.1.0-rc.4\n");
+      expect(readReleasedAsTagged(input)).toBe(false);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
   });
 });

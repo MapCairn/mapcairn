@@ -703,7 +703,8 @@ function readChangelog(root, version) {
 /**
  * Whether the checkout is in the state between releases: the current version
  * is tagged, the tag is an ancestor of HEAD, and CHANGELOG.md has not changed
- * since it. A Release branch changes CHANGELOG.md, so a tagged version there
+ * since it, committed or not (the working tree is compared). A Release branch
+ * changes CHANGELOG.md, so a tagged version there
  * is still a problem.
  *
  * @param {object} input
@@ -720,7 +721,7 @@ export function readReleasedAsTagged({ root, version, tags, runGit = git }) {
   }
   return (
     runGit(["merge-base", "--is-ancestor", tag, "HEAD"], root).ok &&
-    runGit(["diff", "--quiet", tag, "HEAD", "--", "CHANGELOG.md"], root).ok
+    runGit(["diff", "--quiet", tag, "--", "CHANGELOG.md"], root).ok
   );
 }
 
