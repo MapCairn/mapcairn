@@ -92,11 +92,14 @@ describe("the install block on the page", () => {
     expect(screen.getByRole("radio", { name: "pnpm" })).not.toBeChecked();
   });
 
-  it("holds each command in its own code block, under the Embed a map heading and not in a sentence", () => {
+  it("holds each command in its own code block, in the hero, above the first section, and not in a sentence", () => {
     render(<ProductPage clipboard={new FakeClipboard()} />);
-    const embed = screen.getByRole("region", { name: "Embed a map" });
+    const group = installGroup();
+    expect(
+      screen.getByRole("region", { name: "Embed a map" }).contains(group),
+    ).toBe(false);
     for (const [manager, command] of COMMANDS) {
-      const code = within(embed).getByText(command);
+      const code = within(group).getByText(command);
       expect(code.tagName).toBe("CODE");
       expect(code.closest("pre")).not.toBeNull();
       expect(code.closest("pre")).toHaveAttribute(

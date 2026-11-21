@@ -104,7 +104,7 @@ export const image = style({
 /**
  * A plain colour in place of the preview, for a basemap with no preview, one
  * whose preview failed to load, and Save data mode: the basemap's own swatch
- * colour when it has one, else the map's background colour, so the tile
+ * colour when it has one, else the light default's land colour (set in code), so the tile
  * keeps its size without an image. The hairline keeps it visible against a
  * sheet of a similar colour.
  */

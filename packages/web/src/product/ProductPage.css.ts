@@ -4,17 +4,21 @@ import { focusRing, tokens } from "@mapcairn/theme";
 import { globalStyle, style } from "@vanilla-extract/css";
 
 /*
- * The product page: calm and in one reading column. The hero carries the
- * pitch, the three actions and the survey sheet beside them; every section
- * below is a heading and a few short blocks, with the detail one tap away in
- * native disclosures. Mobile first: one column at 320 px; from the `wide`
- * width the hero puts the art beside its words. Tokens only.
+ * The product page: calm and in one reading column, set like a survey sheet.
+ * The hero carries the pitch, the install block, the actions and the survey sheet
+ * beside them; every section below is a graticule rule (a ruler's ticks, in the
+ * blue of the survey marks), a heading and a few short blocks, with the detail
+ * one tap away in native disclosures, except what you get, which is a legend
+ * and always shown. Mobile first: one column at 320 px; from the `wide` width
+ * the hero puts the art beside its words. The type is the large step for
+ * reading, the title step for section headings and the small step for
+ * captions, never below 13 px. Tokens only.
  */
 
 /** From here the hero puts its art beside its words. */
 const WIDE = "screen and (min-width: 56rem)";
 
-/** From here the actions sit side by side, wrapping onto a second row when they do not fit. */
+/** From here the button and the two links share a line, and the legend's text sits beside its name. */
 const ROOMY = "screen and (min-width: 30rem)";
 
 /** The reading width of the sections, about 65 characters of the large type. */
@@ -23,14 +27,71 @@ const MEASURE = "40rem";
 /** The tallest the code example gets before it scrolls inside its own box. */
 const CODE_HEIGHT = "26rem";
 
-/** The widest the art gets, so it stays beside the words rather than taking over. */
-const ART_WIDTH = "30rem";
+/** The widest the closing relief strip gets: its sheet is 640 units wide, so it is drawn at one pixel to the unit. */
+const ART_WIDTH = "40rem";
+
+/** The widest a plate gets: its capture's width and its latitude collar, a little over, so its picture is shown no larger than it was taken. */
+const PLATE_WIDTH = "26rem";
+
+/** The width of a plate's latitude collar, and the height of its longitude collar: the small step's line and a margin for the tick. */
+const LATITUDE_COLLAR = "1.5rem";
+const LONGITUDE_COLLAR = "1.75rem";
 
 /** The widest the page gets. */
 const PAGE_WIDTH = "60rem";
 
 /** The space between sections: two of the largest steps. */
 const SECTION_SPACE = `calc(${tokens.space.xl} * 2)`;
+
+/**
+ * A section's top, the largest step in all: the space above its rule, the rule
+ * and the space between the rule and its heading, which add up to one
+ * `space.xl`, so the rule sits on its heading like a ruler on a line.
+ */
+const RULE_HEIGHT = tokens.space.sm;
+
+/** The space between a section's rule and its heading. */
+const RULE_TO_HEADING = tokens.space.xs;
+
+/** The distance between the rule's ticks, and a long tick every fifth. */
+const TICK_PITCH = tokens.size.control;
+const LONG_TICK_PITCH = `calc(${TICK_PITCH} * 5)`;
+
+/** How wide a tick is: a long one is twice a short one. */
+const TICK_WIDTH = "1px";
+const LONG_TICK_WIDTH = "2px";
+
+/**
+ * The graticule rule: a baseline with a short tick every 48 px and a long one
+ * every 240 px, all of it decoration, in flow so it takes its own height. It
+ * opens every section and the closing relief strip, so the page keeps one
+ * motif. The ticks are the blue of the survey marks, a graphic colour that
+ * keeps 3:1 on the page in both themes; the pattern is the same read from
+ * either end, so it needs no mirrored copy.
+ */
+const graticuleRule = {
+  content: '""',
+  display: "block",
+  // The border-box keeps the rule 12 px tall with the forced-colours border added.
+  boxSizing: "border-box",
+  height: RULE_HEIGHT,
+  marginBlockStart: tokens.space.sm,
+  marginBlockEnd: RULE_TO_HEADING,
+  backgroundRepeat: "no-repeat",
+  backgroundPosition: "0 100%",
+  backgroundSize: `100% 100%, 100% ${tokens.space.xs}, 100% 1px`,
+  backgroundImage: [
+    `repeating-linear-gradient(90deg, ${tokens.color.mapMeasureLine} 0 ${LONG_TICK_WIDTH}, transparent ${LONG_TICK_WIDTH} ${LONG_TICK_PITCH})`,
+    `repeating-linear-gradient(90deg, ${tokens.color.mapMeasureLine} 0 ${TICK_WIDTH}, transparent ${TICK_WIDTH} ${TICK_PITCH})`,
+    `linear-gradient(${tokens.color.controlBoundary}, ${tokens.color.controlBoundary})`,
+  ].join(", "),
+} as const;
+
+/** Forced colours repaint no background image, so the rule is a plain line in the system's text colour. */
+const graticuleRuleForced = {
+  backgroundImage: "none",
+  borderBlockEnd: "1px solid CanvasText",
+} as const;
 
 /*
  * Interaction states. Hover shows only where a pointer can hover, so a touch
@@ -222,10 +283,147 @@ export const heroText = style({
   minWidth: 0,
 });
 
-/** The hero's art: quiet, and only as wide as it needs to be. */
+/** The hero's picture: only as wide as its capture, so it is never drawn larger than it was taken. */
 export const heroArt = style({
   minWidth: 0,
+  maxWidth: PLATE_WIDTH,
+});
+
+/**
+ * The relief strip's place at the end of the page, after the last section and
+ * before the footer: the way ends at the cairn. It opens with the same
+ * graticule rule as a section and keeps the page's column and the strip's own
+ * width.
+ */
+export const closing = style({
+  ...pageColumn,
+  paddingBlockEnd: tokens.space.xl,
+  selectors: {
+    "&::before": { ...graticuleRule, marginBlockEnd: tokens.space.md },
+  },
+  "@media": {
+    [WIDE]: { paddingInline: tokens.space.xl },
+    [FORCED]: {
+      selectors: {
+        "&::before": graticuleRuleForced,
+      },
+    },
+  },
+});
+
+/** The relief strip, no wider than its sheet. */
+export const closingArt = style({
   maxWidth: ART_WIDTH,
+});
+
+/**
+ * The sheet: the picture in its neatline, the latitude collar down its start
+ * edge and the longitude collar under it, which hold the ticks and their
+ * labels.
+ */
+export const plateSheet = style({
+  display: "grid",
+  gridTemplateColumns: `${LATITUDE_COLLAR} minmax(0, 1fr)`,
+  gridTemplateRows: `auto ${LONGITUDE_COLLAR}`,
+  gridTemplateAreas: '"latitude frame" ". longitude"',
+});
+
+/** The picture's neatline: a fine rule round it, in the control boundary colour. */
+export const plateFrame = style({
+  gridArea: "frame",
+  lineHeight: 0,
+  border: `1px solid ${tokens.color.controlBoundary}`,
+  borderRadius: tokens.radius.inner,
+  overflow: "hidden",
+});
+
+/** One capture. Its width and height attributes give the shape that is held before it loads. */
+export const plateImage = style({
+  display: "block",
+  width: "100%",
+  height: "auto",
+});
+
+/** The light capture, shown unless the page is dark. */
+export const plateLight = style({});
+
+/** The dark capture, not drawn unless the page is dark, so it is never fetched in the light theme. */
+export const plateDark = style({
+  display: "none",
+});
+
+// The page's theme chooses the capture with CSS alone: an explicit choice on
+// the root first, and with none the operating system's, as the tokens do.
+globalStyle(`[data-theme="dark"] ${plateLight}`, { display: "none" });
+globalStyle(`[data-theme="dark"] ${plateDark}`, { display: "block" });
+globalStyle(`:root:not([data-theme]) ${plateLight}`, {
+  "@media": { "(prefers-color-scheme: dark)": { display: "none" } },
+});
+globalStyle(`:root:not([data-theme]) ${plateDark}`, {
+  "@media": { "(prefers-color-scheme: dark)": { display: "block" } },
+});
+
+/** A collar: SVG that fills its cell, with ink that follows the text colour, so forced colours repaint it. */
+const collar = {
+  overflow: "visible",
+  color: tokens.color.textMuted,
+  fontFamily: tokens.type.family,
+  fontSize: tokens.type.small.size,
+  fontVariantNumeric: "tabular-nums",
+} as const;
+
+/** The latitude collar, down the picture's start edge. */
+export const plateLatitude = style({
+  ...collar,
+  gridArea: "latitude",
+  width: "100%",
+  height: "100%",
+});
+
+/** The longitude collar, under the picture. */
+export const plateLongitude = style({
+  ...collar,
+  gridArea: "longitude",
+  width: "100%",
+  height: "100%",
+});
+
+/** A tick: a fine line in the collar's ink. */
+export const plateTick = style({
+  stroke: "currentColor",
+  strokeWidth: 1,
+  vectorEffect: "non-scaling-stroke",
+});
+
+/** A latitude label, read downwards beside its tick, centred on it. */
+export const plateLatitudeLabel = style({
+  fill: "currentColor",
+  writingMode: "vertical-rl",
+  textAnchor: "middle",
+  dominantBaseline: "central",
+});
+
+/** A longitude label, centred under its tick. */
+export const plateLongitudeLabel = style({
+  fill: "currentColor",
+  textAnchor: "middle",
+  dominantBaseline: "central",
+});
+
+/** The words under a plate: what it shows, the basemaps, then the credits. */
+export const plateCaption = style({
+  display: "flex",
+  flexDirection: "column",
+  gap: tokens.space.xxs,
+  fontSize: tokens.type.small.size,
+  lineHeight: tokens.type.small.lineHeight,
+  letterSpacing: tokens.type.small.tracking,
+  color: tokens.color.textMuted,
+});
+
+/** The credits line: the map's own credits, linked as the map links them. */
+export const plateCredits = style({
+  textWrap: "pretty",
 });
 
 /** The page's one h1, at the display size on a wide screen and smaller on a phone. */
@@ -245,16 +443,36 @@ export const lede = style({
   color: tokens.color.textMuted,
 });
 
-/** The three actions, the same height and side by side where there is room, stacked on a narrow phone. */
+/**
+ * The actions: the one button, then the row of two links. On a phone the button
+ * is the full width and the links sit at either end of the row under it; from
+ * the roomy width the button and the links share one line.
+ */
 export const actions = style({
-  display: "grid",
-  gridTemplateColumns: "minmax(0, 1fr)",
+  display: "flex",
+  flexDirection: "column",
   gap: tokens.space.xs,
   "@media": {
     [ROOMY]: {
-      display: "flex",
+      flexDirection: "row",
       flexWrap: "wrap",
+      alignItems: "center",
+      columnGap: tokens.space.lg,
     },
+  },
+});
+
+/** The two links: at either end of their row on a phone, side by side from the roomy width. */
+export const heroLinks = style({
+  display: "flex",
+  flexWrap: "wrap",
+  justifyContent: "space-between",
+  gap: tokens.space.md,
+  margin: 0,
+  padding: 0,
+  listStyle: "none",
+  "@media": {
+    [ROOMY]: { justifyContent: "flex-start" },
   },
 });
 
@@ -324,33 +542,8 @@ export const primaryAction = style({
   },
 });
 
-/** The secondary actions: Try the playground and View on npm. Under a pointer it also takes the accent tint and edge. */
-export const secondaryAction = style({
-  ...action,
-  border: `1px solid ${tokens.color.controlBoundary}`,
-  backgroundColor: tokens.color.surfaceRaised,
-  color: tokens.color.text,
-  selectors: {
-    "&:focus-visible": focusRing,
-    "&:active": {
-      ...actionPressed,
-      borderColor: tokens.color.accent,
-      backgroundColor: tokens.color.accentTint,
-    },
-  },
-  "@media": {
-    [HOVER]: {
-      selectors: {
-        ...actionHover,
-        "&:hover": {
-          borderColor: tokens.color.accent,
-          backgroundColor: tokens.color.accentTint,
-        },
-      },
-    },
-    ...actionHoverForced,
-  },
-});
+/** A link of the hero's row: the header link's look. */
+export const heroLink = style([navLink]);
 
 /** The quiet line under the actions. */
 export const note = style({
@@ -363,14 +556,24 @@ export const note = style({
 /** One section: a heading and a few blocks, in the reading column, with room around it. Neighbours' padding adds up to two of the largest steps between them. */
 export const section = style({
   ...pageColumn,
-  paddingBlock: tokens.space.xl,
+  paddingBlockStart: 0,
+  paddingBlockEnd: tokens.space.xl,
   display: "flex",
   flexDirection: "column",
   alignItems: "stretch",
   scrollMarginBlockStart: tokens.space.md,
+  selectors: {
+    "&::before": graticuleRule,
+  },
   "@media": {
     [WIDE]: {
       paddingInline: tokens.space.xl,
+    },
+    /* Forced colours repaint no background image, so the rule is a plain line in the system's text colour. */
+    [FORCED]: {
+      selectors: {
+        "&::before": graticuleRuleForced,
+      },
     },
   },
 });
@@ -380,6 +583,25 @@ globalStyle(`${section} > *`, {
   maxWidth: MEASURE,
 });
 
+/**
+ * A plate: a capture of the playground on a survey sheet. It is as wide as the
+ * space it has, up to the width of its capture, so the interface text in the
+ * picture is never drawn larger than it was taken.
+ */
+export const plate = style({
+  margin: 0,
+  width: "100%",
+  maxWidth: PLATE_WIDTH,
+  display: "flex",
+  flexDirection: "column",
+  gap: tokens.space.sm,
+  selectors: {
+    // In a section, the rule that holds every block to the reading width
+    // would win over `maxWidth` above; this is the more specific one.
+    [`${section} > &`]: { maxWidth: PLATE_WIDTH },
+  },
+});
+
 /** A section's heading. */
 export const sectionHeading = style({
   margin: 0,
@@ -387,11 +609,13 @@ export const sectionHeading = style({
   lineHeight: tokens.type.title.lineHeight,
   letterSpacing: tokens.type.title.tracking,
   fontWeight: tokens.type.weight.semibold,
+  textWrap: "balance",
 });
 
 /** A paragraph. */
 export const paragraph = style({
   margin: 0,
+  textWrap: "pretty",
 });
 
 /** A subheading inside a section. */
@@ -485,8 +709,8 @@ export const codeFile = style({
 });
 
 /**
- * The copy button: a quiet 48 px pill that reads like the secondary action,
- * with the same hover and pressed states. Its words and icon say what the
+ * The copy button: a quiet 48 px pill that reads like the install
+ * block's pills, with the same hover and pressed states. Its words and icon say what the
  * last copy did.
  */
 export const copyButton = style({
@@ -576,7 +800,7 @@ export const installOption = style({
 });
 
 /**
- * A choice, a 48 px pill that reads like the secondary action. The chosen one
+ * A choice, a 48 px pill: outlined, raised on hover and tinted when pressed. The chosen one
  * takes the accent edge and tint, and is underlined so colour is not the only
  * sign, in forced colours too.
  */
@@ -652,6 +876,8 @@ export const installCommand = style([
   {
     order: 2,
     flexBasis: "100%",
+    // The command wraps at its spaces instead of scrolling sideways, so a phone shows all of it.
+    whiteSpace: "pre-wrap",
     // Without `:has()` every command shows, each in its named region, so none is lost.
     "@supports": {
       "selector(:has(*))": {
@@ -692,6 +918,72 @@ export const codeMuted = style({
 /** A component or type name in the code example: the heavier weight, not a second colour. */
 export const codeName = style({
   fontWeight: tokens.type.weight.semibold,
+});
+
+/** The legend: one entry for each thing you get, with no card, border or shadow around it. */
+export const legend = style({
+  display: "flex",
+  flexDirection: "column",
+  gap: tokens.space.lg,
+  margin: 0,
+  padding: 0,
+  listStyle: "none",
+});
+
+/**
+ * One entry. On a phone the symbol and the name share a row and what it means
+ * runs the full width beneath them, so the text keeps its measure; from the
+ * `ROOMY` width the symbol is a key column beside the name and the text.
+ */
+export const legendItem = style({
+  display: "grid",
+  gridTemplateColumns: `${tokens.size.control} minmax(0, 1fr)`,
+  columnGap: tokens.space.md,
+  rowGap: tokens.space.xs,
+  alignItems: "center",
+  "@media": {
+    [ROOMY]: {
+      rowGap: tokens.space.xxs,
+      alignItems: "start",
+    },
+  },
+});
+
+/**
+ * An entry's symbol: its icon in the accent on the accent tint, as a map's key
+ * draws a symbol beside its words. In forced colours the tint is dropped, and
+ * the icon takes the system's text colour.
+ */
+export const legendSymbol = style({
+  display: "inline-flex",
+  alignItems: "center",
+  justifyContent: "center",
+  width: tokens.size.control,
+  height: tokens.size.control,
+  borderRadius: tokens.radius.control,
+  backgroundColor: tokens.color.accentTint,
+  color: tokens.color.accent,
+  "@media": {
+    [ROOMY]: { gridRow: "1 / span 2" },
+    [FORCED]: { color: "CanvasText" },
+  },
+});
+
+/** An entry's name: the semibold weight at the reading size. */
+export const legendName = style({
+  fontWeight: tokens.type.weight.semibold,
+  textWrap: "balance",
+});
+
+/** What an entry means: quieter than its name. */
+export const legendText = style({
+  gridColumn: "1 / -1",
+  margin: 0,
+  color: tokens.color.textMuted,
+  textWrap: "pretty",
+  "@media": {
+    [ROOMY]: { gridColumn: "2" },
+  },
 });
 
 /** A list of disclosures, ruled apart. */
@@ -813,7 +1105,14 @@ export const footer = style({
   },
 });
 
-/** The footer's links, wrapping onto as many rows as they need. */
+/** The footer's two groups of links, project links first and the site's own after, with a small gap between rows and groups. */
+export const footerNav = style({
+  display: "flex",
+  flexDirection: "column",
+  rowGap: tokens.space.xxs,
+});
+
+/** One group of the footer's links, wrapping onto as many rows as it needs. */
 export const footerLinks = style({
   display: "flex",
   flexWrap: "wrap",

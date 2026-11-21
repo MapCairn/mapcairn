@@ -247,6 +247,7 @@ export interface BasemapCatalogue {
     readonly defaultId: string;
     get(id: string): BasemapDefinition | undefined;
     resolve(id: string): BasemapDefinition;
+    readonly themeDefaultIds?: ThemeDefaultIds;
 }
 
 // @public
@@ -575,7 +576,7 @@ export interface CoordinateWords {
 export function coordinateWordsFor(catalogue: MessageCatalogue): CoordinateWords;
 
 // @public
-export function createBasemapCatalogue(basemaps: readonly BasemapDefinition[], defaultId?: string | undefined): BasemapCatalogue;
+export function createBasemapCatalogue(basemaps: readonly BasemapDefinition[], defaultId?: string | undefined, themeDefaultIds?: ThemeDefaultIds): BasemapCatalogue;
 
 // @public
 export function createDecoderRegistry(extra?: Readonly<Record<string, Decoder>>): DecoderRegistry;
@@ -704,6 +705,12 @@ export const DEFAULT_BASEMAP_BACKGROUND = "#f8f4f0";
 export const DEFAULT_BASEMAP_ID = "bright";
 
 // @public
+export const DEFAULT_DARK_BASEMAP_BACKGROUND = "#45516e";
+
+// @public
+export const DEFAULT_DARK_BASEMAP_ID = "fiord";
+
+// @public
 export const DEFAULT_FAKE_FIX: LocationFix;
 
 // @public
@@ -732,6 +739,9 @@ export const DEFAULT_MARKER_RADIUS = 6;
 
 // @public
 export const DEFAULT_SELECTION_LIMIT = 200;
+
+// @public
+export function defaultBasemapFor(catalogue: BasemapCatalogue, theme: ResolvedTheme): BasemapDefinition;
 
 // @public
 export function defaultControlValues(definition: LayerDefinition, now: number): ControlValues;
@@ -3485,6 +3495,9 @@ export interface RequestedImage {
 }
 
 // @public
+export function resolveBasemapFor(catalogue: BasemapCatalogue, id: string | null | undefined, theme: ResolvedTheme): BasemapDefinition;
+
+// @public
 export function resolveControlValues(definition: LayerDefinition, values: Readonly<Record<string, string>> | undefined, now: number): ControlValues;
 
 // @public
@@ -3772,8 +3785,7 @@ export function setDetent(detent: SheetDetent): SurfaceAction;
 
 // @public
 export interface Settings {
-    // (undocumented)
-    readonly basemapId: string;
+    readonly basemapId: string | null;
     readonly language: string | null;
     // (undocumented)
     readonly lastView: ViewState | null;
@@ -4249,6 +4261,12 @@ export const THEME_STORAGE_KEY = "mapcairn:theme";
 
 // @public
 export type ThemeChoice = "system" | "light" | "dark";
+
+// @public
+export interface ThemeDefaultIds {
+    readonly dark?: string;
+    readonly light?: string;
+}
 
 // @public
 export interface ThemeSource {

@@ -4,12 +4,17 @@ import type {
   BasemapAttributionEntry,
   BasemapDefinition,
 } from "../ports/basemap";
+import type { ResolvedTheme } from "../ports/settings";
 
 /**
- * The basemap shown when nobody has chosen one, in both interface themes, and
- * the one an unknown or retired id (such as the old "auto") falls back to.
+ * The basemap shown in the light theme when nobody has chosen one, and the
+ * one a catalogue that names no per-theme default falls back to. An unknown or
+ * retired id (such as the old "auto") gets the theme's default instead.
  */
 export const DEFAULT_BASEMAP_ID = "bright";
+
+/** The basemap shown in the dark theme when nobody has chosen one. */
+export const DEFAULT_DARK_BASEMAP_ID = "fiord";
 
 /**
  * The default basemap's background (land) colour: the `background` layer of
@@ -19,6 +24,15 @@ export const DEFAULT_BASEMAP_ID = "bright";
  * before Bright draws.
  */
 export const DEFAULT_BASEMAP_BACKGROUND = "#f8f4f0";
+
+/**
+ * The dark default basemap's background (land) colour: the `background` layer
+ * of the OpenFreeMap Fiord style (checked 2026-11-11). In the dark theme the
+ * server paints the map region in this colour before the map loads, so a
+ * first visit that follows the theme does not flash the light default's
+ * colour before Fiord draws. It is also Fiord's picker swatch.
+ */
+export const DEFAULT_DARK_BASEMAP_BACKGROUND = "#45516e";
 
 const OPEN_STREET_MAP_CREDIT: BasemapAttributionEntry = {
   text: "© OpenStreetMap contributors",
@@ -127,7 +141,7 @@ const FIORD: BasemapDefinition = {
   // Fiord's own land colour (the `background` layer of its style), so the
   // plain tile the picker shows (the SDK names no preview image, and Save data
   // mode shows one too) reads as a dark map, not as Bright's.
-  swatch: "#45516e",
+  swatch: DEFAULT_DARK_BASEMAP_BACKGROUND,
   // Nothing to leave out in Save data mode: like Bright, the style names the
   // Natural Earth raster source but draws no raster layer from it.
 };
@@ -192,6 +206,17 @@ export function getBasemap(id: string): BasemapDefinition | undefined {
 }
 
 /**
+ * The ids of the basemaps a catalogue shows by default in each interface
+ * theme. A theme left out uses the catalogue's `defaultId`.
+ */
+export interface ThemeDefaultIds {
+  /** The basemap to show in the light theme. */
+  readonly light?: string;
+  /** The basemap to show in the dark theme. */
+  readonly dark?: string;
+}
+
+/**
  * The basemaps a host offers, with the one used when nothing, or nothing
  * known, has been chosen. Plain data: a host builds one with
  * {@link createBasemapCatalogue} and passes it as `Services.basemaps`.
@@ -201,11 +226,18 @@ export interface BasemapCatalogue {
   readonly basemaps: readonly BasemapDefinition[];
   /** The id of the default basemap, which is in `basemaps`. */
   readonly defaultId: string;
+  /**
+   * The ids of the basemaps shown by default in each theme, all in
+   * `basemaps`. Absent, or a theme left out, means `defaultId`. Read it with
+   * {@link defaultBasemapFor}.
+   */
+  readonly themeDefaultIds?: ThemeDefaultIds;
   /** Finds a basemap by id. */
   get(id: string): BasemapDefinition | undefined;
   /**
    * Turns a stored or linked id into a basemap. An id that names none (a
-   * removed one, or the retired "auto" choice) gives the default.
+   * removed one, or the retired "auto" choice) gives `defaultId`'s basemap;
+   * use {@link resolveBasemapFor} to give the theme's default instead.
    */
   resolve(id: string): BasemapDefinition;
 }
@@ -214,11 +246,15 @@ export interface BasemapCatalogue {
  * Builds a {@link BasemapCatalogue}.
  * @param basemaps - At least one basemap, with unique ids.
  * @param defaultId - The default basemap's id. Defaults to the first basemap.
- * @throws When the list is empty, repeats an id, or does not hold `defaultId`.
+ * @param themeDefaultIds - The basemap to show by default in each theme, for a
+ *   host whose default follows the theme. A theme left out uses `defaultId`.
+ * @throws When the list is empty, repeats an id, or does not hold `defaultId`
+ *   or a per-theme default.
  */
 export function createBasemapCatalogue(
   basemaps: readonly BasemapDefinition[],
   defaultId: string | undefined = basemaps[0]?.id,
+  themeDefaultIds?: ThemeDefaultIds,
 ): BasemapCatalogue {
   const byId = new Map<string, BasemapDefinition>();
   for (const basemap of basemaps) {
@@ -235,17 +271,57 @@ export function createBasemapCatalogue(
         : `The default basemap "${defaultId}" is not in the catalogue.`,
     );
   }
+  for (const id of Object.values(themeDefaultIds ?? {})) {
+    if (id !== undefined && !byId.has(id)) {
+      throw new Error(`The default basemap "${id}" is not in the catalogue.`);
+    }
+  }
   return {
     basemaps,
     defaultId: fallback.id,
+    ...(themeDefaultIds === undefined ? {} : { themeDefaultIds }),
     get: (id) => byId.get(id),
     resolve: (id) => byId.get(id) ?? fallback,
   };
 }
 
-/** The catalogue of the built-in basemaps, Bright the default. */
+/**
+ * The basemap a catalogue shows in a theme when nobody has chosen one: the
+ * host's default for that theme, else the catalogue's default.
+ */
+export function defaultBasemapFor(
+  catalogue: BasemapCatalogue,
+  theme: ResolvedTheme,
+): BasemapDefinition {
+  return catalogue.resolve(
+    catalogue.themeDefaultIds?.[theme] ?? catalogue.defaultId,
+  );
+}
+
+/**
+ * Turns a stored or linked id into a basemap for a theme. No id (nothing
+ * chosen), or one that names no basemap in the catalogue (a removed one, or
+ * the retired "auto" choice), gives the theme's default.
+ */
+export function resolveBasemapFor(
+  catalogue: BasemapCatalogue,
+  id: string | null | undefined,
+  theme: ResolvedTheme,
+): BasemapDefinition {
+  const chosen =
+    id === null || id === undefined ? undefined : catalogue.get(id);
+  return chosen ?? defaultBasemapFor(catalogue, theme);
+}
+
+/**
+ * The catalogue of the built-in basemaps: Bright the default in the light
+ * theme and Fiord in the dark theme.
+ */
 export const BUILT_IN_BASEMAP_CATALOGUE: BasemapCatalogue =
-  createBasemapCatalogue(BASEMAPS, DEFAULT_BASEMAP_ID);
+  createBasemapCatalogue(BASEMAPS, DEFAULT_BASEMAP_ID, {
+    light: DEFAULT_BASEMAP_ID,
+    dark: DEFAULT_DARK_BASEMAP_ID,
+  });
 
 /**
  * The style layer ids a basemap leaves out, given whether Save data is on.

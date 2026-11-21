@@ -2,7 +2,18 @@
 // Copyright MapCairn contributors
 import type { ClipboardPort } from "@mapcairn/core";
 import { Icon, LiveRegionProvider, SkipLink } from "@mapcairn/map";
-import { ChevronDown, CodeXml, Compass, Heart, Package } from "lucide-react";
+import {
+  Accessibility,
+  AppWindow,
+  ChevronDown,
+  CodeXml,
+  Compass,
+  Heart,
+  Layers,
+  Palette,
+  Plug,
+  ShieldCheck,
+} from "lucide-react";
 import type { ReactNode } from "react";
 import { Brand } from "../app/Brand";
 import { DOCUMENT_SCROLL } from "../app/documentScroll";
@@ -17,17 +28,22 @@ import { CopyCodeButton } from "./CopyCodeButton";
 import { type CodeTokenKind, highlightCode } from "./highlightCode";
 import { InstallBlock } from "./InstallBlock";
 import * as styles from "./ProductPage.css";
+import { ProductPlate } from "./ProductPlate";
 import {
   type Block,
   type Disclosure,
   GITHUB_ACTION,
   HEADLINE,
+  HERO_INSTALL,
   HERO_NOTE,
   type Inline,
   LEDE,
+  type LegendIcon,
+  type LegendItem,
   type Line,
   NPM_ACTION,
   PLAYGROUND_ACTION,
+  REPOSITORY_PAGES,
   SECTIONS,
   type Section,
 } from "./productContent";
@@ -87,7 +103,11 @@ function HighlightedCode({ source }: { readonly source: string }) {
   );
 }
 
-/** The three actions, the same size: View on GitHub first and filled, then Try the playground and View on npm. */
+/**
+ * The actions: View on GitHub as the one button, then the playground and the
+ * npm package as two links in a row, the first at the start and the second at
+ * the end where the row has the width.
+ */
 function Actions() {
   return (
     <div className={styles.actions}>
@@ -99,22 +119,26 @@ function Actions() {
         <Icon icon={CodeXml} />
         {GITHUB_ACTION.text}
       </a>
-      <a
-        className={styles.secondaryAction}
-        href={PLAYGROUND_ACTION.href}
-        data-testid="action-playground"
-      >
-        <Icon icon={Compass} />
-        {PLAYGROUND_ACTION.text}
-      </a>
-      <a
-        className={styles.secondaryAction}
-        href={NPM_ACTION.href}
-        data-testid="action-npm"
-      >
-        <Icon icon={Package} />
-        {NPM_ACTION.text}
-      </a>
+      <ul className={styles.heroLinks}>
+        <li>
+          <a
+            className={styles.heroLink}
+            href={PLAYGROUND_ACTION.href}
+            data-testid="action-playground"
+          >
+            {PLAYGROUND_ACTION.text}
+          </a>
+        </li>
+        <li>
+          <a
+            className={styles.heroLink}
+            href={NPM_ACTION.href}
+            data-testid="action-npm"
+          >
+            {NPM_ACTION.text}
+          </a>
+        </li>
+      </ul>
     </div>
   );
 }
@@ -137,6 +161,39 @@ function Disclosures({ items }: { readonly items: readonly Disclosure[] }) {
         </details>
       ))}
     </div>
+  );
+}
+
+/** The Lucide icon each legend item is drawn with. */
+const LEGEND_ICONS: Readonly<Record<LegendIcon, typeof Layers>> = {
+  interface: AppWindow,
+  layers: Layers,
+  accessible: Accessibility,
+  private: ShieldCheck,
+  ports: Plug,
+  design: Palette,
+};
+
+/**
+ * A legend: what the SDK gives, set out like the key of a map, an icon in a
+ * fixed column beside each name and its meaning. Always shown, so a skimmer
+ * and a page without scripts see the content and not only headings.
+ */
+function Legend({ items }: { readonly items: readonly LegendItem[] }) {
+  return (
+    <ul className={styles.legend}>
+      {items.map(({ icon, name, text }) => (
+        <li key={name} className={styles.legendItem}>
+          <span className={styles.legendSymbol}>
+            <Icon icon={LEGEND_ICONS[icon]} />
+          </span>
+          <span className={styles.legendName}>{name}</span>
+          <p className={styles.legendText}>
+            <Text line={text} />
+          </p>
+        </li>
+      ))}
+    </ul>
   );
 }
 
@@ -210,6 +267,10 @@ function BlockView({
       );
     case "details":
       return <Disclosures items={block.items} />;
+    case "legend":
+      return <Legend items={block.items} />;
+    case "plate":
+      return <ProductPlate id={block.id} />;
     case "deepLinks":
       return (
         <ul className={styles.deepLinks} data-testid="playground-deep-links">
@@ -284,8 +345,8 @@ function ProductHeader() {
   );
 }
 
-/** The hero: the pitch, the three actions, and the survey sheet beside them. */
-function Hero() {
+/** The hero: the pitch, the install block as its main action and the links, with a picture of the playground beside them. */
+function Hero({ clipboard }: { readonly clipboard: ClipboardPort }) {
   return (
     <div className={styles.hero}>
       <div className={styles.heroText}>
@@ -293,19 +354,24 @@ function Hero() {
         <p className={styles.lede}>
           <Text line={LEDE} />
         </p>
+        <InstallBlock
+          label={HERO_INSTALL.label}
+          options={HERO_INSTALL.options}
+          clipboard={clipboard}
+        />
         <Actions />
         <p className={styles.note}>
           <Text line={HERO_NOTE} />
         </p>
       </div>
       <div className={styles.heroArt}>
-        <SurveyArt />
+        <ProductPlate id="hero" />
       </div>
     </div>
   );
 }
 
-/** The footer: where the project is made, the licence, the source, the playground and the privacy policy. */
+/** The footer: where the project is made, the licence, the source and the pages an adopter looks for next, the playground and the privacy policy. */
 function ProductFooter() {
   return (
     <footer className={styles.footer}>
@@ -316,7 +382,7 @@ function ProductFooter() {
       <p className={styles.footerLine}>
         MapCairn is open source under the AGPL-3.0.
       </p>
-      <nav aria-label="Footer">
+      <nav aria-label="Footer" className={styles.footerNav}>
         <ul className={styles.footerLinks}>
           <li>
             <a
@@ -327,6 +393,13 @@ function ProductFooter() {
               Source code
             </a>
           </li>
+          {REPOSITORY_PAGES.map(({ text, href }) => (
+            <li key={href}>
+              <a className={styles.footerLink} href={href}>
+                {text}
+              </a>
+            </li>
+          ))}
           <li>
             <a
               className={styles.footerLink}
@@ -337,6 +410,8 @@ function ProductFooter() {
               Mastodon
             </a>
           </li>
+        </ul>
+        <ul className={styles.footerLinks}>
           <li>
             <a className={styles.footerLink} href={PLAYGROUND_PATH}>
               Try the playground
@@ -354,20 +429,22 @@ function ProductFooter() {
 }
 
 /**
- * The product page at `/`: the pitch and the three actions, the embedding
- * example, what you get, the playground, when it fits and the questions, with
- * View on GitHub as the first action and the playground one link away from
- * anywhere on the page.
+ * The product page at `/`: the pitch, the install block, View on GitHub as the
+ * one button with the playground and npm links under it, the embedding example,
+ * what you get, the playground, when it fits and the questions, with the
+ * playground one link away from anywhere on the page.
  *
  * @remarks Server-rendered: it loads no map code and no service but the
  *   clipboard it is given,
  *   and its own markup requests nothing from another site (in production the
  *   host adds its cookieless page-view counter, as on every page). It links
- *   to the repository from exactly two places, the hero's View on GitHub and
- *   the footer's Source code, to the package on npm from the hero's View on
- *   npm, to the footer's Mastodon profile (`rel="me"`), and
- *   otherwise only to this site: never a
- *   Markdown file, an issue, a pull request or a milestone.
+ *   to the repository's front page from exactly two places, the hero's View
+ *   on GitHub and the footer's Source code, to the short named set of pages in
+ *   it (`REPOSITORY_PAGES`, in the footer, with the documentation again in the
+ *   production answer and the example app in "How do I use it?"), to the
+ *   package on npm from the hero's View on npm, to the footer's Mastodon
+ *   profile (`rel="me"`), and otherwise only to this site: never an issue, a
+ *   pull request or a milestone.
  *   Its first element is the inline script that sends an old map link
  *   (`/#map=...`) on to the playground before the page paints. It is English
  *   only, by decision, so it sets `lang="en-GB"` on its own root whatever
@@ -396,7 +473,7 @@ export function ProductPage({
         <SkipLink targetId={MAIN_ID}>Skip to content</SkipLink>
         <ProductHeader />
         <main id={MAIN_ID} tabIndex={-1} className={styles.main}>
-          <Hero />
+          <Hero clipboard={clipboard} />
           {SECTIONS.map((section) => (
             <SectionView
               key={section.id}
@@ -404,6 +481,11 @@ export function ProductPage({
               clipboard={clipboard}
             />
           ))}
+          <div className={styles.closing} data-testid="closing">
+            <div className={styles.closingArt}>
+              <SurveyArt />
+            </div>
+          </div>
         </main>
         <ProductFooter />
       </LiveRegionProvider>

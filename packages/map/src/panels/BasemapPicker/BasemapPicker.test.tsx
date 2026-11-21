@@ -6,6 +6,7 @@ import {
   type BasemapDefinition,
   createBasemapCatalogue,
   createFakeServices,
+  DEFAULT_BASEMAP_BACKGROUND,
   FAKE_HYBRID_BASEMAP,
   FAKE_RASTER_BASEMAP,
   FAKE_VECTOR_BASEMAP,
@@ -167,10 +168,20 @@ describe("BasemapPicker", () => {
     expect(onChange).toHaveBeenCalledWith("liberty");
   });
 
-  it("does not call onChange when the selected tile is clicked", () => {
+  it("calls onChange with the id when the tile already shown is pressed, so a host can keep it, and announces nothing", () => {
     const { onChange } = renderPicker();
     fireEvent.click(radio("Positron"));
-    expect(onChange).not.toHaveBeenCalled();
+    expect(onChange).toHaveBeenCalledTimes(1);
+    expect(onChange).toHaveBeenCalledWith("positron");
+    expect(screen.getByTestId("live-region-polite").textContent).toBe("");
+  });
+
+  it("calls onChange once, not twice, when another tile is pressed", () => {
+    const { onChange } = renderPicker();
+    fireEvent.click(radio("Liberty"));
+    fireEvent.click(radio("Liberty"));
+    expect(onChange).toHaveBeenCalledTimes(2);
+    expect(onChange).toHaveBeenNthCalledWith(1, "liberty");
   });
 
   it("announces the new basemap politely", () => {
@@ -377,17 +388,19 @@ describe("BasemapPicker swatch colours", () => {
       .getByTestId(`basemap-swatch-${id}`)
       .style.getPropertyValue("--basemap-swatch");
 
-  it("paints a basemap's own swatch colour, and leaves the default colour to one without", () => {
+  it("paints a basemap's own swatch colour, and the light default's land colour on one without, in either theme", () => {
     renderSwatched(false);
-    // This basemap has a preview, so no swatch yet; the one without has no colour.
+    // This basemap has a preview, so no swatch yet; the one without has no
+    // colour of its own, so it takes the light default's land colour, not the
+    // map background token, which is Fiord's in the dark theme.
     expect(screen.queryByTestId("basemap-swatch-fake-swatched")).toBeNull();
-    expect(colourOf("fake-plain")).toBe("");
+    expect(colourOf("fake-plain")).toBe(DEFAULT_BASEMAP_BACKGROUND);
   });
 
   it("shows the same swatch colour in Save data mode, where every basemap is a swatch", () => {
     renderSwatched(true);
     expect(colourOf("fake-swatched")).toBe("#22262c");
-    expect(colourOf("fake-vector")).toBe("");
+    expect(colourOf("fake-vector")).toBe(DEFAULT_BASEMAP_BACKGROUND);
   });
 
   it("paints the swatch of a basemap that has no preview image", () => {

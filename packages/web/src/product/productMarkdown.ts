@@ -5,12 +5,15 @@ import {
   type Block,
   GITHUB_ACTION,
   HEADLINE,
+  HERO_INSTALL,
   HERO_NOTE,
   type Inline,
   LEDE,
   type Line,
   NPM_ACTION,
+  PLATES,
   PLAYGROUND_ACTION,
+  plateCreditsText,
   SECTIONS,
   type Section,
 } from "./productContent";
@@ -43,7 +46,7 @@ function linkList(links: readonly { text: string; href: string }[]): string {
     .join("\n");
 }
 
-/** The three actions, as a list of links. */
+/** The actions, as a list of links. */
 const ACTIONS = linkList([GITHUB_ACTION, PLAYGROUND_ACTION, NPM_ACTION]);
 
 /** One block as Markdown. */
@@ -66,6 +69,12 @@ function block(item: Block): string {
             `### ${summary}\n\n${detail.map(lineToMarkdown).join("\n\n")}`,
         )
         .join("\n\n");
+    case "legend":
+      return item.items
+        .map(({ name, text }) => `### ${name}\n\n${lineToMarkdown(text)}`)
+        .join("\n\n");
+    case "plate":
+      return `${PLATES[item.id].description} ${plateCreditsText(item.id)}`;
     case "deepLinks":
       return linkList(item.links);
   }
@@ -85,8 +94,10 @@ export function productMarkdown(): string {
   return `${[
     `# ${HEADLINE}`,
     lineToMarkdown(LEDE),
+    block(HERO_INSTALL),
     ACTIONS,
     lineToMarkdown(HERO_NOTE),
+    block({ kind: "plate", id: "hero" }),
     ...SECTIONS.map(section),
   ].join("\n\n")}\n`;
 }

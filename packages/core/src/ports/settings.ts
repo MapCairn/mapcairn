@@ -31,7 +31,15 @@ export interface Settings {
   readonly saveData: boolean | null;
   /** The shape of the map: `"flat"` (the default) or `"globe"`. */
   readonly projection: MapProjection;
-  readonly basemapId: string;
+  /**
+   * The id of the basemap the person chose, or `null` when they never have.
+   * With `null` the basemap is the host's default for the theme shown (see
+   * `BasemapCatalogue`), and it changes when the theme does. A chosen id is
+   * kept across theme changes and reloads. Nothing writes an id until a
+   * person picks a basemap, so a stored id, even the default's, is a choice.
+   * A shared link's basemap is not stored here.
+   */
+  readonly basemapId: string | null;
   readonly lastView: ViewState | null;
   /**
    * The version of the first-visit tour the person has answered (taken,

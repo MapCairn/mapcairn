@@ -959,6 +959,71 @@ describe("locate", () => {
   });
 });
 
+describe("the default basemap follows the theme", () => {
+  function hostServices(theme: "light" | "dark") {
+    const services = createFakeServices({ basemaps: HOST_BASEMAP_CATALOGUE });
+    services.fakes.theme.setSystemTheme(theme);
+    return services;
+  }
+
+  it("mounts Bright for a first visit in the light theme and Fiord in the dark theme, saving nothing", async () => {
+    const mount = vi.spyOn(FakeMapAdapter.prototype, "mount");
+    const light = await renderApp(hostServices("light"));
+    expect(light.fakes.settings.get().basemapId).toBeNull();
+    const [, lightOptions] = mount.mock.calls[0] as [unknown, MapMountOptions];
+    expect(lightOptions.basemap.id).toBe("bright");
+    cleanup();
+
+    const dark = await renderApp(hostServices("dark"));
+    expect(dark.fakes.settings.get().basemapId).toBeNull();
+    const [, darkOptions] = mount.mock.calls[1] as [unknown, MapMountOptions];
+    expect(darkOptions.basemap.id).toBe("fiord");
+  });
+
+  it("swaps the default and rewrites the link when the theme changes, for a visitor who never chose", async () => {
+    const services = await renderApp(hostServices("light"));
+    const setBasemap = vi.spyOn(adapter(services), "setBasemap");
+    act(() => {
+      adapter(services).setView({ zoom: 5 });
+    });
+    expect(services.fakes.url.read().basemapId).toBe("bright");
+    act(() => services.fakes.theme.setSystemTheme("dark"));
+    await settle();
+    expect(setBasemap).toHaveBeenCalledWith(
+      expect.objectContaining({ id: "fiord" }),
+      { saveData: false },
+    );
+    expect(services.fakes.url.read().basemapId).toBe("fiord");
+    expect(services.fakes.settings.get().basemapId).toBeNull();
+  });
+
+  it("keeps a basemap the visitor chose when the theme changes", async () => {
+    const services = await renderApp(hostServices("light"));
+    fireEvent.click(screen.getByRole("button", { name: "Map options" }));
+    fireEvent.click(
+      screen
+        .getByTestId("basemap-option-liberty")
+        .querySelector("input") as HTMLInputElement,
+    );
+    await settle();
+    expect(services.fakes.settings.get().basemapId).toBe("liberty");
+    const setBasemap = vi.spyOn(adapter(services), "setBasemap");
+    act(() => services.fakes.theme.setSystemTheme("dark"));
+    await settle();
+    expect(setBasemap).not.toHaveBeenCalled();
+    expect(services.fakes.url.read().basemapId).toBe("liberty");
+  });
+
+  it("shows a link's basemap whatever the viewer's theme", async () => {
+    const mount = vi.spyOn(FakeMapAdapter.prototype, "mount");
+    const services = hostServices("dark");
+    services.fakes.url.write({ basemapId: "bright" });
+    await renderApp(services);
+    const [, options] = mount.mock.calls[0] as [unknown, MapMountOptions];
+    expect(options.basemap.id).toBe("bright");
+  });
+});
+
 describe("basemaps", () => {
   it("stores a basemap chosen in the sheet and swaps it on the same engine", async () => {
     const services = await renderApp();
@@ -1139,19 +1204,6 @@ describe("basemaps", () => {
     });
   });
 
-  it("starts on Bright in a dark theme as well as a light one", async () => {
-    for (const theme of ["light", "dark"] as const) {
-      const mount = vi.spyOn(FakeMapAdapter.prototype, "mount");
-      const services = createFakeServices();
-      services.fakes.settings.set({ theme });
-      await renderApp(services);
-      const [, options] = mount.mock.calls[0] as [unknown, MapMountOptions];
-      expect(options.basemap.id, theme).toBe("bright");
-      cleanup();
-      vi.restoreAllMocks();
-    }
-  });
-
   it("keeps a chosen basemap whatever the theme", async () => {
     const mount = vi.spyOn(FakeMapAdapter.prototype, "mount");
     const services = createFakeServices();
@@ -1181,17 +1233,17 @@ describe("basemaps", () => {
     }
   });
 
-  it("treats a saved auto, Maptoolkit Dark or retired basemap as Bright, and leaves the saved value alone", async () => {
+  it("treats a saved auto, Maptoolkit Dark or retired basemap as no choice, so the theme's default shows, and leaves the saved value alone", async () => {
     for (const stored of ["auto", "maptoolkit-dark", "retired-basemap"]) {
       const mount = vi.spyOn(FakeMapAdapter.prototype, "mount");
       const services = createFakeServices();
       services.fakes.settings.set({ theme: "dark", basemapId: stored });
       await renderApp(services);
       const [, options] = mount.mock.calls[0] as [unknown, MapMountOptions];
-      expect(options.basemap.id, stored).toBe("bright");
+      expect(options.basemap.id, stored).toBe("fiord");
       fireEvent.click(screen.getByRole("button", { name: "Map options" }));
       expect(
-        screen.getByTestId("basemap-option-bright").querySelector("input"),
+        screen.getByTestId("basemap-option-fiord").querySelector("input"),
       ).toBeChecked();
       expect(
         screen.queryByRole("switch", { name: /match the map/i }),

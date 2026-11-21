@@ -48,9 +48,4 @@ export const COPY_ALLOWLIST = [
     reason:
       "Developer-facing product page, English only; Afrikaans later is one small pull request.",
   },
-  {
-    file: "packages/web/src/product/SurveyArt.tsx",
-    reason:
-      "Developer-facing product page, English only; Afrikaans later is one small pull request.",
-  },
 ];

@@ -35,8 +35,9 @@ export const neutral = {
 /**
  * The one accent: a clear blue at hue 255. Chroma follows the sRGB gamut edge
  * at each lightness, which is why it peaks in the middle of the ramp.
- * Step 600 is the map overlay blue and the light focus ring; 700 is the light
- * accent used for text and fills; 300 is the dark accent.
+ * Step 600 is the light theme's map overlay blue and focus ring; 400 is the
+ * dark theme's, light enough to show over Fiord; 700 is the light accent used
+ * for text and fills; 300 is the dark accent.
  */
 export const accent = {
   50: "oklch(0.97 0.013 255)",
@@ -104,8 +105,9 @@ export const dataMarker = {
 /**
  * Backdrops that surface contrast is measured over. A translucent surface
  * takes on whatever map is under it, so tests composite over both extremes,
- * plus the light basemaps for the things drawn on the map. Every built-in
- * basemap is light; pure black stands in for any dark map a host adds.
+ * plus the default basemap of each theme for the things drawn on the map. A
+ * visitor can pick either basemap in either theme, so both pairings count.
+ * Pure black stands in for any other dark map a host adds.
  */
 export const representativeBackdrops = {
   white: "#ffffff",
@@ -114,11 +116,18 @@ export const representativeBackdrops = {
   lightMap: "#f2efe9",
   /**
    * The land (background layer) colour of OpenFreeMap Bright, the default
-   * basemap in both themes. It must equal `DEFAULT_BASEMAP_BACKGROUND` in
+   * basemap in the light theme. It must equal `DEFAULT_BASEMAP_BACKGROUND` in
    * `@mapcairn/core`, which this package cannot import; a test in
    * `packages/web` checks that they agree.
    */
   defaultBasemap: "#f8f4f0",
+  /**
+   * The land colour of OpenFreeMap Fiord, the default basemap in the dark
+   * theme, a mid-dark blue-grey that is neither extreme. It must equal
+   * `DEFAULT_DARK_BASEMAP_BACKGROUND` in `@mapcairn/core`; the same test in
+   * `packages/web` checks it.
+   */
+  defaultDarkBasemap: "#45516e",
 } as const;
 
 /** The semantic colour roles. Components use these and never a ramp step. */
@@ -159,16 +168,17 @@ export interface ColourRoles {
    */
   pageBackground: string;
   /**
-   * Colour of the map region before the map draws: the default basemap's
-   * land colour, the same in both themes, so the first view does not flash a
-   * different colour before the basemap appears.
+   * Colour of the map region before the map draws: the land colour of the
+   * default basemap of the theme (Bright's in light, Fiord's in dark), so the
+   * first view does not flash a different colour before the basemap appears.
    */
   mapBackground: string;
   /**
    * The space around the sphere when the map is drawn as a globe, in place
    * of `mapBackground`. Darker than every pale basemap's land, so the edge
    * of the globe shows, and in the dark theme lighter and bluer than the
-   * near-black Dark basemap, so its edge shows too. A flat map never uses it.
+   * near-black Dark basemap, so its edge shows too, while still clearing 1.2:1
+   * against Fiord's land. A flat map never uses it.
    */
   mapGlobeSpace: string;
   /** Dropped pin. */
@@ -275,15 +285,15 @@ const darkColour: ColourRoles = {
   danger: red.textDark,
   dangerTint: red.tintDark,
   scrim: "oklch(0 0 0 / 0.6)",
-  focusRing: accent[500],
+  focusRing: accent[400],
   focusRingInner: "oklch(0.19 0.008 250)",
   pageBackground: "oklch(0.24 0.008 250)",
-  mapBackground: representativeBackdrops.defaultBasemap,
+  mapBackground: representativeBackdrops.defaultDarkBasemap,
   mapGlobeSpace: "oklch(0.31 0.025 255)",
-  mapPin: accent[600],
-  mapMeasureLine: accent[600],
+  mapPin: accent[400],
+  mapMeasureLine: accent[400],
   mapMeasureFill: "oklch(0.55 0.175 255 / 0.28)",
-  mapAccuracy: accent[600],
+  mapAccuracy: accent[400],
   mapAccuracyFill: "oklch(0.55 0.175 255 / 0.2)",
   mapHalo: "oklch(0.19 0.008 250)",
 };

@@ -311,6 +311,7 @@ Most apps install only `@mapcairn/sdk`. The packages inside it are published on 
 | [`docs/guides/using-the-reference-site.md`](docs/guides/using-the-reference-site.md) | Using the playground: search, saving the map, choosing between features, drawing, import and export        |
 | [`docs/guides/capability-matrix.md`](docs/guides/capability-matrix.md)               | What a GIS application needs, what MapCairn has, partly has or lacks, and the issue for each gap           |
 | [`docs/guides/performance.md`](docs/guides/performance.md)                           | What was measured for Lighthouse, what was tried and what was left alone                                   |
+| [`docs/guides/product-captures.md`](docs/guides/product-captures.md)                 | How the product page's pictures of the playground are taken again, their budgets and their credits         |
 | [`docs/guides/working-with-agents.md`](docs/guides/working-with-agents.md)           | Using a coding agent on this repository: what each one reads and how to start                              |
 | [`docs/guides/personal-preferences.md`](docs/guides/personal-preferences.md)         | Keeping your own working style for a coding agent in a git-ignored file, not in the shared rules           |
 | [`docs/plans/`](docs/plans/README.md)                                                | Numbered plans for work not yet built                                                                      |

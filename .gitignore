@@ -4,6 +4,8 @@ node_modules
 dist
 packages/web/build/
 packages/web/.react-router/
+# The recorded basemap answers the capture script replays (packages/web/scripts/captureProduct.ts).
+packages/web/.captures/
 coverage
 .cloudflare
 # Left by checkouts from before the move from Wrangler to cf.

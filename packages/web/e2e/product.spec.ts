@@ -150,7 +150,7 @@ test.describe("the product page", () => {
     });
   });
 
-  test("makes View on GitHub the first action, beside Try the playground and View on npm", async ({
+  test("makes View on GitHub the one button, with Try the playground and View on npm as links in a row", async ({
     page,
   }) => {
     const product = new ProductPage(page);
@@ -159,30 +159,202 @@ test.describe("the product page", () => {
       "href",
       "https://github.com/MapCairn/mapcairn",
     );
-    const github = await product.heroGitHub.boundingBox();
-    const playground = await product.heroPlayground.boundingBox();
-    const npm = await product.heroNpm.boundingBox();
     await expect(product.heroNpm).toHaveAttribute(
       "href",
       "https://www.npmjs.com/package/@mapcairn/sdk",
     );
-    expect(github?.height).toBeGreaterThanOrEqual(44);
-    expect(playground?.height).toBe(github?.height);
-    expect(npm?.height).toBe(github?.height);
+    const github = await product.heroGitHub.boundingBox();
+    const playground = await product.heroPlayground.boundingBox();
+    const npm = await product.heroNpm.boundingBox();
+    expect(github?.height).toBeGreaterThanOrEqual(48);
+    expect(playground?.height).toBeGreaterThanOrEqual(44);
+    expect(npm?.height).toBeGreaterThanOrEqual(44);
+    expect(playground?.y).toBe(npm?.y);
+    expect(playground?.x).toBeLessThan(npm?.x ?? 0);
   });
+
+  for (const [width, height] of [
+    [390, 844],
+    [820, 1180],
+    [1440, 900],
+  ] as const) {
+    test(`shows the install command and View on GitHub in the first screen at ${width}px, with the whole command readable and no sideways scroll`, async ({
+      page,
+    }) => {
+      await page.setViewportSize({ width, height });
+      const product = new ProductPage(page);
+      await product.goto();
+      await expect(product.installCommand("npm")).toBeInViewport();
+      await expect(product.heroGitHub).toBeInViewport();
+      await expect(product.heroPlayground).toBeInViewport();
+      const fit = await product.installCommand("npm").evaluate((pre) => ({
+        wraps: getComputedStyle(pre).whiteSpace,
+        clipped: pre.scrollWidth > pre.clientWidth,
+        page: document.documentElement.scrollWidth,
+      }));
+      expect(fit.wraps).toBe("pre-wrap");
+      expect(fit.clipped).toBe(false);
+      expect(fit.page).toBeLessThanOrEqual(width);
+    });
+  }
 
   test("links to the repository from the hero's button and the footer's Source code only", async ({
     page,
   }) => {
     const product = new ProductPage(page);
     await product.goto();
-    const repository = page.locator('a[href^="https://github.com/"]');
+    const repository = page.locator(
+      'a[href="https://github.com/MapCairn/mapcairn"]',
+    );
     await expect(repository).toHaveCount(2);
     await expect(product.header.locator('a[href^="https://"]')).toHaveCount(0);
     await expect(
       product.footer.getByRole("link", { name: "Source code" }),
     ).toHaveAttribute("href", "https://github.com/MapCairn/mapcairn");
   });
+
+  test("links the documentation, release notes, licence guide, security policy and Discussions from the footer", async ({
+    page,
+  }) => {
+    const product = new ProductPage(page);
+    await product.goto();
+    for (const [name, href] of [
+      ["Documentation", "#documentation"],
+      ["Release notes", "/releases"],
+      ["Licence guide", "/blob/main/docs/guides/licence.md"],
+      ["Security", "/blob/main/SECURITY.md"],
+      ["Discussions", "/discussions"],
+    ] as const) {
+      const link = product.footer.getByRole("link", { name });
+      await expect(link).toHaveAttribute(
+        "href",
+        `https://github.com/MapCairn/mapcairn${href}`,
+      );
+      expect((await link.boundingBox())?.height).toBeGreaterThanOrEqual(44);
+    }
+  });
+
+  for (const viewport of VIEWPORTS) {
+    test(`sets no text of the page below 13px at ${viewport.width}px, the relief strip's labels included`, async ({
+      page,
+    }) => {
+      await page.setViewportSize(viewport);
+      const product = new ProductPage(page);
+      await product.goto();
+      const small = await page.evaluate(() => {
+        const found: string[] = [];
+        for (const element of document.querySelectorAll(
+          "header *, main *, footer *",
+        )) {
+          const hasText = [...element.childNodes].some(
+            (node) =>
+              node.nodeType === Node.TEXT_NODE && node.textContent?.trim(),
+          );
+          if (!hasText) {
+            continue;
+          }
+          const size = Number.parseFloat(getComputedStyle(element).fontSize);
+          if (size < 13) {
+            found.push(`${element.tagName} ${size}px`);
+          }
+        }
+        return found;
+      });
+      expect(small).toEqual([]);
+    });
+  }
+
+  for (const [width, beside] of [
+    [320, false],
+    [390, false],
+    [1440, true],
+  ] as const) {
+    test(`lays the legend out ${beside ? "as a key column beside the text" : "with the text full width under the symbol and name"} at ${width}px, with nothing clipped`, async ({
+      page,
+    }) => {
+      await page.setViewportSize({ width, height: 900 });
+      const product = new ProductPage(page);
+      await product.goto();
+      const boxes = await page.evaluate(() => {
+        const item = document.querySelector("main section ul li");
+        const rect = (selector: string) => {
+          const box = item?.querySelector(selector)?.getBoundingClientRect();
+          return {
+            left: box?.left ?? Number.NaN,
+            right: box?.right ?? Number.NaN,
+            top: box?.top ?? Number.NaN,
+            bottom: box?.bottom ?? Number.NaN,
+          };
+        };
+        const symbol = item?.firstElementChild?.getBoundingClientRect();
+        const name = item?.children[1]?.getBoundingClientRect();
+        const text = rect("p");
+        return {
+          symbol: { left: symbol?.left ?? 0, bottom: symbol?.bottom ?? 0 },
+          name: { left: name?.left ?? 0, top: name?.top ?? 0 },
+          text,
+          scrollWidth: document.documentElement.scrollWidth,
+        };
+      });
+      expect(boxes.text.right).toBeLessThanOrEqual(width);
+      expect(boxes.scrollWidth).toBeLessThanOrEqual(width);
+      if (beside) {
+        expect(boxes.text.left).toBeCloseTo(boxes.name.left, 0);
+        expect(boxes.text.left).toBeGreaterThan(boxes.symbol.left);
+      } else {
+        expect(boxes.text.left).toBeCloseTo(boxes.symbol.left, 0);
+        expect(boxes.text.top).toBeGreaterThanOrEqual(boxes.symbol.bottom);
+        expect(boxes.name.top).toBeLessThan(boxes.symbol.bottom);
+      }
+    });
+  }
+
+  test("shows what you get open, as a legend, with no script", async ({
+    page,
+  }) => {
+    const product = new ProductPage(page);
+    await product.goto();
+    const you = page.getByRole("region", { name: "What you get" });
+    await expect(you.locator("details")).toHaveCount(0);
+    const items = you.getByRole("listitem");
+    await expect(items).toHaveCount(6);
+    for (const item of await items.all()) {
+      await expect(item.locator("p")).toBeVisible();
+    }
+  });
+
+  for (const viewport of VIEWPORTS) {
+    test(`sets a graticule rule on each section at ${viewport.width}px, and a plain line in forced colours`, async ({
+      page,
+    }) => {
+      await page.setViewportSize(viewport);
+      const product = new ProductPage(page);
+      await product.goto();
+      const rule = (selector: string) =>
+        page.evaluate((sel) => {
+          const style = getComputedStyle(
+            document.querySelector(sel) as Element,
+            "::before",
+          );
+          return {
+            image: style.backgroundImage,
+            border: style.borderBlockEndStyle,
+            height: Number.parseFloat(style.height),
+          };
+        }, selector);
+      const section = "main > section";
+      const normal = await rule(section);
+      expect(normal.image).toContain("repeating-linear-gradient");
+      expect(normal.height).toBeGreaterThan(0);
+      await page.emulateMedia({ forcedColors: "active" });
+      const forced = await rule(section);
+      expect(forced.image).toBe("none");
+      expect(forced.border).toBe("solid");
+      // The border is inside the box, so the rule keeps its 12px.
+      expect(forced.height).toBe(normal.height);
+      expect(forced.height).toBeCloseTo(12, 0);
+    });
+  }
 
   for (const viewport of VIEWPORTS) {
     test(`keeps Playground in the header at ${viewport.width}px`, async ({
@@ -641,7 +813,7 @@ test.describe("the product page", () => {
       await page.mouse.up();
     });
 
-    test("the secondary action, the header link and the copy button take the accent tint under a pointer", async ({
+    test("the hero links, the header link and the copy button take the accent tint under a pointer", async ({
       page,
       isMobile,
     }) => {
@@ -660,6 +832,20 @@ test.describe("the product page", () => {
         const hovered = await interactionStyle(target);
         expect(hovered.backgroundColor).not.toBe(resting.backgroundColor);
         await page.mouse.move(0, 0);
+      }
+    });
+
+    test("in forced colours the hero's two links stay visible and underlined", async ({
+      page,
+    }) => {
+      await page.emulateMedia({ forcedColors: "active" });
+      const product = new ProductPage(page);
+      await product.goto();
+      for (const link of [product.heroPlayground, product.heroNpm]) {
+        await expect(link).toBeVisible();
+        const style = await interactionStyle(link);
+        expect(style.textDecorationLine).toContain("underline");
+        expect(style.color).not.toBe(style.backgroundColor);
       }
     });
 
@@ -721,12 +907,8 @@ test.describe("the product page", () => {
         probe.remove();
         return colour;
       });
-      const actions = [
-        product.heroGitHub,
-        product.heroPlayground,
-        product.heroNpm,
-        product.copyCode,
-      ];
+      // The two links have no fill of their own: their label sits on the page, which is Canvas.
+      const actions = [product.heroGitHub, product.copyCode];
       const readable = async (action: Locator) => {
         const style = await interactionStyle(action);
         expect(style.backgroundColor).toBe(canvas);
@@ -766,151 +948,199 @@ test.describe("the product page", () => {
     });
   });
 
-  for (const viewport of VIEWPORTS) {
-    for (const colorScheme of ["light", "dark"] as const) {
-      test(`draws the art's marks where they belong at ${viewport.width}px in ${colorScheme}`, async ({
+  test.describe("the pictures of the playground", () => {
+    /** The capture of each plate, by its subject: its CSS size, which the picture's file is twice. */
+    const PLATES = [
+      { id: "hero", width: 400, height: 520 },
+      { id: "basemaps", width: 390, height: 720 },
+    ] as const;
+
+    /** Scrolls down the page a screen at a time, so every lazy picture that is drawn is fetched, and waits for each to finish. */
+    async function scrollThroughPage(page: Page): Promise<void> {
+      await page.evaluate(async () => {
+        const step = window.innerHeight;
+        for (let y = 0; y < document.documentElement.scrollHeight; y += step) {
+          window.scrollTo(0, y);
+          await new Promise((resolve) => setTimeout(resolve, 50));
+        }
+      });
+      await page.waitForFunction(() =>
+        [...document.images]
+          .filter((image) => getComputedStyle(image).display !== "none")
+          .every((image) => image.complete),
+      );
+    }
+
+    for (const width of [390, 820, 1440]) {
+      for (const colorScheme of ["light", "dark"] as const) {
+        test(`fetches only the pictures of the ${colorScheme} theme at ${width}px, shifts nothing, asks no other site and never scrolls sideways`, async ({
+          page,
+        }) => {
+          await page.setViewportSize({ width, height: 900 });
+          await page.emulateMedia({ colorScheme });
+          const requests: string[] = [];
+          page.on("request", (request) => requests.push(request.url()));
+          await page.addInitScript(() => {
+            const shifts: number[] = [];
+            Object.assign(window, { __layoutShifts: shifts });
+            new PerformanceObserver((list) => {
+              for (const entry of list.getEntries()) {
+                const shift = entry as PerformanceEntry & {
+                  value: number;
+                  hadRecentInput: boolean;
+                };
+                if (!shift.hadRecentInput) {
+                  shifts.push(shift.value);
+                }
+              }
+            }).observe({ type: "layout-shift", buffered: true });
+          });
+          const product = new ProductPage(page);
+          await product.goto();
+          await scrollThroughPage(page);
+
+          const pictures = requests
+            .map((url) => new URL(url).pathname)
+            .filter((path) => /\.webp$/.test(path));
+          const other = colorScheme === "light" ? "dark" : "light";
+          for (const { id } of PLATES) {
+            expect(
+              pictures.filter((path) => path.includes(`${id}-${colorScheme}`)),
+              `the ${colorScheme} ${id} picture`,
+            ).toHaveLength(1);
+            expect(
+              pictures.filter((path) => path.includes(`${id}-${other}`)),
+              `the ${other} ${id} picture, which is not drawn`,
+            ).toHaveLength(0);
+          }
+          const origin = new URL(page.url()).origin;
+          expect(
+            requests.filter((url) => new URL(url).origin !== origin),
+            "requests to another origin",
+          ).toEqual([]);
+          const shifted = await page.evaluate(() =>
+            (
+              (window as unknown as { __layoutShifts: number[] })
+                .__layoutShifts ?? []
+            ).reduce((sum, value) => sum + value, 0),
+          );
+          expect(shifted).toBe(0);
+          expect(
+            await page.evaluate(() => document.documentElement.scrollWidth),
+          ).toBeLessThanOrEqual(width);
+        });
+      }
+    }
+
+    for (const { id, width: capture, height } of PLATES) {
+      test(`draws the ${id} picture no larger than it was taken, whole, with the collar's labels inside its sheet, at 1440px`, async ({
         page,
       }) => {
-        await page.setViewportSize(viewport);
-        await page.emulateMedia({ colorScheme });
+        await page.setViewportSize({ width: 1440, height: 900 });
         const product = new ProductPage(page);
         await product.goto();
-        const art = page.getByTestId("survey-art");
-        await art.scrollIntoViewIfNeeded();
-        const marks = await art.evaluate((svg) => {
-          /** A point in an element's own coordinates, on the screen. */
-          const onScreen = (element: Element | null, x: number, y: number) => {
-            const matrix = (element as SVGGraphicsElement).getScreenCTM();
-            const point = new DOMPoint(x, y).matrixTransform(
-              matrix ?? undefined,
+        const figure = page.getByTestId(`plate-${id}`);
+        await figure.scrollIntoViewIfNeeded();
+        const image = figure.getByRole("img");
+        await expect(image).toBeVisible();
+        const shown = await image.boundingBox();
+        expect(shown?.width).toBeLessThanOrEqual(capture);
+        // The picture keeps its shape at any width.
+        expect((shown?.width ?? 0) / (shown?.height ?? 1)).toBeCloseTo(
+          capture / height,
+          1,
+        );
+        await expect
+          .poll(() =>
+            image.evaluate((element: HTMLImageElement) => element.naturalWidth),
+          )
+          .toBe(capture * 2);
+        const outside = await figure.evaluate((element) => {
+          const sheet = element.getBoundingClientRect();
+          return [...element.querySelectorAll("svg text")].filter((label) => {
+            const box = label.getBoundingClientRect();
+            return (
+              box.left < sheet.left - 1 ||
+              box.right > sheet.right + 1 ||
+              box.top < sheet.top - 1 ||
+              box.bottom > sheet.bottom + 1
             );
-            return { x: point.x, y: point.y };
-          };
-          const tip = svg.querySelector('[data-anchor="pin-tip"]');
-          const line = svg.querySelector<SVGLineElement>(
-            '[data-anchor="measure-line"]',
-          );
-          const cross = svg.querySelector<SVGCircleElement>(
-            '[data-anchor="crosshair"]',
-          );
-          const north = svg.querySelector<SVGPathElement>(
-            '[data-anchor="north"]',
-          );
-          const quarters = [
-            ...svg.querySelectorAll<SVGRectElement>(
-              '[data-anchor="scale-quarter"]',
-            ),
-          ].map((rect) => rect.getBBox());
-          const arms = [
-            ...(cross?.parentElement?.querySelectorAll("line") ?? []),
-          ];
-          const crossCentre = {
-            x: cross?.cx.baseVal.value ?? Number.NaN,
-            y: cross?.cy.baseVal.value ?? Number.NaN,
-          };
-          const northBox = north?.getBBox();
-          return {
-            tip: onScreen(tip, 0, 0),
-            lineStart: onScreen(
-              line,
-              line?.x1.baseVal.value ?? Number.NaN,
-              line?.y1.baseVal.value ?? Number.NaN,
-            ),
-            armsMeetCentre: arms.every((arm) => {
-              const { x1, y1, x2, y2 } = arm;
-              return (
-                (y1.baseVal.value === crossCentre.y &&
-                  y2.baseVal.value === crossCentre.y) ||
-                (x1.baseVal.value === crossCentre.x &&
-                  x2.baseVal.value === crossCentre.x)
-              );
-            }),
-            // A DOMPoint does not survive the trip out of the page, so copy its numbers.
-            northTip: north
-              ? {
-                  x: north.getPointAtLength(0).x,
-                  y: north.getPointAtLength(0).y,
-                }
-              : null,
-            northBox: northBox
-              ? { x: northBox.x, y: northBox.y, height: northBox.height }
-              : null,
-            quarterWidths: quarters.map((box) => box.width),
-            quarterStarts: quarters.map((box) => box.x),
-          };
+          }).length;
         });
-        // The pin's tip is the measured line's first point, to within a hundredth of a pixel.
-        expect(Math.abs(marks.tip.x - marks.lineStart.x)).toBeLessThan(0.01);
-        expect(Math.abs(marks.tip.y - marks.lineStart.y)).toBeLessThan(0.01);
-        expect(marks.armsMeetCentre).toBe(true);
-        // The filled half starts at the arrow's tip, its top-left corner: the
-        // tip is straight above the shared edge, so it points up the grid.
-        expect(marks.northTip).not.toBeNull();
-        expect(marks.northBox).not.toBeNull();
-        expect(marks.northTip?.x).toBeCloseTo(
-          marks.northBox?.x ?? Number.NaN,
-          3,
+        expect(outside).toBe(0);
+        // The collar's labels keep the small step's 13px.
+        const sizes = await figure.evaluate((element) =>
+          [...element.querySelectorAll("svg text")].map((label) =>
+            Number.parseFloat(getComputedStyle(label).fontSize),
+          ),
         );
-        expect(marks.northTip?.y).toBeCloseTo(
-          marks.northBox?.y ?? Number.NaN,
-          3,
-        );
-        // The scale bar's four quarters are equal and follow one another.
-        const [first] = marks.quarterWidths;
-        for (const [i, width] of marks.quarterWidths.entries()) {
-          expect(width).toBeCloseTo(first ?? 0, 6);
-          if (i > 0) {
-            expect(marks.quarterStarts[i]).toBeCloseTo(
-              (marks.quarterStarts[i - 1] ?? 0) + (first ?? 0),
-              6,
-            );
-          }
-        }
-        // On a narrow screen the art is cropped round the line, and the pin and the line are still in view.
-        const frame = await page.getByTestId("survey-art-frame").boundingBox();
-        expect(frame).not.toBeNull();
-        if (frame) {
-          expect(marks.tip.x).toBeGreaterThan(frame.x);
-          expect(marks.tip.x).toBeLessThan(frame.x + frame.width);
-          expect(marks.tip.y).toBeGreaterThan(frame.y);
-          expect(marks.tip.y).toBeLessThan(frame.y + frame.height);
+        for (const size of sizes) {
+          expect(size).toBeGreaterThanOrEqual(13);
         }
       });
     }
-  }
 
-  test.describe("with motion on", () => {
-    test.use({ reducedMotion: "no-preference" });
+    test("follows a theme chosen on the page, whatever the system prefers", async ({
+      page,
+    }) => {
+      await page.emulateMedia({ colorScheme: "light" });
+      const product = new ProductPage(page);
+      await product.goto();
+      await page.evaluate(() => {
+        document.documentElement.dataset.theme = "dark";
+      });
+      const figure = page.getByTestId("plate-hero");
+      await figure.scrollIntoViewIfNeeded();
+      await expect(figure.getByRole("img")).toHaveAttribute(
+        "alt",
+        /dark theme/,
+      );
+      await expect(figure.getByRole("img")).toHaveCount(1);
+    });
 
-    test("lands the pin with its tip on the measured line once it has dropped", async ({
+    test("credits the map beside each picture with links to the credited pages", async ({
       page,
     }) => {
       const product = new ProductPage(page);
       await product.goto();
-      const art = page.getByTestId("survey-art");
-      await art.evaluate(() =>
-        Promise.all(document.getAnimations().map((motion) => motion.finished)),
-      );
-      const offset = await art.evaluate((svg) => {
-        const tip = svg.querySelector<SVGGraphicsElement>(
-          '[data-anchor="pin-tip"]',
-        );
-        const line = svg.querySelector<SVGLineElement>(
-          '[data-anchor="measure-line"]',
-        );
-        const at = (element: SVGGraphicsElement | null, x: number, y: number) =>
-          new DOMPoint(x, y).matrixTransform(
-            element?.getScreenCTM() ?? undefined,
-          );
-        const a = at(tip, 0, 0);
-        const b = at(
-          line,
-          line?.x1.baseVal.value ?? Number.NaN,
-          line?.y1.baseVal.value ?? Number.NaN,
-        );
-        return Math.hypot(a.x - b.x, a.y - b.y);
+      for (const { id } of PLATES) {
+        const figure = page.getByTestId(`plate-${id}`);
+        const credits = figure.getByText("Map credits:");
+        await expect(credits).toContainText("OpenStreetMap contributors");
+        await expect(credits).toContainText("OpenFreeMap");
+        await expect(
+          credits.getByRole("link", { name: "© OpenStreetMap contributors" }),
+        ).toHaveAttribute("href", "https://www.openstreetmap.org/copyright");
+      }
+    });
+
+    test.describe("without a script", () => {
+      test.use({ javaScriptEnabled: false });
+
+      test("still show each picture, whole, with its credits, and never scroll sideways", async ({
+        page,
+      }) => {
+        await page.setViewportSize({ width: 390, height: 900 });
+        await page.goto("/");
+        for (const { id } of PLATES) {
+          const figure = page.getByTestId(`plate-${id}`);
+          const image = figure.locator("img:visible");
+          await expect(image).toHaveCount(1);
+          await image.scrollIntoViewIfNeeded();
+          await expect
+            .poll(() =>
+              image.evaluate(
+                (element: HTMLImageElement) =>
+                  element.complete && element.naturalWidth > 0,
+              ),
+            )
+            .toBe(true);
+          await expect(figure.getByText("Map credits:")).toBeVisible();
+        }
+        expect(
+          await page.evaluate(() => document.documentElement.scrollWidth),
+        ).toBeLessThanOrEqual(390);
       });
-      expect(offset).toBeLessThan(0.01);
     });
   });
 
@@ -1148,6 +1378,21 @@ test.describe("the product page @a11y", () => {
     const product = new ProductPage(page);
     await product.goto();
     expect(await findLongMotion(page)).toEqual([]);
+  });
+
+  test.describe("with motion allowed", () => {
+    test.use({ reducedMotion: "no-preference" });
+
+    test("the relief strip does not move: no animation runs on the page @a11y", async ({
+      page,
+    }) => {
+      const product = new ProductPage(page);
+      await product.goto();
+      const running = await page.evaluate(() =>
+        document.getAnimations().map((motion) => motion.playState),
+      );
+      expect(running).toEqual([]);
+    });
   });
 });
 

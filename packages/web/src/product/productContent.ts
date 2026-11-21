@@ -1,9 +1,21 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
 import {
+  type BasemapAttributionEntry,
+  buildAttribution,
+  getBasemap,
+} from "@mapcairn/core";
+import {
   PLAYGROUND_PATH,
   SOURCE_REPOSITORY_URL,
 } from "../constants/siteConfig";
+import {
+  CAPTURE_BASEMAP_NAMES,
+  type CaptureSubjectId,
+  type CaptureTheme,
+  captureSubject,
+  measuredReadout,
+} from "./captureSubjects";
 import { EMBED_EXAMPLE_FILES } from "./embedExampleFiles";
 
 /*
@@ -14,15 +26,19 @@ import { EMBED_EXAMPLE_FILES } from "./embedExampleFiles";
  * `scripts/copy-check/allowlist.mjs`).
  *
  * Evergreen by design: it describes what the SDK is and how it is built, not
- * counts, versions, dates, plans or what is in progress, so a change to the SDK
- * normally needs nothing here. What is current lives in the repository's
- * documentation.
+ * counts, dates, plans or what is in progress, so a change to the SDK normally
+ * needs nothing here. What is current lives in the repository's documentation.
+ * The one status line, that the SDK is before version 1.0, is the deliberate
+ * exception (`STATUS_LINE`): it goes when 1.0 ships.
  *
- * Links: the repository from exactly two places, the hero's View on GitHub and
- * the footer's Source code, the package on npm from the hero's View on npm, the
- * project's Mastodon profile from the footer (with `rel="me"`), and otherwise
- * only this site's own pages. Never a Markdown file, an issue, a pull request or
- * a milestone, and no second way to the repository: the big button is enough.
+ * Links: the repository's front page from exactly two places, the hero's View
+ * on GitHub and the footer's Source code, and from the footer a short, named set
+ * of pages in it (`REPOSITORY_PAGES`: the documentation, the release notes, the
+ * licence guide, the security policy and Discussions, which an adopter looks
+ * for next) and the example app, which the text names. The package on npm from
+ * the hero's View on npm, the project's Mastodon profile from the footer (with
+ * `rel="me"`), and otherwise only this site's own pages. Never an issue, a pull
+ * request or a milestone, and no other page of the repository.
  */
 
 /** A link inside a block of text. Paths starting with `/` are on this site. */
@@ -41,6 +57,22 @@ export type Inline = string | InlineLink | InlineCode;
 
 /** One line of text made of runs. */
 export type Line = readonly Inline[];
+
+/** The icon a legend item is drawn with: a name the page maps to a Lucide icon, so this module stays free of React. */
+export type LegendIcon =
+  | "interface"
+  | "layers"
+  | "accessible"
+  | "private"
+  | "ports"
+  | "design";
+
+/** One item of a legend: its icon, its name and what it means, always shown. */
+export interface LegendItem {
+  readonly icon: LegendIcon;
+  readonly name: string;
+  readonly text: Line;
+}
 
 /** One item that opens to show more: a one-line summary and the detail under it. */
 export interface Disclosure {
@@ -65,6 +97,8 @@ export type Block =
       readonly options: readonly InstallOption[];
     }
   | { readonly kind: "details"; readonly items: readonly Disclosure[] }
+  | { readonly kind: "legend"; readonly items: readonly LegendItem[] }
+  | { readonly kind: "plate"; readonly id: CaptureSubjectId }
   | { readonly kind: "deepLinks"; readonly links: readonly InlineLink[] };
 
 /** One package manager and the command that installs the SDK with it. */
@@ -97,13 +131,71 @@ export const DEEP_LINKS: readonly InlineLink[] = [
   },
 ];
 
+/** The repository's pages on GitHub, which are not its front page. */
+const REPOSITORY_BLOB = `${SOURCE_REPOSITORY_URL}/blob/main`;
+
+/** The README's documentation section, the index of the guides, which the footer names Documentation. */
+export const DOCUMENTATION_LINK: InlineLink = {
+  text: "Documentation",
+  href: `${SOURCE_REPOSITORY_URL}#documentation`,
+};
+
+/** What a GIS application needs and what the SDK has, partly has or lacks: the answer on production readiness links it. */
+export const CAPABILITY_MATRIX_LINK: InlineLink = {
+  text: "capability matrix",
+  href: `${REPOSITORY_BLOB}/docs/guides/capability-matrix.md`,
+};
+
+/** What changed in each release. */
+export const RELEASE_NOTES_LINK: InlineLink = {
+  text: "Release notes",
+  href: `${SOURCE_REPOSITORY_URL}/releases`,
+};
+
+/** What the AGPL-3.0 means for an app that uses the SDK, in plain words. */
+export const LICENCE_GUIDE_LINK: InlineLink = {
+  text: "Licence guide",
+  href: `${REPOSITORY_BLOB}/docs/guides/licence.md`,
+};
+
+/** How to report a vulnerability, and what the project supports. */
+export const SECURITY_LINK: InlineLink = {
+  text: "Security",
+  href: `${REPOSITORY_BLOB}/SECURITY.md`,
+};
+
+/** Where questions are asked and answered in public. */
+export const DISCUSSIONS_LINK: InlineLink = {
+  text: "Discussions",
+  href: `${SOURCE_REPOSITORY_URL}/discussions`,
+};
+
+/** The example app that uses the SDK only through its public entry points. */
+export const EXAMPLE_APP_LINK: InlineLink = {
+  text: "examples/embed",
+  href: `${SOURCE_REPOSITORY_URL}/tree/main/examples/embed`,
+};
+
+/**
+ * The pages of the repository, other than its front page, that the page may
+ * link, in the order the footer lists them. The tests hold the page to this
+ * set (and the example app), each for the reason beside it in the test.
+ */
+export const REPOSITORY_PAGES: readonly InlineLink[] = [
+  DOCUMENTATION_LINK,
+  RELEASE_NOTES_LINK,
+  LICENCE_GUIDE_LINK,
+  SECURITY_LINK,
+  DISCUSSIONS_LINK,
+];
+
 /** The primary action, wherever the page offers it. */
 export const GITHUB_ACTION: InlineLink = {
   text: "View on GitHub",
   href: SOURCE_REPOSITORY_URL,
 };
 
-/** The secondary action, wherever the page offers it. */
+/** The playground link, a plain link in the hero's row under the button and again in the footer. */
 export const PLAYGROUND_ACTION: InlineLink = {
   text: "Try the playground",
   href: PLAYGROUND_PATH,
@@ -122,13 +214,12 @@ export const NPM_ACTION: InlineLink = {
 export const PRODUCT_TITLE =
   "MapCairn | Open-source SDK for accessible map applications";
 
-/** The page's one h1: what a team can build with MapCairn, and for whom. */
-export const HEADLINE =
-  "Build accessible, privacy-respecting map applications for the public";
+/** The page's one h1: what MapCairn makes, and for whom. */
+export const HEADLINE = "Accessible map interfaces for the public";
 
-/** The short paragraph under the h1: what MapCairn is, who it is for and what it gives them. */
+/** The sentence under the h1: what MapCairn is and what it promises, with the page's own hedge on the target and on what is requested. */
 export const LEDE: Line = [
-  "MapCairn is an open-source React SDK for teams building public-interest maps, such as open data and hazard maps. It gives you the whole interface around a MapLibre map, open data layers written as data, and every service behind a small interface you can replace.",
+  "MapCairn is an open-source React SDK for public-interest maps: the whole interface around a MapLibre map, with WCAG 2.2 AA as the target and, by default, nothing requested beyond the basemap until a person asks, unless a host turns on search suggestions.",
 ];
 
 /** The umbrella package and its three peers, as every package manager is asked to add them. */
@@ -170,6 +261,13 @@ export function installCopyLabel(manager: string): string {
 /** The group's accessible name, the install block's label. */
 export const INSTALL_GROUP_LABEL = "Package manager";
 
+/** The hero's install block: a command for each package manager, the first chosen. */
+export const HERO_INSTALL: Extract<Block, { kind: "install" }> = {
+  kind: "install",
+  label: INSTALL_GROUP_LABEL,
+  options: INSTALL_OPTIONS,
+};
+
 /** The copy button's words beside a code example, and what it announces. */
 export const COPY_CODE = {
   idle: "Copy code",
@@ -182,10 +280,14 @@ export const COPY_CODE = {
     `Could not copy ${file}. Select the code and copy it manually.`,
 } as const;
 
-/** The line under the hero's two buttons. */
+/** The line under the hero's button and links. */
 export const HERO_NOTE: Line = [
-  "Open source under the AGPL-3.0. Contributions are welcome.",
+  "Open source under the AGPL-3.0, which allows commercial use. Contributions are welcome.",
 ];
+
+/** One line of project status, in the answer on whether it is ready for production. */
+export const STATUS_LINE =
+  "It is before version 1.0: a minor release can change the public API, and each release's notes name what to change.";
 
 /** A line as plain text: the words of its links and names, with no markup. */
 export function lineToText(line: Line): string {
@@ -214,6 +316,80 @@ export function faqEntries(): { question: string; answer: string }[] {
     }));
 }
 
+/** The words of one picture. */
+export interface PlateText {
+  /** What the picture shows, apart from its theme and basemap: the start of its alt text and what `/index.md` says in its place. */
+  readonly description: string;
+  /** The line under the picture, before its basemaps and credits. */
+  readonly caption: string;
+}
+
+/**
+ * The words of each picture, which are captures of the running playground
+ * (`captureSubjects.ts`). The capture script checks the length the hero's
+ * picture measures against the subject's `readout`, so what the description says is
+ * what the picture shows.
+ */
+export const PLATES: Readonly<Record<CaptureSubjectId, PlateText>> = {
+  hero: {
+    description: `The MapCairn playground over Cape Town with the Measure tool open: a line of ${measuredReadout("hero")} measured from the slopes of Lion's Head to the city centre, with its length and the Distance and Area choices in the toolbar.`,
+    caption: "The playground, measuring across Cape Town.",
+  },
+  basemaps: {
+    description:
+      "The MapCairn playground on a phone, over Cape Town, with the Map options sheet half open on its Basemap picker, which offers Bright, Liberty, Positron and more, with one chosen.",
+    caption: "Map options on a phone, over the same view.",
+  },
+};
+
+/**
+ * The alt text of a picture: what it shows, then the basemap and the theme it
+ * is drawn in, so the picture for each theme says what is in it.
+ */
+export function plateAlt(id: CaptureSubjectId, theme: CaptureTheme): string {
+  const basemap = CAPTURE_BASEMAP_NAMES[captureSubject(id).basemaps[theme]];
+  return `${PLATES[id].description} The map is drawn over the ${basemap} basemap, in the ${theme} theme.`;
+}
+
+/** The basemaps a picture is drawn over, by theme, in words for its caption. */
+export function plateBasemaps(id: CaptureSubjectId): string {
+  const { basemaps } = captureSubject(id);
+  return `The basemap is ${CAPTURE_BASEMAP_NAMES[basemaps.light]} in the light theme and ${CAPTURE_BASEMAP_NAMES[basemaps.dark]} in the dark theme.`;
+}
+
+/**
+ * The credits that go with a picture: those the map itself shows for each
+ * basemap it is drawn over, from the basemap's definition in the SDK, so they
+ * cannot differ from the playground's own. Each credit appears once.
+ */
+export function plateCredits(
+  id: CaptureSubjectId,
+): readonly BasemapAttributionEntry[] {
+  const credits = Object.values(captureSubject(id).basemaps).flatMap(
+    (basemapId) => {
+      const basemap = getBasemap(basemapId);
+      if (basemap === undefined) {
+        throw new Error(`No basemap ${basemapId}.`);
+      }
+      return buildAttribution(basemap);
+    },
+  );
+  return credits.filter(
+    (credit, index) =>
+      credits.findIndex((other) => other.text === credit.text) === index,
+  );
+}
+
+/** What leads the credits under a picture. */
+export const PLATE_CREDITS_LEAD = "Map credits:";
+
+/** The credits of a picture as plain words, for `/index.md` and `/llms-full.txt`. */
+export function plateCreditsText(id: CaptureSubjectId): string {
+  return `${PLATE_CREDITS_LEAD} ${plateCredits(id)
+    .map((credit) => credit.text)
+    .join(", ")}.`;
+}
+
 /** The page's sections, in reading order. */
 export const SECTIONS: readonly Section[] = [
   {
@@ -223,17 +399,12 @@ export const SECTIONS: readonly Section[] = [
       {
         kind: "paragraph",
         text: [
-          "Install ",
+          "The command at the top of the page installs ",
           { code: "@mapcairn/sdk" },
           ", the one package most apps need, with its peers. Its root holds the interface, and the MapLibre adapter that draws the map is at the subpath ",
           { code: "@mapcairn/sdk/adapter-maplibre" },
           ".",
         ],
-      },
-      {
-        kind: "install",
-        label: INSTALL_GROUP_LABEL,
-        options: INSTALL_OPTIONS,
       },
       { kind: "paragraph", text: INSTALL_REQUIREMENTS },
       {
@@ -333,55 +504,50 @@ export const SECTIONS: readonly Section[] = [
         kind: "paragraph",
         text: ["What a map renderer leaves to you, built and tested."],
       },
+      { kind: "plate", id: "basemaps" },
       {
-        kind: "details",
+        kind: "legend",
         items: [
           {
-            summary: "A finished map interface",
-            detail: [
-              [
-                "Search by place or by coordinates, measuring, drawing and editing shapes with import and export, directions through a routing provider you supply, a layers panel with keys and feature cards, saving the map as an image, and links that carry what is on the map.",
-              ],
+            icon: "interface",
+            name: "A finished map interface",
+            text: [
+              "Search by place or by coordinates, measuring, drawing and editing shapes with import and export, directions through a routing provider you supply, a layers panel with keys and feature cards, saving the map as an image, and links that carry what is on the map.",
             ],
           },
           {
-            summary: "Open data layers written as data",
-            detail: [
-              [
-                "A layer is one definition: a feed, tiles, a heatmap or a query for what is in view. The SDK draws it, builds its key, card and list, keeps words beside every colour, and validates the definition.",
-              ],
+            icon: "layers",
+            name: "Open data layers written as data",
+            text: [
+              "A layer is one definition: a feed, tiles, a heatmap or a query for what is in view. The SDK draws it, builds its key, card and list, keeps words beside every colour, and validates the definition.",
             ],
           },
           {
-            summary: "Accessible by default",
-            detail: [
-              [
-                "WCAG 2.2 AA is the target in the light and the dark theme. Every gesture has a keyboard or single-tap equivalent, announcements go through one live region, and automated accessibility checks run on every pull request.",
-              ],
+            icon: "accessible",
+            name: "Accessible by default",
+            text: [
+              "WCAG 2.2 AA is the target in the light and the dark theme. Every gesture has a keyboard or single-tap equivalent, announcements go through one live region, and automated accessibility checks run on every pull request.",
             ],
           },
           {
-            summary: "Private by design",
-            detail: [
-              [
-                "Apart from the basemap, nothing is requested until a person asks: a layer loads when it is turned on, a search when it is submitted. The exception is search suggestions, which a host may turn on and which send the text typed so far. No accounts, no tracking, settings kept on the device, and nothing proxied.",
-              ],
+            icon: "private",
+            name: "Private by design",
+            text: [
+              "Apart from the basemap, nothing is requested until a person asks: a layer loads when it is turned on, a search when it is submitted. The exception is search suggestions, which a host may turn on and which send the text typed so far. No accounts, no tracking, settings kept on the device, and nothing proxied.",
             ],
           },
           {
-            summary: "Every service behind a port",
-            detail: [
-              [
-                "The interface never imports MapLibre or an adapter. Search, routing, storage, layers, the map engine and the rest are small interfaces, each with an in-memory fake and a shared contract suite, so the whole interface can be tested without WebGL or a network, and any service replaced without touching it.",
-              ],
+            icon: "ports",
+            name: "Every service behind a port",
+            text: [
+              "The interface never imports MapLibre or an adapter. Search, routing, storage, layers, the map engine and the rest are small interfaces, each with an in-memory fake and a shared contract suite, so the whole interface can be tested without WebGL or a network, and any service replaced without touching it.",
             ],
           },
           {
-            summary: "A design system with checked contrast",
-            detail: [
-              [
-                "Typed tokens only, light and dark themes and one accent. The contrast of every token pair is calculated in a test, and a style scanner rejects raw colours, off-scale spacing and unnamed controls.",
-              ],
+            icon: "design",
+            name: "A design system with checked contrast",
+            text: [
+              "Typed tokens only, light and dark themes and one accent. The contrast of every token pair is calculated in a test, and a style scanner rejects raw colours, off-scale spacing and unnamed controls.",
             ],
           },
         ],
@@ -396,6 +562,18 @@ export const SECTIONS: readonly Section[] = [
         kind: "paragraph",
         text: [
           "The playground is the reference site, built from these packages. Search for a place or a pair of coordinates, measure and draw, switch the basemap, turn on a data layer, or change the language in Settings.",
+        ],
+      },
+      {
+        kind: "paragraph",
+        text: [
+          "What the playground adds is its own: its search, directions and data layers are this site's adapters and definitions, built on public community services (Nominatim for search and the FOSSGIS Valhalla server for directions) that are not meant for other sites' production traffic.",
+        ],
+      },
+      {
+        kind: "paragraph",
+        text: [
+          "Your app supplies its own providers. The SDK ships the interface, the MapLibre adapter and in-memory fakes.",
         ],
       },
       { kind: "deepLinks", links: DEEP_LINKS },
@@ -445,8 +623,8 @@ export const SECTIONS: readonly Section[] = [
               [
                 "Install ",
                 { code: "@mapcairn/sdk" },
-                ", as the first section shows. Or start from the example app in ",
-                { code: "examples/embed" },
+                ", as the command at the top of the page shows. Or start from the example app in ",
+                { text: "examples/embed", href: EXAMPLE_APP_LINK.href },
                 " in the source on GitHub, which uses the SDK only through its public entry points. The playground shows the whole SDK working.",
               ],
             ],
@@ -455,8 +633,14 @@ export const SECTIONS: readonly Section[] = [
             summary: "Is it ready for production?",
             detail: [
               [
-                "The reference site runs on it in production, and every change passes the project's unit, browser and accessibility tests before it is merged. What it has and lacks today is in the documentation on GitHub.",
+                "The reference site runs on it in production, and every change passes the project's unit, browser and accessibility tests before it is merged. What it has and lacks today is in the ",
+                {
+                  text: "capability matrix",
+                  href: CAPABILITY_MATRIX_LINK.href,
+                },
+                " on GitHub.",
               ],
+              [STATUS_LINE],
             ],
           },
           {
@@ -479,7 +663,9 @@ export const SECTIONS: readonly Section[] = [
             summary: "What does it cost?",
             detail: [
               [
-                "Nothing: it is open source under the AGPL-3.0. The services a map uses, such as tiles, search and routing, are yours to choose, and each provider has its own terms.",
+                "Nothing: it is open source under the AGPL-3.0, which allows commercial use. The services a map uses, such as tiles, search and routing, are yours to choose, and each provider has its own terms. The ",
+                { text: "licence guide", href: LICENCE_GUIDE_LINK.href },
+                " says what the licence means for your project.",
               ],
             ],
           },
@@ -498,7 +684,7 @@ export const SECTIONS: readonly Section[] = [
                 "The SDK is AGPL-3.0-only, an open-source licence. If you distribute an app that includes the SDK, including by serving it to people's browsers, you must give them access to the corresponding source of the code you combine with the SDK and serve with it, under the same licence.",
               ],
               [
-                "If you modify the SDK and let people interact with your modified version over a network, you must give them access to its corresponding source. A licence for closed-source use is not available yet. The SDK's own dependencies are permissively licensed.",
+                "If you modify the SDK and let people interact with your modified version over a network, you must give them access to its corresponding source. Keeping an app's source private while it is distributed with the SDK inside needs separate terms. A licence for closed-source use is not on offer yet. The SDK's own dependencies are permissively licensed.",
               ],
             ],
           },

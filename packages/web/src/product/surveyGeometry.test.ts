@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
-import { tokenValues } from "@mapcairn/theme";
 import { describe, expect, it } from "vitest";
 import {
   CONTOUR_INTERVAL_METRES,
@@ -12,53 +11,35 @@ import {
   type Box,
   CAIRN_BOX,
   CAIRN_FOOT,
-  CROSSHAIR,
-  CROSSHAIR_ARMS,
+  type Crop,
   EASTINGS,
-  GRID_STEP,
-  LABEL_SIZE,
-  labelBox,
   MEASURE,
   MEASURE_LABEL,
   MEASURE_METRES,
   MEASURE_UNITS,
-  markBoxes,
   NARROW_CROP,
-  NORTH,
-  NORTH_HALVES,
   NORTHINGS,
+  PIN_BOX,
   PIN_PATH,
   PIN_TIP,
-  SCALE_BAR,
+  placeIn,
   SHEET,
   SPOT_HEIGHT,
   UNITS_PER_KM,
-  VIEW_BOX,
+  WIDE_CROP,
 } from "./surveyGeometry";
 
-/** Whether two boxes share any area. */
-function overlaps(a: Box, b: Box): boolean {
+/** Whether `inner` lies inside `outer`. */
+function inside(inner: Box, outer: Box): boolean {
   return (
-    a.left < b.right && b.left < a.right && a.top < b.bottom && b.top < a.bottom
+    inner.left >= outer.left &&
+    inner.right <= outer.right &&
+    inner.top >= outer.top &&
+    inner.bottom <= outer.bottom
   );
 }
 
-/** The distance from a point to the infinite line through two points. */
-function distanceToLine(
-  point: { x: number; y: number },
-  from: { x: number; y: number },
-  to: { x: number; y: number },
-): number {
-  const length = Math.hypot(to.x - from.x, to.y - from.y);
-  return (
-    Math.abs(
-      (to.x - from.x) * (from.y - point.y) -
-        (from.x - point.x) * (to.y - from.y),
-    ) / length
-  );
-}
-
-describe("the survey sheet's geometry", () => {
+describe("the relief strip's geometry", () => {
   it("starts the measured line exactly at the pin's tip and ends it at the cairn's foot", () => {
     expect(MEASURE.from).toEqual(PIN_TIP);
     expect(MEASURE.to).toEqual(CAIRN_FOOT);
@@ -73,90 +54,35 @@ describe("the survey sheet's geometry", () => {
     expect((CAIRN_BOX.left + CAIRN_BOX.right) / 2).toBeCloseTo(CAIRN_FOOT.x, 6);
   });
 
-  it("labels the line with its own length on the scale bar's scale", () => {
+  it("labels the line with its own length on the sheet's scale, at the line's middle", () => {
     const metres = (MEASURE_UNITS / UNITS_PER_KM) * 1000;
     expect(MEASURE_METRES).toBe(metres);
     const km = Number(MEASURE_LABEL.text.replace(" km", ""));
     expect(MEASURE_LABEL.text.endsWith(" km")).toBe(true);
     expect(Math.abs(km * 1000 - metres)).toBeLessThan(10);
+    expect(MEASURE_LABEL.at.x).toBe((PIN_TIP.x + CAIRN_FOOT.x) / 2);
+    expect(MEASURE_LABEL.at.y).toBe((PIN_TIP.y + CAIRN_FOOT.y) / 2);
   });
 
-  it("keeps the length label off the line, beside its middle", () => {
-    const box = labelBox(MEASURE_LABEL.text, MEASURE_LABEL.at, "middle");
-    const corners = [
-      { x: box.left, y: box.top },
-      { x: box.right, y: box.top },
-      { x: box.left, y: box.bottom },
-      { x: box.right, y: box.bottom },
-    ];
-    const side = (point: { x: number; y: number }) =>
-      Math.sign(
-        (MEASURE.to.x - MEASURE.from.x) * (point.y - MEASURE.from.y) -
-          (MEASURE.to.y - MEASURE.from.y) * (point.x - MEASURE.from.x),
-      );
-    // Every corner is on the same side, so the line does not cross the label.
-    expect(new Set(corners.map(side)).size).toBe(1);
-    const centre = {
-      x: (box.left + box.right) / 2,
-      y: (box.top + box.bottom) / 2,
-    };
-    const middle = {
-      x: (MEASURE.from.x + MEASURE.to.x) / 2,
-      y: (MEASURE.from.y + MEASURE.to.y) / 2,
-    };
-    expect(Math.hypot(centre.x - middle.x, centre.y - middle.y)).toBeLessThan(
-      60,
-    );
-    expect(distanceToLine(centre, MEASURE.from, MEASURE.to)).toBeGreaterThan(4);
+  it("rises the line away from its label's side, so the label sits on the empty side of the line", () => {
+    // The label's box starts below and after the middle; the line there is
+    // higher the further along it goes, so it never reaches the box.
+    expect(MEASURE.to.y).toBeLessThan(MEASURE.from.y);
+    expect(MEASURE.to.x).toBeGreaterThan(MEASURE.from.x);
   });
 
-  it("draws one kilometre on the scale bar in four equal quarters, labelled 0 and 1 km at its ends", () => {
-    const { quarters, origin, labels } = SCALE_BAR;
-    expect(quarters).toHaveLength(4);
-    expect(quarters[0]?.x).toBe(origin.x);
-    const end = (quarters[3]?.x ?? 0) + (quarters[3]?.width ?? 0);
-    expect(end - origin.x).toBe(UNITS_PER_KM);
-    for (const quarter of quarters) {
-      expect(quarter.width).toBe(UNITS_PER_KM / 4);
-    }
-    expect(labels).toEqual([
-      { x: origin.x, text: "0" },
-      { x: origin.x + UNITS_PER_KM, text: "1 km" },
-    ]);
-  });
-
-  it("meets the crosshair's arms on its centre", () => {
-    const { centre } = CROSSHAIR;
-    for (const [from, to] of CROSSHAIR_ARMS) {
-      const horizontal = from.y === to.y;
-      if (horizontal) {
-        expect(from.y).toBe(centre.y);
-      } else {
-        expect(from.x).toBe(centre.x);
-        expect(to.x).toBe(centre.x);
-      }
-    }
-    expect(CROSSHAIR_ARMS).toHaveLength(4);
-  });
-
-  it("points the north arrow straight up the grid", () => {
-    expect(NORTH.tip.y).toBeLessThan(NORTH.baseY);
-    expect(NORTH_HALVES.dark).toContain(`M${NORTH.tip.x} ${NORTH.tip.y}`);
-    expect(NORTH_HALVES.light).toContain(`M${NORTH.tip.x} ${NORTH.tip.y}`);
-    // The two halves are mirror images about the tip's vertical.
-    expect(NORTH_HALVES.dark).toContain(`L${NORTH.tip.x + NORTH.halfWidth} `);
-    expect(NORTH_HALVES.light).toContain(`L${NORTH.tip.x - NORTH.halfWidth} `);
-  });
-
-  it("puts the grid ticks on the grid's true positions, numbered with north the larger", () => {
+  it("puts the grid ticks a kilometre apart inside the sheet", () => {
     expect(EASTINGS.map((tick) => tick.at)).toEqual(
-      Array.from({ length: EASTINGS.length }, (_, i) => (i + 1) * GRID_STEP),
+      Array.from({ length: EASTINGS.length }, (_, i) => (i + 1) * UNITS_PER_KM),
     );
-    const northings = NORTHINGS.map((tick) => Number(tick.label));
-    expect([...northings].sort((a, b) => b - a)).toEqual(northings);
-    const eastings = EASTINGS.map((tick) => Number(tick.label));
-    expect([...eastings].sort((a, b) => a - b)).toEqual(eastings);
-    expect(GRID_STEP).toBe(UNITS_PER_KM);
+    expect(NORTHINGS.map((tick) => tick.at)).toEqual(
+      Array.from(
+        { length: NORTHINGS.length },
+        (_, i) => (i + 1) * UNITS_PER_KM,
+      ),
+    );
+    expect(EASTINGS.at(-1)?.at).toBeLessThan(SHEET.width);
+    expect(NORTHINGS.at(-1)?.at).toBeLessThan(SHEET.height);
   });
 
   it("marks every fifth contour from the base as an index contour, and gives the summit a height just above the highest", () => {
@@ -175,88 +101,68 @@ describe("the survey sheet's geometry", () => {
     expect(SPOT_HEIGHT.text).toBe(SUMMIT.metres.toLocaleString("en-GB"));
   });
 
-  it("keeps every mark inside the sheet and clear of every other mark", () => {
-    const boxes = Object.entries(markBoxes());
-    for (const [name, box] of boxes) {
-      expect(box.left, name).toBeGreaterThanOrEqual(0);
-      expect(box.top, name).toBeGreaterThanOrEqual(0);
-      expect(box.right, name).toBeLessThanOrEqual(SHEET.width);
-      expect(box.bottom, name).toBeLessThanOrEqual(SHEET.height);
-    }
-    for (const [i, [first, a]] of boxes.entries()) {
-      for (const [second, b] of boxes.slice(i + 1)) {
-        expect(overlaps(a, b), `${first} and ${second}`).toBe(false);
-      }
-    }
+  it("sets the spot height on the cairn's start side, in the middle of its height", () => {
+    expect(SPOT_HEIGHT.at.x).toBe(CAIRN_BOX.left);
+    expect(SPOT_HEIGHT.at.y).toBeGreaterThan(CAIRN_BOX.top);
+    expect(SPOT_HEIGHT.at.y).toBeLessThan(CAIRN_BOX.bottom);
   });
+});
 
-  it("keeps the measured line clear of every mark but its two ends", () => {
-    const { pin, cairn, ...others } = markBoxes();
-    for (const [name, box] of Object.entries(others)) {
-      const centre = {
-        x: (box.left + box.right) / 2,
-        y: (box.top + box.bottom) / 2,
-      };
-      const halfDiagonal = Math.hypot(
-        (box.right - box.left) / 2,
-        (box.bottom - box.top) / 2,
+describe("the two crops", () => {
+  const crops: readonly [string, Crop][] = [
+    ["wide", WIDE_CROP],
+    ["narrow", NARROW_CROP],
+  ];
+
+  it.each(crops)(
+    "keeps the pin, the cairn, the line and both label anchors in the %s crop, inside the sheet",
+    (_name, crop) => {
+      for (const mark of [PIN_BOX, CAIRN_BOX]) {
+        expect(inside(mark, crop.box)).toBe(true);
+      }
+      for (const point of [SPOT_HEIGHT.at, MEASURE_LABEL.at]) {
+        const { inline, block } = placeIn(crop, point);
+        expect(inline).toBeGreaterThan(0);
+        expect(inline).toBeLessThan(1);
+        expect(block).toBeGreaterThan(0);
+        expect(block).toBeLessThan(1);
+      }
+      expect(crop.box.left).toBeGreaterThanOrEqual(0);
+      expect(crop.box.right).toBeLessThanOrEqual(SHEET.width);
+      expect(crop.box.top).toBeGreaterThanOrEqual(0);
+      expect(crop.box.bottom).toBeLessThanOrEqual(SHEET.height);
+    },
+  );
+
+  it.each(crops)(
+    "puts the %s crop's top start corner on its frame's, with the frame the crop's shape",
+    (_name, crop) => {
+      const width = crop.box.right - crop.box.left;
+      // The drawing is `zoom` times the frame's width, so a frame width is `width` units.
+      expect(crop.zoom).toBeCloseTo(SHEET.width / width, 9);
+      expect(0 - crop.marginInlineStart * width).toBeCloseTo(crop.box.left, 9);
+      expect(0 - crop.marginBlockStart * width).toBeCloseTo(crop.box.top, 9);
+      expect(width / (crop.box.bottom - crop.box.top)).toBeCloseTo(
+        crop.aspect,
+        9,
       );
-      const t =
-        ((centre.x - MEASURE.from.x) * (MEASURE.to.x - MEASURE.from.x) +
-          (centre.y - MEASURE.from.y) * (MEASURE.to.y - MEASURE.from.y)) /
-        MEASURE_UNITS ** 2;
-      const onSegment = t > 0 && t < 1;
-      if (onSegment && name !== "measureLabel") {
-        expect(
-          distanceToLine(centre, MEASURE.from, MEASURE.to),
-          name,
-        ).toBeGreaterThan(halfDiagonal);
-      }
-    }
-    expect(pin.bottom).toBe(PIN_TIP.y);
-    expect(cairn.bottom).toBe(CAIRN_FOOT.y);
+    },
+  );
+
+  it("shows the whole width of the sheet in the wide crop, and enlarges the marks in the narrow one", () => {
+    expect(WIDE_CROP.zoom).toBe(1);
+    expect(NARROW_CROP.zoom).toBeGreaterThan(1.5);
   });
 
-  it("measures its labels at the size they are drawn: the type scale's small step", () => {
-    const rem = Number.parseFloat(tokenValues.typeScale.small.size);
-    expect(rem * 16).toBe(LABEL_SIZE);
-  });
-
-  it("keeps the pin, the line, its label, the cairn and the scale bar in the narrow-screen crop", () => {
-    const { box, zoom, aspect } = NARROW_CROP;
-    const { pin, cairn, measureLabel, spotHeight, scaleBar } = markBoxes();
-    for (const [name, mark] of Object.entries({
-      pin,
-      cairn,
-      measureLabel,
-      spotHeight,
-      scaleBar,
-    })) {
-      expect(mark.left, name).toBeGreaterThanOrEqual(box.left);
-      expect(mark.right, name).toBeLessThanOrEqual(box.right);
-      expect(mark.top, name).toBeGreaterThanOrEqual(box.top);
-      expect(mark.bottom, name).toBeLessThanOrEqual(box.bottom);
-    }
-    // With the drawing `zoom` times the frame's width, one view box unit is
-    // zoom / VIEW_BOX.width of the frame's width; the offsets must put the
-    // crop's top-left corner at the frame's top-left corner.
-    const unitsPerFrameWidth = VIEW_BOX.width / zoom;
-    expect(
-      VIEW_BOX.x - NARROW_CROP.marginInlineStart * unitsPerFrameWidth,
-    ).toBeCloseTo(box.left, 6);
-    expect(
-      VIEW_BOX.y - NARROW_CROP.marginBlockStart * unitsPerFrameWidth,
-    ).toBeCloseTo(box.top, 6);
-    // The frame shows exactly the crop's box.
-    expect((box.right - box.left) / (box.bottom - box.top)).toBeCloseTo(
-      aspect,
-      6,
-    );
-  });
-
-  it("leaves room in the collar for the grid numbers", () => {
-    expect(VIEW_BOX.x).toBeLessThan(0);
-    expect(VIEW_BOX.y).toBeLessThan(0);
-    expect(VIEW_BOX.width).toBeGreaterThan(SHEET.width);
+  it("places a point at its share of the crop", () => {
+    const { box } = WIDE_CROP;
+    expect(placeIn(WIDE_CROP, { x: box.left, y: box.top })).toEqual({
+      inline: 0,
+      block: 0,
+    });
+    expect(placeIn(WIDE_CROP, { x: box.right, y: box.bottom })).toEqual({
+      inline: 1,
+      block: 1,
+    });
   });
 });

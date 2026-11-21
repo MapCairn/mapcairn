@@ -479,7 +479,7 @@ export interface ScriptedSettings {
   readonly theme: "system" | "light" | "dark";
   readonly units: "metric" | "imperial";
   readonly zoomButtons: boolean | null;
-  readonly basemapId: string;
+  readonly basemapId: string | null;
   readonly lastView: {
     readonly center: { readonly lat: number; readonly lng: number };
     readonly zoom: number;
@@ -503,7 +503,7 @@ export async function scriptMemorySettings(
       theme: "system",
       units: "metric",
       zoomButtons: null,
-      basemapId: "bright",
+      basemapId: null,
       lastView: null,
       language: null,
       ...seed,
