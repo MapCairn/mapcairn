@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
+
 import { SITE_URL } from "../constants/siteConfig";
+import type { CaptureSubjectId } from "./captureSubjects";
 import {
   type Block,
   GITHUB_ACTION,
@@ -14,6 +16,7 @@ import {
   PLATES,
   PLAYGROUND_ACTION,
   plateCreditsText,
+  plateLiveLink,
   SECTIONS,
   type Section,
 } from "./productContent";
@@ -74,10 +77,17 @@ function block(item: Block): string {
         .map(({ name, text }) => `### ${name}\n\n${lineToMarkdown(text)}`)
         .join("\n\n");
     case "plate":
-      return `${PLATES[item.id].description} ${plateCreditsText(item.id)}`;
+      return plateMarkdown(item.id);
     case "deepLinks":
       return linkList(item.links);
   }
+}
+
+/** A picture as Markdown: what it shows, its credits and, where it has one, its link to the live playground. */
+function plateMarkdown(id: CaptureSubjectId): string {
+  const live = plateLiveLink(id);
+  const text = `${PLATES[id].description} ${plateCreditsText(id)}`;
+  return live === undefined ? text : `${text}\n\n${inline(live)}`;
 }
 
 /** One section as Markdown: its heading and its blocks. */

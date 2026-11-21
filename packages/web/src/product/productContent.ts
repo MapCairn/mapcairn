@@ -14,6 +14,7 @@ import {
   type CaptureSubjectId,
   type CaptureTheme,
   captureSubject,
+  captureView,
   measuredReadout,
 } from "./captureSubjects";
 import { EMBED_EXAMPLE_FILES } from "./embedExampleFiles";
@@ -322,6 +323,8 @@ export interface PlateText {
   readonly description: string;
   /** The line under the picture, before its basemaps and credits. */
   readonly caption: string;
+  /** Set for a picture that links to the live playground over the view it shows. */
+  readonly live?: true;
 }
 
 /**
@@ -334,6 +337,7 @@ export const PLATES: Readonly<Record<CaptureSubjectId, PlateText>> = {
   hero: {
     description: `The MapCairn playground over Cape Town with the Measure tool open: a line of ${measuredReadout("hero")} measured from the slopes of Lion's Head to the city centre, with its length and the Distance and Area choices in the toolbar.`,
     caption: "The playground, measuring across Cape Town.",
+    live: true,
   },
   basemaps: {
     description:
@@ -382,6 +386,24 @@ export function plateCredits(
 
 /** What leads the credits under a picture. */
 export const PLATE_CREDITS_LEAD = "Map credits:";
+
+/**
+ * The link under a picture that opens the live playground over the view the
+ * picture shows. It is a plain link and the whole of the page's live map:
+ * nothing of the map loads, and no tile is asked for, until it is followed.
+ */
+export const PLATE_LIVE_TEXT = "Try it live: open this view in the playground";
+
+/** The live link of a picture, or nothing for a picture that has none. */
+export function plateLiveLink(id: CaptureSubjectId): InlineLink | undefined {
+  if (PLATES[id].live !== true) {
+    return undefined;
+  }
+  return {
+    text: PLATE_LIVE_TEXT,
+    href: `${PLAYGROUND_PATH}${captureView(captureSubject(id))}`,
+  };
+}
 
 /** The credits of a picture as plain words, for `/index.md` and `/llms-full.txt`. */
 export function plateCreditsText(id: CaptureSubjectId): string {

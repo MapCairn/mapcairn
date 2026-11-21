@@ -18,6 +18,7 @@ import {
   plateAlt,
   plateBasemaps,
   plateCredits,
+  plateLiveLink,
 } from "./productContent";
 
 /** The picture of each subject for each theme, as the build serves them from this site. */
@@ -129,6 +130,19 @@ function PlateCredits({ id }: { readonly id: CaptureSubjectId }) {
   );
 }
 
+/** The link that opens the live playground over the view a picture shows, when the picture has one. */
+function PlateLive({ id }: { readonly id: CaptureSubjectId }) {
+  const live = plateLiveLink(id);
+  if (live === undefined) {
+    return null;
+  }
+  return (
+    <a className={styles.plateLive} href={live.href}>
+      {live.text}
+    </a>
+  );
+}
+
 /**
  * A picture of the running playground, set on a survey sheet: the capture in
  * a neatline, with a collar of latitude and longitude ticks worked out from
@@ -165,6 +179,7 @@ export function ProductPlate({ id }: { readonly id: CaptureSubjectId }) {
         <LatitudeCollar ticks={latitudeTicks} />
         <LongitudeCollar ticks={longitudeTicks} />
       </div>
+      <PlateLive id={id} />
       <figcaption className={styles.plateCaption}>
         <span>
           {PLATES[id].caption} {plateBasemaps(id)}
