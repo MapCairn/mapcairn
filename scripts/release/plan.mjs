@@ -132,24 +132,16 @@ export function planRelease({ pre, sources }) {
   }
 
   const merged = sources.mergedPullRequests();
-  const resolved = commits.map((commit) => ({
-    commit,
-    info: resolvePullRequest(commit, sources, merged),
-  }));
-  const pullRequests = resolved.map(({ commit, info }) => {
-    if (info === null && commit.pullRequest !== null) {
-      notices.push(`Could not read pull request #${commit.pullRequest}.`);
-    }
-    return {
-      number: info?.number ?? commit.pullRequest,
-      title: info?.title ?? commit.subject,
-      url: info?.url ?? null,
-      author: info?.author?.login ?? null,
-      type: commit.type,
-      scope: commit.scope,
-      breaking: commit.breaking,
-    };
-  });
+  const { resolved, pullRequests } = listPullRequests(
+    commits,
+    sources,
+    merged,
+    notices,
+  );
+  const sinceLastCandidate =
+    pre === null && last !== null && isPrerelease(last.version)
+      ? planSinceCandidate(last.tag, sources, merged, notices)
+      : null;
 
   return {
     lastTag: last?.tag ?? null,
@@ -174,8 +166,67 @@ export function planRelease({ pre, sources }) {
       sources,
       notices,
     ),
+    sinceLastCandidate,
     reviewByHand: REVIEW_BY_HAND,
     notices,
+  };
+}
+
+/**
+ * The pull requests behind some commits, each as the plan prints it, with the
+ * lookup result kept for the contributors to thank.
+ *
+ * @param {Array<import("./versionRules.mjs").ParsedCommit & { hash: string }>} commits
+ * @param {PlanSources} sources
+ * @param {Map<string, PullRequestInfo>} merged
+ * @param {string[]} notices
+ */
+function listPullRequests(commits, sources, merged, notices) {
+  const resolved = commits.map((commit) => ({
+    commit,
+    info: resolvePullRequest(commit, sources, merged),
+  }));
+  const pullRequests = resolved.map(({ commit, info }) => {
+    if (info === null && commit.pullRequest !== null) {
+      notices.push(`Could not read pull request #${commit.pullRequest}.`);
+    }
+    return {
+      number: info?.number ?? commit.pullRequest,
+      title: info?.title ?? commit.subject,
+      url: info?.url ?? null,
+      author: info?.author?.login ?? null,
+      type: commit.type,
+      scope: commit.scope,
+      breaking: commit.breaking,
+    };
+  });
+  return { resolved, pullRequests };
+}
+
+/**
+ * The changes since the last candidate, for a stable release planned after
+ * one: the notes cover everything since the last stable tag, but a person
+ * reviewing the release needs to see what changed since the candidate that was
+ * tried. It names its base, so the two parts are never confused.
+ *
+ * @param {string} base The last tag, a candidate.
+ * @param {PlanSources} sources
+ * @param {Map<string, PullRequestInfo>} merged
+ * @param {string[]} notices
+ */
+function planSinceCandidate(base, sources, merged, notices) {
+  const commits = sources
+    .commits(base)
+    .map((commit) => ({
+      ...parseCommit(commit.subject, commit.body),
+      hash: commit.hash,
+    }))
+    .filter((commit) => commit.scope !== "release");
+  return {
+    base,
+    pullRequests: listPullRequests(commits, sources, merged, notices)
+      .pullRequests,
+    apiChanges: compareApiReports(sources.reports(base), sources.reports(null)),
   };
 }
 

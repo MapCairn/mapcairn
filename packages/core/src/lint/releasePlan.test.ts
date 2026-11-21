@@ -243,10 +243,54 @@ describe("planRelease", () => {
       bump: "prerelease",
       notesSince: null,
     });
-    expect(seenTags).toEqual([null]);
+    expect(seenTags).toEqual([null, "v0.1.0-rc.2"]);
     expect(plan.notices.join(" ")).toContain(
       "the last tag that is not a prerelease",
     );
+  });
+
+  it("compares the API reports and lists the pull requests against the last candidate for a stable plan with no stable tag", () => {
+    const { sources, seenTags } = fakeSources({
+      tags: ["v0.1.0-rc.1", "v0.1.0-rc.2"],
+      commits: [{ subject: "feat(core): widen a type (#2)" }],
+      pulls: { 2: { title: "Widen a type" } },
+      after: REPORT_AFTER,
+    });
+    const plan = planRelease({ pre: null, sources });
+    expect(seenTags).toEqual([null, "v0.1.0-rc.2"]);
+    expect(plan.notesSince).toBeNull();
+    expect(plan.apiChanges).toEqual([]);
+    expect(plan.sinceLastCandidate.base).toBe("v0.1.0-rc.2");
+    expect(plan.sinceLastCandidate.apiChanges).toHaveLength(1);
+    expect(plan.sinceLastCandidate.pullRequests).toMatchObject([
+      { number: 2, title: "Widen a type" },
+    ]);
+  });
+
+  it("keeps the notes base at the last stable tag and adds the candidate base beside it", () => {
+    const { sources, seenTags } = fakeSources({
+      tags: ["v0.1.0", "v0.2.0-rc.1"],
+      commits: [{ subject: "fix(core): a thing (#2)" }],
+      pulls: { 2: {} },
+    });
+    const plan = planRelease({ pre: null, sources });
+    expect(seenTags).toEqual(["v0.1.0", "v0.2.0-rc.1"]);
+    expect(plan).toMatchObject({
+      notesSince: "v0.1.0",
+      version: "0.2.0",
+      sinceLastCandidate: { base: "v0.2.0-rc.1" },
+    });
+  });
+
+  it("has no candidate part when the last tag is a stable release or a candidate is planned", () => {
+    const stable = fakeSources({ tags: ["v0.1.0"] });
+    expect(
+      planRelease({ pre: null, sources: stable.sources }).sinceLastCandidate,
+    ).toBeNull();
+    const candidate = fakeSources({ tags: ["v0.1.0-rc.1"] });
+    expect(
+      planRelease({ pre: "rc", sources: candidate.sources }).sinceLastCandidate,
+    ).toBeNull();
   });
 
   it("reads the commits since the last tag that is not a prerelease", () => {
