@@ -465,6 +465,17 @@ describe("the README of @mapcairn/sdk", () => {
     );
     expect(readme).toContain("`maplibre-gl` (`^6.18.0`) is a required peer");
   });
+
+  it("points to the whole app, and says what a Vite project and a strict policy need, as the repository README does", () => {
+    expect(readme).toContain(
+      "https://github.com/MapCairn/mapcairn#embed-a-map",
+    );
+    expect(readme).toContain('`/// <reference types="vite/client" />`');
+    expect(readme).toContain("`https://tiles.openfreemap.org`");
+    expect(readme).toContain("`connect-src`");
+    expect(readme).toContain("`img-src`");
+    expect(readme).toContain("`MODULE_LEVEL_DIRECTIVE`");
+  });
 });
 
 describe("the README of @mapcairn/map", () => {

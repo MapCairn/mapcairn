@@ -29,6 +29,8 @@ For a real map, add the adapter from its subpath. It needs the URL of the engine
 import { createMapLibreMapAdapter } from "@mapcairn/sdk/adapter-maplibre";
 ```
 
+The [repository README's "Embed a map"](https://github.com/MapCairn/mapcairn#embed-a-map) shows a whole app that draws a map: `index.html`, a style sheet that gives the page a height, and `main.tsx`, which a test compiles as written. In a Vite project, start `main.tsx` with `/// <reference types="vite/client" />` (or list `vite/client` under `types` in `tsconfig.json`; Vite's `react-ts` template already does), or `tsc --noEmit` fails on the worker URL import and the CSS import. Under a strict Content Security Policy the default basemap needs `https://tiles.openfreemap.org` in `connect-src` and `img-src`, and the worker from the page's own origin in `worker-src`; the README has a policy line to start from. A Vite 8 build prints `"use client"` warnings (`MODULE_LEVEL_DIRECTIVE`) from the Radix UI packages that `@mapcairn/map` depends on; they are expected and harmless.
+
 `@mapcairn/sdk/styles.css` is three `@import` lines: the tokens from `@mapcairn/theme`, the styles of `@mapcairn/map`, then the engine styles of `@mapcairn/adapter-maplibre`. A host that links stylesheets without a bundler keeps using `@mapcairn/theme/tokens.css` and `@mapcairn/map/styles.css`, and adds `@mapcairn/adapter-maplibre/styles.css` for a real map. [`@mapcairn/map`](https://github.com/MapCairn/mapcairn/tree/main/packages/map) shows a whole app, which works the same with these imports.
 
 ## Next steps

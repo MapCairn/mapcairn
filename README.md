@@ -35,18 +35,59 @@ Install `@mapcairn/sdk`. It is the one package most apps need: it holds the whol
 npm install @mapcairn/sdk@next react react-dom maplibre-gl
 ```
 
-```ts
-import "@mapcairn/sdk/styles.css";
-import { MapChrome, ServicesProvider } from "@mapcairn/sdk";
-```
-
 `@mapcairn/sdk` re-exports `core`, `map`, `react` and `theme` from its root, and the MapLibre adapter at `@mapcairn/sdk/adapter-maplibre`. Its root never imports the engine, so an app that does not import the subpath carries none. Its stylesheet is the three the packages ship, in order: tokens, the map's, the engine's. The individual packages are the advanced option, for a host that wants fewer dependencies: `core` has no React or browser dependency, `theme` installs without the interface, and the adapter is a package of its own (see [Packages](#packages)). [`packages/sdk/README.md`](packages/sdk/README.md) lists the entry points and says how to keep one copy of a package when you also list it directly.
 
-A real map needs the adapter in the services, and the adapter needs the URL of the engine's worker file. In a Vite app that is the bundler's own worker URL import:
+A map that shows is three files in a Vite and React project: the page, a style sheet that gives the map a height, and the entry file. Together they are a whole app. It mounts the map with the SDK's interface around it and a search box at the top, and builds its services with the MapLibre adapter. The adapter needs the URL of the engine's worker file, which in a Vite app is the bundler's own worker URL import.
 
-```ts
-import { createFakeServices } from "@mapcairn/sdk";
+`index.html`:
+
+```html
+<!doctype html>
+<html lang="en-GB">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>My map</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
+```
+
+`src/page.css`. The SDK ships no base stylesheet, so the page gives the map its height and removes the body margin; without these the map is zero pixels high and nothing shows:
+
+```css
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+}
+```
+
+`src/main.tsx`:
+
+```tsx
+/// <reference types="vite/client" />
+import "@mapcairn/sdk/styles.css";
+import "./page.css";
+import {
+  createFakeServices,
+  FocusRegistryProvider,
+  LiveRegionProvider,
+  MapChrome,
+  MapView,
+  SearchPill,
+  ServicesProvider,
+  TooltipProvider,
+  useBasemaps,
+  useMap,
+} from "@mapcairn/sdk";
 import { createMapLibreMapAdapter } from "@mapcairn/sdk/adapter-maplibre";
+import { type ReactNode, StrictMode } from "react";
+import { createRoot } from "react-dom/client";
 
 const services = createFakeServices({
   createMapAdapter: () =>
@@ -59,33 +100,8 @@ const services = createFakeServices({
       },
     }),
 });
-```
 
-Give `services` to `ServicesProvider`, as the whole-app example below does. The other ports stay on the fakes until you write an adapter for each one you need. Another bundler must serve `maplibre-gl/dist/maplibre-gl-worker.mjs` as a same-origin file and resolve `loadWorkerUrl` to its address; [`docs/guides/content-security-policy.md`](docs/guides/content-security-policy.md) covers the `worker-src` that file needs.
-
-The adapter makes no request until a map mounts, and then asks only for what the basemap you pass `MapView` names: it has no default basemap and no origin of its own. The basemaps in `@mapcairn/core`, including the default the example below resolves, name a public tile provider, so choose the one whose terms and privacy you accept. A test checks the block above against the SDK's source declarations through the `@mapcairn/source` condition. The release's consumer check, which covers the packed packages, has a browser leg that builds an app listing only `@mapcairn/sdk` with plain Vite and draws the map in Chromium under a strict policy with a mocked style; it runs in the `SDK packages` job, which is a required check on `main`, and the release `check` job does not draw a map. Plain Vite and Chromium only: other bundlers and browsers have not been tried here. [`docs/guides/extending.md`](docs/guides/extending.md#show-a-real-map) holds the details, including what to do when a server bundle imports the subpath, and [`packages/adapter-maplibre/README.md`](packages/adapter-maplibre/README.md) lists what the adapter asks of a host. The whole-app example below and `examples/embed` stay on the fakes.
-
-This is a whole app. It mounts the map with the SDK's interface around it and a search box at the top, written against the four packages because the umbrella is for apps outside this repository: a lint rule keeps everything in `packages/`, the playground included, off it. `examples/embed` stays on the four packages so that CI proves each package's own entry points. Every name in it comes from `@mapcairn/sdk` too, so with the umbrella you change the imports and drop the second stylesheet:
-
-```tsx
-import "@mapcairn/theme/tokens.css";
-import "@mapcairn/map/styles.css";
-import { createFakeServices } from "@mapcairn/core";
-import {
-  FocusRegistryProvider,
-  LiveRegionProvider,
-  MapChrome,
-  MapView,
-  SearchPill,
-  ServicesProvider,
-  TooltipProvider,
-  useBasemaps,
-  useMap,
-} from "@mapcairn/map";
-import { type ReactNode, useState } from "react";
-
-export function App() {
-  const [services] = useState(createFakeServices);
+function App() {
   return (
     <ServicesProvider services={services}>
       <LiveRegionProvider>
@@ -130,11 +146,33 @@ function Chrome({ background }: { readonly background: ReactNode }) {
     </FocusRegistryProvider>
   );
 }
+
+const root = document.getElementById("root");
+if (!root) {
+  throw new Error("The page has no #root element.");
+}
+createRoot(root).render(
+  <StrictMode>
+    <App />
+  </StrictMode>,
+);
 ```
 
-`createFakeServices()` runs the interface on the SDK's in-memory fakes, so the app above requests nothing and draws no map tiles. With the real adapter from the block above in its services, it draws the default basemap from that basemap's public provider.
+The first line of `main.tsx`, `/// <reference types="vite/client" />`, gives TypeScript the types of the `?worker&url` import and of a plain CSS import. Vite's `react-ts` template (`npm create vite@latest -- --template react-ts`, whose `index.html` and `src/main.tsx` you replace with the two above) already lists `vite/client` in its `tsconfig` types, so the line is only needed when your project does not. Without the types, `tsc --noEmit` reports TS2307 for the worker import, always, and TS2882 for `import "./page.css"` when `noUncheckedSideEffectImports` is on, as it is by default in the TypeScript 7.0 checked here.
 
-[`examples/embed`](examples/embed/README.md) is the full version of this app, written against the four packages directly, with the end stack of controls, the sheet, the measure tool, layers and a search provider of its own, and a test in `packages/core/src/lint/readme.test.ts` fails if this snippet uses an import, a component or a prop that the example does not (an import from `@mapcairn/sdk` counts as the package it re-exports). [`docs/guides/extending.md`](docs/guides/extending.md) lists what an app provides around it (the stylesheet import, base styles and the font). The snippet sets no page styles: the SDK ships no base stylesheet today, so an app gives the page a height, removes the body margin and sets its own font and colours (the example does it in `examples/embed/src/main.tsx` and `page.css`). Whether the SDK should ship base styles or stable alias properties for theming is not decided.
+Search and the rest of the interface run on the SDK's in-memory fakes, so search shows sample results until you add a search adapter, and nothing but the map is requested. Another bundler must serve `maplibre-gl/dist/maplibre-gl-worker.mjs` as a same-origin file and resolve `loadWorkerUrl` to its address. The adapter makes no request until a map mounts, and then asks only for what the basemap you pass `MapView` names. The basemap catalogue's default, which this app resolves, names a public tile provider (OpenFreeMap), so choose the basemap whose terms and privacy you accept.
+
+Under a strict Content Security Policy, this page needs only the default basemap's origin, `https://tiles.openfreemap.org`, in `connect-src` and `img-src`, with the worker served from the page's own origin. A policy line to start from, which is the one the consumer check's browser leg runs under with a mocked style, so it has not been run against the default basemap's real style:
+
+```text
+default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data: blob: https://tiles.openfreemap.org; font-src 'self'; connect-src 'self' https://tiles.openfreemap.org; worker-src 'self' blob:
+```
+
+[`docs/guides/content-security-policy.md`](docs/guides/content-security-policy.md) says what each directive is for, including when `worker-src` needs `blob:`. A Vite 8 build prints 18 `"use client"` warnings (`MODULE_LEVEL_DIRECTIVE`) from the Radix UI packages that `@mapcairn/map` depends on; they are expected and harmless.
+
+What is tested, and what is not, is in [`docs/guides/extending.md`](docs/guides/extending.md#show-a-real-map): a test compiles `main.tsx` as written, and the release's consumer check draws a map in Chromium from a similar app, not from this file.
+
+[`examples/embed`](examples/embed/README.md) is the full version of this app, on the fakes and written against the four packages directly, so that CI proves each package's own entry points. It has the end stack of controls, the sheet, the measure tool, layers and a search provider of its own, and a test fails if the app above uses an import, a component or a prop that the example does not (an import from `@mapcairn/sdk` counts as the package it re-exports; the adapter's import is checked by compiling the block instead). [`docs/guides/extending.md`](docs/guides/extending.md) lists what an app provides around it, including the font, which the app above leaves to the system. Whether the SDK should ship base styles or stable alias properties for theming is not decided.
 
 The SDK does not depend on the playground's framework. The playground is a server-rendered React 19 app on React Router, Vite and Cloudflare Workers, but the SDK packages import neither React Router nor MapLibre, the two that use React (`map` and `react`) take it as a peer, and `examples/embed` is a plain Vite and React app. The SDK's styles are compiled to plain stylesheets, so it needs no vanilla-extract plugin and should render in any React 19 app whose bundler handles a CSS import, though no other framework has been tried here. There is no prebuilt bundle for pages without React yet. [`docs/guides/serving-from-iis.md`](docs/guides/serving-from-iis.md) covers serving a build you make yourself from IIS and a server-rendered page; it was checked against Microsoft's documentation and not run on a Windows server.
 
