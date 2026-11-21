@@ -25,22 +25,11 @@ This repository also holds the playground, a reference site built from the SDK's
 
 The playground in its light and dark themes, with the earthquakes layer on and a distance measured. Map data and tile credits are in [`ATTRIBUTIONS.md`](ATTRIBUTIONS.md).
 
-**Status:** the SDK is usable from this repository, but the packages are not on npm yet. Publishing them is part of the First release milestone in [`ROADMAP.md`](ROADMAP.md), and [`docs/guides/releasing.md`](docs/guides/releasing.md) describes how a release is made.
-
-## Try the playground
-
-The playground at [mapcairn.timothybrits.co.za/map](https://mapcairn.timothybrits.co.za/map) is a complete map built from the SDK's packages, and it is where the SDK is shown working and where its browser tests run. Search for a place, measure a distance or draw a shape, turn on an open data layer such as earthquakes or rainfall, switch the interface between English and Afrikaans in Settings, and open Help to find the About block that links back here. The recording below searches for a place, turns on the earthquakes layer for the past week, measures a distance and opens the map credits.
-
-<p>
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="docs/images/playground-demo-dark.gif">
-    <img src="docs/images/playground-demo.gif" alt="A recording of the playground: a search box suggests places, the earthquakes layer is turned on for the past week in Map options, a distance is measured across Africa and the map credits are opened" width="100%">
-  </picture>
-</p>
+**Status:** a release candidate, for early adopters. The packages are on npm under the `next` tag, which is why the install line below says `@next` until `0.1.0`. The API is still settling, so a breaking change can land before `0.1.0`; the [changelog](CHANGELOG.md) lists each one. [`docs/guides/releasing.md`](docs/guides/releasing.md) describes how a release is made.
 
 ## Embed a map
 
-One package holds the whole SDK, with one stylesheet and two import paths: the interface from the root, and the MapLibre adapter that draws the map from a subpath. React is a peer dependency and `maplibre-gl` is a required peer, because the adapter needs the engine, so a strict package manager wants both listed:
+Install `@mapcairn/sdk`. It is the one package most apps need: it holds the whole SDK, with one stylesheet and two import paths, the interface from the root and the MapLibre adapter that draws the map from a subpath. React is a peer dependency and `maplibre-gl` is a required peer, because the adapter needs the engine, so a strict package manager wants both listed:
 
 ```bash
 npm install @mapcairn/sdk@next react react-dom maplibre-gl
@@ -51,7 +40,7 @@ import "@mapcairn/sdk/styles.css";
 import { MapChrome, ServicesProvider } from "@mapcairn/sdk";
 ```
 
-The packages are not on npm yet (see Status above), so the install works once they are. `@mapcairn/sdk` re-exports `core`, `map`, `react` and `theme` from its root, and the MapLibre adapter at `@mapcairn/sdk/adapter-maplibre`. Its stylesheet is the three the packages ship, in order: tokens, the map's, the engine's. An app that wants less installs the packages it needs: `core` has no React or browser dependency, and `theme` installs without the interface. [`packages/sdk/README.md`](packages/sdk/README.md) lists the entry points and says how to keep one copy of a package when you also list it directly.
+`@mapcairn/sdk` re-exports `core`, `map`, `react` and `theme` from its root, and the MapLibre adapter at `@mapcairn/sdk/adapter-maplibre`. Its root never imports the engine, so an app that does not import the subpath carries none. Its stylesheet is the three the packages ship, in order: tokens, the map's, the engine's. The individual packages are the advanced option, for a host that wants fewer dependencies: `core` has no React or browser dependency, `theme` installs without the interface, and the adapter is a package of its own (see [Packages](#packages)). [`packages/sdk/README.md`](packages/sdk/README.md) lists the entry points and says how to keep one copy of a package when you also list it directly.
 
 A real map needs the adapter in the services, and the adapter needs the URL of the engine's worker file. In a Vite app that is the bundler's own worker URL import:
 
@@ -76,7 +65,7 @@ Give `services` to `ServicesProvider`, as the whole-app example below does. The 
 
 The adapter makes no request until a map mounts, and then asks only for what the basemap you pass `MapView` names: it has no default basemap and no origin of its own. The basemaps in `@mapcairn/core`, including the default the example below resolves, name a public tile provider, so choose the one whose terms and privacy you accept. A test checks the block above against the SDK's source declarations through the `@mapcairn/source` condition. The release's consumer check, which covers the packed packages, has a browser leg that builds an app listing only `@mapcairn/sdk` with plain Vite and draws the map in Chromium under a strict policy with a mocked style; it runs in the `SDK packages` job, which is not a required check, and the release `check` job does not draw a map. Plain Vite and Chromium only: other bundlers and browsers have not been tried here. [`docs/guides/extending.md`](docs/guides/extending.md#show-a-real-map) holds the details, including what to do when a server bundle imports the subpath, and [`packages/adapter-maplibre/README.md`](packages/adapter-maplibre/README.md) lists what the adapter asks of a host. The whole-app example below and `examples/embed` stay on the fakes.
 
-This is a whole app. It mounts the map with the SDK's interface around it and a search box at the top, written against the four packages, which is what the playground and `examples/embed` use. Every name in it comes from `@mapcairn/sdk` too, so with the umbrella you change the imports and drop the second stylesheet:
+This is a whole app. It mounts the map with the SDK's interface around it and a search box at the top, written against the four packages because this repository's playground may not import the umbrella (a lint rule forbids it) and `examples/embed` stays on the four packages so that CI proves each package's own entry points. Every name in it comes from `@mapcairn/sdk` too, so with the umbrella you change the imports and drop the second stylesheet:
 
 ```tsx
 import "@mapcairn/theme/tokens.css";
@@ -149,6 +138,17 @@ function Chrome({ background }: { readonly background: ReactNode }) {
 
 The SDK does not depend on the playground's framework. The playground is a server-rendered React 19 app on React Router, Vite and Cloudflare Workers, but the SDK packages import neither React Router nor MapLibre, the two that use React (`map` and `react`) take it as a peer, and `examples/embed` is a plain Vite and React app. The SDK's styles are compiled to plain stylesheets, so it needs no vanilla-extract plugin and should render in any React 19 app whose bundler handles a CSS import, though no other framework has been tried here. There is no prebuilt bundle for pages without React yet. [`docs/guides/serving-from-iis.md`](docs/guides/serving-from-iis.md) covers serving a build you make yourself from IIS and a server-rendered page; it was checked against Microsoft's documentation and not run on a Windows server.
 
+## Try the playground
+
+The playground at [mapcairn.timothybrits.co.za/map](https://mapcairn.timothybrits.co.za/map) is a complete map built from the SDK's packages, and it is where the SDK is shown working and where its browser tests run. Search for a place, measure a distance or draw a shape, turn on an open data layer such as earthquakes or rainfall, switch the interface between English and Afrikaans in Settings, and open Help to find the About block that links back here. The recording below searches for a place, turns on the earthquakes layer for the past week, measures a distance and opens the map credits.
+
+<p>
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/images/playground-demo-dark.gif">
+    <img src="docs/images/playground-demo.gif" alt="A recording of the playground: a search box suggests places, the earthquakes layer is turned on for the past week in Map options, a distance is measured across Africa and the map credits are opened" width="100%">
+  </picture>
+</p>
+
 ## What the SDK adds to a map renderer
 
 **A finished interface.** Search with optional suggestions as you type, zoom and compass controls, a bottom sheet that becomes a side panel on wide screens, measuring, drawing and editing shapes with GeoJSON, CSV and WKT import and export, directions through your own routing provider, a layers panel with keys, feature cards, saving the map as an image, and links that carry the view, the basemap, the layers and drawn shapes.
@@ -211,7 +211,7 @@ It is not the right choice today if you need:
 - a hosted service, a dataset or accounts. MapCairn is code: you choose each provider (tiles, search, routing) and its terms, and you host the app;
 - GIS analysis. MapCairn is not a GIS analysis engine: it measures, draws and has geometry helpers, but does no overlay analysis or geoprocessing;
 - a map engine other than MapLibre GL JS, or tilt, terrain and 3D buildings;
-- to `npm install` it, to mount it in a page without React, or to reach layers behind a login;
+- to mount it in a page without React, or to reach layers behind a login;
 - your own colours and font with contrast checked, clustering of dense points or offline use.
 
 A map renderer on its own leaves every interface decision to you, which is the better choice when your interface has little in common with a map application. The [capability matrix](docs/guides/capability-matrix.md) lists what MapCairn has, partly has and lacks, with the issue for each gap that has one, and [`ROADMAP.md`](ROADMAP.md) says what comes next.
@@ -240,14 +240,16 @@ npm run dev
 
 ## Packages
 
-| Package                                                             | Provides                                                                                                      |
-| ------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
-| [`@mapcairn/sdk`](packages/sdk/README.md)                           | The packages below from one install and one import, with one stylesheet. It holds no code of its own          |
-| [`@mapcairn/core`](packages/core/README.md)                         | The port interfaces, pure logic, basemap definitions, fakes and contract suites. No React, no browser globals |
-| [`@mapcairn/map`](packages/map/README.md)                           | The map interface: chrome, sheet and panels, tools, `MapView` and the services provider                       |
-| [`@mapcairn/react`](packages/react/README.md)                       | Generic React hooks                                                                                           |
-| [`@mapcairn/theme`](packages/theme/README.md)                       | The typed design tokens and their contrast calculations                                                       |
-| [`@mapcairn/adapter-maplibre`](packages/adapter-maplibre/README.md) | The MapLibre GL JS map adapter and its engine styles. `maplibre-gl` is a peer dependency                      |
+Most apps install only `@mapcairn/sdk`. The packages inside it are published on their own too, and each is the advanced option, for a host that wants fewer dependencies or only one piece.
+
+| Package                                                             | Provides                                                                                                                                      |
+| ------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| [`@mapcairn/sdk`](packages/sdk/README.md)                           | Recommended. Everything below from one install and one import, with one stylesheet. It holds no code of its own                               |
+| [`@mapcairn/core`](packages/core/README.md)                         | Inside the SDK. The port interfaces, pure logic, basemap definitions, fakes and contract suites. No React, no browser globals                 |
+| [`@mapcairn/map`](packages/map/README.md)                           | Inside the SDK. The map interface: chrome, sheet and panels, tools, `MapView` and the services provider                                       |
+| [`@mapcairn/react`](packages/react/README.md)                       | Inside the SDK. Generic React hooks                                                                                                           |
+| [`@mapcairn/theme`](packages/theme/README.md)                       | Inside the SDK. The typed design tokens and their contrast calculations                                                                       |
+| [`@mapcairn/adapter-maplibre`](packages/adapter-maplibre/README.md) | Inside the SDK, at `@mapcairn/sdk/adapter-maplibre`. The MapLibre GL JS map adapter and its engine styles. `maplibre-gl` is a peer dependency |
 
 `packages/web` is the playground, called the reference host in the rest of the documentation.
 

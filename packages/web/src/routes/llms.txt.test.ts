@@ -4,6 +4,7 @@ import { existsSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
 import { SITE_URL } from "../constants/siteConfig";
+import { INSTALL_COMMAND } from "../product/productContent";
 import { productMarkdown } from "../product/productMarkdown";
 import { routePaths } from "../routePaths";
 import routes from "../routes";
@@ -67,14 +68,17 @@ describe("/llms.txt", () => {
     );
   });
 
-  it("says what MapCairn is not and how to use it today, and nothing about npm", async () => {
+  it("says what MapCairn is not and how to use it today, and leads with the install command and nothing else about npm", async () => {
     const text = await loader().text();
     expect(text).toContain(
       "It is not a hosted service, a dataset or a GIS analysis engine",
     );
-    expect(text).toContain("It is used from its source on GitHub");
-    expect(text).not.toMatch(/npm/i);
-    expect(await fullLoader().text()).not.toMatch(/npm/i);
+    expect(text).toContain(INSTALL_COMMAND);
+    expect(text).toContain("advanced option");
+    expect(text.replaceAll(INSTALL_COMMAND, "")).not.toMatch(/npm/i);
+    expect(
+      (await fullLoader().text()).replaceAll(INSTALL_COMMAND, ""),
+    ).not.toMatch(/npm/i);
   });
 
   it("links only to pages the site serves and files the repository has", async () => {

@@ -21,6 +21,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { MAP_LINK_REDIRECT_SCRIPT } from "../app/mapLinkRedirect";
 import { loader as markdownLoader } from "../routes/index.md";
+import { loader as llmsLoader } from "../routes/llms.txt";
 import { loader as fullLoader } from "../routes/llms-full.txt";
 import { COPIED_FEEDBACK_MS } from "./CopyCodeButton";
 import { ProductPage } from "./ProductPage";
@@ -28,6 +29,7 @@ import * as styles from "./ProductPage.css";
 import {
   EMBED_EXAMPLE_CODE,
   HEADLINE,
+  INSTALL_COMMAND,
   LEDE,
   lineToText,
 } from "./productContent";
@@ -123,9 +125,34 @@ describe("the product page stands on its own", () => {
       "@mapcairn/map",
       "@mapcairn/react",
       "@mapcairn/theme",
+      "@mapcairn/adapter-maplibre",
     ]) {
       expect(within(embed).getByText(name)).toBeInTheDocument();
     }
+  });
+
+  it("leads with the umbrella's install command, ahead of the example and of any single package", () => {
+    renderPage();
+    const embed = section("Embed a map");
+    const install = within(embed).getByText(INSTALL_COMMAND);
+    expect(install.tagName).toBe("CODE");
+    const example = within(embed).getByRole("region", {
+      name: "Embedding example",
+    });
+    expect(
+      install.compareDocumentPosition(example) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    const first = embed.querySelector("p");
+    expect(first?.textContent).toContain("@mapcairn/sdk");
+    expect(first?.textContent).not.toContain("@mapcairn/core");
+    expect(embed.textContent).toContain("advanced option");
+  });
+
+  it("puts the install command and the advanced option into /llms.txt", async () => {
+    const text = await llmsLoader().text();
+    expect(text).toContain(INSTALL_COMMAND);
+    expect(text).toContain("advanced option");
   });
 
   it("shows the embedding example in its own focusable, named region", () => {
