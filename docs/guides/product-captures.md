@@ -1,6 +1,6 @@
 # The product page's pictures
 
-The product page at `/` shows one real capture of the running playground, straight under the hero: the Measure tool over Cape Town, taken at two sizes, a narrow one (`hero`, 400 by 520) drawn edge to edge on a phone and a wide one (`heroWide`, 896 by 560) drawn at the page's column from 48rem. Each is a WebP in `packages/web/src/product/captures`, one for the light theme and one for the dark. They are committed, so the page, the build and CI never fetch a map to show them.
+The product page at `/` shows one real capture of the running playground, straight under the hero: the Measure tool over Cape Town, taken at two sizes, a narrow one (`hero`, 400 by 520) drawn edge to edge on a phone and a wide one (`heroWide`, 1152 by 640) drawn from 48rem as wide as the screen allows up to its own width, wider than the text column on a large screen. Each is a WebP in `packages/web/src/product/captures`, one for the light theme and one for the dark. They are committed, so the page, the build and CI never fetch a map to show them.
 
 ## What is captured
 
@@ -24,7 +24,7 @@ A normal run contacts nobody. Every request that does not go to the local server
 
 ## Weight
 
-The narrow picture is at most 60 KB and the wide one at most 110 KB, 340 KB for all four files. The budgets were raised on 2026-11-21, when the wide picture replaced the basemap picker capture, which was illegible at a phone's width: a wide capture at the column's full width needs the bytes to keep its interface text sharp. Only one file is fetched, the one for the visitor's theme and screen width, and only when it nears the screen, so a visit adds at most 110 KB. The script encodes WebP with Chromium's own encoder and lowers the quality until a file fits its budget; if even the lowest quality does not, it stops and says by how much, and the fix is a smaller capture or a quieter view, not a larger budget.
+The narrow picture is at most 60 KB and the wide one at most 180 KB, 480 KB for all four files. The budgets were raised on 2026-11-21, when the wide picture replaced the basemap picker capture, which was illegible at a phone's width, and again the same day when the wide picture grew from 896 to 1152 px so it can be drawn wider than the text on a large screen: at twice the device pixels it needs the bytes to keep its interface text sharp. Only one file is fetched, the one for the visitor's theme and screen width, and only when it nears the screen, so a visit adds at most 180 KB. The script encodes WebP with Chromium's own encoder and lowers the quality until a file fits its budget; if even the lowest quality does not, it stops and says by how much, and the fix is a smaller capture or a quieter view, not a larger budget.
 
 ## Credits
 
