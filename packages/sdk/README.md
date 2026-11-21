@@ -31,6 +31,17 @@ import { createMapLibreMapAdapter } from "@mapcairn/sdk/adapter-maplibre";
 
 `@mapcairn/sdk/styles.css` is three `@import` lines: the tokens from `@mapcairn/theme`, the styles of `@mapcairn/map`, then the engine styles of `@mapcairn/adapter-maplibre`. A host that links stylesheets without a bundler keeps using `@mapcairn/theme/tokens.css` and `@mapcairn/map/styles.css`, and adds `@mapcairn/adapter-maplibre/styles.css` for a real map. [`@mapcairn/map`](https://github.com/MapCairn/mapcairn/tree/main/packages/map) shows a whole app, which works the same with these imports.
 
+## Next steps
+
+- [Show a real map](https://github.com/MapCairn/mapcairn/blob/main/docs/guides/extending.md#show-a-real-map): the adapter, the engine's worker file and a basemap.
+- [Theme the interface with your own colours](https://github.com/MapCairn/mapcairn/blob/main/docs/guides/extending.md#theme-the-sdk-with-your-own-colours), checked against WCAG 2.2 AA.
+- [Translate the interface](https://github.com/MapCairn/mapcairn/blob/main/docs/guides/translate-the-sdk.md) or offer a choice of languages.
+- [Write a search provider](https://github.com/MapCairn/mapcairn/blob/main/docs/guides/extending.md#write-a-search-provider).
+- [Add a routing provider](https://github.com/MapCairn/mapcairn/blob/main/docs/guides/extending.md#add-a-routing-provider).
+- [Add a data layer](https://github.com/MapCairn/mapcairn/blob/main/docs/guides/extending.md#add-a-data-layer).
+- Read the [Content Security Policy guide](https://github.com/MapCairn/mapcairn/blob/main/docs/guides/content-security-policy.md) before you deploy.
+- Try the [playground](https://mapcairn.timothybrits.co.za/map), and read [`examples/embed`](https://github.com/MapCairn/mapcairn/tree/main/examples/embed), a whole app written against the packages.
+
 ## What it exports
 
 | Entry point                      | Same as                                                     |
@@ -61,8 +72,8 @@ A host that adds a service of its own by declaration merging augments `@mapcairn
 
 ## Licence
 
-`@mapcairn/sdk` is licensed under AGPL-3.0-only, and the [licence text](https://github.com/MapCairn/mapcairn/blob/main/packages/sdk/LICENSE) comes with the package. If you ship it in a product, or let people use a modified version over a network, you must publish the corresponding source under the same licence. The SDK packages depend only on permissively licensed packages. The [licence section of the repository README](https://github.com/MapCairn/mapcairn#licence) says more, including how to talk about other terms for closed-source use.
+`@mapcairn/sdk` is licensed under AGPL-3.0-only, which allows commercial use, and the [licence text](https://github.com/MapCairn/mapcairn/blob/main/packages/sdk/LICENSE) comes with the package. If you distribute an app that includes it, or let people interact with a modified version over a network, you must offer them the corresponding source under the same licence. A licence for closed-source use is not on offer yet. The SDK packages depend only on permissively licensed packages. The [licence section of the repository README](https://github.com/MapCairn/mapcairn#licence) says more, including how to discuss other terms for closed-source use.
 
 ## Contributing and changes
 
-The source and the issue tracker are in the [repository](https://github.com/MapCairn/mapcairn); file a bug in the [issue tracker](https://github.com/MapCairn/mapcairn/issues). Read [`CONTRIBUTING.md`](https://github.com/MapCairn/mapcairn/blob/main/CONTRIBUTING.md) before you send a pull request. Changes between releases are listed in [`CHANGELOG.md`](https://github.com/MapCairn/mapcairn/blob/main/CHANGELOG.md).
+The source and the issue tracker are in the [repository](https://github.com/MapCairn/mapcairn); file a bug in the [issue tracker](https://github.com/MapCairn/mapcairn/issues). Ask a question in [Discussions](https://github.com/MapCairn/mapcairn/discussions). Report a security problem privately, as [`SECURITY.md`](https://github.com/MapCairn/mapcairn/blob/main/SECURITY.md) explains, not in an issue. Read [`CONTRIBUTING.md`](https://github.com/MapCairn/mapcairn/blob/main/CONTRIBUTING.md) before you send a pull request. Changes between releases are listed in [`CHANGELOG.md`](https://github.com/MapCairn/mapcairn/blob/main/CHANGELOG.md).

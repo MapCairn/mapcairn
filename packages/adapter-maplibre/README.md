@@ -4,7 +4,7 @@ The MapLibre GL JS adapter for MapCairn's `MapAdapter` port, and the styles that
 
 Most apps should install [`@mapcairn/sdk`](https://github.com/MapCairn/mapcairn/tree/main/packages/sdk) instead, which has this package already: it re-exports it at `@mapcairn/sdk/adapter-maplibre`, and its root stays free of the map engine. Install `@mapcairn/adapter-maplibre` on its own as the advanced option, for a host that wants fewer dependencies.
 
-**Status:** a release candidate, for early adopters. It is released with the other SDK packages from `0.1.0-rc.3`, and the reference host uses it. [Plan 0016](https://github.com/MapCairn/mapcairn/blob/main/docs/plans/0016-adapter-maplibre-package.md) describes how it joined the release. The API is still settling, so a breaking change can land before `0.1.0`; the [changelog](https://github.com/MapCairn/mapcairn/blob/main/CHANGELOG.md) lists each one. Until `0.1.0`, add `@next` to the package name in the install commands below.
+**Status:** a release candidate, for early adopters. The API is still settling, so a breaking change can land before `0.1.0`; the [changelog](https://github.com/MapCairn/mapcairn/blob/main/CHANGELOG.md) lists each one. Until `0.1.0`, add `@next` to the package name in the install commands below.
 
 ## Install
 
@@ -54,8 +54,8 @@ The adapter class, the engine loader and the options only tests use are not expo
 
 ## Licence
 
-`@mapcairn/adapter-maplibre` is licensed under AGPL-3.0-only, and the [licence text](https://github.com/MapCairn/mapcairn/blob/main/packages/adapter-maplibre/LICENSE) comes with the package. If you ship it in a product, or let people use a modified version over a network, you must publish the corresponding source under the same licence. The SDK packages depend only on permissively licensed packages, and `maplibre-gl` is BSD-3-Clause. The [licence section of the repository README](https://github.com/MapCairn/mapcairn#licence) says more, including how to talk about other terms for closed-source use.
+`@mapcairn/adapter-maplibre` is licensed under AGPL-3.0-only, which allows commercial use, and the [licence text](https://github.com/MapCairn/mapcairn/blob/main/packages/adapter-maplibre/LICENSE) comes with the package. If you distribute an app that includes it, or let people interact with a modified version over a network, you must offer them the corresponding source under the same licence. A licence for closed-source use is not on offer yet. The SDK packages depend only on permissively licensed packages, and `maplibre-gl` is BSD-3-Clause. The [licence section of the repository README](https://github.com/MapCairn/mapcairn#licence) says more, including how to discuss other terms for closed-source use.
 
 ## Contributing and changes
 
-The source and the issue tracker are in the [repository](https://github.com/MapCairn/mapcairn); file a bug in the [issue tracker](https://github.com/MapCairn/mapcairn/issues). Read [`CONTRIBUTING.md`](https://github.com/MapCairn/mapcairn/blob/main/CONTRIBUTING.md) before you send a pull request. Changes between releases are listed in [`CHANGELOG.md`](https://github.com/MapCairn/mapcairn/blob/main/CHANGELOG.md).
+The source and the issue tracker are in the [repository](https://github.com/MapCairn/mapcairn); file a bug in the [issue tracker](https://github.com/MapCairn/mapcairn/issues). Ask a question in [Discussions](https://github.com/MapCairn/mapcairn/discussions). Report a security problem privately, as [`SECURITY.md`](https://github.com/MapCairn/mapcairn/blob/main/SECURITY.md) explains, not in an issue. Read [`CONTRIBUTING.md`](https://github.com/MapCairn/mapcairn/blob/main/CONTRIBUTING.md) before you send a pull request. Changes between releases are listed in [`CHANGELOG.md`](https://github.com/MapCairn/mapcairn/blob/main/CHANGELOG.md).

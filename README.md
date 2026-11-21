@@ -204,7 +204,7 @@ It fits a team that:
 - builds in React and wants a complete, accessible map interface rather than a blank canvas;
 - shows open data from providers the browser can reach directly, and wants each layer requested only when a person turns it on;
 - wants to test its map interface without a browser or WebGL, against fakes;
-- can publish its source under AGPL-3.0, or will discuss other terms (see [Licence](#licence)).
+- can offer the source of its app to the people who use it under AGPL-3.0-only, which allows commercial use, or will discuss other terms for closed-source use (see [Licence](#licence)).
 
 It is not the right choice today if you need:
 
@@ -212,7 +212,7 @@ It is not the right choice today if you need:
 - GIS analysis. MapCairn is not a GIS analysis engine: it measures, draws and has geometry helpers, but does no overlay analysis or geoprocessing;
 - a map engine other than MapLibre GL JS, or tilt, terrain and 3D buildings;
 - to mount it in a page without React, or to reach layers behind a login;
-- your own colours and font with contrast checked, clustering of dense points or offline use.
+- your own font, or colours beyond the 14 interface roles, clustering of dense points or offline use.
 
 A map renderer on its own leaves every interface decision to you, which is the better choice when your interface has little in common with a map application. The [capability matrix](docs/guides/capability-matrix.md) lists what MapCairn has, partly has and lacks, with the issue for each gap that has one, and [`ROADMAP.md`](ROADMAP.md) says what comes next.
 
@@ -278,13 +278,15 @@ Most apps install only `@mapcairn/sdk`. The packages inside it are published on 
 
 ## Contributing, security and conduct
 
+Ask a question in [Discussions](https://github.com/MapCairn/mapcairn/discussions), and report a bug or propose a change in the [issue tracker](https://github.com/MapCairn/mapcairn/issues). Report a security problem privately, as [`SECURITY.md`](SECURITY.md) explains, not in an issue.
+
 See [`CONTRIBUTING.md`](CONTRIBUTING.md) for checks and conventions, [`GOVERNANCE.md`](GOVERNANCE.md) for who decides what, [`ROADMAP.md`](ROADMAP.md) for what is planned and what is not, [`SECURITY.md`](SECURITY.md) for private vulnerability reporting (with the [assurance case](docs/assurance-case.md)) and [`CODE_OF_CONDUCT.md`](CODE_OF_CONDUCT.md) for community expectations.
 
 Everyone is welcome to use the coding agent they prefer, and the same rules in [`AGENTS.md`](AGENTS.md) apply to all of them. [`docs/guides/working-with-agents.md`](docs/guides/working-with-agents.md) lists what Claude Code, Codex, OpenCode, GitHub Copilot, Antigravity, Cursor and Qwen Code read, as checked against their documentation, how to start, and what has not been tried.
 
 ## Licence
 
-MapCairn is licensed under [AGPL-3.0](LICENSE), and each SDK package (`packages/core`, `packages/map`, `packages/react`, `packages/theme`, `packages/adapter-maplibre` and `packages/sdk`) carries its own copy. If you ship the SDK in a product, or let people use a modified version over a network, you must publish the corresponding source under the same licence.
+MapCairn is licensed under [AGPL-3.0-only](LICENSE), which allows commercial use, and each SDK package (`packages/core`, `packages/map`, `packages/react`, `packages/theme`, `packages/adapter-maplibre` and `packages/sdk`) carries its own copy. If you distribute an app that includes the SDK, or let people interact with a modified version over a network, you must offer them the corresponding source under the same licence.
 
 The SDK packages depend only on permissively licensed packages (MIT, BSD, Apache-2.0, ISC and similar), and `npm run lint` fails when a new production dependency of one has any other licence.
 

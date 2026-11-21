@@ -44,6 +44,9 @@ const REPOSITORY_FOLDERS = "https://github.com/MapCairn/mapcairn/tree/main/";
  */
 const NOT_YET_IN_THE_REPOSITORY: readonly string[] = [];
 
+/** Where a person asks a question about the SDK. */
+const DISCUSSIONS = "https://github.com/MapCairn/mapcairn/discussions";
+
 /** The install line each package shows, for one package manager. */
 const INSTALL_VERBS = ["npm install", "pnpm add", "yarn add"] as const;
 
@@ -241,6 +244,146 @@ describe.each(BUILT_SDK_PACKAGES)("the README of @mapcairn/%s", (name) => {
     expect(
       prose.match(/\/(?:issues|pull)\/\d+|(?<![\w/&])#\d+(?![\w-])/g),
     ).toBeNull();
+  });
+
+  it("says where to ask a question and to report a security problem privately", () => {
+    const section = readme.slice(readme.indexOf("## Contributing and changes"));
+    const targets = linkTargets(section);
+    expect(targets).toContain(DISCUSSIONS);
+    expect(targets).toContain(`${REPOSITORY_FILES}SECURITY.md`);
+    expect(section).toMatch(/privately/);
+    expect(section).toMatch(/not in an issue/);
+  });
+
+  it("describes the licence as allowing commercial use and offering the source, not publishing it", () => {
+    const section = readme.slice(readme.indexOf("## Licence"));
+    expect(section).toContain("allows commercial use");
+    expect(section).toMatch(/must offer them the corresponding source/);
+    expect(section).toMatch(/not on offer yet/);
+    expect(section).not.toMatch(/publish the corresponding source/);
+  });
+
+  it("keeps the history of how the package joined the release out of the Status line", () => {
+    const status = readme
+      .split("\n")
+      .find((line) => line.startsWith("**Status:**"));
+    expect(status).not.toMatch(/\bPlan \d{4}\b|from `?\d+\.\d+\.\d+-rc/);
+  });
+});
+
+describe("the package.json descriptions npm search shows", () => {
+  function descriptionOf(name: string): string {
+    return (
+      JSON.parse(
+        readFileSync(path.join(REPO, "packages", name, "package.json"), "utf8"),
+      ) as { readonly description: string }
+    ).description;
+  }
+
+  it("name what each package is now, not what it was", () => {
+    expect(descriptionOf("map")).toContain("accessible React map interface");
+    expect(descriptionOf("theme")).toContain("no plugin needed");
+    expect(descriptionOf("core")).toContain("no React");
+  });
+
+  it("leave out the stale wording", () => {
+    for (const name of BUILT_SDK_PACKAGES as string[]) {
+      expect(descriptionOf(name), name).not.toMatch(
+        /Domain-agnostic|Generic map rendering|vanilla-extract/,
+      );
+    }
+  });
+});
+
+/** The anchor GitHub gives a heading: lower case, punctuation dropped, spaces joined with hyphens. */
+function headingAnchor(heading: string): string {
+  return heading
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N} -]/gu, "")
+    .replace(/ /g, "-");
+}
+
+describe("the Next steps list in the README of @mapcairn/sdk", () => {
+  const readme = readmeOf("sdk");
+  const section = readme.slice(readme.indexOf("## Next steps"));
+  const targets = linkTargets(section.slice(0, section.indexOf("\n## ", 5)));
+
+  it("links the guides, the playground and the whole-app example", () => {
+    expect(readme).toContain("## Next steps");
+    for (const wanted of [
+      "docs/guides/extending.md#show-a-real-map",
+      "docs/guides/extending.md#theme-the-sdk-with-your-own-colours",
+      "docs/guides/translate-the-sdk.md",
+      "docs/guides/extending.md#write-a-search-provider",
+      "docs/guides/extending.md#add-a-routing-provider",
+      "docs/guides/extending.md#add-a-data-layer",
+      "docs/guides/content-security-policy.md",
+      "examples/embed",
+    ]) {
+      expect(
+        targets.some((target) => target.endsWith(wanted)),
+        wanted,
+      ).toBe(true);
+    }
+    expect(targets).toContain("https://mapcairn.timothybrits.co.za/map");
+  });
+
+  it("points every anchor at a heading that exists in the target file", () => {
+    const missing: string[] = [];
+    for (const target of targets) {
+      const [url = "", anchor] = target.split("#");
+      if (anchor === undefined || !url.startsWith(REPOSITORY_FILES)) {
+        continue;
+      }
+      const text = readFileSync(
+        path.join(REPO, url.slice(REPOSITORY_FILES.length)),
+        "utf8",
+      );
+      const anchors = text
+        .split("\n")
+        .filter((line) => /^#{1,6} /.test(line))
+        .map((line) => headingAnchor(line.replace(/^#+ /, "")));
+      if (!anchors.includes(anchor)) {
+        missing.push(target);
+      }
+    }
+    expect(missing).toEqual([]);
+  });
+
+  it("derives anchors the way GitHub does", () => {
+    expect(headingAnchor("Theme the SDK with your own colours")).toBe(
+      "theme-the-sdk-with-your-own-colours",
+    );
+    expect(headingAnchor("Show a real map")).toBe("show-a-real-map");
+  });
+});
+
+describe("the release guide's steps for the stable version", () => {
+  const guide = readFileSync(
+    path.join(REPO, "docs/guides/releasing.md"),
+    "utf8",
+  );
+  const stable = guide
+    .split("\n")
+    .filter((line) => /^[45]\. /.test(line) && line.includes("0.1.0"))
+    .join("\n");
+
+  it("has the Release pull request remove @next from every README install and Status line and update the tests' literals", () => {
+    expect(stable).toMatch(/Status line/);
+    expect(stable).toContain("packages/core/src/lint/readme.test.ts");
+    expect(stable).toContain("packages/core/src/lint/packageReadmes.test.ts");
+  });
+
+  it("leaves only INSTALL_COMMAND to the follow-up, and does not send the READMEs there too", () => {
+    expect(guide).toContain("INSTALL_COMMAND");
+    expect(guide).not.toMatch(
+      /`productContent\.ts`, the root `README\.md` and the package READMEs/,
+    );
+  });
+
+  it("has the Release pull request apply the stable Status text to the six package READMEs and the root", () => {
+    expect(stable).toMatch(/stable Status/i);
+    expect(stable).toMatch(/six package READMEs and the root/);
   });
 });
 
