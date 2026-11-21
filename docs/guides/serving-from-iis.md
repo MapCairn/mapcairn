@@ -10,7 +10,7 @@ One thing a page needs is not built yet:
 
 - There is no prebuilt bundle and no `mountMap` function for a page without React ([#44](https://github.com/MapCairn/mapcairn/issues/44)). A page builds a small entry of its own that imports the SDK packages and calls React's `createRoot`, as [`examples/embed`](../../examples/embed/README.md) does.
 
-The map adapter is a package, `@mapcairn/adapter-maplibre`, also at `@mapcairn/sdk/adapter-maplibre`, and is not on npm until its release is published. A real map needs it, with `maplibre-gl` and a URL for the engine's worker that your server serves; [Show a real map](extending.md#show-a-real-map) has the steps. `examples/embed` runs on the SDK's fakes and draws no map.
+An app that builds its own entry installs `@mapcairn/sdk`, which holds the whole SDK; the individual packages that the samples below name are the advanced option, for a host that wants fewer dependencies, and the umbrella re-exports them. The map adapter is a package, `@mapcairn/adapter-maplibre`, also at `@mapcairn/sdk/adapter-maplibre`. A real map needs it, with `maplibre-gl` and a URL for the engine's worker that your server serves; [Show a real map](extending.md#show-a-real-map) has the steps. `examples/embed` runs on the SDK's fakes and draws no map.
 
 What the SDK packages ship, from their manifests:
 

@@ -6,6 +6,7 @@ import {
   SITE_URL,
   SOURCE_REPOSITORY_URL,
 } from "../constants/siteConfig";
+import { INSTALL_COMMAND } from "./productContent";
 import { productMarkdown } from "./productMarkdown";
 
 /*
@@ -28,7 +29,7 @@ const SUMMARY =
 /** What MapCairn is, what it is not, and how to use it today, in plain words. */
 const DETAILS = `It gives a team a complete map interface, open data layers defined as data, measuring and drawing tools, and a design system, with every service behind a small interface (a port) that a host implements with its own adapter. It is not a hosted service, a dataset or a GIS analysis engine, and MapLibre GL JS is its only map engine.
 
-It is used from its source on GitHub (linked below): clone the repository and build it, or start from the example app in \`examples/embed\`.`;
+It is installed as one package, \`@mapcairn/sdk\`: \`${INSTALL_COMMAND}\`. The package re-exports the interface, the logic, the hooks and the design tokens from its root, and the MapLibre adapter at \`@mapcairn/sdk/adapter-maplibre\`; \`maplibre-gl\` is a required peer, and the root never imports the engine. The individual packages (\`@mapcairn/core\`, \`@mapcairn/map\`, \`@mapcairn/react\`, \`@mapcairn/theme\` and \`@mapcairn/adapter-maplibre\`) are the advanced option, for a host that wants fewer dependencies. The source is on GitHub (linked below), with an example app in \`examples/embed\`.`;
 
 /** The playground's description, the same words its page renders for crawlers. */
 const PLAYGROUND_SUMMARY = EN_GB_CATALOGUE["host.map.summary"];
@@ -38,7 +39,7 @@ const DOCUMENTS: readonly (readonly [string, string, string])[] = [
   [
     "README",
     "README.md",
-    "what the SDK offers, how to embed it and the packages",
+    "what the SDK offers, how to install and embed it, and the packages",
   ],
   [
     "Embedding and extending",
