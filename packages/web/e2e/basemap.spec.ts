@@ -430,6 +430,7 @@ test.describe("basemaps", () => {
           "OpenFreeMap",
           "OpenMapTiles",
           "MapLibre",
+          "About MapCairn",
         ]);
         expect(await axeViolations(page)).toEqual([]);
       });
@@ -557,6 +558,7 @@ test.describe("basemaps", () => {
       await expect(mapPage.creditsRegion.getByRole("link")).toHaveText([
         RASTER_BASEMAP_CREDIT,
         "MapLibre",
+        "About MapCairn",
       ]);
       await mapPage.page.keyboard.press("Escape");
 
@@ -568,6 +570,7 @@ test.describe("basemaps", () => {
         "OpenFreeMap",
         "OpenMapTiles",
         "MapLibre",
+        "About MapCairn",
       ]);
 
       await mapPage.goto(`#basemap=${DARK_BASEMAP_ID}`);
@@ -578,6 +581,7 @@ test.describe("basemaps", () => {
         "OpenFreeMap",
         "OpenMapTiles",
         "MapLibre",
+        "About MapCairn",
       ]);
     });
   });

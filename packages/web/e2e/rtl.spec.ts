@@ -293,6 +293,14 @@ test.describe("right to left", () => {
           secondaryLabel: "Cairo Governorate, Egypt",
           centre: { lat: 30.0444, lng: 31.2357 },
         },
+        // A second place, because a search with one result goes straight to it
+        // and shows no list.
+        {
+          id: "cairo-illinois",
+          label: "Cairo",
+          secondaryLabel: "Illinois, United States",
+          centre: { lat: 37.0053, lng: -89.1765 },
+        },
       ],
     });
     await mapPage.goto();
