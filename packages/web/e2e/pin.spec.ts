@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
+import { EN_GB_CATALOGUE } from "@mapcairn/core";
 import type { Page } from "@playwright/test";
 import { expect, test } from "./fixtures";
 import { GEOCODER_REVERSE_PATTERN } from "./support/network";
@@ -136,8 +137,9 @@ test.describe("pin", () => {
     await expect(mapPage.pinCard).toBeVisible();
     await expect(mapPage.pinLookupButton).toBeVisible();
     await expect(mapPage.pinLookupNote).toHaveText(
-      "Sends the pin's position, to about 11 m, to OpenStreetMap's Nominatim service.",
+      EN_GB_CATALOGUE["host.notes.pinLookup"],
     );
+    await expect(mapPage.pinLookupNote).toContainText("as the referrer");
     await expect(mapPage.pinLookupButton).toHaveAccessibleDescription(
       /Nominatim/,
     );

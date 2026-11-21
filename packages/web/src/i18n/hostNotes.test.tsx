@@ -56,6 +56,11 @@ const SHARED_FACTS: ReadonlyArray<{
     notes: [SETTINGS_PRIVACY_NOTE, PIN_LOOKUP_NOTE],
   },
   {
+    fact: "a search and an address lookup send this site's address as the referrer",
+    pattern: /referrer|verwyser/,
+    notes: [SETTINGS_PRIVACY_NOTE, PIN_LOOKUP_NOTE],
+  },
+  {
     fact: "an address lookup sends the pin's position to about 11 m",
     pattern: /11 m/,
     notes: [SETTINGS_PRIVACY_NOTE, PIN_LOOKUP_NOTE],
@@ -80,10 +85,10 @@ const SHARED_FACTS: ReadonlyArray<{
 describe("the host's privacy notes", () => {
   it("say what the reference site has always said, word for word", () => {
     expect(PIN_LOOKUP_NOTE).toBe(
-      "Sends the pin's position, to about 11 m, to OpenStreetMap's Nominatim service.",
+      "Sends the pin's position, to about 11 m, and this site's address as the referrer, to OpenStreetMap's Nominatim service.",
     );
     expect(SETTINGS_PRIVACY_NOTE).toBe(
-      "MapCairn has no accounts, sets no cookies and counts page views without tracking you. Map tiles come from the map provider you choose. As you type in search, the text so far is sent to the Photon service, run by komoot, to suggest places. Pressing Enter or Search sends your query to OpenStreetMap's Nominatim service, and Look up address on a pin sends the pin's position, to about 11 m, to Nominatim too. Nothing is sent to either service until you type in search or ask for an address, and a pair of coordinates typed in search is not sent to them, though showing the place loads map tiles for that area, as any move of the map does. A data layer contacts its provider only while it is on. Your settings stay on this device.",
+      "MapCairn has no accounts, sets no cookies and counts page views without tracking you. Map tiles come from the map provider you choose. As you type in search, the text so far is sent to the Photon service, run by komoot, to suggest places. Pressing Enter or Search sends your query to OpenStreetMap's Nominatim service, and Look up address on a pin sends the pin's position, to about 11 m, to Nominatim too. A search and an address lookup also send this site's address to Nominatim as the referrer. Nothing is sent to either service until you type in search or ask for an address, and a pair of coordinates typed in search is not sent to them, though showing the place loads map tiles for that area, as any move of the map does. A data layer contacts its provider only while it is on. Your settings stay on this device.",
     );
   });
 
@@ -120,5 +125,6 @@ describe("the host's privacy notes", () => {
       /Valhalla[\s\S]*FOSSGIS/,
     );
     expect(AF_CATALOGUE["host.notes.routing"]).toMatch(/IP-adres/);
+    expect(AF_CATALOGUE["host.notes.routing"]).toMatch(/as die verwyser/);
   });
 });

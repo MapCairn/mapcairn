@@ -255,7 +255,7 @@ describe("ValhallaRoutingProvider requests", () => {
     expect(href).toContain("json=%7B");
   });
 
-  it("sends no cookies, no referrer and no cached copy, and no header beyond Accept", async () => {
+  it("sends no cookies and no cached copy, no header beyond Accept, and the site's origin as the only referrer", async () => {
     const { scripted, provider } = setup();
     const controller = new AbortController();
     await provider.route({
@@ -272,10 +272,11 @@ describe("ValhallaRoutingProvider requests", () => {
       expect(call.init).toMatchObject({
         headers: { Accept: "application/json" },
         credentials: "omit",
-        referrerPolicy: "no-referrer",
+        referrerPolicy: "strict-origin",
         cache: "no-store",
       });
       expect(Object.keys(call.init?.headers ?? {})).toEqual(["Accept"]);
+      expect(call.init?.referrer).toBeUndefined();
     }
     expect(scripted.calls[0]?.init?.signal).toBe(controller.signal);
   });

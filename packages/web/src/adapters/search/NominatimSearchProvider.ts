@@ -145,8 +145,11 @@ function toSearchResult(item: NominatimItem): SearchResult | null {
  * A {@link SearchProvider} backed by OpenStreetMap's Nominatim service.
  *
  * @remarks Privacy: every search sends the query text to the OpenStreetMap
- *   Nominatim service, and the browser sends the user's IP address and user
- *   agent with it. A reverse lookup sends the position instead. Nothing is
+ *   Nominatim service, and the browser sends the user's IP address, its user
+ *   agent and the page's origin as the referrer with it, and no cookies. The
+ *   usage policy asks for a valid Referer, so the policy is `strict-origin`:
+ *   the origin and never the path, the query or the fragment, whatever the
+ *   page's own referrer policy. A reverse lookup sends the position instead. Nothing is
  *   sent until the user submits a search or asks for a pin's address. The
  *   page's CSP must allow `connect-src https://nominatim.openstreetmap.org`.
  *
@@ -246,6 +249,8 @@ export class NominatimSearchProvider implements SearchProvider {
       response = await this.#fetch(`${this.#endpoint}/${path}?${params}`, {
         signal,
         headers: { Accept: "application/json" },
+        credentials: "omit",
+        referrerPolicy: "strict-origin",
       });
     } catch (error) {
       if (signal?.aborted || isAbortError(error)) {

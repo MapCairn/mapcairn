@@ -163,6 +163,7 @@ describe("PrivacyPage in the active language", () => {
       "Valhalla",
       "valhalla1.openstreetmap.de",
       "FOSSGIS",
+      "hierdie webwerf se adres as die verwyser: net die webwerf se adres",
       "USGS",
       "NASA",
       "Global Imagery Browse Services",

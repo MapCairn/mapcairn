@@ -69,6 +69,12 @@ describe("PRIVACY.md mirrors the privacy page", () => {
     );
   });
 
+  it("says tile layers carry the site's address like basemap tiles", () => {
+    expectBothCopies(
+      "Like basemap tiles, they also carry this site's address as the referrer.",
+    );
+  });
+
   it("says tile requests show which part of the map is on screen", () => {
     expectBothCopies(
       "Tiles are requested for the part of the map on screen, so the basemap's provider, and the provider of any tile layer you turn on, can tell roughly which area you are looking at, and after Locate me roughly where you are.",
@@ -83,7 +89,7 @@ describe("PRIVACY.md mirrors the privacy page", () => {
       "A request goes out each time you pause after typing at least three characters, so one search can send several partial versions of it, and Photon may log them with your IP address.",
     );
     expectBothCopies(
-      "Your browser sends no cookies and no referrer with these requests. Picking a suggestion sends nothing more, and if suggestions stop working, Enter and the Search button still search through Nominatim.",
+      "Your browser sends no cookies with these requests. A search or an address lookup sent to Nominatim also carries this site's address as the referrer: the address of the site only, not the page you are on, because the service asks for one. The suggestions sent to Photon carry no referrer. Picking a suggestion sends nothing more, and if suggestions stop working, Enter and the Search button still search through Nominatim.",
     );
   });
 

@@ -29,7 +29,7 @@ For each new or changed layer, list its source kind (`feed`, `query`, `tiles` or
 **Browser-direct fetch and privacy**
 
 - The definition's URLs are the provider's own `https` origins: no proxy, no Worker, no key, token or account. A provider that cannot answer a browser directly is a question for the maintainer, not a reason to add a proxy.
-- Feeds go through `FetchLayerSource`, which sends no cookies and no referrer. Tile requests come from the map engine: say what the provider can see (the page origin per the site's `Referrer-Policy`, and the area in view from the tile coordinates).
+- Feeds go through `FetchLayerSource`, which sends no cookies and no referrer (the routing provider (#618) and Nominatim search (#623) are the documented exceptions: they get the site's origin only, because their terms ask for a Referer, and the privacy page says so; any new origin-only referrer needs the maintainer's decision). Tile requests come from the map engine: say what the provider can see (the page origin per the site's `Referrer-Policy`, and the area in view from the tile coordinates).
 - Nothing is requested before the layer is on. `PRIVACY.md` and `packages/web/src/app/PrivacyPage.tsx` name the provider and say what the browser sends, and the two agree (the loop test reads neither). Changing them is the maintainer's: list the wording needed.
 
 **Content-Security-Policy**
