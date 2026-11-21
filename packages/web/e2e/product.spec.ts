@@ -1114,6 +1114,35 @@ test.describe("the product page", () => {
       }
     });
 
+    test("makes the hero's picture a live map only when its link is followed: nothing of the map is asked for before, and the keyboard follows it", async ({
+      page,
+    }) => {
+      const requests: string[] = [];
+      page.on("request", (request) => requests.push(request.url()));
+      const product = new ProductPage(page);
+      await product.goto();
+      const link = page.getByTestId("plate-hero").getByRole("link", {
+        name: "Try it live: open this view in the playground",
+      });
+      await link.scrollIntoViewIfNeeded();
+      await link.focus();
+      await expect(link).toBeFocused();
+      const origin = new URL(page.url()).origin;
+      expect(
+        requests.filter((url) => new URL(url).origin !== origin),
+        "requests to another origin before the link is followed",
+      ).toEqual([]);
+      expect(
+        requests.filter((url) => /maplibre|\.pbf|tiles|style/i.test(url)),
+        "map requests before the link is followed",
+      ).toEqual([]);
+      await expect(page.getByTestId("map-host")).toHaveCount(0);
+
+      await page.keyboard.press("Enter");
+      await expect(page).toHaveURL(/\/map#map=13\.00\/-33\.93650\/18\.40700/);
+      await expect(page.getByTestId("map-host")).toBeVisible();
+    });
+
     test.describe("without a script", () => {
       test.use({ javaScriptEnabled: false });
 

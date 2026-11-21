@@ -20,6 +20,7 @@ import {
 import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { MAP_LINK_REDIRECT_SCRIPT } from "../app/mapLinkRedirect";
+import { SITE_URL } from "../constants/siteConfig";
 import { loader as markdownLoader } from "../routes/index.md";
 import { loader as llmsLoader } from "../routes/llms.txt";
 import { loader as fullLoader } from "../routes/llms-full.txt";
@@ -37,6 +38,7 @@ import {
   lineToText,
   NPM_PACKAGE_URL,
   PLATE_CREDITS_LEAD,
+  PLATE_LIVE_TEXT,
   PLATES,
   plateAlt,
   plateCredits,
@@ -762,6 +764,36 @@ describe("the pictures", () => {
       });
       expect(light).toHaveClass(styles.plateLight);
       expect(dark).toHaveClass(styles.plateDark);
+    }
+  });
+
+  it("offers the hero's picture as a link to the live playground over the view it shows, and no other picture", () => {
+    renderPage();
+    const link = within(plate("hero")).getByRole("link", {
+      name: PLATE_LIVE_TEXT,
+    });
+    const href = link.getAttribute("href") ?? "";
+    expect(href).toBe("/map#map=13.00/-33.93650/18.40700");
+    // The address round-trips through the app's own reader and writer, and names no basemap, so the playground's theme chooses it.
+    const state = parseUrlHash(href.slice(href.indexOf("#")));
+    expect(state.view).toBeDefined();
+    expect(`/map${serialiseUrlHash(state)}`).toBe(href);
+    expect(
+      within(plate("basemaps")).queryByRole("link", { name: PLATE_LIVE_TEXT }),
+    ).toBeNull();
+    // A plain link: nothing loads before it is followed, and no script is needed.
+    expect(link.tagName).toBe("A");
+    expect(link).not.toHaveAttribute("target");
+  });
+
+  it("says the same in /index.md and /llms-full.txt", async () => {
+    for (const text of [
+      await markdownLoader().text(),
+      await fullLoader().text(),
+    ]) {
+      expect(text).toContain(
+        `[${PLATE_LIVE_TEXT}](${SITE_URL}/map#map=13.00/-33.93650/18.40700)`,
+      );
     }
   });
 
