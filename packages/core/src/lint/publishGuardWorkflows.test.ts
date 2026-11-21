@@ -604,6 +604,29 @@ function actions(run: StepRun): string[] {
   );
 }
 
+/** The tarballs the loop asked npm to publish, in order. */
+function publishedTarballs(run: StepRun): string[] {
+  return actions(run)
+    .filter((call) => call.startsWith("npm "))
+    .map((call) => call.split(" ")[2]);
+}
+
+/** What each package's tarball depends on, as in the six packages' manifests. */
+const DEPENDENCIES = {
+  core: [],
+  react: ["@mapcairn/core"],
+  theme: [],
+  map: ["@mapcairn/core", "@mapcairn/react", "@mapcairn/theme"],
+  "adapter-maplibre": ["@mapcairn/core", "@mapcairn/theme"],
+  sdk: [
+    "@mapcairn/adapter-maplibre",
+    "@mapcairn/core",
+    "@mapcairn/map",
+    "@mapcairn/react",
+    "@mapcairn/theme",
+  ],
+};
+
 describe.skipIf(process.platform === "win32")(
   "the publishing step of the npm job, run with a fake npm and a fake registry",
   () => {
@@ -804,26 +827,14 @@ describe.skipIf(process.platform === "win32")(
       expect(run.stdout).toContain("by hand");
     });
 
-    it("refuses before any publish, naming both packages, when a package that others pin is new and a dependent would be published", () => {
+    it("publishes only the packages that do not depend on a new core, skips the dependents naming each, and fails", () => {
       const run = runPublishStep({
         mode: "publish",
         states: { ...ALL_MISSING, core: "new" },
-        dependencies: {
-          react: ["@mapcairn/core"],
-          theme: [],
-          map: ["@mapcairn/core", "@mapcairn/react", "@mapcairn/theme"],
-          "adapter-maplibre": ["@mapcairn/core", "@mapcairn/theme"],
-          sdk: [
-            "@mapcairn/adapter-maplibre",
-            "@mapcairn/core",
-            "@mapcairn/map",
-            "@mapcairn/react",
-            "@mapcairn/theme",
-          ],
-        },
+        dependencies: DEPENDENCIES,
       });
       expect(run.status).not.toBe(0);
-      expect(actions(run)).toEqual([]);
+      expect(publishedTarballs(run)).toEqual([tarball("theme")]);
       expect(run.stdout).toContain(
         "::error::@mapcairn/react depends on @mapcairn/core",
       );
@@ -837,6 +848,7 @@ describe.skipIf(process.platform === "win32")(
         "::error::@mapcairn/sdk depends on @mapcairn/core",
       );
       expect(run.stdout).not.toContain("::error::@mapcairn/theme depends");
+      expect(run.stdout).toContain("@mapcairn/core is not on npm yet");
       expect(run.stdout).toContain("by hand");
     });
 
@@ -907,22 +919,71 @@ describe.skipIf(process.platform === "win32")(
       expect(run.stdout).not.toContain("depends on");
     });
 
-    it("refuses, and publishes nothing, when the adapter is new and the umbrella that pins it is not on npm, the known limit of a release after rc.3", () => {
+    it("publishes core, react, theme and map, skips the umbrella and fails naming both, when the adapter is new and the umbrella that pins it is not on npm", () => {
       const run = runPublishStep({
         mode: "publish",
         states: { ...ALL_MISSING, "adapter-maplibre": "new" },
+        dependencies: DEPENDENCIES,
+      });
+      expect(run.status).not.toBe(0);
+      expect(publishedTarballs(run)).toEqual([
+        tarball("core"),
+        tarball("react"),
+        tarball("theme"),
+        tarball("map"),
+      ]);
+      expect(run.stdout).toContain(
+        "::error::@mapcairn/sdk depends on @mapcairn/adapter-maplibre",
+      );
+      expect(run.stdout).toContain(
+        "@mapcairn/adapter-maplibre is not on npm yet",
+      );
+      expect(run.stdout).not.toContain("::error::@mapcairn/map depends");
+    });
+
+    it("publishes the dependent on a re-run, once the new package it pins is on npm", () => {
+      const run = runPublishStep({
+        mode: "publish",
+        states: {
+          core: "published",
+          react: "published",
+          theme: "published",
+          map: "published",
+          "adapter-maplibre": "published",
+          sdk: "missing",
+        },
+        dependencies: DEPENDENCIES,
+      });
+      expect(run.status).toBe(0);
+      expect(publishedTarballs(run)).toEqual([tarball("sdk")]);
+      expect(run.stdout).not.toContain("::error::");
+    });
+
+    it("skips a dependent of a skipped package too, so a package never pins a version that is not on npm", () => {
+      const run = runPublishStep({
+        mode: "publish",
+        states: {
+          core: "published",
+          react: "missing",
+          theme: "new",
+          map: "missing",
+          "adapter-maplibre": "missing",
+          sdk: "missing",
+        },
         dependencies: {
-          core: [],
           react: ["@mapcairn/core"],
-          theme: [],
           map: ["@mapcairn/core", "@mapcairn/react", "@mapcairn/theme"],
-          sdk: ["@mapcairn/adapter-maplibre", "@mapcairn/core"],
+          "adapter-maplibre": ["@mapcairn/core", "@mapcairn/theme"],
+          sdk: ["@mapcairn/map", "@mapcairn/react"],
         },
       });
       expect(run.status).not.toBe(0);
-      expect(actions(run)).toEqual([]);
+      expect(publishedTarballs(run)).toEqual([tarball("react")]);
       expect(run.stdout).toContain(
-        "::error::@mapcairn/sdk depends on @mapcairn/adapter-maplibre",
+        "::error::@mapcairn/map depends on @mapcairn/theme",
+      );
+      expect(run.stdout).toContain(
+        "::error::@mapcairn/sdk depends on @mapcairn/map",
       );
     });
 
@@ -944,21 +1005,31 @@ describe.skipIf(process.platform === "win32")(
       expect(run.stdout).toContain("by hand");
     });
 
-    it("refuses to publish the umbrella while a package it pins is new, and publishes nothing", () => {
+    it("skips every package that depends on a new theme, and publishes react, which does not", () => {
       const run = runPublishStep({
         mode: "publish",
         states: { ...ALL_MISSING, theme: "new", core: "published" },
-        dependencies: {
-          react: [],
-          map: ["@mapcairn/theme"],
-          sdk: ["@mapcairn/theme"],
-        },
+        dependencies: DEPENDENCIES,
       });
       expect(run.status).not.toBe(0);
-      expect(actions(run)).toEqual([]);
+      expect(publishedTarballs(run)).toEqual([tarball("react")]);
       expect(run.stdout).toContain(
         "::error::@mapcairn/sdk depends on @mapcairn/theme",
       );
+    });
+
+    it("stops at a failed publish and publishes nothing after it, even when a dependent was skipped earlier in the loop", () => {
+      const run = runPublishStep({
+        mode: "publish",
+        states: { ...ALL_MISSING, theme: "new" },
+        dependencies: DEPENDENCIES,
+        publishFails: ["react"],
+      });
+      expect(run.status).not.toBe(0);
+      expect(publishedTarballs(run)).toEqual([
+        tarball("core"),
+        tarball("react"),
+      ]);
     });
 
     it("does not refuse when the dependents of a new package are already on npm at this version", () => {

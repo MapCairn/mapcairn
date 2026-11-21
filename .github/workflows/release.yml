@@ -439,10 +439,14 @@ jobs:
         # publisher only after its first publish: it is left, the others are
         # handled, and the job then fails naming it, so the run is red until
         # the first upload is done by hand and the failed jobs are re-run. Every
-        # state is read before anything is published, and nothing is published
-        # when a package that is not on npm is a dependency of one that would be.
-        # The dependencies are read into a variable first, so that a read that
-        # fails stops the job instead of reading as no dependencies.
+        # state is read before anything is published. A package that depends on
+        # one that is not on npm at this version, or on one skipped for that
+        # reason, is skipped too, and named, because published now it would be
+        # a version nobody can install; the packages that do not depend on a
+        # missing one are published. A re-run, once the first upload is done,
+        # publishes the skipped ones. The dependencies are read into a
+        # variable first, so that a read that fails stops the job instead of
+        # reading as no dependencies.
         run: |
           first_uploads=()
           to_publish=()
@@ -459,22 +463,37 @@ jobs:
             fi
             to_publish+=("$name")
           done
-          blocked=0
+          dependencies_of=()
           for name in "${to_publish[@]}"; do
             dependencies="$(node scripts/release/verifyRelease.mjs dependencies "@mapcairn/$name" "$VERSION" release)"
-            for dependency in $dependencies; do
-              for package in "${first_uploads[@]}"; do
-                if [ "$dependency" = "$package" ]; then
-                  echo "::error::@mapcairn/$name depends on $package, which is not on npm yet, so publishing it now would leave a version nobody can install. Nothing was published. Upload $package by hand first, then use Re-run failed jobs (docs/guides/releasing.md, A package npm does not have yet)."
-                  blocked=1
+            dependencies_of+=("$dependencies")
+          done
+          unavailable=" ${first_uploads[*]} "
+          changed=1
+          while [ "$changed" = "1" ]; do
+            changed=0
+            index=0
+            for name in "${to_publish[@]}"; do
+              if [[ "$unavailable" != *" @mapcairn/$name "* ]]; then
+                blocked=0
+                for dependency in ${dependencies_of[$index]}; do
+                  if [[ "$unavailable" == *" $dependency "* ]]; then
+                    echo "::error::@mapcairn/$name depends on $dependency, which is not on npm at $VERSION, so @mapcairn/$name is skipped: published now it would leave a version nobody can install. The packages that do not depend on it are published. Upload the missing package by hand first, then use Re-run failed jobs (docs/guides/releasing.md, A package npm does not have yet)."
+                    blocked=1
+                  fi
+                done
+                if [ "$blocked" = "1" ]; then
+                  unavailable="$unavailable@mapcairn/$name "
+                  changed=1
                 fi
-              done
+              fi
+              index=$((index + 1))
             done
           done
-          if [ "$blocked" = "1" ]; then
-            exit 1
-          fi
           for name in "${to_publish[@]}"; do
+            if [[ "$unavailable" == *" @mapcairn/$name "* ]]; then
+              continue
+            fi
             npm publish "$GITHUB_WORKSPACE/release/mapcairn-$name-$VERSION.tgz" --ignore-scripts --tag "$DIST_TAG" --provenance
             node scripts/release/verifyRelease.mjs confirm-published "@mapcairn/$name" "$VERSION"
           done
