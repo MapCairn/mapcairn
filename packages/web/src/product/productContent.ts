@@ -16,7 +16,8 @@ import embedExampleSource from "./embedExample.tsx?raw";
  * Evergreen by design: it describes what the SDK is and how it is built, not
  * counts, versions, dates, plans or what is in progress, so a change to the SDK
  * normally needs nothing here. What is current lives in the repository's
- * documentation.
+ * documentation. The one exception is `INSTALL_COMMAND`, which carries `@next`
+ * until `0.1.0`.
  *
  * Links: the repository from exactly two places, the hero's View on GitHub and
  * the footer's Source code, the project's Mastodon profile from the footer (with
@@ -111,6 +112,15 @@ export const LEDE: Line = [
   "MapCairn is an open-source React SDK for teams building public-interest maps, such as open data and hazard maps. It gives you the whole interface around a MapLibre map, open data layers written as data, and every service behind a small interface you can replace.",
 ];
 
+/**
+ * The install command the page leads with: the umbrella package and its three
+ * peers. It is the one place the page names npm or a dist-tag. Until `0.1.0`
+ * the packages are published under `next` only, so the command says `@next`;
+ * drop the tag here, in the README and in the package READMEs together.
+ */
+export const INSTALL_COMMAND =
+  "npm install @mapcairn/sdk@next react react-dom maplibre-gl";
+
 /** The copy button's words beside a code example, and what it announces. */
 export const COPY_CODE = {
   idle: "Copy code",
@@ -169,7 +179,19 @@ export const SECTIONS: readonly Section[] = [
       {
         kind: "paragraph",
         text: [
-          "This is a whole React app: the map, the SDK's interface around it and a search box. The project's tests compile and render this exact code.",
+          "Install ",
+          { code: "@mapcairn/sdk" },
+          ", the one package most apps need, with its peers: ",
+          { code: INSTALL_COMMAND },
+          ". Its root holds the interface, and the MapLibre adapter that draws the map is at the subpath ",
+          { code: "@mapcairn/sdk/adapter-maplibre" },
+          ".",
+        ],
+      },
+      {
+        kind: "paragraph",
+        text: [
+          "This is a whole React app: the map, the SDK's interface around it and a search box. It imports the packages inside the SDK directly, as the project's own example does, and every name in it also comes from the umbrella. The project's tests compile and render this exact code.",
         ],
       },
       {
@@ -205,8 +227,11 @@ export const SECTIONS: readonly Section[] = [
             ],
           },
           {
-            summary: "The packages",
+            summary: "What is inside the SDK",
             detail: [
+              [
+                "The umbrella re-exports the packages below, so one install covers them. Each is also published on its own, as the advanced option for a host that wants fewer dependencies.",
+              ],
               [
                 { code: "@mapcairn/core" },
                 ": the port interfaces, pure logic, basemap definitions, fakes and contract suites. No React and no browser globals.",
@@ -221,6 +246,10 @@ export const SECTIONS: readonly Section[] = [
               [
                 { code: "@mapcairn/theme" },
                 ": the typed design tokens and their contrast calculations.",
+              ],
+              [
+                { code: "@mapcairn/adapter-maplibre" },
+                ": the MapLibre GL JS map adapter. It is the only part that imports a map engine, and the umbrella's root never does.",
               ],
             ],
           },
@@ -346,9 +375,11 @@ export const SECTIONS: readonly Section[] = [
             summary: "How do I use it?",
             detail: [
               [
-                "From its source on GitHub: clone the repository and build it, or start from the example app in ",
+                "Install ",
+                { code: "@mapcairn/sdk" },
+                ", as the first section shows. Or start from the example app in ",
                 { code: "examples/embed" },
-                ", which uses the SDK only through its public entry points. The playground shows the whole SDK working.",
+                " in the source on GitHub, which uses the SDK only through its public entry points. The playground shows the whole SDK working.",
               ],
             ],
           },
@@ -372,7 +403,7 @@ export const SECTIONS: readonly Section[] = [
             summary: "Which frameworks does it work with?",
             detail: [
               [
-                "React, with any bundler that handles a CSS import: the styles are two compiled stylesheets, so no style plugin is needed. The map engine is MapLibre GL JS, reached through an adapter.",
+                "React, with any bundler that handles a CSS import: the styles are compiled stylesheets, so no style plugin is needed. The map engine is MapLibre GL JS, reached through an adapter.",
               ],
             ],
           },

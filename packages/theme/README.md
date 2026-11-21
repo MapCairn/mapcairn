@@ -2,16 +2,16 @@
 
 MapCairn's design tokens: typed references to CSS custom properties for colour, space, type, radius, shadow, motion and layering, with a light and a dark theme. Use it to style your own components so they match MapCairn's interface, or to check the contrast of a theme of your own. It is built with [vanilla-extract](https://vanilla-extract.style/) and has no dependency on another MapCairn package, a map engine or React.
 
-**Status:** a release candidate, for early adopters. The API is still settling, so a breaking change can land before `0.1.0`; the [changelog](https://github.com/MapCairn/mapcairn/blob/main/CHANGELOG.md) lists each one. Until `0.1.0`, add `@next` to every package name in the install commands below.
+Most apps should install [`@mapcairn/sdk`](https://github.com/MapCairn/mapcairn/tree/main/packages/sdk) instead: one install, one import and one stylesheet for the whole SDK, which re-exports this package. Install `@mapcairn/theme` on its own as the advanced option, for a host that wants fewer dependencies.
 
-If you would rather install and import the whole SDK once, [`@mapcairn/sdk`](https://github.com/MapCairn/mapcairn/tree/main/packages/sdk) re-exports this package with the others.
+**Status:** a release candidate, for early adopters. The API is still settling, so a breaking change can land before `0.1.0`; the [changelog](https://github.com/MapCairn/mapcairn/blob/main/CHANGELOG.md) lists each one. Until `0.1.0`, add `@next` to every package name in the install commands below.
 
 ## Install
 
 ```bash
-npm install @mapcairn/theme
-pnpm add @mapcairn/theme
-yarn add @mapcairn/theme
+npm install @mapcairn/theme@next
+pnpm add @mapcairn/theme@next
+yarn add @mapcairn/theme@next
 ```
 
 The package is ESM only: it has no `main` field and no CommonJS build. A TypeScript project needs `moduleResolution` set to `node16`, `nodenext` or `bundler`; `node10` is not supported.

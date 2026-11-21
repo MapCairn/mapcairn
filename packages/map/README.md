@@ -2,11 +2,11 @@
 
 The map user interface of MapCairn, in React: the chrome around the map, the bottom sheet and its panels, the search, locate, measure, draw and directions tools, the first-visit tour, the accessible primitives and the `MapView` host. Use it to put a finished, accessible interface around a MapLibre map without building each control yourself.
 
+Most apps should install [`@mapcairn/sdk`](https://github.com/MapCairn/mapcairn/tree/main/packages/sdk) instead: one install, one import and one stylesheet for the whole SDK, which re-exports this package. Install `@mapcairn/map` on its own as the advanced option, for a host that wants fewer dependencies.
+
 It never imports a map engine, an adapter or a browser service. Everything it needs comes from the `Services` bundle that `ServicesProvider` supplies, so the same components run against real adapters in an app and against fakes in a test. It is built on [`@mapcairn/core`](https://github.com/MapCairn/mapcairn/tree/main/packages/core), [`@mapcairn/react`](https://github.com/MapCairn/mapcairn/tree/main/packages/react) and [`@mapcairn/theme`](https://github.com/MapCairn/mapcairn/tree/main/packages/theme).
 
 **Status:** a release candidate, for early adopters. The API is still settling, so a breaking change can land before `0.1.0`; the [changelog](https://github.com/MapCairn/mapcairn/blob/main/CHANGELOG.md) lists each one. Until `0.1.0`, add `@next` to every package name in the install commands below.
-
-If you would rather install and import the whole SDK once, [`@mapcairn/sdk`](https://github.com/MapCairn/mapcairn/tree/main/packages/sdk) re-exports this package with the others.
 
 ## Install
 

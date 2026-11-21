@@ -2,18 +2,18 @@
 
 The ports, pure logic and basemap definitions of MapCairn. Use it when you want MapCairn's logic without its interface: to write an adapter for a map engine or a service, to test an app against in-memory fakes, or to use its measurement, formatting and link-parsing helpers. For the interface, install [`@mapcairn/map`](https://github.com/MapCairn/mapcairn/tree/main/packages/map), which builds on it.
 
+Most apps should install [`@mapcairn/sdk`](https://github.com/MapCairn/mapcairn/tree/main/packages/sdk) instead: one install, one import and one stylesheet for the whole SDK, which re-exports this package. Install `@mapcairn/core` on its own as the advanced option, for a host that wants fewer dependencies.
+
 It has no dependency on another MapCairn package, React, a map engine or a browser global, and it never reads the clock. Its runtime dependencies are the `@turf` maths libraries and the GeoJSON types.
 
 **Status:** a release candidate, for early adopters. The API is still settling, so a breaking change can land before `0.1.0`; the [changelog](https://github.com/MapCairn/mapcairn/blob/main/CHANGELOG.md) lists each one. Until `0.1.0`, add `@next` to every package name in the install commands below.
 
-If you would rather install and import the whole SDK once, [`@mapcairn/sdk`](https://github.com/MapCairn/mapcairn/tree/main/packages/sdk) re-exports this package with the others.
-
 ## Install
 
 ```bash
-npm install @mapcairn/core
-pnpm add @mapcairn/core
-yarn add @mapcairn/core
+npm install @mapcairn/core@next
+pnpm add @mapcairn/core@next
+yarn add @mapcairn/core@next
 ```
 
 The package is ESM only: it has no `main` field and no CommonJS build. A TypeScript project needs `moduleResolution` set to `node16`, `nodenext` or `bundler`; `node10` is not supported.

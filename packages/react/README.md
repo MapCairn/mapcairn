@@ -2,16 +2,16 @@
 
 Generic React hooks for MapCairn apps. Use it when you want these hooks without the map interface; `@mapcairn/map` uses them too. It has no map engine, domain-data or theme dependency and imports no other MapCairn package.
 
-**Status:** a release candidate, for early adopters. The API is still settling, so a breaking change can land before `0.1.0`; the [changelog](https://github.com/MapCairn/mapcairn/blob/main/CHANGELOG.md) lists each one. Until `0.1.0`, add `@next` to every package name in the install commands below.
+Most apps should install [`@mapcairn/sdk`](https://github.com/MapCairn/mapcairn/tree/main/packages/sdk) instead: one install, one import and one stylesheet for the whole SDK, which re-exports this package. Install `@mapcairn/react` on its own as the advanced option, for a host that wants fewer dependencies.
 
-If you would rather install and import the whole SDK once, [`@mapcairn/sdk`](https://github.com/MapCairn/mapcairn/tree/main/packages/sdk) re-exports this package with the others.
+**Status:** a release candidate, for early adopters. The API is still settling, so a breaking change can land before `0.1.0`; the [changelog](https://github.com/MapCairn/mapcairn/blob/main/CHANGELOG.md) lists each one. Until `0.1.0`, add `@next` to every package name in the install commands below.
 
 ## Install
 
 ```bash
-npm install @mapcairn/react
-pnpm add @mapcairn/react
-yarn add @mapcairn/react
+npm install @mapcairn/react@next
+pnpm add @mapcairn/react@next
+yarn add @mapcairn/react@next
 ```
 
 React 19 is a peer dependency, and your app already has it. The package is ESM only: it has no `main` field and no CommonJS build. A TypeScript project needs `moduleResolution` set to `node16`, `nodenext` or `bundler`; `node10` is not supported.
