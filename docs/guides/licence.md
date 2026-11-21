@@ -5,9 +5,9 @@ This is a plain-words guide for people who know MIT, Apache-2.0 or GPL-3.0 and w
 ## The short version
 
 - MapCairn is licensed under AGPL-3.0-only. It is an open-source licence that allows commercial use: you may use it, change it, sell a product built on it and charge for services that run it.
-- The price is the source. If you give people an app that includes the SDK, you must offer them the corresponding source of the code you combine with the SDK and serve with it, under the same licence.
+- The condition is that the source stays available. If you give people an app that includes the SDK, you must offer them the corresponding source of the code you combine with the SDK and serve with it, under the same licence.
 - If you change the SDK and run your version as a service, you must offer the source of your version to the people who use that service over a network.
-- Keeping an app's source private while distributing it, with the SDK inside, needs separate terms. A licence for closed-source use is not on offer yet.
+- The AGPL does not let you keep an app's source private while you distribute it with the SDK inside, because the combined work must be offered under the same licence.
 - `-only` means later versions of the AGPL do not apply to MapCairn automatically (section 14). AGPL section 13 lets you combine AGPL code with GPL-3.0 code.
 
 ## How it compares
@@ -45,23 +45,21 @@ You owe the source to the people who receive the app or use your modified versio
 
 Section 13 asks you to offer the source of your modified version, prominently, to every user who interacts with it over a network. If the full source of the version you run is in a public repository, a prominent link to it in the interface meets this.
 
-## The case that needs separate terms
+## Closed-source apps
 
-Using the SDK, even unmodified, as a dependency of a closed-source product you distribute, is the case that needs separate terms, because the AGPL would require the source of the code you combine with it to be offered. That includes a closed-source web app, since it serves the SDK's JavaScript to browsers.
-
-A licence for closed-source use is not on offer yet. The author is open to talking about other terms. The "Licence" section of the [README](../../README.md#licence) says how to get in touch. Any agreement would go towards the continued development of MapCairn.
+Using the SDK, even unmodified, as a dependency of a closed-source product you distribute is not possible under the AGPL, because it would require the source of the code you combine with it to be offered. That includes a closed-source web app, since it serves the SDK's JavaScript to browsers.
 
 ## Examples
 
 - **A hobby site.** Publish the site's source in a public repository under AGPL-3.0 and link to it from the site. That is the usual way to meet the source duty; keep the notices too.
 - **An open-source app.** Publish the app's source under a licence compatible with the AGPL and offer the combined work under AGPL-3.0, with a link in the app.
 - **An internal tool.** Used only inside your organisation, it is not distributed, so there is no duty to offer the source of the code you combine with the SDK. Once people outside it open the tool in their browsers, they receive the SDK's code, so the distributing case above applies, modified or not.
-- **A closed-source web service.** The app that includes the SDK reaches users' browsers, so the source of the code you serve with it would have to be offered. It needs separate terms, which are not on offer yet.
-- **A closed-source mobile app.** Distributing the app with the SDK inside is conveying it, so the source of the app would have to be offered under AGPL-3.0. App store terms can also conflict with the AGPL, which this guide does not settle. It needs separate terms and legal advice.
+- **A closed-source web service.** The app that includes the SDK reaches users' browsers, so the AGPL requires the source of the code you serve with it to be offered.
+- **A closed-source mobile app.** Distributing the app with the SDK inside is conveying it, so the source of the app would have to be offered under AGPL-3.0. App store terms can also conflict with the AGPL, which this guide does not settle. Ask a lawyer before you rely on this.
 
 ## Contributing
 
-To contribute code, documentation or other material you agree to the contributor licence agreement. [`CONTRIBUTING.md`](../../CONTRIBUTING.md) says how, and [`CLA.md`](../../CLA.md) is the agreement; it uses the family name "AGPL-3.0" where this guide says `AGPL-3.0-only`. You keep the copyright in what you contribute. Section 5 of the agreement promises the project stays available under the AGPL-3.0 or another OSI-approved licence for as long as it is published. The agreement also lets the owner offer your contribution under other terms, including closed-source terms.
+To contribute code, documentation or other material you agree to the contributor licence agreement. [`CONTRIBUTING.md`](../../CONTRIBUTING.md) says how, and [`CLA.md`](../../CLA.md) is the agreement; it uses the family name "AGPL-3.0" where this guide says `AGPL-3.0-only`. You keep the copyright in what you contribute. Section 5 of the agreement promises the project stays available under the AGPL-3.0 or another OSI-approved licence for as long as it is published.
 
 ## What this guide is unsure about
 
