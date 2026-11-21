@@ -563,8 +563,8 @@ function readPullRequest(number) {
 /**
  * The MapCairn packages a manifest depends on, in its dependencies, peer
  * dependencies and optional dependencies, once each and sorted. The publishing
- * loop uses it to refuse a release in which a package would be published
- * against a package that npm does not have.
+ * loop uses it to skip a package that would be published against a package
+ * npm does not have.
  *
  * @param {{ dependencies?: Record<string, string>, peerDependencies?: Record<string, string>, optionalDependencies?: Record<string, string> }} manifest
  * @returns {string[]}
