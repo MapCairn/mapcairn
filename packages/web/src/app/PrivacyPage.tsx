@@ -16,7 +16,7 @@ import * as styles from "./PrivacyPage.css";
  * ISO date this policy's content was last reviewed for accuracy. The root
  * `PRIVACY.md` states the same date, and a test keeps the two equal.
  */
-export const LAST_UPDATED = "2026-11-16";
+export const LAST_UPDATED = "2026-11-21";
 
 /** The browser storage the policy names, which no translation changes. */
 const LOCAL_STORAGE = "localStorage";

@@ -1,6 +1,6 @@
 # Privacy policy
 
-_Last updated: 2026-11-16_
+_Last updated: 2026-11-21_
 
 _This mirrors the policy on the site at `/privacy`
 (`packages/web/src/app/PrivacyPage.tsx`). Keep both in sync when either
@@ -110,8 +110,12 @@ address.
 When you ask for a route or a travel-time area, the request goes to the public
 Valhalla routing service at valhalla1.openstreetmap.de, run by the FOSSGIS
 community and built on OpenStreetMap data. It sends the route's coordinates
-(its stops, or the origin of a travel-time area) and the travel mode, and the
-server may log them with your IP address. Nothing is sent before you ask.
+(its stops, or the origin of a travel-time area) and the travel mode. Your
+browser makes the request itself, so the server also receives your IP address,
+its usual request headers (such as its user agent) and this site's address as
+the referrer: the address of the site only, not the page you are on, the map
+position beyond the places you asked about, or anything this site has stored.
+The server may log all of this. Nothing is sent before you ask.
 MapCairn stores nothing about the request, and the results are not saved or put in
 the page address.
 

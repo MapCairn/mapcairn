@@ -285,7 +285,11 @@ function classifyRefusal(status: number, body: unknown): RoutingError {
  *   sent until a route or an area is asked for. The page's CSP must allow
  *   `connect-src https://valhalla1.openstreetmap.de`. The requests are plain
  *   GETs with no custom header, so the browser sends no preflight, and they
- *   carry no cookies and no referrer.
+ *   carry no cookies. The public server's terms ask for a valid Referer, so
+ *   the browser sends the page's origin as the referrer and nothing more:
+ *   `strict-origin` never adds the path or the query, even to a same-origin
+ *   endpoint, and a Referer never holds the fragment, where the map view and
+ *   the pin are kept.
  *
  *   Every request waits its turn in one queue per provider, so two starts are
  *   at least `minIntervalMs` apart (one second by default). A signal that
@@ -402,7 +406,7 @@ export class ValhallaRoutingProvider implements RoutingProvider {
         signal,
         headers: { Accept: "application/json" },
         credentials: "omit",
-        referrerPolicy: "no-referrer",
+        referrerPolicy: "strict-origin",
         cache: "no-store",
       });
     } catch (error) {

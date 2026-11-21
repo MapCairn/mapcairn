@@ -146,6 +146,10 @@ describe("PrivacyPage", () => {
     expect(text).toMatch(/coordinates/);
     expect(text).toMatch(/travel mode/);
     expect(text).toMatch(/IP address/);
+    expect(text).toMatch(/this site's address as the referrer/);
+    expect(text).toMatch(
+      /the address of the site only, not the page you are on/,
+    );
     expect(text).toMatch(/Nothing is sent before you ask/);
     expect(text).toMatch(/not saved or put in the page address/);
   });
