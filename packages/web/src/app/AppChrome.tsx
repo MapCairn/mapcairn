@@ -30,7 +30,7 @@ import {
   useRef,
   useState,
 } from "react";
-import { ROUTING_CREDITS } from "../constants/routingCredits";
+import { routingCredits } from "../constants/routingCredits";
 import { AppReadout } from "./AppReadout";
 import { AppTour } from "./AppTour";
 import { Brand } from "./Brand";
@@ -222,7 +222,10 @@ function ChromeContent({ app, map, background }: ChromeContentProps) {
           basemap={app.basemap}
           layerCredits={
             app.directions.result
-              ? [...app.layers.credits, ...ROUTING_CREDITS]
+              ? [
+                  ...routingCredits(messages.t("host.credits.fixTheMap", {})),
+                  ...app.layers.credits,
+                ]
               : app.layers.credits
           }
         />

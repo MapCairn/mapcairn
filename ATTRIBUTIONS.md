@@ -65,6 +65,8 @@ Place search and reverse geocoding use [OpenStreetMap Nominatim](https://nominat
 
 Routes and travel-time areas come from the public [Valhalla](https://valhalla.github.io/valhalla/) routing service at `valhalla1.openstreetmap.de`, run by the [FOSSGIS](https://www.fossgis.de) community. Valhalla is open source under the MIT licence, and it routes on OpenStreetMap data, with © OpenStreetMap contributors attribution under the [Open Database Licence](https://opendatacommons.org/licenses/odbl/).
 
+The public server is a free service, not part of the open data, and it is used under the [FOSSGIS usage terms](https://fossgis.de/arbeitsgruppen/osm-server/nutzungsbedingungen) (in German). In short, they ask for clear OpenStreetMap attribution and a link to [Fix the map](https://www.openstreetmap.org/fixthemap), no more than one request a second, a contact address for the site, and no bulk downloading. Commercial use is allowed only when routing is not a substantial part of an online offering, such as a directions sketch on a website, and sites with high traffic are generally not permitted. There is one server and no availability guarantee, and FOSSGIS may change the service or the terms, or withdraw permission, at any time without notice.
+
 ## Translations
 
 The interface text is written in British English. The Afrikaans catalogue (`packages/web/src/i18n/af.ts`) began as a machine-translated draft and was reviewed by the maintainer, a fluent speaker.

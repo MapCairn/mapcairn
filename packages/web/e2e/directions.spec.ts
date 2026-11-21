@@ -6,7 +6,11 @@ import type { MapPage } from "./pages/MapPage";
 import { axeViolations } from "./support/a11y";
 import { GEOCODER_SEARCH_PATTERN } from "./support/network";
 import { mockRoutingService, type RoutingScript } from "./support/routing";
-import { viewportDetails, waitForStableLayout } from "./support/states";
+import {
+  collapseCredits,
+  viewportDetails,
+  waitForStableLayout,
+} from "./support/states";
 import { settleFrames } from "./support/timers";
 
 /*
@@ -84,6 +88,7 @@ for (const viewport of VIEWPORTS) {
     () => {
       test.use({
         viewport: { width: viewport.width, height: viewport.height },
+        fastCredits: true,
       });
 
       let routing: RoutingScript;
@@ -163,6 +168,33 @@ for (const viewport of VIEWPORTS) {
             name: "© OpenStreetMap contributors",
           }),
         ).toHaveCount(1);
+      });
+
+      test("links to Fix the map in the credits only while a result is on the map", async ({
+        page,
+        mapPage,
+      }) => {
+        const fixTheMap = mapPage.creditsRegion.getByRole("link", {
+          name: "Fix the map",
+        });
+        await mapPage.goto(START);
+        await collapseCredits(mapPage);
+        await openDirections(mapPage);
+        await addTwoStopsAtCentre(page, mapPage);
+        await mapPage.creditsButton.click();
+        await expect(
+          mapPage.creditsRegion.getByRole("link", { name: "OpenMapTiles" }),
+        ).toBeVisible();
+        await expect(fixTheMap).toHaveCount(0);
+        await page.keyboard.press("Escape");
+
+        await getRoute(page).click();
+        await expect(page.getByTestId("directions-result")).toBeVisible();
+        await mapPage.creditsButton.click();
+        await expect(fixTheMap).toHaveAttribute(
+          "href",
+          "https://www.openstreetmap.org/fixthemap",
+        );
       });
 
       test("sends the chosen travel mode", async ({ page, mapPage }) => {

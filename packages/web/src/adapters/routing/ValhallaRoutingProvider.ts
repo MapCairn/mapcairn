@@ -62,7 +62,11 @@ export interface ValhallaRoutingProviderOptions {
   readonly fetch?: typeof fetch;
   /**
    * The service address. Defaults to the public Valhalla server run by the
-   * FOSSGIS community, `https://valhalla1.openstreetmap.de`.
+   * FOSSGIS community, `https://valhalla1.openstreetmap.de`, which is used
+   * under the FOSSGIS usage terms (attribution, one request a second, no
+   * availability guarantee) and is not for a high-traffic site or one where
+   * routing is a substantial part of a commercial offering. Such a host
+   * should pass the address of its own Valhalla server.
    */
   readonly endpoint?: string;
   /**
