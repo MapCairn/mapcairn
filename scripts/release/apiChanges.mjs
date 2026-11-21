@@ -11,7 +11,7 @@ import { SDK_PACKAGES } from "../sdkPackages.mjs";
 
 /**
  * @typedef {object} ApiChange
- * @property {"added" | "removed" | "changed" | "union-member-added" | "enum-member-added" | "gained-internal" | "gained-beta" | "required-member-added"} kind
+ * @property {"added" | "removed" | "changed" | "union-member-added" | "union-member-removed" | "enum-member-added" | "gained-internal" | "gained-beta" | "required-member-added"} kind
  * @property {string} name
  * @property {boolean} likelyBreaking Whether `docs/guides/public-api.md` calls this a likely breaking change.
  * @property {string} detail One sentence about what changed.
@@ -73,7 +73,8 @@ export function parseReport(report) {
 
 /**
  * Splits a union at its top-level bars, so a bar inside brackets, braces,
- * parentheses or generics stays in its member.
+ * parentheses or generics stays in its member, and so does anything inside a
+ * string or template literal (a bar, a bracket, an escaped quote).
  *
  * @param {string} text
  * @returns {string[]}
@@ -82,8 +83,24 @@ function unionMembers(text) {
   const members = [];
   let depth = 0;
   let current = "";
+  /** @type {string | null} The quote that closes the literal being read. */
+  let quote = null;
+  let escaped = false;
   for (const character of text) {
-    if ("([{<".includes(character)) {
+    if (quote !== null) {
+      current += character;
+      if (escaped) {
+        escaped = false;
+      } else if (character === "\\") {
+        escaped = true;
+      } else if (character === quote) {
+        quote = null;
+      }
+      continue;
+    }
+    if ("\"'`".includes(character)) {
+      quote = character;
+    } else if ("([{<".includes(character)) {
       depth += 1;
     } else if (")]}>".includes(character) && !current.endsWith("=")) {
       depth -= 1;
@@ -100,21 +117,23 @@ function unionMembers(text) {
 }
 
 /**
- * The members of an exported type alias that is a union, or null.
+ * The header (the text before `=`, with its type parameters) and the members
+ * of an exported type alias that is a union, or null.
  *
  * @param {ReportEntry} entry
- * @returns {string[] | null}
+ * @returns {{ header: string, members: string[] } | null}
  */
 function unionOf(entry) {
   const text = entry.lines.join(" ");
-  const match = /^export\s+type\s+[\w$]+(?:<[^=]*>)?\s*=\s*([\s\S]*?);?$/.exec(
-    text,
-  );
+  const match =
+    /^(export\s+type\s+[\w$]+(?:<[^=]*>)?)\s*=\s*([\s\S]*?);?$/.exec(text);
   if (match === null) {
     return null;
   }
-  const members = unionMembers(match[1].replace(/;\s*$/, ""));
-  return members.length > 1 ? members : null;
+  const members = unionMembers(match[2].replace(/;\s*$/, ""));
+  return members.length > 1
+    ? { header: match[1].replace(/\s+/g, " "), members }
+    : null;
 }
 
 /**
@@ -193,6 +212,38 @@ function withoutTrailingComma(line) {
   return line.replace(/,\s*$/, "");
 }
 
+/** How many removed union members a detail names before it counts the rest. */
+export const UNION_MEMBERS_LISTED = 10;
+
+/**
+ * The sentence for a union that lost members: the first
+ * `UNION_MEMBERS_LISTED` named, then the count of the rest and the total, and
+ * the members it gained, named the same way.
+ *
+ * @param {string} name
+ * @param {string[]} gone The members the union lost.
+ * @param {string[]} fresh The members it gained.
+ * @returns {string}
+ */
+function unionLossDetail(name, gone, fresh) {
+  const listed = (/** @type {string[]} */ members) =>
+    members.slice(0, UNION_MEMBERS_LISTED).join(", ");
+  const rest = gone.length - UNION_MEMBERS_LISTED;
+  const lost =
+    rest > 0
+      ? `${name} lost ${gone.length} members: ${listed(gone)} and ${rest} more`
+      : `${name} lost ${listed(gone)}`;
+  if (fresh.length === 0) {
+    return `${lost}.`;
+  }
+  const more = fresh.length - UNION_MEMBERS_LISTED;
+  const gained =
+    more > 0
+      ? `${fresh.length} members: ${listed(fresh)} and ${more} more`
+      : listed(fresh);
+  return `${lost}, and gained ${gained}.`;
+}
+
 /**
  * @param {ReportEntry} before
  * @param {ReportEntry} after
@@ -219,8 +270,8 @@ function compareEntries(before, after) {
   const oldUnion = unionOf(before);
   const newUnion = unionOf(after);
   if (oldUnion !== null && newUnion !== null) {
-    const gone = missingFrom(oldUnion, newUnion);
-    const fresh = missingFrom(newUnion, oldUnion);
+    const gone = missingFrom(oldUnion.members, newUnion.members);
+    const fresh = missingFrom(newUnion.members, oldUnion.members);
     if (gone.length === 0 && fresh.length > 0) {
       return {
         kind: "union-member-added",
@@ -228,6 +279,17 @@ function compareEntries(before, after) {
         likelyBreaking: supported,
         detail: `${name} gained ${fresh.join(", ")}, so a host's exhaustive switch stops compiling.`,
       };
+    }
+    if (gone.length > 0) {
+      return {
+        kind: "union-member-removed",
+        name,
+        likelyBreaking: supported,
+        detail: unionLossDetail(name, gone, fresh),
+      };
+    }
+    if (oldUnion.header === newUnion.header) {
+      return gainedBeta(before, after, name);
     }
   }
   if (removed.length === 0 && added.length > 0) {
@@ -263,15 +325,27 @@ function compareEntries(before, after) {
       detail: `${name} changed or lost a line: ${removed[0].trim()}`,
     };
   }
-  if (count(after, "@beta") > count(before, "@beta")) {
-    return {
-      kind: "gained-beta",
-      name,
-      likelyBreaking: false,
-      detail: `${name} is now tagged @beta; name it in the release notes.`,
-    };
+  return gainedBeta(before, after, name);
+}
+
+/**
+ * @param {ReportEntry} before
+ * @param {ReportEntry} after
+ * @param {string} name
+ * @returns {ApiChange | null}
+ */
+function gainedBeta(before, after, name) {
+  const beta = (/** @type {ReportEntry} */ entry) =>
+    entry.tags.filter((line) => line.includes("@beta")).length;
+  if (beta(after) <= beta(before)) {
+    return null;
   }
-  return null;
+  return {
+    kind: "gained-beta",
+    name,
+    likelyBreaking: false,
+    detail: `${name} is now tagged @beta; name it in the release notes.`,
+  };
 }
 
 /**
