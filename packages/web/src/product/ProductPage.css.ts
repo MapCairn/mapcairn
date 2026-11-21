@@ -30,6 +30,13 @@ const CODE_HEIGHT = "26rem";
 /** The widest the art gets, so it stays beside the words rather than taking over. */
 const ART_WIDTH = "30rem";
 
+/** The widest a plate gets: its capture's width and its latitude collar, a little over, so its picture is shown no larger than it was taken. */
+const PLATE_WIDTH = "26rem";
+
+/** The width of a plate's latitude collar, and the height of its longitude collar: the small step's line and a margin for the tick. */
+const LATITUDE_COLLAR = "1.5rem";
+const LONGITUDE_COLLAR = "1.75rem";
+
 /** The widest the page gets. */
 const PAGE_WIDTH = "60rem";
 
@@ -244,10 +251,138 @@ export const heroText = style({
   minWidth: 0,
 });
 
-/** The hero's art: quiet, and only as wide as it needs to be. */
+/** The hero's picture: only as wide as its capture, so it is never drawn larger than it was taken. */
 export const heroArt = style({
   minWidth: 0,
+  maxWidth: PLATE_WIDTH,
+});
+
+/**
+ * The survey drawing's place at the end of the page, after the last section
+ * and before the footer: the way ends at the cairn. It keeps the page's
+ * column and the drawing's own width.
+ */
+export const closing = style({
+  ...pageColumn,
+  paddingBlockEnd: tokens.space.xl,
+  "@media": {
+    [WIDE]: { paddingInline: tokens.space.xl },
+  },
+});
+
+/** The closing drawing, only as wide as it needs to be. */
+export const closingArt = style({
   maxWidth: ART_WIDTH,
+});
+
+/**
+ * The sheet: the picture in its neatline, the latitude collar down its start
+ * edge and the longitude collar under it, which hold the ticks and their
+ * labels.
+ */
+export const plateSheet = style({
+  display: "grid",
+  gridTemplateColumns: `${LATITUDE_COLLAR} minmax(0, 1fr)`,
+  gridTemplateRows: `auto ${LONGITUDE_COLLAR}`,
+  gridTemplateAreas: '"latitude frame" ". longitude"',
+});
+
+/** The picture's neatline: a fine rule round it, in the control boundary colour. */
+export const plateFrame = style({
+  gridArea: "frame",
+  lineHeight: 0,
+  border: `1px solid ${tokens.color.controlBoundary}`,
+  borderRadius: tokens.radius.inner,
+  overflow: "hidden",
+});
+
+/** One capture. Its width and height attributes give the shape that is held before it loads. */
+export const plateImage = style({
+  display: "block",
+  width: "100%",
+  height: "auto",
+});
+
+/** The light capture, shown unless the page is dark. */
+export const plateLight = style({});
+
+/** The dark capture, not drawn unless the page is dark, so it is never fetched in the light theme. */
+export const plateDark = style({
+  display: "none",
+});
+
+// The page's theme chooses the capture with CSS alone: an explicit choice on
+// the root first, and with none the operating system's, as the tokens do.
+globalStyle(`[data-theme="dark"] ${plateLight}`, { display: "none" });
+globalStyle(`[data-theme="dark"] ${plateDark}`, { display: "block" });
+globalStyle(`:root:not([data-theme]) ${plateLight}`, {
+  "@media": { "(prefers-color-scheme: dark)": { display: "none" } },
+});
+globalStyle(`:root:not([data-theme]) ${plateDark}`, {
+  "@media": { "(prefers-color-scheme: dark)": { display: "block" } },
+});
+
+/** A collar: SVG that fills its cell, with ink that follows the text colour, so forced colours repaint it. */
+const collar = {
+  overflow: "visible",
+  color: tokens.color.textMuted,
+  fontFamily: tokens.type.family,
+  fontSize: tokens.type.small.size,
+  fontVariantNumeric: "tabular-nums",
+} as const;
+
+/** The latitude collar, down the picture's start edge. */
+export const plateLatitude = style({
+  ...collar,
+  gridArea: "latitude",
+  width: "100%",
+  height: "100%",
+});
+
+/** The longitude collar, under the picture. */
+export const plateLongitude = style({
+  ...collar,
+  gridArea: "longitude",
+  width: "100%",
+  height: "100%",
+});
+
+/** A tick: a fine line in the collar's ink. */
+export const plateTick = style({
+  stroke: "currentColor",
+  strokeWidth: 1,
+  vectorEffect: "non-scaling-stroke",
+});
+
+/** A latitude label, read downwards beside its tick, centred on it. */
+export const plateLatitudeLabel = style({
+  fill: "currentColor",
+  writingMode: "vertical-rl",
+  textAnchor: "middle",
+  dominantBaseline: "central",
+});
+
+/** A longitude label, centred under its tick. */
+export const plateLongitudeLabel = style({
+  fill: "currentColor",
+  textAnchor: "middle",
+  dominantBaseline: "central",
+});
+
+/** The words under a plate: what it shows, the basemaps, then the credits. */
+export const plateCaption = style({
+  display: "flex",
+  flexDirection: "column",
+  gap: tokens.space.xxs,
+  fontSize: tokens.type.small.size,
+  lineHeight: tokens.type.small.lineHeight,
+  letterSpacing: tokens.type.small.tracking,
+  color: tokens.color.textMuted,
+});
+
+/** The credits line: the map's own credits, linked as the map links them. */
+export const plateCredits = style({
+  textWrap: "pretty",
 });
 
 /** The page's one h1, at the display size on a wide screen and smaller on a phone. */
@@ -431,6 +566,25 @@ export const section = style({
 // Every block of a section keeps to the reading width, aligned with the hero's words.
 globalStyle(`${section} > *`, {
   maxWidth: MEASURE,
+});
+
+/**
+ * A plate: a capture of the playground on a survey sheet. It is as wide as the
+ * space it has, up to the width of its capture, so the interface text in the
+ * picture is never drawn larger than it was taken.
+ */
+export const plate = style({
+  margin: 0,
+  width: "100%",
+  maxWidth: PLATE_WIDTH,
+  display: "flex",
+  flexDirection: "column",
+  gap: tokens.space.sm,
+  selectors: {
+    // In a section, the rule that holds every block to the reading width
+    // would win over `maxWidth` above; this is the more specific one.
+    [`${section} > &`]: { maxWidth: PLATE_WIDTH },
+  },
 });
 
 /** A section's heading. */

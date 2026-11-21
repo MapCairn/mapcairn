@@ -28,6 +28,7 @@ import { CopyCodeButton } from "./CopyCodeButton";
 import { type CodeTokenKind, highlightCode } from "./highlightCode";
 import { InstallBlock } from "./InstallBlock";
 import * as styles from "./ProductPage.css";
+import { ProductPlate } from "./ProductPlate";
 import {
   type Block,
   type Disclosure,
@@ -268,6 +269,8 @@ function BlockView({
       return <Disclosures items={block.items} />;
     case "legend":
       return <Legend items={block.items} />;
+    case "plate":
+      return <ProductPlate id={block.id} />;
     case "deepLinks":
       return (
         <ul className={styles.deepLinks} data-testid="playground-deep-links">
@@ -342,7 +345,7 @@ function ProductHeader() {
   );
 }
 
-/** The hero: the pitch, the install block as its main action, the links, and the survey sheet beside them. */
+/** The hero: the pitch, the install block as its main action and the links, with a picture of the playground beside them. */
 function Hero({ clipboard }: { readonly clipboard: ClipboardPort }) {
   return (
     <div className={styles.hero}>
@@ -362,7 +365,7 @@ function Hero({ clipboard }: { readonly clipboard: ClipboardPort }) {
         </p>
       </div>
       <div className={styles.heroArt}>
-        <SurveyArt />
+        <ProductPlate id="hero" />
       </div>
     </div>
   );
@@ -478,6 +481,11 @@ export function ProductPage({
               clipboard={clipboard}
             />
           ))}
+          <div className={styles.closing}>
+            <div className={styles.closingArt}>
+              <SurveyArt />
+            </div>
+          </div>
         </main>
         <ProductFooter />
       </LiveRegionProvider>

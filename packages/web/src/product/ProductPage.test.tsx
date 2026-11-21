@@ -24,6 +24,7 @@ import { loader as markdownLoader } from "../routes/index.md";
 import { loader as llmsLoader } from "../routes/llms.txt";
 import { loader as fullLoader } from "../routes/llms-full.txt";
 import { COPIED_FEEDBACK_MS } from "./CopyCodeButton";
+import { CAPTURE_SUBJECTS, CAPTURE_THEMES } from "./captureSubjects";
 import { EMBED_EXAMPLE_FILES } from "./embedExampleFiles";
 import { ProductPage } from "./ProductPage";
 import * as styles from "./ProductPage.css";
@@ -35,6 +36,11 @@ import {
   LEDE,
   lineToText,
   NPM_PACKAGE_URL,
+  PLATE_CREDITS_LEAD,
+  PLATES,
+  plateAlt,
+  plateCredits,
+  plateCreditsText,
   REPOSITORY_PAGES,
 } from "./productContent";
 
@@ -521,6 +527,12 @@ describe("the product page stands on its own", () => {
       EXAMPLE_APP,
       CAPABILITY_MATRIX,
     ]);
+    // The credits a picture carries, which its basemaps ask for wherever the map shows.
+    const creditHrefs = new Set<string>(
+      CAPTURE_SUBJECTS.flatMap(({ id }) =>
+        plateCredits(id).flatMap((credit) => credit.href ?? []),
+      ),
+    );
     const hrefs = screen
       .getAllByRole("link")
       .map((link) => link.getAttribute("href") ?? "");
@@ -530,6 +542,7 @@ describe("the product page stands on its own", () => {
           named.has(href) ||
           href === NPM_PACKAGE ||
           href === MASTODON ||
+          creditHrefs.has(href) ||
           /^[/#]/.test(href),
         href,
       ).toBe(true);
@@ -541,7 +554,10 @@ describe("the product page stands on its own", () => {
     const html = renderToStaticMarkup(
       <ProductPage clipboard={new FakeClipboard()} />,
     );
-    expect(html).not.toMatch(/<(img|iframe|link|object|embed)\b/);
+    expect(html).not.toMatch(/<(iframe|link|object|embed)\b/);
+    for (const [, source] of html.matchAll(/<img\b[^>]*\ssrc="([^"]*)"/g)) {
+      expect(source, "an image's address").toMatch(/^\/(?!\/)/);
+    }
     expect(html).not.toMatch(/<script[^>]*\bsrc=/);
     expect(html).not.toMatch(/\ssrc="https?:/);
     expect(html).not.toMatch(/style=/);
@@ -586,12 +602,165 @@ describe("the product page stands on its own", () => {
     expect(screen.getByRole("main")).toHaveAttribute("id", "content");
   });
 
-  it("draws its artwork once, in the hero, as decoration only", () => {
+  it("draws its artwork once, after the last section and before the footer, as decoration only", () => {
     renderPage();
     const art = screen.getAllByTestId("survey-art");
     expect(art).toHaveLength(1);
+    const lastSection = [...document.querySelectorAll("main section")].at(-1);
+    expect(lastSection?.compareDocumentPosition(art[0] as Element)).toBe(
+      Node.DOCUMENT_POSITION_FOLLOWING,
+    );
+    expect(
+      art[0]?.compareDocumentPosition(screen.getByRole("contentinfo")),
+    ).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+    expect(screen.getByRole("main")).toContainElement(art[0] as HTMLElement);
     expect(art[0]).toHaveAttribute("aria-hidden", "true");
     expect(art[0]).toHaveAttribute("focusable", "false");
+  });
+});
+
+/** The figure of a picture by its subject. */
+function plate(id: string): HTMLElement {
+  return screen.getByTestId(`plate-${id}`);
+}
+
+describe("the pictures", () => {
+  it("shows the hero's picture in a figure after the h1, in the hero", () => {
+    renderPage();
+    const hero = plate("hero");
+    expect(hero.tagName).toBe("FIGURE");
+    expect(
+      screen.getByRole("heading", { level: 1 }).compareDocumentPosition(hero),
+    ).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+    expect(screen.getByRole("main").firstElementChild).toContainElement(hero);
+  });
+
+  it("puts the phone capture in What you get, before the legend", () => {
+    renderPage();
+    const you = section("What you get");
+    const figure = plate("basemaps");
+    expect(you).toContainElement(figure);
+    const [legend] = within(you).getAllByRole("list");
+    expect(figure.compareDocumentPosition(legend as Element)).toBe(
+      Node.DOCUMENT_POSITION_FOLLOWING,
+    );
+  });
+
+  for (const { id, width, height } of CAPTURE_SUBJECTS) {
+    it(`draws the ${id} picture as two lazy images of its size, one for each theme, each with its own alt text, from this site`, () => {
+      renderPage();
+      const images = within(plate(id)).getAllByRole("img", { hidden: true });
+      expect(images).toHaveLength(CAPTURE_THEMES.length);
+      for (const [index, theme] of CAPTURE_THEMES.entries()) {
+        const image = images[index] as HTMLElement;
+        expect(image).toHaveAttribute("width", String(width));
+        expect(image).toHaveAttribute("height", String(height));
+        expect(image).toHaveAttribute("loading", "lazy");
+        expect(image).toHaveAttribute("decoding", "async");
+        expect(image).toHaveAttribute("alt", plateAlt(id, theme));
+        expect(image.getAttribute("src")).toMatch(
+          new RegExp(`^/.*${id}-${theme}.*\\.webp$`),
+        );
+      }
+    });
+  }
+
+  it("tells in each alt text what the picture shows, the basemap and the theme, and the hero names the length it measures", () => {
+    for (const { id } of CAPTURE_SUBJECTS) {
+      for (const theme of CAPTURE_THEMES) {
+        const alt = plateAlt(id, theme);
+        expect(alt).toContain(PLATES[id].description);
+        expect(alt).toContain(`${theme} theme`);
+      }
+    }
+    expect(plateAlt("hero", "light")).toContain("3.42 km");
+    expect(plateAlt("hero", "light")).toContain("Bright basemap");
+    expect(plateAlt("hero", "dark")).toContain("Fiord basemap");
+  });
+
+  it("credits the map under every picture, in the words and links of the basemap's own definition", () => {
+    renderPage();
+    for (const { id } of CAPTURE_SUBJECTS) {
+      const credits = plateCredits(id);
+      expect(credits.map((credit) => credit.text)).toEqual([
+        "© OpenStreetMap contributors",
+        "OpenFreeMap",
+        "OpenMapTiles",
+        "MapLibre",
+      ]);
+      const lead = within(plate(id)).getByText(PLATE_CREDITS_LEAD, {
+        exact: false,
+      });
+      const links = within(lead).getAllByRole("link");
+      expect(links.map((link) => link.textContent)).toEqual(
+        credits.map((credit) => credit.text),
+      );
+      expect(links.map((link) => link.getAttribute("href"))).toEqual(
+        credits.map((credit) => credit.href),
+      );
+      // Pinned, so a change to a definition's link is seen here and in ATTRIBUTIONS.md.
+      expect(links.map((link) => link.getAttribute("href"))).toEqual([
+        "https://www.openstreetmap.org/copyright",
+        "https://openfreemap.org",
+        "https://openmaptiles.org",
+        "https://maplibre.org",
+      ]);
+      expect(plate(id)).toHaveTextContent(PLATES[id].caption);
+    }
+  });
+
+  it("names the basemap of each theme in the caption, so either picture is described", () => {
+    renderPage();
+    expect(plate("hero")).toHaveTextContent(
+      "The basemap is Bright in the light theme and Fiord in the dark theme.",
+    );
+  });
+
+  it("draws a collar of latitude and longitude ticks round each picture, as decoration only", () => {
+    renderPage();
+    for (const { id } of CAPTURE_SUBJECTS) {
+      const collars = [
+        within(plate(id)).getByTestId("plate-latitude"),
+        within(plate(id)).getByTestId("plate-longitude"),
+      ];
+      for (const collar of collars) {
+        expect(collar).toHaveAttribute("aria-hidden", "true");
+        expect(collar).toHaveAttribute("focusable", "false");
+        expect(collar.querySelectorAll("line").length).toBeGreaterThanOrEqual(
+          2,
+        );
+        const labels = [...collar.querySelectorAll("text")].map(
+          (text) => text.textContent ?? "",
+        );
+        expect(labels.length).toBeGreaterThanOrEqual(2);
+        for (const label of labels) {
+          expect(label).toMatch(/^\d+°\d\d′\d\d″[NSEW]$/);
+        }
+      }
+    }
+  });
+
+  it("swaps the pictures with CSS alone: each picture's dark twin carries the class that starts hidden", () => {
+    renderPage();
+    for (const { id } of CAPTURE_SUBJECTS) {
+      const [light, dark] = within(plate(id)).getAllByRole("img", {
+        hidden: true,
+      });
+      expect(light).toHaveClass(styles.plateLight);
+      expect(dark).toHaveClass(styles.plateDark);
+    }
+  });
+
+  it("describes each picture and its credits in /index.md and /llms-full.txt, in step with the page", async () => {
+    for (const text of [
+      await markdownLoader().text(),
+      await fullLoader().text(),
+    ]) {
+      for (const { id } of CAPTURE_SUBJECTS) {
+        expect(text).toContain(PLATES[id].description);
+        expect(text).toContain(plateCreditsText(id));
+      }
+    }
   });
 });
 
