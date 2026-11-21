@@ -100,8 +100,8 @@ jobs:
 
   # Packs the SDK packages and proves the tarballs hold only what they
   # should and work in an app outside this repository (`npm run pack:check` and
-  # `npm run consumer:check`, plan 0014 step 6). It is not a required check: it
-  # installs from the registry, so a registry outage must not block a merge.
+  # `npm run consumer:check`, plan 0014 step 6). It is a required check on `main`
+  # (ruleset `main-pull-requests`), though it installs from the registry.
   # The release workflow's `check` job installs nothing and so never draws the
   # real map; running this check with Chromium is a go/no-go item of the
   # `release` skill. `paths` filters a whole workflow, not a job, so the first
