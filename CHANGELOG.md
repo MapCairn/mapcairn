@@ -1,8 +1,102 @@
 # Changelog
 
-What changed in each release of the four SDK packages: `@mapcairn/core`, `@mapcairn/map`, `@mapcairn/react` and `@mapcairn/theme`. They are released together under one version, so one list covers all four, newest release first.
+What changed in each release of the SDK packages: `@mapcairn/core`, `@mapcairn/map`, `@mapcairn/react`, `@mapcairn/theme`, and from `0.1.0-rc.3` `@mapcairn/adapter-maplibre` and `@mapcairn/sdk`. They are released together under one version, so one list covers all of them, newest release first.
 
 Each entry says what you can now do and what to change when you upgrade, grouped by what it means for someone using the SDK. The same text is the body of the GitHub Release. The style guide is in `docs/guides/releasing.md`.
+
+## 0.1.0-rc.3 (2026-11-21)
+
+### What is new
+
+This is the release where one install gets you a real map. Until now the four packages gave you the interface around a map, and the MapLibre adapter that draws the map itself lived inside the reference site for you to copy. Two new packages change that, and every package in the set is now at `0.1.0-rc.3`.
+
+**`@mapcairn/sdk`, the front door.** It re-exports `@mapcairn/core`, `@mapcairn/map`, `@mapcairn/react` and `@mapcairn/theme` from one name, so an app installs one package and imports from one place. `@mapcairn/sdk/styles.css` brings the theme tokens and the interface styles in one line. The four packages are still published on their own, for a host that wants only one of them, and the subpaths `@mapcairn/sdk/core`, `@mapcairn/sdk/map`, `@mapcairn/sdk/react` and `@mapcairn/sdk/theme` reach each of them. ([#564](https://github.com/MapCairn/mapcairn/pull/564), [#568](https://github.com/MapCairn/mapcairn/pull/568))
+
+**`@mapcairn/adapter-maplibre`, the MapLibre adapter as a package.** `createMapLibreMapAdapter` is the adapter the reference site runs on, moved out of the site and published, so you no longer copy a folder to draw a map. It takes `maplibre-gl` as a peer dependency, so the engine and its version are yours to choose, and `core`, `map`, `react` and `theme` still carry no map engine at all. The adapter makes no request until the map is given a basemap, and it has no basemap or provider of its own. Its engine styles come in through `@mapcairn/adapter-maplibre/styles.css`, or through the umbrella's stylesheet. ([#580](https://github.com/MapCairn/mapcairn/pull/580), [#583](https://github.com/MapCairn/mapcairn/pull/583))
+
+**A real map from one install.** With the umbrella, the quickstart is two imports and a worker URL:
+
+```ts
+import { createFakeServices } from "@mapcairn/sdk";
+import { createMapLibreMapAdapter } from "@mapcairn/sdk/adapter-maplibre";
+```
+
+The adapter is at the subpath `@mapcairn/sdk/adapter-maplibre`, not at the root, so an app that never imports it does not pull the engine into its bundle. The measured client bundle of an app that imports only the root has no module of `maplibre-gl` in it. Because the umbrella lists `maplibre-gl` as a required peer, install it next to `react` and `react-dom`: `npm install @mapcairn/sdk@next react react-dom maplibre-gl`. The README and the "Show a real map" section of `docs/guides/extending.md` walk through it, and `docs/guides/content-security-policy.md` says what `worker-src` needs. ([#583](https://github.com/MapCairn/mapcairn/pull/583), [#585](https://github.com/MapCairn/mapcairn/pull/585))
+
+**You say where the engine's worker lives.** The adapter no longer imports the engine's worker file itself, because that import only works in one bundler. You pass `loadWorkerUrl`, a function that resolves to the URL of `maplibre-gl/dist/maplibre-gl-worker.mjs` as your app serves it. With Vite that is a `?worker&url` import. The reference site does exactly this, and a failed load shows up as a normal map load failure and is tried again on the next mount. ([#579](https://github.com/MapCairn/mapcairn/pull/579))
+
+**How this candidate was published.** `@mapcairn/adapter-maplibre` and `@mapcairn/sdk` are uploaded by the maintainer for this candidate, so they carry no provenance statement, as `0.1.0-rc.1` carried none. The other four are published by the workflow with provenance, as `0.1.0-rc.2` was. Install all of them under `@next`.
+
+#### @mapcairn/core
+
+**Fit a wide feature on the right side of the world.** `boundsOfPaths` boxes the rings and lines of a shape using every vertex and every edge between them, each edge taken the short way round. A polygon or a line wider than half the globe, with only a few vertices, is now fitted where it really is and not on the far side of its biggest gap. A shape that covers every longitude gets the whole span, and `featureBounds` in `@mapcairn/map` uses it. ([#582](https://github.com/MapCairn/mapcairn/pull/582))
+
+**Query layers across the antimeridian.** A query layer used to ask its provider for a window clamped to the edge of the map, so a view that straddled the 180th meridian got a box that was too narrow or in the wrong place. `queryWindow` now gives such a view a window across the line, `queryBoxes` splits it into the part west of 180 and the part east of -180, `feedUrls` returns one URL for each part, and `decodeFeeds` joins the answers, keeping a feature that sits on the line once. Every other view still sends one request. A view across the line sends two, and if either fails the layer shows its error with no partial result. The URL template, the limit and the provider are the same, so nothing new is requested from anyone. ([#581](https://github.com/MapCairn/mapcairn/pull/581))
+
+### What got better
+
+**Bounds that cross the antimeridian.** `boundsOfPoints` takes the short way round the globe. Points at 179 and -179 give a box from 179 to 181, not one the width of the world. Routes and reachable areas in Directions fit the short way too, and the map centre is always reported between -180 and 180. ([#550](https://github.com/MapCairn/mapcairn/pull/550))
+
+**Releases you can check.** The packages are published by the project's release workflow with provenance, from the same files the GitHub Release holds. The workflow now waits up to about ten minutes for the registry to show each version, reads the registry package by package so one new package does not hold back the others, and `release:verify-published` can compare what the registry holds with the attested tarballs. The project also has a check that an app which installs only `@mapcairn/sdk` draws a real map in a browser under a strict Content Security Policy. It runs in CI and is part of preparing a release. ([#549](https://github.com/MapCairn/mapcairn/pull/549), [#563](https://github.com/MapCairn/mapcairn/pull/563), [#578](https://github.com/MapCairn/mapcairn/pull/578), [#584](https://github.com/MapCairn/mapcairn/pull/584))
+
+### What to change when you upgrade
+
+**`feedUrl` throws for an area across the antimeridian.** It used to clamp the box to the edge of the world and so ask for the wrong area without saying so. Use `feedUrls`, which returns one URL for each part of the area, and `decodeFeeds` to join the answers. A view that does not cross the line behaves as before.
+
+Before:
+
+```ts
+const url = feedUrl(definition, controls, Date.now(), area);
+const feed = decodeFeed(definition, await (await fetch(url)).json(), decoders);
+```
+
+After:
+
+```ts
+const urls = feedUrls(definition, controls, Date.now(), area);
+const raws = await Promise.all(urls.map(async (url) => (await fetch(url)).json()));
+const feed = decodeFeeds(definition, raws, decoders);
+```
+
+**A bounding box can have `east` past 180.** For points on both sides of the antimeridian, `boundsOfPoints`, `routeBounds` and the new `boundsOfPaths` return `west` inside -180 to 180 and `east` beyond 180, and a longitude outside the range is wrapped, not clamped. Code that assumed `east` is never above 180 must read the width as `east - west`, which is how the fit helpers already do it.
+
+Before:
+
+```ts
+const bounds = boundsOfPoints([{ lat: 0, lng: 179 }, { lat: 0, lng: -179 }]);
+// west -179, east 179: a box as wide as the world
+```
+
+After:
+
+```ts
+const bounds = boundsOfPoints([{ lat: 0, lng: 179 }, { lat: 0, lng: -179 }]);
+// west 179, east 181: a box two degrees wide
+```
+
+**If you copied the reference site's MapLibre adapter.** Earlier candidates pointed you at the adapter's source in the reference site to copy. It now lives in `@mapcairn/adapter-maplibre`, whose only public names are `createMapLibreMapAdapter`, its options type, `TILE_LAYER_SLOW_MS` and the stylesheet. The copied code took a `workerCacheKey` and imported the worker file inside the adapter. Install the package and pass `loadWorkerUrl` instead. The adapter's class and loader are not exported, so build the adapter through the factory. None of this was ever part of a published package, so no installed version of the four packages changes.
+
+Before:
+
+```ts
+// copied from the reference site's source
+const adapter = createMapLibreMapAdapter({ workerCacheKey });
+```
+
+After:
+
+```ts
+import { createMapLibreMapAdapter } from "@mapcairn/sdk/adapter-maplibre";
+
+const adapter = createMapLibreMapAdapter({
+  loadWorkerUrl: async () => {
+    const worker = await import(
+      "maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url"
+    );
+    return worker.default;
+  },
+});
+```
 
 ## 0.1.0-rc.2 (2026-11-20)
 

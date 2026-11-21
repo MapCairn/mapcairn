@@ -1,6 +1,6 @@
 {
   "name": "@mapcairn/map",
-  "version": "0.1.0-rc.2",
+  "version": "0.1.0-rc.3",
   "description": "Generic map rendering and UI components for MapCairn",
   "license": "AGPL-3.0-only",
   "repository": {
@@ -52,9 +52,9 @@
     "typecheck": "npm --prefix ../.. run build:sdk && tsc --noEmit"
   },
   "dependencies": {
-    "@mapcairn/core": "0.1.0-rc.2",
-    "@mapcairn/react": "0.1.0-rc.2",
-    "@mapcairn/theme": "0.1.0-rc.2",
+    "@mapcairn/core": "0.1.0-rc.3",
+    "@mapcairn/react": "0.1.0-rc.3",
+    "@mapcairn/theme": "0.1.0-rc.3",
     "@radix-ui/react-slider": "^1.6.1",
     "@radix-ui/react-switch": "^1.4.1",
     "@radix-ui/react-toggle-group": "^1.2.1",
