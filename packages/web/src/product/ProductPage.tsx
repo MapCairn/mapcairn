@@ -481,7 +481,7 @@ export function ProductPage({
               clipboard={clipboard}
             />
           ))}
-          <div className={styles.closing}>
+          <div className={styles.closing} data-testid="closing">
             <div className={styles.closingArt}>
               <SurveyArt />
             </div>

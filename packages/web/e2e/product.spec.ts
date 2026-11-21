@@ -235,7 +235,7 @@ test.describe("the product page", () => {
   });
 
   for (const viewport of VIEWPORTS) {
-    test(`sets no text of the page below 13px at ${viewport.width}px (the survey sheet's labels, in SVG, are the known exception)`, async ({
+    test(`sets no text of the page below 13px at ${viewport.width}px, the relief strip's labels included`, async ({
       page,
     }) => {
       await page.setViewportSize(viewport);
@@ -250,7 +250,7 @@ test.describe("the product page", () => {
             (node) =>
               node.nodeType === Node.TEXT_NODE && node.textContent?.trim(),
           );
-          if (!hasText || element instanceof SVGElement) {
+          if (!hasText) {
             continue;
           }
           const size = Number.parseFloat(getComputedStyle(element).fontSize);
@@ -948,119 +948,6 @@ test.describe("the product page", () => {
     });
   });
 
-  for (const viewport of VIEWPORTS) {
-    for (const colorScheme of ["light", "dark"] as const) {
-      test(`draws the art's marks where they belong at ${viewport.width}px in ${colorScheme}`, async ({
-        page,
-      }) => {
-        await page.setViewportSize(viewport);
-        await page.emulateMedia({ colorScheme });
-        const product = new ProductPage(page);
-        await product.goto();
-        const art = page.getByTestId("survey-art");
-        await art.scrollIntoViewIfNeeded();
-        const marks = await art.evaluate((svg) => {
-          /** A point in an element's own coordinates, on the screen. */
-          const onScreen = (element: Element | null, x: number, y: number) => {
-            const matrix = (element as SVGGraphicsElement).getScreenCTM();
-            const point = new DOMPoint(x, y).matrixTransform(
-              matrix ?? undefined,
-            );
-            return { x: point.x, y: point.y };
-          };
-          const tip = svg.querySelector('[data-anchor="pin-tip"]');
-          const line = svg.querySelector<SVGLineElement>(
-            '[data-anchor="measure-line"]',
-          );
-          const cross = svg.querySelector<SVGCircleElement>(
-            '[data-anchor="crosshair"]',
-          );
-          const north = svg.querySelector<SVGPathElement>(
-            '[data-anchor="north"]',
-          );
-          const quarters = [
-            ...svg.querySelectorAll<SVGRectElement>(
-              '[data-anchor="scale-quarter"]',
-            ),
-          ].map((rect) => rect.getBBox());
-          const arms = [
-            ...(cross?.parentElement?.querySelectorAll("line") ?? []),
-          ];
-          const crossCentre = {
-            x: cross?.cx.baseVal.value ?? Number.NaN,
-            y: cross?.cy.baseVal.value ?? Number.NaN,
-          };
-          const northBox = north?.getBBox();
-          return {
-            tip: onScreen(tip, 0, 0),
-            lineStart: onScreen(
-              line,
-              line?.x1.baseVal.value ?? Number.NaN,
-              line?.y1.baseVal.value ?? Number.NaN,
-            ),
-            armsMeetCentre: arms.every((arm) => {
-              const { x1, y1, x2, y2 } = arm;
-              return (
-                (y1.baseVal.value === crossCentre.y &&
-                  y2.baseVal.value === crossCentre.y) ||
-                (x1.baseVal.value === crossCentre.x &&
-                  x2.baseVal.value === crossCentre.x)
-              );
-            }),
-            // A DOMPoint does not survive the trip out of the page, so copy its numbers.
-            northTip: north
-              ? {
-                  x: north.getPointAtLength(0).x,
-                  y: north.getPointAtLength(0).y,
-                }
-              : null,
-            northBox: northBox
-              ? { x: northBox.x, y: northBox.y, height: northBox.height }
-              : null,
-            quarterWidths: quarters.map((box) => box.width),
-            quarterStarts: quarters.map((box) => box.x),
-          };
-        });
-        // The pin's tip is the measured line's first point, to within a hundredth of a pixel.
-        expect(Math.abs(marks.tip.x - marks.lineStart.x)).toBeLessThan(0.01);
-        expect(Math.abs(marks.tip.y - marks.lineStart.y)).toBeLessThan(0.01);
-        expect(marks.armsMeetCentre).toBe(true);
-        // The filled half starts at the arrow's tip, its top-left corner: the
-        // tip is straight above the shared edge, so it points up the grid.
-        expect(marks.northTip).not.toBeNull();
-        expect(marks.northBox).not.toBeNull();
-        expect(marks.northTip?.x).toBeCloseTo(
-          marks.northBox?.x ?? Number.NaN,
-          3,
-        );
-        expect(marks.northTip?.y).toBeCloseTo(
-          marks.northBox?.y ?? Number.NaN,
-          3,
-        );
-        // The scale bar's four quarters are equal and follow one another.
-        const [first] = marks.quarterWidths;
-        for (const [i, width] of marks.quarterWidths.entries()) {
-          expect(width).toBeCloseTo(first ?? 0, 6);
-          if (i > 0) {
-            expect(marks.quarterStarts[i]).toBeCloseTo(
-              (marks.quarterStarts[i - 1] ?? 0) + (first ?? 0),
-              6,
-            );
-          }
-        }
-        // On a narrow screen the art is cropped round the line, and the pin and the line are still in view.
-        const frame = await page.getByTestId("survey-art-frame").boundingBox();
-        expect(frame).not.toBeNull();
-        if (frame) {
-          expect(marks.tip.x).toBeGreaterThan(frame.x);
-          expect(marks.tip.x).toBeLessThan(frame.x + frame.width);
-          expect(marks.tip.y).toBeGreaterThan(frame.y);
-          expect(marks.tip.y).toBeLessThan(frame.y + frame.height);
-        }
-      });
-    }
-  }
-
   test.describe("the pictures of the playground", () => {
     /** The capture of each plate, by its subject: its CSS size, which the picture's file is twice. */
     const PLATES = [
@@ -1254,41 +1141,6 @@ test.describe("the product page", () => {
           await page.evaluate(() => document.documentElement.scrollWidth),
         ).toBeLessThanOrEqual(390);
       });
-    });
-  });
-
-  test.describe("with motion on", () => {
-    test.use({ reducedMotion: "no-preference" });
-
-    test("lands the pin with its tip on the measured line once it has dropped", async ({
-      page,
-    }) => {
-      const product = new ProductPage(page);
-      await product.goto();
-      const art = page.getByTestId("survey-art");
-      await art.evaluate(() =>
-        Promise.all(document.getAnimations().map((motion) => motion.finished)),
-      );
-      const offset = await art.evaluate((svg) => {
-        const tip = svg.querySelector<SVGGraphicsElement>(
-          '[data-anchor="pin-tip"]',
-        );
-        const line = svg.querySelector<SVGLineElement>(
-          '[data-anchor="measure-line"]',
-        );
-        const at = (element: SVGGraphicsElement | null, x: number, y: number) =>
-          new DOMPoint(x, y).matrixTransform(
-            element?.getScreenCTM() ?? undefined,
-          );
-        const a = at(tip, 0, 0);
-        const b = at(
-          line,
-          line?.x1.baseVal.value ?? Number.NaN,
-          line?.y1.baseVal.value ?? Number.NaN,
-        );
-        return Math.hypot(a.x - b.x, a.y - b.y);
-      });
-      expect(offset).toBeLessThan(0.01);
     });
   });
 
@@ -1526,6 +1378,21 @@ test.describe("the product page @a11y", () => {
     const product = new ProductPage(page);
     await product.goto();
     expect(await findLongMotion(page)).toEqual([]);
+  });
+
+  test.describe("with motion allowed", () => {
+    test.use({ reducedMotion: "no-preference" });
+
+    test("the relief strip does not move: no animation runs on the page @a11y", async ({
+      page,
+    }) => {
+      const product = new ProductPage(page);
+      await product.goto();
+      const running = await page.evaluate(() =>
+        document.getAnimations().map((motion) => motion.playState),
+      );
+      expect(running).toEqual([]);
+    });
   });
 });
 
