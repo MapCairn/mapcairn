@@ -210,7 +210,7 @@ export interface Crop {
 }
 
 /** The crop that shows `box` of the sheet. */
-function cropOf(box: Box): Crop {
+export function cropOf(box: Box): Crop {
   const width = box.right - box.left;
   const height = box.bottom - box.top;
   return {
