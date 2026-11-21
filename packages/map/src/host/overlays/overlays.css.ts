@@ -150,6 +150,13 @@ export const drawRadiusHandle = style({
   strokeWidth: outlineWidth,
 });
 
+/** The halo under the location accuracy outline. */
+export const accuracyHalo = style({
+  fill: "none",
+  stroke: mapOverlayTokens.halo,
+  strokeWidth: haloWidth,
+});
+
 /** The location accuracy circle. */
 export const accuracy = style({
   fill: mapOverlayTokens.accuracyFill,

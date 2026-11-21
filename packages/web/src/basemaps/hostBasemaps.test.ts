@@ -5,6 +5,8 @@ import { join } from "node:path";
 import {
   BASEMAPS,
   DEFAULT_BASEMAP_ID,
+  DEFAULT_DARK_BASEMAP_ID,
+  defaultBasemapFor,
   FakeMessageCatalogue,
   getBasemap,
   resolveText,
@@ -47,13 +49,21 @@ describe("the reference host's basemaps", () => {
     }
   });
 
-  it("makes Bright the default", () => {
+  it("makes Bright the default, and the light theme's default", () => {
     expect(HOST_BASEMAP_CATALOGUE.defaultId).toBe(DEFAULT_BASEMAP_ID);
     expect(HOST_BASEMAP_CATALOGUE.defaultId).toBe("bright");
     expect(HOST_BASEMAP_CATALOGUE.basemaps[0]?.id).toBe("bright");
+    expect(defaultBasemapFor(HOST_BASEMAP_CATALOGUE, "light").id).toBe(
+      "bright",
+    );
   });
 
-  it("opens an id the site does not offer on Bright, including the removed Satellite and Topographic", () => {
+  it("makes Fiord the dark theme's default", () => {
+    expect(DEFAULT_DARK_BASEMAP_ID).toBe("fiord");
+    expect(defaultBasemapFor(HOST_BASEMAP_CATALOGUE, "dark").id).toBe("fiord");
+  });
+
+  it("resolves an id the site does not offer to the catalogue's default, Bright, including the removed Satellite and Topographic (the viewer's theme default is chosen by `resolveBasemapFor`)", () => {
     for (const id of [
       "satellite",
       "topographic",

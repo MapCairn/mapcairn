@@ -237,9 +237,54 @@ describe("toHex", () => {
  * fill compared with the map it sits on is meaningless; the outline beside it
  * carries the 3:1.
  */
-const { white, black, lightMap, defaultBasemap } = representativeBackdrops;
+const { white, black, lightMap, defaultBasemap, defaultDarkBasemap } =
+  representativeBackdrops;
 const themeNames: ThemeName[] = ["light", "dark"];
 const colourSets = ["colour", "opaque", "contrastMore"] as const;
+
+/**
+ * The overlay roles the map draws on a halo: the pin's stroke, the halo under
+ * a measure line and under the accuracy outline (`overlays.css.ts`). Only a
+ * role listed here earns halo credit below, so a mark drawn without one must
+ * clear 3:1 against the map itself.
+ */
+const drawnWithHalo: Readonly<Record<string, boolean>> = {
+  mapPin: true,
+  mapMeasureLine: true,
+  mapAccuracy: true,
+};
+
+/** The contrast an overlay mark has over a backdrop, by itself or by its halo. */
+function overlayContrast(
+  roles: { readonly mapHalo: string } & Record<string, string>,
+  role: string,
+  backdrop: string,
+): number {
+  const direct = contrastRatio(roles[role] as string, backdrop);
+  if (drawnWithHalo[role] !== true) {
+    return direct;
+  }
+  const byHalo = Math.min(
+    contrastRatio(roles.mapHalo, backdrop),
+    contrastRatio(roles[role] as string, roles.mapHalo),
+  );
+  return Math.max(direct, byHalo);
+}
+
+describe("overlay contrast", () => {
+  it("gives no halo credit to a role that draws none", () => {
+    const roles = {
+      ...themeValues.light.colour,
+      mapUndrawn: themeValues.light.colour.mapPin,
+    };
+    expect(
+      overlayContrast(roles, "mapUndrawn", defaultDarkBasemap),
+    ).toBeLessThan(AA_NON_TEXT);
+    expect(
+      overlayContrast(roles, "mapPin", defaultDarkBasemap),
+    ).toBeGreaterThanOrEqual(AA_NON_TEXT);
+  });
+});
 
 describe.each(themeNames)("%s theme tokens", (theme) => {
   const values = themeValues[theme];
@@ -284,16 +329,20 @@ describe.each(themeNames)("%s theme tokens", (theme) => {
       },
     );
 
-    it("keeps map overlays visible on light and dark basemaps", () => {
+    // A pin, a line or a vertex is drawn on its halo, so it shows on a map
+    // when it clears 3:1 against the map itself, or when its halo clears 3:1
+    // against the map and the mark clears 3:1 against its halo.
+    it("keeps map overlays visible on light and dark basemaps, by the mark or by its halo", () => {
       for (const role of ["mapPin", "mapMeasureLine", "mapAccuracy"] as const) {
         for (const [name, backdrop] of Object.entries({
           white,
           black,
           lightMap,
           defaultBasemap,
+          defaultDarkBasemap,
         })) {
           expect(
-            contrastRatio(roles[role], backdrop),
+            overlayContrast(roles, role, backdrop),
             `${role} on ${name}`,
           ).toBeGreaterThanOrEqual(AA_NON_TEXT);
         }
@@ -310,9 +359,11 @@ describe.each(themeNames)("%s theme tokens", (theme) => {
     });
   });
 
-  it("paints the map before it loads in the default basemap's land colour, whatever the theme", () => {
+  it("paints the map before it loads in the land colour of the theme's default basemap", () => {
     for (const set of colourSets) {
-      expect(values[set].mapBackground, set).toBe(defaultBasemap);
+      expect(values[set].mapBackground, set).toBe(
+        theme === "dark" ? defaultDarkBasemap : defaultBasemap,
+      );
     }
   });
 
