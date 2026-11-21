@@ -3,6 +3,7 @@
 import type { Page } from "@playwright/test";
 import { expect, test } from "./fixtures";
 import { mockLayerProviders } from "./support/layers";
+import { collapseCredits } from "./support/states";
 
 const card = (page: Page) => page.getByTestId("tour-card");
 
@@ -153,5 +154,116 @@ test.describe("first-visit tour", () => {
     await mapPage.goto("#map=12.00/51.50000/-0.12000");
     await expect(mapPage.region).toBeVisible();
     await expect(card(page)).toHaveCount(0);
+  });
+});
+
+/*
+ * The credits' first showing and the welcome card are two overlays. On a
+ * phone they would cover much of the map together, so the credits wait for
+ * the tour to be answered; where the cards sit in different corners they show
+ * as they always did. The clock is the page's own, jumped past the five
+ * seconds by `collapseCredits`.
+ */
+test.describe("credits first showing beside the tour card", () => {
+  test.use({ firstVisit: true, reducedMotion: "reduce", fastCredits: true });
+
+  const creditsRoot = (page: Page) =>
+    page.locator('[data-chrome="attribution"]');
+
+  test("on a phone the credits wait for the tour, then show for their time", async ({
+    page,
+    mapPage,
+  }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await mapPage.goto();
+    await expect(card(page)).toBeVisible();
+    // `goto` returns once the map has started: the first showing would have begun by now.
+    await expect(mapPage.creditsButton).toBeVisible();
+    await page.clock.fastForward(10_000);
+    await expect(mapPage.creditsButton).toHaveAttribute(
+      "aria-expanded",
+      "false",
+    );
+    await expect(creditsRoot(page)).not.toHaveAttribute(
+      "data-intro-started",
+      "true",
+    );
+
+    await card(page).getByRole("button", { name: "Skip", exact: true }).click();
+    await expect(card(page)).toHaveCount(0);
+    await expect(creditsRoot(page)).toHaveAttribute(
+      "data-intro-started",
+      "true",
+    );
+    await expect(mapPage.creditsRegion).toBeVisible();
+    await expect(mapPage.creditsRegion.getByRole("link").first()).toBeVisible();
+    await collapseCredits(mapPage);
+  });
+
+  test("on a phone they are shown after the whole tour too", async ({
+    page,
+    mapPage,
+  }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await mapPage.goto();
+    await card(page)
+      .getByRole("button", { name: "Take the tour", exact: true })
+      .click();
+    for (const name of ["Next", "Next", "Finish"]) {
+      await card(page).getByRole("button", { name, exact: true }).click();
+    }
+    await expect(mapPage.creditsButton).toHaveAttribute(
+      "aria-expanded",
+      "false",
+    );
+    await expect(creditsRoot(page)).not.toHaveAttribute(
+      "data-intro-started",
+      "true",
+    );
+    await card(page)
+      .getByRole("button", { name: "Close", exact: true })
+      .click();
+    await expect(creditsRoot(page)).toHaveAttribute(
+      "data-intro-started",
+      "true",
+    );
+    await expect(mapPage.creditsRegion).toBeVisible();
+  });
+
+  test("on a phone, opening the credits by hand during the tour counts as seeing them", async ({
+    page,
+    mapPage,
+  }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await mapPage.goto();
+    await expect(card(page)).toBeVisible();
+    await mapPage.creditsButton.click();
+    await expect(mapPage.creditsRegion).toBeVisible();
+    await mapPage.creditsButton.click();
+    await expect(mapPage.creditsRegion).toBeHidden();
+
+    await card(page).getByRole("button", { name: "Skip", exact: true }).click();
+    await expect(card(page)).toHaveCount(0);
+    await page.clock.fastForward(10_000);
+    await expect(mapPage.creditsRegion).toBeHidden();
+    await expect(creditsRoot(page)).not.toHaveAttribute(
+      "data-intro-started",
+      "true",
+    );
+  });
+
+  test("on a desktop screen they show beside the card, as before", async ({
+    page,
+    mapPage,
+  }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await mapPage.goto();
+    await expect(card(page)).toBeVisible();
+    await expect(creditsRoot(page)).toHaveAttribute(
+      "data-intro-started",
+      "true",
+    );
+    await expect(mapPage.creditsRegion).toBeVisible();
+    await expect(card(page)).toBeVisible();
   });
 });

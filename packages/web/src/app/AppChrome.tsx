@@ -220,6 +220,7 @@ function ChromeContent({ app, map, background }: ChromeContentProps) {
       bottomEnd={
         <Attribution
           basemap={app.basemap}
+          introHeld={app.tour.state.status !== "off"}
           layerCredits={
             app.directions.result
               ? [

@@ -22,6 +22,7 @@ import { useMap } from "../../host";
 import { useMessages, usePreferences } from "../../services";
 import { IconButton } from "../../ui";
 import { CHROME_GAP_PX } from "../chromeSpacing";
+import { useChromeLayout } from "../layoutContext";
 import * as styles from "./Attribution.css";
 
 /**
@@ -151,6 +152,15 @@ export interface AttributionProps {
   readonly basemap: BasemapDefinition;
   /** Credits of the data layers that are on, listed after the map's own. */
   readonly layerCredits?: readonly LayerAttribution[];
+  /**
+   * Holds the first showing back while the host has another card on the map
+   * (its first-visit tour), in the bottom-sheet layout only, where the two
+   * would cover much of a phone's map together. The side-panel layout puts
+   * them in different corners, so it ignores the hold. The credits show once
+   * the hold ends, for the full time. The button opens them at any moment,
+   * and opening them counts as the first showing.
+   */
+  readonly introHeld?: boolean;
 }
 
 /**
@@ -166,7 +176,9 @@ export interface AttributionProps {
  *   makes, the map moving, a press outside it) or after
  *   {@link ATTRIBUTION_INTRO_MS}, whichever comes first, fading out unless
  *   reduced motion is on. Focus moving into it during that time keeps it
- *   open as if the person had opened it.
+ *   open as if the person had opened it. A host with another card on the map
+ *   (its first-visit tour) holds the first showing back with `introHeld`, and
+ *   it starts, for the full time, when the hold ends.
  *
  *   After that it behaves as a popover the person opens. It opens above the
  *   bottom row, clear of the readout beside the button; where it starts a gap
@@ -187,8 +199,11 @@ export interface AttributionProps {
 export function Attribution({
   basemap,
   layerCredits = NO_CREDITS,
+  introHeld: hostHold = false,
 }: AttributionProps) {
   const { adapter, view, onUserZoom } = useMap();
+  const { layout } = useChromeLayout();
+  const introHeld = hostHold && layout === "sheet";
   const { reducedMotion } = usePreferences();
   const [open, setOpen] = useState(false);
   // True while the credits show by themselves after the map started.
@@ -250,6 +265,7 @@ export function Attribution({
       return;
     }
     openedOnView.current = view;
+    introShown.current = true;
     setPlacement("above");
     setIntro(false);
     setFading(false);
@@ -257,9 +273,10 @@ export function Attribution({
     setOpenRequest((count) => count + 1);
   };
 
-  // Shown once, when the map has started: before that there is no map to credit.
+  // Shown once, when the map has started and no other card holds it back:
+  // before that there is no map to credit.
   useEffect(() => {
-    if (adapter === null || introShown.current) {
+    if (adapter === null || introHeld || introShown.current) {
       return;
     }
     introShown.current = true;
@@ -268,7 +285,7 @@ export function Attribution({
     setOpen(true);
     setIntro(true);
     setIntroStarted(true);
-  }, [adapter, view]);
+  }, [adapter, view, introHeld]);
 
   useEffect(() => {
     if (!intro) {

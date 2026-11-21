@@ -71,14 +71,30 @@ const CREDITS_FADE_CHECK_MS = 1_000;
 /**
  * Waits for the credits' first showing to start. They begin collapsed, before
  * the map exists, so a collapsed button would otherwise pass a check for
- * "collapsed" too early.
+ * "collapsed" too early. On a phone they are held back while the first-visit
+ * tour card is on the map, so a card that is showing there counts as the
+ * showing being held: it starts when the tour is closed or skipped.
  */
 async function waitForCreditsIntro(mapPage: MapPage): Promise<void> {
-  await expect(
-    mapPage.page.locator('[data-chrome="attribution"]'),
-  ).toHaveAttribute("data-intro-started", "true", {
-    timeout: CREDITS_COLLAPSE_TIMEOUT_MS,
-  });
+  await expect
+    .poll(
+      () =>
+        mapPage.page.evaluate(() => {
+          const credits = document.querySelector('[data-chrome="attribution"]');
+          if (credits?.getAttribute("data-intro-started") === "true") {
+            return "started";
+          }
+          const tourShowing = document.querySelector(
+            '[data-testid="tour-card"]',
+          );
+          const layout = document
+            .querySelector('[data-testid="map-options-sheet"]')
+            ?.getAttribute("data-layout");
+          return tourShowing && layout === "sheet" ? "held" : "waiting";
+        }),
+      { timeout: CREDITS_COLLAPSE_TIMEOUT_MS },
+    )
+    .not.toBe("waiting");
 }
 
 /** Expects the button to say the credits are collapsed and the popover to be hidden. */
