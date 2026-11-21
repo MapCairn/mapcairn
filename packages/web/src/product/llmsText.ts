@@ -43,7 +43,7 @@ It is installed as one package, \`@mapcairn/sdk\`, with the package manager you 
 ${INSTALL_OPTIONS.map((option) => option.command).join("\n")}
 \`\`\`
 
-The package re-exports the interface, the logic, the hooks and the design tokens from its root, and the MapLibre adapter at \`@mapcairn/sdk/adapter-maplibre\`; \`maplibre-gl\` is a required peer, and the root never imports the engine. The individual packages (\`@mapcairn/core\`, \`@mapcairn/map\`, \`@mapcairn/react\`, \`@mapcairn/theme\` and \`@mapcairn/adapter-maplibre\`) are the advanced option, for a host that wants fewer dependencies. The source is on GitHub (linked below), with an example app in \`examples/embed\` (${EXAMPLE_APP_LINK.href}). The licence allows commercial use; keeping an app's source private while it is distributed with the SDK inside needs separate terms, and a licence for closed-source use is not on offer yet. ${STATUS_LINE}`;
+The package re-exports the interface, the logic, the hooks and the design tokens from its root, and the MapLibre adapter at \`@mapcairn/sdk/adapter-maplibre\`; \`maplibre-gl\` is a required peer, and the root never imports the engine. The individual packages (\`@mapcairn/core\`, \`@mapcairn/map\`, \`@mapcairn/react\`, \`@mapcairn/theme\` and \`@mapcairn/adapter-maplibre\`) are the advanced option, for a host that wants fewer dependencies. The source is on GitHub (linked below), with an example app in \`examples/embed\` (${EXAMPLE_APP_LINK.href}). The licence allows commercial use; an app distributed with the SDK inside is offered under the AGPL-3.0 with its source. ${STATUS_LINE}`;
 
 /** The playground's description, the same words its page renders for crawlers. */
 const PLAYGROUND_SUMMARY = EN_GB_CATALOGUE["host.map.summary"];
@@ -54,6 +54,11 @@ const DOCUMENTS: readonly (readonly [string, string, string])[] = [
     "README",
     "README.md",
     "what the SDK offers, how to install and embed it, and the packages",
+  ],
+  [
+    "Embedding walkthrough",
+    "docs/guides/embed-a-map.md",
+    "the whole embedding app, file by file, with what each part does",
   ],
   [
     "Embedding and extending",
@@ -73,7 +78,7 @@ const DOCUMENTS: readonly (readonly [string, string, string])[] = [
   [
     "Licence guide",
     "docs/guides/licence.md",
-    "what the AGPL-3.0 means for an app that uses the SDK, and when closed-source use needs separate terms",
+    "what the AGPL-3.0 means for an app that uses the SDK",
   ],
   [
     "Public API",

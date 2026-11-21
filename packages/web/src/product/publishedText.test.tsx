@@ -11,25 +11,38 @@ import { EMBED_EXAMPLE_FILES } from "./embedExampleFiles";
 import { ProductPage } from "./ProductPage";
 import {
   CAPABILITY_MATRIX_LINK,
+  EMBED_GUIDE_LINK,
   EXAMPLE_APP_LINK,
   INSTALL_OPTIONS,
   NPM_ACTION,
   REPOSITORY_PAGES,
 } from "./productContent";
 
+/** A release for the page to name, as the route's loader gives it. */
+const RELEASE = { version: "0.1.0", date: "2026-11-21" } as const;
+
 /*
  * The rules every text the product page publishes keeps: the page itself, its
  * structured data, `/index.md`, `/llms.txt` and `/llms-full.txt`. They link to
- * no issue, pull request or milestone and cite none by number, say nothing
- * about npm beyond the install commands (and the package managers' names that choose them) and the link to the package (`NPM_ACTION`),
- * say nothing about commercial terms beyond the phrase "allows commercial use" (what the licence allows, in the READMEs' own words),
- * link into the repository no further than its front page and the named set below, and hold no fact that is true only today (a
- * percentage, a "coming soon"), so the page stays true as the SDK changes.
+ * no issue, pull request or milestone and cite none by number; say nothing
+ * about npm beyond the install commands (and the package managers' names that
+ * choose them) and, in `/llms.txt`, the link to the package (`NPM_ACTION`);
+ * say nothing about commercial terms beyond the phrase "allows commercial
+ * use" (what the licence allows, in the READMEs' own words) and nothing at
+ * all about any licensing or terms other than the AGPL-3.0; link into the
+ * repository no further than its front page and the named set below; and hold
+ * no fact that is true only for a while (a percentage, a "coming soon"), so
+ * the page stays true as the SDK changes. The latest release is the one
+ * exception, and it is read from the changelog when the site is built.
  */
 
 /** An issue, pull request or milestone on GitHub, or a `#123` reference. */
 const TRACKER =
   /github\.com\/[\w.-]+\/[\w.-]+\/(issues|pull|pulls|milestones?)\b|(^|[^\w&/=.])#\d+\b/i;
+
+/** Wording about licensing or terms other than the AGPL-3.0, which the project does not publish. */
+const OTHER_LICENSING =
+  /closed-source|separate terms|other terms|not on offer|alternative licen|licen[cs]e for/i;
 
 /** Wording that is true only for a while. */
 const VOLATILE =
@@ -37,7 +50,9 @@ const VOLATILE =
 
 /** Everything the rendered page says and links to, as one text. */
 function pageText(): string {
-  const { container } = render(<ProductPage clipboard={new FakeClipboard()} />);
+  const { container } = render(
+    <ProductPage clipboard={new FakeClipboard()} release={RELEASE} />,
+  );
   // The install block's choices are the package managers' names, npm among them.
   const managers = INSTALL_OPTIONS.map(({ manager }) => manager);
   for (const choice of container.querySelectorAll("fieldset label")) {
@@ -115,7 +130,11 @@ const ALLOWED_PAGES: ReadonlyArray<readonly [string, string]> = [
   ],
   [
     "https://github.com/MapCairn/mapcairn/tree/main/examples/embed",
-    "the example app the answer on how to use the SDK names",
+    "the example app the answer on how to start names",
+  ],
+  [
+    "https://github.com/MapCairn/mapcairn/blob/main/docs/guides/embed-a-map.md",
+    "the embedding walkthrough: the whole app the page's excerpt is cut from",
   ],
 ];
 
@@ -159,6 +178,10 @@ describe.each(SOURCES)("%s", (_name, read) => {
     expect(text.replaceAll(COMMERCIAL_PHRASE, "")).not.toMatch(/commercial/i);
   });
 
+  it("says nothing about licensing or terms other than the AGPL-3.0", async () => {
+    expect(await read()).not.toMatch(OTHER_LICENSING);
+  });
+
   it("holds no fact that is true only for a while", async () => {
     // The example's code is not a statement about today: `height: 100%` is CSS.
     const prose = EMBED_EXAMPLE_FILES.reduce(
@@ -171,11 +194,15 @@ describe.each(SOURCES)("%s", (_name, read) => {
 
 describe("links to the repository's front page", () => {
   it.each([
-    ["the page: the hero's button and the footer's Source code", pageText, 2],
-    ["/index.md: the hero's button", () => markdownLoader().text(), 1],
+    [
+      "the page: the header's GitHub, the hero's View on GitHub and the footer's Source code",
+      pageText,
+      3,
+    ],
+    ["/index.md: the hero's View on GitHub", () => markdownLoader().text(), 1],
     ["/llms.txt: Source code", () => llmsLoader().text(), 1],
     [
-      "/llms-full.txt: its own Source code and the page's button",
+      "/llms-full.txt: its own Source code and the page's View on GitHub",
       () => fullLoader().text(),
       2,
     ],
@@ -217,7 +244,12 @@ describe("links to the repository's front page", () => {
 
   it("keeps the allowed set equal to the pages the content links", () => {
     expect(
-      [...REPOSITORY_PAGES, CAPABILITY_MATRIX_LINK, EXAMPLE_APP_LINK]
+      [
+        ...REPOSITORY_PAGES,
+        CAPABILITY_MATRIX_LINK,
+        EXAMPLE_APP_LINK,
+        EMBED_GUIDE_LINK,
+      ]
         .map((link) => link.href)
         .sort(),
     ).toEqual(ALLOWED_PAGES.map(([url]) => url).sort());

@@ -302,6 +302,7 @@ Most apps install only `@mapcairn/sdk`. The packages inside it are published on 
 | [`ARCHITECTURE.md`](ARCHITECTURE.md)                                                 | Layers, ports and adapters, the map adapter, adding an adapter                                             |
 | [`DESIGN.md`](DESIGN.md)                                                             | Tokens, layout slots, accessibility contracts and the lint rules                                           |
 | [`docs/guides/public-api.md`](docs/guides/public-api.md)                             | What counts as the SDK's public API beyond its exports, the API reports and how a change is classed        |
+| [`docs/guides/embed-a-map.md`](docs/guides/embed-a-map.md)                           | The whole embedding app, file by file, with what each part does; the product page links it                 |
 | [`docs/guides/extending.md`](docs/guides/extending.md)                               | Embedding the SDK, and adding a basemap, each kind of data layer, a search or routing provider, an adapter |
 | [`docs/guides/licence.md`](docs/guides/licence.md)                                   | What the AGPL means for your project, for people who know MIT, Apache-2.0 and GPL-3.0                      |
 | [`docs/guides/translate-the-sdk.md`](docs/guides/translate-the-sdk.md)               | Another language, a choice of languages, translating definitions, your own message-format library          |

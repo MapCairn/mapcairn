@@ -32,7 +32,7 @@ What an app of your own provides:
 
 ## Show a real map
 
-The package and its release status are in `packages/adapter-maplibre/README.md`; the README's "Embed a map" has a whole app that draws a map: `index.html`, a style sheet and `main.tsx`. The steps, for an app that installs `@mapcairn/sdk`:
+The package and its release status are in `packages/adapter-maplibre/README.md`; the README's "Embed a map" and [`embed-a-map.md`](embed-a-map.md) have a whole app that draws a map: `index.html`, a style sheet and `main.tsx`. The steps, for an app that installs `@mapcairn/sdk`:
 
 1. List `react`, `react-dom` and `maplibre-gl` beside the umbrella. `maplibre-gl` (`^6.18.0`) is a required peer of the umbrella because the subpath needs it; npm installs peers itself, and strict pnpm and Yarn want them listed.
 2. Import `@mapcairn/sdk/styles.css` once. It includes the engine styles, which only style a map that `MapView` hosts.

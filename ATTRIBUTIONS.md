@@ -59,11 +59,11 @@ The screenshots and the recording in `docs/images/` are captures of the live ref
 
 ### Product page pictures
 
-The two pictures on the product page at `/` (`packages/web/src/product/captures`, a light and a dark file for each) are captures of the reference site's playground, taken by `packages/web/scripts/captureProduct.ts` (`docs/guides/product-captures.md`). They show the Bright basemap (light) and the Fiord basemap (dark) from OpenFreeMap over Cape Town, with no data layer on. The page carries the credits under each picture, in the words and links of the basemap definitions, and links no other source for them:
+The picture on the product page at `/` (`packages/web/src/product/captures`, one view at two sizes, a light and a dark file for each) is a capture of the reference site's playground, taken by `packages/web/scripts/captureProduct.ts` (`docs/guides/product-captures.md`). They show the Bright basemap (light) and the Fiord basemap (dark) from OpenFreeMap over Cape Town, with no data layer on. The page carries the credits under the picture, in the words and links of the basemap definitions, and links no other source for them:
 
 | Image                                                                            | Shows                                          | Credit                                                                                                                                                           |
 | -------------------------------------------------------------------------------- | ---------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `hero-light.webp`, `hero-dark.webp`, `basemaps-light.webp`, `basemaps-dark.webp` | OpenFreeMap vector tiles and styles, Cape Town | © OpenStreetMap contributors, OpenFreeMap, OpenMapTiles, MapLibre (the credits the map shows; data under the [ODbL](https://opendatacommons.org/licenses/odbl/)) |
+| `hero-light.webp`, `hero-dark.webp`, `heroWide-light.webp`, `heroWide-dark.webp` | OpenFreeMap vector tiles and styles, Cape Town | © OpenStreetMap contributors, OpenFreeMap, OpenMapTiles, MapLibre (the credits the map shows; data under the [ODbL](https://opendatacommons.org/licenses/odbl/)) |
 
 The pictures are retaken with the script, never edited by hand, and keep this table in step with the basemap definitions.
 

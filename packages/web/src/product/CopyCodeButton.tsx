@@ -25,14 +25,15 @@ export interface CopyCodeButtonProps {
 }
 
 /**
- * Copies a code example on click. The button's own words show the outcome
- * (Copied, which reverts after {@link COPIED_FEEDBACK_MS}, or Copy failed,
- * which stays until the next try), and the outcome is also announced: politely
- * when it worked, assertively when it did not, with how to copy by hand. Each
+ * Copies a code example on click: a small icon button that sits in the
+ * corner of its code. Its icon shows the outcome (a check once copied, which
+ * reverts after {@link COPIED_FEEDBACK_MS}, or a cross if the copy failed,
+ * which stays until the next try), its accessible name says it in words
+ * ("Copied, src/main.tsx"), and the outcome is also announced: politely when
+ * it worked, assertively when it did not, with how to copy by hand. Each
  * successful copy gets the full time on Copied, and only the latest click's
  * outcome is shown or announced. Focus stays on the button, which is never
- * disabled. Its visible words come first in its accessible name, which adds
- * what it copies, because a page can hold several.
+ * disabled. Its name adds what it copies, because a page can hold several.
  */
 export function CopyCodeButton({
   code,
@@ -94,7 +95,6 @@ export function CopyCodeButton({
       onClick={copy}
     >
       <Icon icon={ICONS[state]} className={styles.copyIcon} />
-      {COPY_CODE[state]}
     </button>
   );
 }

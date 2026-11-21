@@ -19,7 +19,7 @@ A milestone leaves this list in the pull request that closes its last issue. A n
 ### Now
 
 1. **Site, [Selection](https://github.com/MapCairn/mapcairn/milestone/5) ([#49](https://github.com/MapCairn/mapcairn/issues/49)).** Visitors can select several features on the map and work with the selection.
-2. **SDK, [Embeddable SDK](https://github.com/MapCairn/mapcairn/milestone/6) ([#51](https://github.com/MapCairn/mapcairn/issues/51)).** A team can embed the map in its own application without copying the reference host. A redesign of the product page is in progress under this milestone ([#642](https://github.com/MapCairn/mapcairn/issues/642)): the site has a new hero, real captures and share cards, and a larger restructure of the homepage is being built.
+2. **SDK, [Embeddable SDK](https://github.com/MapCairn/mapcairn/milestone/6) ([#51](https://github.com/MapCairn/mapcairn/issues/51)).** A team can embed the map in its own application without copying the reference host. The product page was redesigned under this milestone ([#642](https://github.com/MapCairn/mapcairn/issues/642)): it leads with the playground and answers the licence, the cost and how ready the SDK is in the open.
 
 ### Next
 

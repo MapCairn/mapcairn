@@ -5,7 +5,7 @@ import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import type { Locator, Page } from "@playwright/test";
 import { expect, test } from "./fixtures";
-import { PRODUCT_HEADLINE, ProductPage } from "./pages/ProductPage";
+import { EXCERPT, PRODUCT_HEADLINE, ProductPage } from "./pages/ProductPage";
 import {
   axeViolations,
   findLongMotion,
@@ -150,7 +150,66 @@ test.describe("the product page", () => {
     });
   });
 
-  test("makes View on GitHub the one button, with Try the playground and View on npm as links in a row", async ({
+  for (const viewport of VIEWPORTS) {
+    test(`fills one control only, Try the playground, at ${viewport.width}px`, async ({
+      page,
+    }) => {
+      await page.setViewportSize(viewport);
+      const product = new ProductPage(page);
+      await product.goto();
+      await expect(product.heroPlayground).toHaveAttribute("href", "/map");
+      expect(
+        (await product.heroPlayground.boundingBox())?.height,
+      ).toBeGreaterThanOrEqual(48);
+      const filled = await page.evaluate(() => {
+        const ground = getComputedStyle(
+          document.querySelector("[data-testid=product-page]") as Element,
+        ).backgroundColor;
+        return [...document.querySelectorAll("a, button, label")]
+          .filter((element) => {
+            const fill = getComputedStyle(element).backgroundColor;
+            return fill !== "rgba(0, 0, 0, 0)" && fill !== ground;
+          })
+          .map((element) => element.textContent?.trim());
+      });
+      expect(filled).toEqual(["Try the playground"]);
+    });
+  }
+
+  for (const [width, beside] of [
+    [390, false],
+    [1280, true],
+  ] as const) {
+    test(`sets the install command ${beside ? "beside" : "under"} the hero's words at ${width}px, with one filled button`, async ({
+      page,
+    }) => {
+      await page.setViewportSize({ width, height: 900 });
+      const product = new ProductPage(page);
+      await product.goto();
+      const words = await product.headline.boundingBox();
+      const install = await product.installGroup.boundingBox();
+      if (beside) {
+        expect(install?.x ?? 0).toBeGreaterThan(
+          (words?.x ?? 0) + (words?.width ?? 0),
+        );
+        // Beside the words the command still fits its column on one line.
+        const lines = await product.installCommand("npm").evaluate((pre) => {
+          const range = document.createRange();
+          range.selectNodeContents(pre);
+          return new Set(
+            [...range.getClientRects()].map((rect) => Math.round(rect.top)),
+          ).size;
+        });
+        expect(lines).toBe(1);
+      } else {
+        expect(install?.y ?? 0).toBeGreaterThan(
+          (words?.y ?? 0) + (words?.height ?? 0),
+        );
+      }
+    });
+  }
+
+  test("offers the repository in the hero as an underlined text link of 44 px", async ({
     page,
   }) => {
     const product = new ProductPage(page);
@@ -159,18 +218,12 @@ test.describe("the product page", () => {
       "href",
       "https://github.com/MapCairn/mapcairn",
     );
-    await expect(product.heroNpm).toHaveAttribute(
-      "href",
-      "https://www.npmjs.com/package/@mapcairn/sdk",
-    );
-    const github = await product.heroGitHub.boundingBox();
-    const playground = await product.heroPlayground.boundingBox();
-    const npm = await product.heroNpm.boundingBox();
-    expect(github?.height).toBeGreaterThanOrEqual(48);
-    expect(playground?.height).toBeGreaterThanOrEqual(44);
-    expect(npm?.height).toBeGreaterThanOrEqual(44);
-    expect(playground?.y).toBe(npm?.y);
-    expect(playground?.x).toBeLessThan(npm?.x ?? 0);
+    expect(
+      (await product.heroGitHub.boundingBox())?.height,
+    ).toBeGreaterThanOrEqual(44);
+    expect(
+      (await interactionStyle(product.heroGitHub)).textDecorationLine,
+    ).toContain("underline");
   });
 
   for (const [width, height] of [
@@ -178,7 +231,7 @@ test.describe("the product page", () => {
     [820, 1180],
     [1440, 900],
   ] as const) {
-    test(`shows the install command and View on GitHub in the first screen at ${width}px, with the whole command readable and no sideways scroll`, async ({
+    test(`shows the playground button, the install command and View on GitHub in the first screen at ${width}px, with the whole command readable and no sideways scroll`, async ({
       page,
     }) => {
       await page.setViewportSize({ width, height });
@@ -198,7 +251,7 @@ test.describe("the product page", () => {
     });
   }
 
-  test("links to the repository from the hero's button and the footer's Source code only", async ({
+  test("links to the repository from the header, the hero's text link and the footer's Source code only", async ({
     page,
   }) => {
     const product = new ProductPage(page);
@@ -206,8 +259,16 @@ test.describe("the product page", () => {
     const repository = page.locator(
       'a[href="https://github.com/MapCairn/mapcairn"]',
     );
-    await expect(repository).toHaveCount(2);
-    await expect(product.header.locator('a[href^="https://"]')).toHaveCount(0);
+    await expect(repository).toHaveCount(3);
+    await expect(product.headerGitHub).toHaveAttribute(
+      "href",
+      "https://github.com/MapCairn/mapcairn",
+    );
+    await expect(product.headerDocs).toHaveAttribute(
+      "href",
+      "https://github.com/MapCairn/mapcairn#documentation",
+    );
+    await expect(product.header.locator('a[href^="https://"]')).toHaveCount(2);
     await expect(
       product.footer.getByRole("link", { name: "Source code" }),
     ).toHaveAttribute("href", "https://github.com/MapCairn/mapcairn");
@@ -264,52 +325,36 @@ test.describe("the product page", () => {
     });
   }
 
-  for (const [width, beside] of [
-    [320, false],
-    [390, false],
-    [1440, true],
+  for (const [width, columns] of [
+    [320, 1],
+    [390, 1],
+    [1440, 2],
   ] as const) {
-    test(`lays the legend out ${beside ? "as a key column beside the text" : "with the text full width under the symbol and name"} at ${width}px, with nothing clipped`, async ({
+    test(`lays what you get out in ${columns} column${columns > 1 ? "s" : ""} at ${width}px, with nothing clipped`, async ({
       page,
     }) => {
       await page.setViewportSize({ width, height: 900 });
       const product = new ProductPage(page);
       await product.goto();
-      const boxes = await page.evaluate(() => {
-        const item = document.querySelector("main section ul li");
-        const rect = (selector: string) => {
-          const box = item?.querySelector(selector)?.getBoundingClientRect();
+      const layout = await page
+        .getByRole("region", { name: "What you get" })
+        .evaluate((region) => {
+          const items = [...region.querySelectorAll("li")].map((item) =>
+            item.getBoundingClientRect(),
+          );
           return {
-            left: box?.left ?? Number.NaN,
-            right: box?.right ?? Number.NaN,
-            top: box?.top ?? Number.NaN,
-            bottom: box?.bottom ?? Number.NaN,
+            lefts: [...new Set(items.map((box) => Math.round(box.left)))],
+            right: Math.max(...items.map((box) => box.right)),
+            scrollWidth: document.documentElement.scrollWidth,
           };
-        };
-        const symbol = item?.firstElementChild?.getBoundingClientRect();
-        const name = item?.children[1]?.getBoundingClientRect();
-        const text = rect("p");
-        return {
-          symbol: { left: symbol?.left ?? 0, bottom: symbol?.bottom ?? 0 },
-          name: { left: name?.left ?? 0, top: name?.top ?? 0 },
-          text,
-          scrollWidth: document.documentElement.scrollWidth,
-        };
-      });
-      expect(boxes.text.right).toBeLessThanOrEqual(width);
-      expect(boxes.scrollWidth).toBeLessThanOrEqual(width);
-      if (beside) {
-        expect(boxes.text.left).toBeCloseTo(boxes.name.left, 0);
-        expect(boxes.text.left).toBeGreaterThan(boxes.symbol.left);
-      } else {
-        expect(boxes.text.left).toBeCloseTo(boxes.symbol.left, 0);
-        expect(boxes.text.top).toBeGreaterThanOrEqual(boxes.symbol.bottom);
-        expect(boxes.name.top).toBeLessThan(boxes.symbol.bottom);
-      }
+        });
+      expect(layout.lefts).toHaveLength(columns);
+      expect(layout.right).toBeLessThanOrEqual(width);
+      expect(layout.scrollWidth).toBeLessThanOrEqual(width);
     });
   }
 
-  test("shows what you get open, as a legend, with no script", async ({
+  test("shows what you get open, as four benefits, each with its heading and text", async ({
     page,
   }) => {
     const product = new ProductPage(page);
@@ -317,42 +362,142 @@ test.describe("the product page", () => {
     const you = page.getByRole("region", { name: "What you get" });
     await expect(you.locator("details")).toHaveCount(0);
     const items = you.getByRole("listitem");
-    await expect(items).toHaveCount(6);
+    await expect(items).toHaveCount(4);
     for (const item of await items.all()) {
       await expect(item.locator("p")).toBeVisible();
     }
   });
 
   for (const viewport of VIEWPORTS) {
-    test(`sets a graticule rule on each section at ${viewport.width}px, and a plain line in forced colours`, async ({
+    test(`draws no rule between sections at ${viewport.width}px: space alone sets them apart`, async ({
       page,
     }) => {
       await page.setViewportSize(viewport);
       const product = new ProductPage(page);
       await product.goto();
-      const rule = (selector: string) =>
-        page.evaluate((sel) => {
-          const style = getComputedStyle(
-            document.querySelector(sel) as Element,
-            "::before",
-          );
+      const rules = await page.evaluate(() =>
+        [...document.querySelectorAll("main > section")].map((section) => {
+          const before = getComputedStyle(section, "::before");
+          const own = getComputedStyle(section);
           return {
-            image: style.backgroundImage,
-            border: style.borderBlockEndStyle,
-            height: Number.parseFloat(style.height),
+            image: before.backgroundImage,
+            content: before.content,
+            border: own.borderBlockStartStyle,
           };
-        }, selector);
-      const section = "main > section";
-      const normal = await rule(section);
-      expect(normal.image).toContain("repeating-linear-gradient");
-      expect(normal.height).toBeGreaterThan(0);
-      await page.emulateMedia({ forcedColors: "active" });
-      const forced = await rule(section);
-      expect(forced.image).toBe("none");
-      expect(forced.border).toBe("solid");
-      // The border is inside the box, so the rule keeps its 12px.
-      expect(forced.height).toBe(normal.height);
-      expect(forced.height).toBeCloseTo(12, 0);
+        }),
+      );
+      for (const rule of rules) {
+        expect(rule.image).toBe("none");
+        expect(rule.content).toBe("none");
+        expect(rule.border).toBe("none");
+      }
+    });
+  }
+
+  for (const width of [320, 390, 1440]) {
+    test(`keeps the header at the top while the page scrolls at ${width}px, slim, with every link whole`, async ({
+      page,
+    }) => {
+      await page.setViewportSize({ width, height: 700 });
+      const product = new ProductPage(page);
+      await product.goto();
+      await page.evaluate(() => window.scrollTo(0, 2000));
+      await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(2000);
+      const header = await product.header.boundingBox();
+      expect(header?.y).toBe(0);
+      expect(header?.height ?? 0).toBeLessThanOrEqual(64);
+      for (const link of [
+        product.headerPlayground,
+        product.headerDocs,
+        product.headerGitHub,
+      ]) {
+        await expect(link).toBeInViewport({ ratio: 1 });
+        expect((await link.boundingBox())?.height).toBeGreaterThanOrEqual(44);
+      }
+      expect(
+        await page.evaluate(() => document.documentElement.scrollWidth),
+      ).toBeLessThanOrEqual(width);
+    });
+  }
+
+  for (const [hash, name] of [
+    ["#questions", "Questions"],
+    ["#licence", "Licence and cost"],
+    ["#readiness", "How ready it is"],
+  ] as const) {
+    test(`lands ${hash} just below the header, not under it and not far below it`, async ({
+      page,
+    }) => {
+      await page.setViewportSize({ width: 390, height: 700 });
+      const product = new ProductPage(page);
+      await product.goto(hash);
+      const heading = page.getByRole("heading", { level: 2, name });
+      const header = (await product.header.boundingBox())?.height ?? 0;
+      await expect
+        .poll(async () => (await heading.boundingBox())?.y ?? 0)
+        .toBeGreaterThanOrEqual(header);
+      // One offset, the scroll padding: the header and a step of air, not twice that.
+      expect((await heading.boundingBox())?.y ?? 0).toBeLessThanOrEqual(
+        header + 24,
+      );
+    });
+  }
+
+  test("follows the licence badge and the release line to their sections", async ({
+    page,
+  }) => {
+    const product = new ProductPage(page);
+    await product.goto();
+    await product.main.getByRole("link", { name: "AGPL-3.0-only" }).click();
+    await expect(page).toHaveURL(/#licence$/);
+    await expect(
+      page.getByRole("heading", { level: 2, name: "Licence and cost" }),
+    ).toBeInViewport();
+    await product.main.getByRole("link", { name: "How ready it is" }).click();
+    await expect(page).toHaveURL(/#readiness$/);
+    await expect(
+      page.getByRole("heading", { level: 2, name: "How ready it is" }),
+    ).toBeInViewport();
+  });
+
+  for (const width of [320, 1280]) {
+    test(`keeps every control the keyboard reaches clear of the sticky header with text at 200% at ${width}px`, async ({
+      page,
+    }) => {
+      await page.setViewportSize({ width, height: 700 });
+      const product = new ProductPage(page);
+      await product.goto();
+      await page.evaluate(() =>
+        document.documentElement.style.setProperty("font-size", "200%"),
+      );
+      const hidden: string[] = [];
+      for (let step = 0; step < 40; step += 1) {
+        await page.keyboard.press("Tab");
+        const where = await page.evaluate(() => {
+          const focused = document.activeElement as HTMLElement | null;
+          const header = document.querySelector("header");
+          // The skip link shows itself over the top of the page by design; the
+          // header's own links are in the header. Only the page's content counts.
+          const content = focused?.closest("main, footer");
+          if (!focused || !header || !content) {
+            return null;
+          }
+          const box = focused.getBoundingClientRect();
+          return {
+            name: `${focused.tagName} ${focused.textContent?.trim().slice(0, 30)}`,
+            top: box.top,
+            headerBottom: header.getBoundingClientRect().bottom,
+          };
+        });
+        if (where !== null && where.top < where.headerBottom - 1) {
+          hidden.push(where.name);
+        }
+      }
+      expect(hidden).toEqual([]);
+      // The header stays one row tall, so its own links are reachable too.
+      const header = (await product.header.boundingBox())?.height ?? 0;
+      const link = (await product.headerPlayground.boundingBox())?.height ?? 0;
+      expect(header).toBeLessThan(link * 1.5);
     });
   }
 
@@ -388,24 +533,6 @@ test.describe("the product page", () => {
     });
   }
 
-  for (const [name, lat, lng] of [
-    ["Open the playground over Cape Town", -33.92, 18.42],
-    ["Open the playground over the whole world", 20, 0],
-  ] as const) {
-    test(`follows "${name}" to a working map over that place`, async ({
-      page,
-      mapPage,
-    }) => {
-      const product = new ProductPage(page);
-      await product.goto();
-      await page.getByRole("link", { name }).click();
-      await mapPage.waitForMap();
-      const view = await mapPage.hashView();
-      expect(view?.lat).toBeCloseTo(lat, 1);
-      expect(view?.lng).toBeCloseTo(lng, 1);
-    });
-  }
-
   test("lets the keyboard reach and scroll the code example", async ({
     page,
   }) => {
@@ -434,10 +561,10 @@ test.describe("the product page", () => {
       await expect.poll(() => copiedTexts(page)).toEqual([]);
       await product.copyCode.click();
       await expect(
-        product.main.getByRole("button", { name: "Copied" }),
+        product.main.getByRole("button", { name: `Copied, ${EXCERPT}` }),
       ).toBeFocused();
       await expect(page.getByTestId("live-region-polite")).toHaveText(
-        "Code copied, src/main.tsx",
+        `Code copied, ${EXCERPT}`,
       );
       const shown = await product.code.textContent();
       await expect.poll(() => copiedTexts(page)).toEqual([shown]);
@@ -451,7 +578,7 @@ test.describe("the product page", () => {
       await product.copyCode.focus();
       await page.keyboard.press("Enter");
       await expect(
-        product.main.getByRole("button", { name: "Copied" }),
+        product.main.getByRole("button", { name: `Copied, ${EXCERPT}` }),
       ).toBeFocused();
       await expect.poll(async () => (await copiedTexts(page)).length).toBe(1);
     });
@@ -464,33 +591,33 @@ test.describe("the product page", () => {
       await product.goto();
       await product.copyCode.click();
       await expect(
-        product.main.getByRole("button", { name: "Copy failed" }),
+        product.main.getByRole("button", { name: `Copy failed, ${EXCERPT}` }),
       ).toBeFocused();
       await expect(page.getByTestId("live-region-assertive")).toHaveText(
-        "Could not copy src/main.tsx. Select the code and copy it manually.",
+        `Could not copy ${EXCERPT}. Select the code and copy it manually.`,
       );
       await expect.poll(() => copiedTexts(page)).toEqual([]);
     });
 
-    test("copies index.html and src/page.css from their own buttons, each exactly as shown", async ({
+    test("sits in the corner of its code box as a 44 px icon button, named in words", async ({
       page,
     }) => {
-      await recordClipboard(page, { ok: true });
+      await page.setViewportSize({ width: 360, height: 780 });
       const product = new ProductPage(page);
       await product.goto();
-      const shown: string[] = [];
-      for (const file of ["index.html", "src/page.css"]) {
-        await product.main
-          .getByRole("button", { name: `Copy code, ${file}` })
-          .click();
-        await expect(page.getByTestId("live-region-polite")).toHaveText(
-          `Code copied, ${file}`,
-        );
-        shown.push(
-          (await page.getByRole("region", { name: file }).textContent()) ?? "",
-        );
-      }
-      await expect.poll(() => copiedTexts(page)).toEqual(shown);
+      const button = await product.copyCode.boundingBox();
+      const box = await product.code.evaluate((code) =>
+        (code.parentElement as Element).getBoundingClientRect().toJSON(),
+      );
+      expect(button?.width).toBeGreaterThanOrEqual(44);
+      expect(button?.height).toBeGreaterThanOrEqual(44);
+      expect(await product.copyCode.textContent()).toBe("");
+      // Inside the box's one-pixel edge, at its top end corner.
+      const inset = box.right - ((button?.x ?? 0) + (button?.width ?? 0));
+      expect(inset).toBeGreaterThanOrEqual(0);
+      expect(inset).toBeLessThanOrEqual(2);
+      expect((button?.y ?? 0) - box.top).toBeGreaterThanOrEqual(0);
+      expect((button?.y ?? 0) - box.top).toBeLessThanOrEqual(2);
     });
   });
 
@@ -524,18 +651,28 @@ test.describe("the product page", () => {
       }
     });
 
-    test("keep a row for the copy button once the page runs, so nothing moves when it arrives", async ({
+    test("put the copy button in the command's corner once the page runs, inside the command's box and clear of its words", async ({
       page,
     }) => {
+      await page.setViewportSize({ width: 360, height: 780 });
       const product = new ProductPage(page);
       await product.goto();
-      await expect(page.getByTestId("install-copy-row")).toBeVisible();
-      const row = await page.getByTestId("install-copy-row").boundingBox();
+      const command = product.installCommand("npm");
       const button = await product.installCopy("npm").boundingBox();
-      expect(button?.y ?? 0).toBeGreaterThanOrEqual(row?.y ?? 0);
-      expect((button?.y ?? 0) + (button?.height ?? 0)).toBeLessThanOrEqual(
-        (row?.y ?? 0) + (row?.height ?? 0) + 1,
+      const box = await command.boundingBox();
+      expect(button?.width).toBeGreaterThanOrEqual(44);
+      expect(button?.y ?? 0).toBeGreaterThanOrEqual(box?.y ?? 0);
+      expect((button?.x ?? 0) + (button?.width ?? 0)).toBeLessThanOrEqual(
+        (box?.x ?? 0) + (box?.width ?? 0),
       );
+      const words = await command.evaluate((pre) => {
+        const range = document.createRange();
+        range.selectNodeContents(pre);
+        return Math.max(
+          ...[...range.getClientRects()].map((rect) => rect.right),
+        );
+      });
+      expect(words).toBeLessThanOrEqual(button?.x ?? 0);
     });
 
     test("say what the SDK needs under the block", async ({ page }) => {
@@ -543,7 +680,7 @@ test.describe("the product page", () => {
       await product.goto();
       await expect(
         product.main.getByText(
-          "Needs React 19, maplibre-gl 6.18 or later and a bundler that handles CSS imports.",
+          "It adds the SDK and its three peers. Needs React 19, maplibre-gl 6.18 or later and a bundler that handles CSS imports (tried with Vite).",
         ),
       ).toBeVisible();
     });
@@ -630,7 +767,7 @@ test.describe("the product page", () => {
       await expect.poll(() => copiedTexts(page)).toEqual([]);
     });
 
-    test("mark the chosen manager with an underline as well as a tint, and only that one", async ({
+    test("mark the chosen manager with an underline as well as the text colour, and only that one", async ({
       page,
     }) => {
       const product = new ProductPage(page);
@@ -649,19 +786,19 @@ test.describe("the product page", () => {
       }
     });
 
-    test("show the chosen manager's edge in the system colour in forced colours", async ({
+    test("keep the chosen manager's underline in forced colours, and only on that one", async ({
       page,
     }) => {
       await page.emulateMedia({ forcedColors: "active" });
       const product = new ProductPage(page);
       await product.goto();
-      const edges = (manager: string) =>
-        product
-          .installPill(manager)
-          .evaluate((element) => getComputedStyle(element).borderTopColor);
-      const chosen = await edges("npm");
-      const other = await edges("pnpm");
-      expect(chosen).not.toBe(other);
+      expect(
+        (await interactionStyle(product.installPill("npm"))).textDecorationLine,
+      ).toBe("underline");
+      expect(
+        (await interactionStyle(product.installPill("pnpm")))
+          .textDecorationLine,
+      ).toBe("none");
     });
 
     test("answer a press with the pressed look", async ({ page }) => {
@@ -771,8 +908,6 @@ test.describe("the product page", () => {
       );
       await expect(product.installCommand("npm")).toBeHidden();
       await expect(product.installGroup.getByRole("button")).toHaveCount(0);
-      // The row kept for the button takes no room where scripts do not run.
-      await expect(page.getByTestId("install-copy-row")).toBeHidden();
     });
   });
 
@@ -784,18 +919,19 @@ test.describe("the product page", () => {
       test.skip(isMobile, "Hover needs a pointer that can hover.");
       const product = new ProductPage(page);
       await product.goto();
-      const resting = await interactionStyle(product.heroGitHub);
+      const resting = await interactionStyle(product.heroPlayground);
       expect(resting.boxShadow).toBe("none");
       expect(resting.transform).toBe("none");
 
-      await product.heroGitHub.hover();
+      await product.heroPlayground.hover();
       // A transform settles a frame after the state changes, so poll for it.
       await expect
         .poll(
-          async () => (await interactionStyle(product.heroGitHub)).transform,
+          async () =>
+            (await interactionStyle(product.heroPlayground)).transform,
         )
         .toBe("matrix(1, 0, 0, 1, 0, -1)");
-      const hovered = await interactionStyle(product.heroGitHub);
+      const hovered = await interactionStyle(product.heroPlayground);
       expect(hovered.boxShadow).not.toBe("none");
       // The colours stay the AA pair they were.
       expect(hovered.color).toBe(resting.color);
@@ -804,16 +940,17 @@ test.describe("the product page", () => {
       await page.mouse.down();
       await expect
         .poll(
-          async () => (await interactionStyle(product.heroGitHub)).transform,
+          async () =>
+            (await interactionStyle(product.heroPlayground)).transform,
         )
         .toBe("matrix(0.98, 0, 0, 0.98, 0, 0)");
-      expect((await interactionStyle(product.heroGitHub)).boxShadow).toBe(
+      expect((await interactionStyle(product.heroPlayground)).boxShadow).toBe(
         "none",
       );
       await page.mouse.up();
     });
 
-    test("the hero links, the header link and the copy button take the accent tint under a pointer", async ({
+    test("the hero's text link, the header links, the copy button and the install tabs take the accent tint under a pointer", async ({
       page,
       isMobile,
     }) => {
@@ -821,9 +958,9 @@ test.describe("the product page", () => {
       const product = new ProductPage(page);
       await product.goto();
       for (const target of [
-        product.heroPlayground,
-        product.heroNpm,
+        product.heroGitHub,
         product.headerPlayground,
+        product.headerGitHub,
         product.copyCode,
         product.installPill("pnpm"),
       ]) {
@@ -835,13 +972,18 @@ test.describe("the product page", () => {
       }
     });
 
-    test("in forced colours the hero's two links stay visible and underlined", async ({
+    test("in forced colours the hero's text link and the header's links stay visible and underlined", async ({
       page,
     }) => {
       await page.emulateMedia({ forcedColors: "active" });
       const product = new ProductPage(page);
       await product.goto();
-      for (const link of [product.heroPlayground, product.heroNpm]) {
+      for (const link of [
+        product.heroGitHub,
+        product.headerPlayground,
+        product.headerDocs,
+        product.headerGitHub,
+      ]) {
         await expect(link).toBeVisible();
         const style = await interactionStyle(link);
         expect(style.textDecorationLine).toContain("underline");
@@ -875,11 +1017,11 @@ test.describe("the product page", () => {
       const product = new ProductPage(page);
       await product.goto();
       expect(
-        (await interactionStyle(product.heroGitHub)).textDecorationLine,
+        (await interactionStyle(product.heroPlayground)).textDecorationLine,
       ).toBe("none");
-      await product.heroGitHub.hover();
+      await product.heroPlayground.hover();
       expect(
-        (await interactionStyle(product.heroGitHub)).textDecorationLine,
+        (await interactionStyle(product.heroPlayground)).textDecorationLine,
       ).toBe("underline");
       const pill = product.installPill("pnpm");
       expect((await interactionStyle(pill)).textDecorationLine).toBe("none");
@@ -907,11 +1049,17 @@ test.describe("the product page", () => {
         probe.remove();
         return colour;
       });
-      // The two links have no fill of their own: their label sits on the page, which is Canvas.
-      const actions = [product.heroGitHub, product.copyCode];
+      // The filled button becomes an outlined link on Canvas. The copy button
+      // has no fill of its own, so its icon sits on its code box, which is Canvas.
+      const actions = [product.heroPlayground, product.copyCode];
       const readable = async (action: Locator) => {
         const style = await interactionStyle(action);
-        expect(style.backgroundColor).toBe(canvas);
+        if (action === product.copyCode) {
+          const clear = /,\s*0\)$/.test(style.backgroundColor);
+          expect(clear || style.backgroundColor === canvas).toBe(true);
+        } else {
+          expect(style.backgroundColor).toBe(canvas);
+        }
         expect(style.color).not.toBe(canvas);
       };
       for (const action of actions) {
@@ -939,7 +1087,7 @@ test.describe("the product page", () => {
       const resting = await interactionStyle(product.copyCode);
       await product.copyCode.tap();
       await expect(
-        product.main.getByRole("button", { name: "Copied" }),
+        product.main.getByRole("button", { name: `Copied, ${EXCERPT}` }),
       ).toBeVisible();
       const tapped = await interactionStyle(product.copyCode);
       expect(tapped.backgroundColor).toBe(resting.backgroundColor);
@@ -948,11 +1096,16 @@ test.describe("the product page", () => {
     });
   });
 
-  test.describe("the pictures of the playground", () => {
-    /** The capture of each plate, by its subject: its CSS size, which the picture's file is twice. */
+  test.describe("the picture of the playground", () => {
+    /** The two sizes of the picture, by subject: its CSS size, which the file is twice, and the widths it is drawn at. */
     const PLATES = [
-      { id: "hero", width: 400, height: 520 },
-      { id: "basemaps", width: 390, height: 720 },
+      { id: "hero", width: 400, height: 520, shownAt: [360, 390] },
+      {
+        id: "heroWide",
+        width: 1152,
+        height: 640,
+        shownAt: [820, 1280, 1440, 1600],
+      },
     ] as const;
 
     /** Scrolls down the page a screen at a time, so every lazy picture that is drawn is fetched, and waits for each to finish. */
@@ -966,14 +1119,14 @@ test.describe("the product page", () => {
       });
       await page.waitForFunction(() =>
         [...document.images]
-          .filter((image) => getComputedStyle(image).display !== "none")
+          .filter((image) => image.checkVisibility())
           .every((image) => image.complete),
       );
     }
 
     for (const width of [390, 820, 1440]) {
       for (const colorScheme of ["light", "dark"] as const) {
-        test(`fetches only the pictures of the ${colorScheme} theme at ${width}px, shifts nothing, asks no other site and never scrolls sideways`, async ({
+        test(`fetches one picture, the ${colorScheme} theme's at this size, at ${width}px, shifts nothing, asks no other site and never scrolls sideways`, async ({
           page,
         }) => {
           await page.setViewportSize({ width, height: 900 });
@@ -1002,17 +1155,11 @@ test.describe("the product page", () => {
           const pictures = requests
             .map((url) => new URL(url).pathname)
             .filter((path) => /\.webp$/.test(path));
-          const other = colorScheme === "light" ? "dark" : "light";
-          for (const { id } of PLATES) {
-            expect(
-              pictures.filter((path) => path.includes(`${id}-${colorScheme}`)),
-              `the ${colorScheme} ${id} picture`,
-            ).toHaveLength(1);
-            expect(
-              pictures.filter((path) => path.includes(`${id}-${other}`)),
-              `the ${other} ${id} picture, which is not drawn`,
-            ).toHaveLength(0);
-          }
+          const size = width < 768 ? "hero" : "heroWide";
+          expect(pictures).toHaveLength(1);
+          expect(pictures[0]).toMatch(
+            new RegExp(`/${size}-${colorScheme}[^/]*\\.webp$`),
+          );
           const origin = new URL(page.url()).origin;
           expect(
             requests.filter((url) => new URL(url).origin !== origin),
@@ -1032,53 +1179,74 @@ test.describe("the product page", () => {
       }
     }
 
-    for (const { id, width: capture, height } of PLATES) {
-      test(`draws the ${id} picture no larger than it was taken, whole, with the collar's labels inside its sheet, at 1440px`, async ({
-        page,
-      }) => {
-        await page.setViewportSize({ width: 1440, height: 900 });
-        const product = new ProductPage(page);
-        await product.goto();
-        const figure = page.getByTestId(`plate-${id}`);
-        await figure.scrollIntoViewIfNeeded();
-        const image = figure.getByRole("img");
-        await expect(image).toBeVisible();
-        const shown = await image.boundingBox();
-        expect(shown?.width).toBeLessThanOrEqual(capture);
-        // The picture keeps its shape at any width.
-        expect((shown?.width ?? 0) / (shown?.height ?? 1)).toBeCloseTo(
-          capture / height,
-          1,
-        );
-        await expect
-          .poll(() =>
-            image.evaluate((element: HTMLImageElement) => element.naturalWidth),
-          )
-          .toBe(capture * 2);
-        const outside = await figure.evaluate((element) => {
-          const sheet = element.getBoundingClientRect();
-          return [...element.querySelectorAll("svg text")].filter((label) => {
-            const box = label.getBoundingClientRect();
-            return (
-              box.left < sheet.left - 1 ||
-              box.right > sheet.right + 1 ||
-              box.top < sheet.top - 1 ||
-              box.bottom > sheet.bottom + 1
-            );
-          }).length;
+    for (const { id, width: capture, height, shownAt } of PLATES) {
+      for (const width of shownAt) {
+        test(`draws the ${id} picture whole and no larger than it was taken at ${width}px${id === "hero" ? ", edge to edge" : ""}`, async ({
+          page,
+        }) => {
+          await page.setViewportSize({ width, height: 900 });
+          const product = new ProductPage(page);
+          await product.goto();
+          const frame = page.getByTestId(`plate-${id}`);
+          await frame.scrollIntoViewIfNeeded();
+          const image = frame.getByRole("img");
+          await expect(image).toBeVisible();
+          const shown = await image.boundingBox();
+          expect(shown?.width).toBeLessThanOrEqual(capture);
+          expect((shown?.width ?? 0) / (shown?.height ?? 1)).toBeCloseTo(
+            capture / height,
+            1,
+          );
+          if (id === "hero" && width <= capture) {
+            expect(shown?.x).toBe(0);
+            expect(shown?.width).toBe(width);
+          }
+          await expect
+            .poll(() =>
+              image.evaluate(
+                (element: HTMLImageElement) => element.naturalWidth,
+              ),
+            )
+            .toBe(capture * 2);
         });
-        expect(outside).toBe(0);
-        // The collar's labels keep the small step's 13px.
-        const sizes = await figure.evaluate((element) =>
-          [...element.querySelectorAll("svg text")].map((label) =>
-            Number.parseFloat(getComputedStyle(label).fontSize),
-          ),
-        );
-        for (const size of sizes) {
-          expect(size).toBeGreaterThanOrEqual(13);
-        }
-      });
+      }
     }
+
+    test("is the largest picture on the page, wider than the text, at its own 1152px from 1280px", async ({
+      page,
+    }) => {
+      await page.setViewportSize({ width: 1280, height: 900 });
+      const product = new ProductPage(page);
+      await product.goto();
+      const image = page.getByTestId("plate-heroWide").getByRole("img");
+      await image.scrollIntoViewIfNeeded();
+      const shown = (await image.boundingBox())?.width ?? 0;
+      expect(shown).toBe(1152);
+      const text = await page
+        .getByRole("region", { name: "Embed a map" })
+        .locator("p")
+        .first()
+        .boundingBox();
+      expect(shown).toBeGreaterThan((text?.width ?? 0) * 1.5);
+      // The hero's contour motif is the faint ground behind the words, not a picture.
+      const others = await page.evaluate(() =>
+        [...document.querySelectorAll("main svg, main img")]
+          .filter((element) => element.checkVisibility())
+          .filter((element) => !element.closest("[data-testid=hero-motif]"))
+          .map(
+            (element) =>
+              element.getBoundingClientRect().width *
+              element.getBoundingClientRect().height,
+          ),
+      );
+      const largest = Math.max(...others);
+      const picture = await image.evaluate(
+        (element) =>
+          element.getBoundingClientRect().width *
+          element.getBoundingClientRect().height,
+      );
+      expect(picture).toBe(largest);
+    });
 
     test("follows a theme chosen on the page, whatever the system prefers", async ({
       page,
@@ -1089,100 +1257,67 @@ test.describe("the product page", () => {
       await page.evaluate(() => {
         document.documentElement.dataset.theme = "dark";
       });
-      const figure = page.getByTestId("plate-hero");
-      await figure.scrollIntoViewIfNeeded();
-      await expect(figure.getByRole("img")).toHaveAttribute(
-        "alt",
-        /dark theme/,
+      const demo = page.getByTestId("demo");
+      await demo.scrollIntoViewIfNeeded();
+      await expect(demo.getByRole("img")).toHaveCount(1);
+      await expect(demo.getByRole("img")).toHaveAttribute(
+        "src",
+        /-dark[^/]*\.webp$/,
       );
-      await expect(figure.getByRole("img")).toHaveCount(1);
     });
 
-    test("credits the map beside each picture with links to the credited pages", async ({
+    test("credits the map under the picture with links to the credited pages", async ({
       page,
     }) => {
       const product = new ProductPage(page);
       await product.goto();
-      for (const { id } of PLATES) {
-        const figure = page.getByTestId(`plate-${id}`);
-        const credits = figure.getByText("Map credits:");
-        await expect(credits).toContainText("OpenStreetMap contributors");
-        await expect(credits).toContainText("OpenFreeMap");
-        await expect(
-          credits.getByRole("link", { name: "© OpenStreetMap contributors" }),
-        ).toHaveAttribute("href", "https://www.openstreetmap.org/copyright");
-      }
+      const credits = page.getByTestId("demo").getByText("Map credits:");
+      await expect(credits).toContainText("OpenStreetMap contributors");
+      await expect(credits).toContainText("OpenFreeMap");
+      await expect(
+        credits.getByRole("link", { name: "© OpenStreetMap contributors" }),
+      ).toHaveAttribute("href", "https://www.openstreetmap.org/copyright");
     });
 
-    test("makes the hero's picture a live map only when its link is followed: nothing of the map is asked for before, and the keyboard follows it", async ({
+    test("loads nothing of the map: the picture is a capture, and the playground is one link away", async ({
       page,
     }) => {
       const requests: string[] = [];
       page.on("request", (request) => requests.push(request.url()));
       const product = new ProductPage(page);
       await product.goto();
-      const link = page.getByTestId("plate-hero").getByRole("link", {
-        name: "Try it live: open this view in the playground",
-      });
-      await link.scrollIntoViewIfNeeded();
-      await link.focus();
-      await expect(link).toBeFocused();
-      const origin = new URL(page.url()).origin;
+      await page.getByTestId("demo").scrollIntoViewIfNeeded();
       expect(
-        requests.filter((url) => new URL(url).origin !== origin),
-        "requests to another origin before the link is followed",
-      ).toEqual([]);
-      expect(
-        requests.filter((url) => /maplibre|\.pbf|tiles|style/i.test(url)),
-        "map requests before the link is followed",
+        requests.filter((url) => /maplibre|\.pbf|tiles|style\.json/i.test(url)),
+        "map requests",
       ).toEqual([]);
       await expect(page.getByTestId("map-host")).toHaveCount(0);
-
-      await page.keyboard.press("Enter");
-      await expect(page).toHaveURL(/\/map#map=13\.00\/-33\.93650\/18\.40700/);
-      await expect(page.getByTestId("map-host")).toBeVisible();
     });
 
     test.describe("without a script", () => {
       test.use({ javaScriptEnabled: false });
 
-      test("still show each picture, whole, with its credits, and never scroll sideways", async ({
+      test("still shows the picture, whole, with its credits, and never scrolls sideways", async ({
         page,
       }) => {
         await page.setViewportSize({ width: 390, height: 900 });
         await page.goto("/");
-        for (const { id } of PLATES) {
-          const figure = page.getByTestId(`plate-${id}`);
-          const image = figure.locator("img:visible");
-          await expect(image).toHaveCount(1);
-          await image.scrollIntoViewIfNeeded();
-          await expect
-            .poll(() =>
-              image.evaluate(
-                (element: HTMLImageElement) =>
-                  element.complete && element.naturalWidth > 0,
-              ),
-            )
-            .toBe(true);
-          await expect(figure.getByText("Map credits:")).toBeVisible();
-        }
+        const demo = page.getByTestId("demo");
+        const image = demo.locator("img:visible");
+        await expect(image).toHaveCount(1);
+        await image.scrollIntoViewIfNeeded();
+        await expect
+          .poll(() =>
+            image.evaluate(
+              (element: HTMLImageElement) =>
+                element.complete && element.naturalWidth > 0,
+            ),
+          )
+          .toBe(true);
+        await expect(demo.getByText("Map credits:")).toBeVisible();
         expect(
           await page.evaluate(() => document.documentElement.scrollWidth),
         ).toBeLessThanOrEqual(390);
-      });
-
-      test("still offer the hero's picture as a link to the live playground", async ({
-        page,
-      }) => {
-        await page.goto("/");
-        const link = page.getByTestId("plate-hero").getByRole("link", {
-          name: "Try it live: open this view in the playground",
-        });
-        await expect(link).toBeVisible();
-        await expect(link).toHaveAttribute(
-          "href",
-          "/map#map=13.00/-33.93650/18.40700",
-        );
       });
     });
   });
@@ -1247,57 +1382,56 @@ test.describe("the product page", () => {
   });
 
   for (const viewport of VIEWPORTS) {
-    test(`leaves the same gap under the hero as between sections at ${viewport.width}px`, async ({
+    test(`puts the picture of the playground straight under the hero, wider than the hero's words, at ${viewport.width}px`, async ({
       page,
     }) => {
       await page.setViewportSize(viewport);
       const product = new ProductPage(page);
       await product.goto();
-      const gaps = await page.evaluate(() => {
-        const top = (element: Element | null | undefined) =>
-          element?.getBoundingClientRect().top ?? Number.NaN;
-        const bottom = (element: Element | null | undefined) =>
-          element?.getBoundingClientRect().bottom ?? Number.NaN;
-        const main = document.querySelector("main");
-        const hero = main?.firstElementChild;
-        const sections = [...document.querySelectorAll("main > section")];
-        // The hero's content ends with whichever of its words and art is lower.
-        const heroEnd = Math.max(
-          ...[...(hero?.children ?? [])].map((child) => bottom(child)),
-        );
+      const layout = await page.evaluate(() => {
+        const main = document.querySelector("main") as Element;
+        const hero = main.children[0]?.getBoundingClientRect();
+        const demo = main.children[1];
+        const frame = [...(demo?.children ?? [])]
+          .find((child) => getComputedStyle(child).display !== "none")
+          ?.getBoundingClientRect();
+        const words = document
+          .querySelector("h1")
+          ?.parentElement?.getBoundingClientRect();
         return {
-          underHero: top(sections[0]?.querySelector("h2")) - heroEnd,
-          betweenSections:
-            top(sections[1]?.querySelector("h2")) -
-            bottom(sections[0]?.lastElementChild),
+          isFigure: demo?.tagName,
+          gap: (frame?.top ?? 0) - (hero?.bottom ?? 0),
+          frameWidth: frame?.width ?? 0,
+          wordsWidth: words?.width ?? 0,
         };
       });
-      expect(gaps.betweenSections).toBeCloseTo(64, 0);
-      expect(gaps.underHero).toBeCloseTo(gaps.betweenSections, 0);
+      expect(layout.isFigure).toBe("FIGURE");
+      expect(layout.gap).toBeGreaterThanOrEqual(0);
+      expect(layout.gap).toBeLessThanOrEqual(1);
+      expect(layout.frameWidth).toBeGreaterThan(layout.wordsWidth);
     });
   }
 
-  test("puts each subheading closer to what it heads than to what comes before it", async ({
+  test("puts each group's heading closer to what it heads than the groups are to each other", async ({
     page,
   }) => {
     const product = new ProductPage(page);
     await product.goto();
-    const subheadings = await page.evaluate(() =>
-      [...document.querySelectorAll("main > section > h3")].map((heading) => {
+    const headings = await page.evaluate(() =>
+      [...document.querySelectorAll("main section h3")].map((heading) => {
         const box = heading.getBoundingClientRect();
-        const before = heading.previousElementSibling?.getBoundingClientRect();
         const after = heading.nextElementSibling?.getBoundingClientRect();
         return {
           text: heading.textContent,
-          before: box.top - (before?.bottom ?? Number.NaN),
           after: (after?.top ?? Number.NaN) - box.bottom,
         };
       }),
     );
-    expect(subheadings.length).toBeGreaterThan(1);
-    for (const { text, before, after } of subheadings) {
+    expect(headings.length).toBeGreaterThan(4);
+    for (const { text, after } of headings) {
       expect(after, `${text}: gap after`).toBeGreaterThan(0);
-      expect(after, `${text}: closer to what follows`).toBeLessThan(before);
+      // tokens.space.xs is 8 px; groups and benefits are tokens.space.xl, 32 px, apart.
+      expect(after, `${text}: close to what it heads`).toBeLessThanOrEqual(8);
     }
   });
 

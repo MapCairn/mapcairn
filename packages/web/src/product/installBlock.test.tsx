@@ -23,6 +23,9 @@ import {
   lineToText,
 } from "./productContent";
 
+/** A release for the page to name, as the route's loader gives it. */
+const RELEASE = { version: "0.1.0", date: "2026-11-21" } as const;
+
 /** What each package manager is asked to install, every one with the peers. */
 const COMMANDS = [
   ["npm", "npm install @mapcairn/sdk react react-dom maplibre-gl"],
@@ -72,14 +75,14 @@ describe("the install commands", () => {
     expect(SDK_MANIFEST.peerDependencies.react).toBe("^19.0.0");
     expect(SDK_MANIFEST.peerDependencies["maplibre-gl"]).toBe("^6.18.0");
     expect(lineToText(INSTALL_REQUIREMENTS)).toBe(
-      "Needs React 19, maplibre-gl 6.18 or later and a bundler that handles CSS imports.",
+      "It adds the SDK and its three peers. Needs React 19, maplibre-gl 6.18 or later and a bundler that handles CSS imports (tried with Vite).",
     );
   });
 });
 
 describe("the install block on the page", () => {
   it("is a native radio group named Package manager, with npm chosen", () => {
-    render(<ProductPage clipboard={new FakeClipboard()} />);
+    render(<ProductPage clipboard={new FakeClipboard()} release={RELEASE} />);
     const radios = within(installGroup()).getAllByRole("radio");
     expect(radios.map((radio) => radio.getAttribute("value"))).toEqual(
       COMMANDS.map(([manager]) => manager),
@@ -93,7 +96,7 @@ describe("the install block on the page", () => {
   });
 
   it("holds each command in its own code block, in the hero, above the first section, and not in a sentence", () => {
-    render(<ProductPage clipboard={new FakeClipboard()} />);
+    render(<ProductPage clipboard={new FakeClipboard()} release={RELEASE} />);
     const group = installGroup();
     expect(
       screen.getByRole("region", { name: "Embed a map" }).contains(group),
@@ -111,8 +114,8 @@ describe("the install block on the page", () => {
   });
 
   it("says what the SDK needs, in one line under the block", () => {
-    render(<ProductPage clipboard={new FakeClipboard()} />);
-    const line = screen.getByText(/^Needs React 19,/);
+    render(<ProductPage clipboard={new FakeClipboard()} release={RELEASE} />);
+    const line = screen.getByText(/^It adds the SDK and its three peers/);
     expect(line.textContent).toBe(lineToText(INSTALL_REQUIREMENTS));
     expect(
       installGroup().compareDocumentPosition(line) &
@@ -122,7 +125,7 @@ describe("the install block on the page", () => {
 
   it("is server-rendered with npm chosen, every command in the markup and no copy button until the page runs", () => {
     const html = renderToStaticMarkup(
-      <ProductPage clipboard={new FakeClipboard()} />,
+      <ProductPage clipboard={new FakeClipboard()} release={RELEASE} />,
     );
     for (const [, command] of COMMANDS) {
       expect(html).toContain(command);
@@ -135,7 +138,7 @@ describe("the install block on the page", () => {
   });
 
   it("offers the copy button once the page runs, named for the command it copies", async () => {
-    render(<ProductPage clipboard={new FakeClipboard()} />);
+    render(<ProductPage clipboard={new FakeClipboard()} release={RELEASE} />);
     expect(
       await within(installGroup()).findByRole("button", {
         name: "Copy code, npm install command",
@@ -147,7 +150,7 @@ describe("the install block on the page", () => {
     "copies the %s command when it is chosen",
     async (manager, command) => {
       const clipboard = new FakeClipboard();
-      render(<ProductPage clipboard={clipboard} />);
+      render(<ProductPage clipboard={clipboard} release={RELEASE} />);
       fireEvent.click(screen.getByRole("radio", { name: manager }));
       const button = await within(installGroup()).findByRole("button", {
         name: `Copy code, ${manager} install command`,
@@ -169,7 +172,7 @@ describe("the install block on the page", () => {
     const container = document.createElement("div");
     document.body.append(container);
     container.innerHTML = renderToString(
-      <ProductPage clipboard={new FakeClipboard()} />,
+      <ProductPage clipboard={new FakeClipboard()} release={RELEASE} />,
     );
     const earlyChoice = container.querySelector<HTMLInputElement>(
       'input[value="yarn"]',
@@ -179,7 +182,10 @@ describe("the install block on the page", () => {
     const clipboard = new FakeClipboard();
     const { act } = await import("@testing-library/react");
     await act(async () => {
-      hydrateRoot(container, <ProductPage clipboard={clipboard} />);
+      hydrateRoot(
+        container,
+        <ProductPage clipboard={clipboard} release={RELEASE} />,
+      );
     });
     const button = await within(container).findByRole("button", {
       name: "Copy code, yarn install command",
@@ -196,7 +202,7 @@ describe("the install block on the page", () => {
   it("says how to copy by hand when the clipboard is unavailable, and keeps the command selectable", async () => {
     const clipboard = new FakeClipboard();
     clipboard.failWith("denied");
-    render(<ProductPage clipboard={clipboard} />);
+    render(<ProductPage clipboard={clipboard} release={RELEASE} />);
     fireEvent.click(
       await within(installGroup()).findByRole("button", {
         name: "Copy code, npm install command",
@@ -215,7 +221,7 @@ describe("the install block on the page", () => {
     const sent = vi.spyOn(globalThis, "fetch");
     const cookies = document.cookie;
     try {
-      render(<ProductPage clipboard={new FakeClipboard()} />);
+      render(<ProductPage clipboard={new FakeClipboard()} release={RELEASE} />);
       fireEvent.click(screen.getByRole("radio", { name: "bun" }));
       fireEvent.click(
         await within(installGroup()).findByRole("button", {
@@ -251,7 +257,7 @@ describe("the install commands in the text twins", () => {
 
   it("/index.md says what the SDK needs under the commands", async () => {
     expect(await markdownLoader().text()).toContain(
-      "Needs React 19, `maplibre-gl` 6.18 or later and a bundler that handles CSS imports.",
+      "It adds the SDK and its three peers. Needs React 19, `maplibre-gl` 6.18 or later and a bundler that handles CSS imports (tried with Vite).",
     );
   });
 });

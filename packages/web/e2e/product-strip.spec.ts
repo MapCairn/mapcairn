@@ -8,7 +8,7 @@ import { ProductPage } from "./pages/ProductPage";
  * The product page's relief strip, the drawing before the footer: where its
  * marks are, that its two labels are at least 13 px and whole inside the frame
  * at every width and at 200% text, that they clear each other and the marks,
- * and that forced colours keep the strip and give its rule a plain line.
+ * and that forced colours keep the strip.
  */
 
 /** The widths checked: phones, the crop's boundary (36rem, 576 px) either side, a tablet and a desktop. */
@@ -205,9 +205,7 @@ test.describe("the relief strip", () => {
     });
   }
 
-  test("keeps the strip whole in forced colours and gives its rule a plain line", async ({
-    page,
-  }) => {
+  test("keeps the strip whole in forced colours", async ({ page }) => {
     await page.emulateMedia({ forcedColors: "active" });
     const product = new ProductPage(page);
     await product.goto();
@@ -228,10 +226,6 @@ test.describe("the relief strip", () => {
         }
         return getComputedStyle(element);
       };
-      const rule = getComputedStyle(
-        document.querySelector('[data-testid="closing"]') as Element,
-        "::before",
-      );
       return {
         text: colourOf("CanvasText"),
         canvas: colourOf("Canvas"),
@@ -242,9 +236,6 @@ test.describe("the relief strip", () => {
         label: query('[data-testid="survey-art-length"]').color,
         labelPlate: query('[data-testid="survey-art-length"]').backgroundColor,
         frameEdge: query('[data-testid="survey-art-frame"]').borderTopColor,
-        ruleImage: rule.backgroundImage,
-        ruleBorder: rule.borderBlockEndStyle,
-        ruleColour: rule.borderBlockEndColor,
       };
     });
     // Forced colours replace the blue with the system's own colours, so the marks stay visible.
@@ -255,8 +246,5 @@ test.describe("the relief strip", () => {
     expect(ink.label).toBe(ink.text);
     expect(ink.labelPlate).toBe(ink.canvas);
     expect(ink.frameEdge).toBe(ink.text);
-    expect(ink.ruleImage).toBe("none");
-    expect(ink.ruleBorder).toBe("solid");
-    expect(ink.ruleColour).toBe(ink.text);
   });
 });

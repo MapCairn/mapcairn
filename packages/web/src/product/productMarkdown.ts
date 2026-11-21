@@ -2,27 +2,36 @@
 // Copyright MapCairn contributors
 
 import { SITE_URL } from "../constants/siteConfig";
-import type { CaptureSubjectId } from "./captureSubjects";
 import {
+  BADGES,
   type Block,
+  DEMO_PLATES,
   GITHUB_ACTION,
   HEADLINE,
-  HERO_INSTALL,
-  HERO_NOTE,
+  INSTALL_OPTIONS,
+  INSTALL_REQUIREMENTS,
   type Inline,
   LEDE,
   type Line,
-  NPM_ACTION,
   PLATES,
   PLAYGROUND_ACTION,
   plateCreditsText,
-  plateLiveLink,
+  RELEASE_TEXT,
   SECTIONS,
   type Section,
 } from "./productContent";
+import { formatReleaseDate } from "./releaseDate";
+import { RELEASE } from "./releaseFacts.server";
 
-/** An address as an absolute URL: a path on this site gets the site's origin. */
+/** A line break, and the blank line between Markdown paragraphs. */
+const NEWLINE = String.fromCharCode(10);
+const PARAGRAPH = NEWLINE + NEWLINE;
+
+/** An address as an absolute URL: a path on this site gets the site's origin, and a section of the page the page's address. */
 function absoluteUrl(href: string): string {
+  if (href.startsWith("#")) {
+    return `${SITE_URL}/${href}`;
+  }
   return href.startsWith("/") ? `${SITE_URL}${href}` : href;
 }
 
@@ -49,8 +58,17 @@ function linkList(links: readonly { text: string; href: string }[]): string {
     .join("\n");
 }
 
-/** The actions, as a list of links. */
-const ACTIONS = linkList([GITHUB_ACTION, PLAYGROUND_ACTION, NPM_ACTION]);
+/** The latest release, as the page's sentence says it. */
+const RELEASE_LINE = RELEASE_TEXT.line(
+  RELEASE.version,
+  formatReleaseDate(RELEASE.date),
+);
+
+/** The install commands, one for each package manager, as one block. */
+const INSTALL_BLOCK = `\`\`\`bash\n${INSTALL_OPTIONS.map((option) => option.command).join("\n")}\n\`\`\``;
+
+/** The picture of the playground, as words: what it shows and its credits. */
+const DEMO = `${PLATES[DEMO_PLATES.wide].description} ${plateCreditsText(DEMO_PLATES.wide)}`;
 
 /** One block as Markdown. */
 function block(item: Block): string {
@@ -63,8 +81,6 @@ function block(item: Block): string {
       return `### ${item.text}`;
     case "code":
       return `\`${item.label}\`:\n\n\`\`\`${item.language}\n${item.code}\n\`\`\``;
-    case "install":
-      return `\`\`\`bash\n${item.options.map((option) => option.command).join("\n")}\n\`\`\``;
     case "details":
       return item.items
         .map(
@@ -72,22 +88,21 @@ function block(item: Block): string {
             `### ${summary}\n\n${detail.map(lineToMarkdown).join("\n\n")}`,
         )
         .join("\n\n");
-    case "legend":
+    case "features":
       return item.items
         .map(({ name, text }) => `### ${name}\n\n${lineToMarkdown(text)}`)
         .join("\n\n");
-    case "plate":
-      return plateMarkdown(item.id);
-    case "deepLinks":
-      return linkList(item.links);
+    case "groups":
+      return item.items
+        .map(({ heading, text, list }) => {
+          const lines =
+            list === true
+              ? text.map((line) => `- ${lineToMarkdown(line)}`).join(NEWLINE)
+              : text.map(lineToMarkdown).join(PARAGRAPH);
+          return `### ${heading}${PARAGRAPH}${lines}`;
+        })
+        .join(PARAGRAPH);
   }
-}
-
-/** A picture as Markdown: what it shows, its credits and, where it has one, its link to the live playground. */
-function plateMarkdown(id: CaptureSubjectId): string {
-  const live = plateLiveLink(id);
-  const text = `${PLATES[id].description} ${plateCreditsText(id)}`;
-  return live === undefined ? text : `${text}\n\n${inline(live)}`;
 }
 
 /** One section as Markdown: its heading and its blocks. */
@@ -97,17 +112,22 @@ function section({ heading, blocks }: Section): string {
 
 /**
  * The product page as Markdown, from the same content the page renders, with
- * every link absolute and every disclosure open. Served at `/index.md` and
+ * every link absolute and every disclosure open: the hero (the playground,
+ * the install commands, the repository, the badges and the latest release),
+ * the picture in words, then the sections. Served at `/index.md` and
  * included in `/llms-full.txt`.
  */
 export function productMarkdown(): string {
   return `${[
     `# ${HEADLINE}`,
     lineToMarkdown(LEDE),
-    block(HERO_INSTALL),
-    ACTIONS,
-    lineToMarkdown(HERO_NOTE),
-    block({ kind: "plate", id: "hero" }),
+    linkList([PLAYGROUND_ACTION]),
+    INSTALL_BLOCK,
+    lineToMarkdown(INSTALL_REQUIREMENTS),
+    linkList([GITHUB_ACTION]),
+    BADGES.map((badge) => badge.text).join(" · "),
+    `${RELEASE_LINE} ${inline(RELEASE_TEXT.readiness)}`,
+    DEMO,
     ...SECTIONS.map(section),
   ].join("\n\n")}\n`;
 }

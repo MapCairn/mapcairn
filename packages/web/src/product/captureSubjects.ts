@@ -5,7 +5,7 @@
  * What the product page's captures show: one subject for each picture, the
  * place and size it is captured at and the basemap each theme uses. The capture
  * script (`scripts/captureProduct.ts`) takes its pictures from this table, the
- * page (`productContent.ts` and `ProductPlate.tsx`) reads the same table for
+ * page (`productContent.ts` and `DemoFigure.tsx`) reads the same table for
  * their size and caption, and a test holds every committed image to it. The
  * words that describe each picture are in `productContent.ts`.
  */
@@ -17,7 +17,7 @@ export const CAPTURE_THEMES = ["light", "dark"] as const;
 export type CaptureTheme = (typeof CAPTURE_THEMES)[number];
 
 /** The id of a subject, which is also the start of its files' names. */
-export type CaptureSubjectId = "hero" | "basemaps";
+export type CaptureSubjectId = "hero" | "heroWide";
 
 /** The basemap ids a capture uses, which the playground reads from its address. */
 export type CaptureBasemapId = "bright" | "fiord";
@@ -37,18 +37,14 @@ export interface CapturePlace {
 
 /**
  * What the page is made to show before the picture is taken: a line measured
- * between two places, tapped in order, whose length the picture reads; or
- * Map options open on the basemap picker.
+ * between two places, tapped in order, whose length the picture reads.
  */
-export type CaptureArrangement =
-  | {
-      readonly kind: "measure";
-      /** The two ends of the line, tapped in this order. */
-      readonly line: readonly [CapturePlace, CapturePlace];
-      /** The length the line reads, which the subject's words state and the script checks. */
-      readonly readout: string;
-    }
-  | { readonly kind: "basemap-picker" };
+export interface CaptureArrangement {
+  /** The two ends of the line, tapped in this order. */
+  readonly line: readonly [CapturePlace, CapturePlace];
+  /** The length the line reads, which the subject's words state and the script checks. */
+  readonly readout: string;
+}
 
 /** One thing a capture shows, and how it is taken. */
 export interface CaptureSubject {
@@ -58,8 +54,6 @@ export interface CaptureSubject {
   /** The size the picture is shown at, in CSS pixels; it is captured at twice this. */
   readonly width: number;
   readonly height: number;
-  /** Whether the capture is of a phone: a touch screen with the bottom sheet. */
-  readonly phone: boolean;
   /** The basemap each theme's picture is taken over. */
   readonly basemaps: Readonly<Record<CaptureTheme, CaptureBasemapId>>;
   /** What the page is made to show first. */
@@ -70,7 +64,7 @@ export interface CaptureSubject {
 
 /**
  * Cape Town between the city bowl and the summit of Lion's Head, the view of
- * the hero and of the other captures, so the page shows one place.
+ * both pictures.
  */
 const CAPE_TOWN_VIEW = { latitude: -33.9365, longitude: 18.407, zoom: 13 };
 
@@ -80,35 +74,40 @@ const BY_THEME: Readonly<Record<CaptureTheme, CaptureBasemapId>> = {
   dark: "fiord",
 };
 
-/** Every subject, in the order the page shows them. */
+/** The line both pictures measure, from the slopes of Lion's Head to the city centre, and what it reads. */
+const LION_HEAD_LINE: CaptureArrangement = {
+  // Tapped from the summit first: the first tap puts a panel over the lower left, where the summit lies.
+  line: [
+    { latitude: -33.9355, longitude: 18.3893 },
+    { latitude: -33.9249, longitude: 18.4241 },
+  ],
+  readout: "3.42 km",
+};
+
+/**
+ * Every subject, in the order the page shows them: one view at two sizes. The
+ * narrow picture is the playground at a phone's width, shown on a phone; the
+ * wide one is the playground on a wide screen, shown from the tablet width and
+ * up to its own 1152 px on a large screen, wider than the text column.
+ */
 export const CAPTURE_SUBJECTS: readonly CaptureSubject[] = [
   {
     id: "hero",
     view: CAPE_TOWN_VIEW,
     width: 400,
     height: 520,
-    phone: false,
     basemaps: BY_THEME,
-    // Tapped from the summit first: the first tap puts a panel over the lower left, where the summit lies.
-    arrangement: {
-      kind: "measure",
-      line: [
-        { latitude: -33.9355, longitude: 18.3893 },
-        { latitude: -33.9249, longitude: 18.4241 },
-      ],
-      readout: "3.42 km",
-    },
+    arrangement: LION_HEAD_LINE,
     budgetBytes: 60 * 1024,
   },
   {
-    id: "basemaps",
+    id: "heroWide",
     view: CAPE_TOWN_VIEW,
-    width: 390,
-    height: 720,
-    phone: true,
+    width: 1152,
+    height: 640,
     basemaps: BY_THEME,
-    arrangement: { kind: "basemap-picker" },
-    budgetBytes: 48 * 1024,
+    arrangement: LION_HEAD_LINE,
+    budgetBytes: 180 * 1024,
   },
 ];
 
@@ -116,7 +115,7 @@ export const CAPTURE_SUBJECTS: readonly CaptureSubject[] = [
 export const CAPTURE_SCALE = 2;
 
 /** The most bytes all the pictures may take together, the page's whole added weight. */
-export const TOTAL_BUDGET_BYTES = 300 * 1024;
+export const TOTAL_BUDGET_BYTES = 480 * 1024;
 
 /** The name of a picture's file, which sits in `src/product/captures`. */
 export function captureFileName(
@@ -149,11 +148,7 @@ export function captureAddress(
   return `${captureView(subject)}&basemap=${subject.basemaps[theme]}`;
 }
 
-/** The length a subject's measured line reads; a subject that measures nothing is a mistake in the caller. */
+/** The length a subject's measured line reads. */
 export function measuredReadout(id: CaptureSubjectId): string {
-  const { arrangement } = captureSubject(id);
-  if (arrangement.kind !== "measure") {
-    throw new Error(`Capture subject ${id} measures nothing.`);
-  }
-  return arrangement.readout;
+  return captureSubject(id).arrangement.readout;
 }

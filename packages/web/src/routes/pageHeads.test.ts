@@ -153,9 +153,7 @@ describe("the product page's structured data", () => {
   });
 
   it("claims no organisation, rating, offer, other profile or npm package", () => {
-    // The licence answer says, in the README's words, that a licence for
-    // closed-source use is "not on offer yet": the words are not a schema.org Offer.
-    const text = JSON.stringify(nodes).replaceAll("not on offer yet", "");
+    const text = JSON.stringify(nodes);
     expect(text).not.toMatch(
       /Organization|AggregateRating|Review|Offer|sameAs|npm/i,
     );

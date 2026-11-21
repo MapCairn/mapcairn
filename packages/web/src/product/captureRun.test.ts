@@ -25,13 +25,13 @@ describe("readOptions", () => {
       record: false,
       only: "hero",
     });
-    expect(readOptions(["--record", "--only", "basemaps"])).toEqual({
+    expect(readOptions(["--record", "--only", "heroWide"])).toEqual({
       record: true,
-      only: "basemaps",
+      only: "heroWide",
     });
-    expect(readOptions(["--only", "basemaps", "--record"])).toEqual({
+    expect(readOptions(["--only", "heroWide", "--record"])).toEqual({
       record: true,
-      only: "basemaps",
+      only: "heroWide",
     });
   });
 
@@ -44,7 +44,7 @@ describe("readOptions", () => {
 
   it("refuses a subject the table does not hold, naming those it does", () => {
     expect(() => readOptions(["--only", "nowhere"])).toThrow(
-      'No subject "nowhere". The subjects are hero, basemaps.',
+      'No subject "nowhere". The subjects are hero, heroWide.',
     );
   });
 
@@ -135,15 +135,15 @@ describe("checkView", () => {
 
   it("fails when the map has moved, even a little, or reports none", () => {
     expect(() => checkView(hero, { ...agreeing, lat: -33.9366 })).toThrow(
-      /collar would be wrong/,
+      /words would be wrong/,
     );
     expect(() => checkView(hero, { ...agreeing, lng: 18.4075 })).toThrow(
-      /collar would be wrong/,
+      /words would be wrong/,
     );
     expect(() => checkView(hero, { ...agreeing, zoom: 13.5 })).toThrow(
-      /collar would be wrong/,
+      /words would be wrong/,
     );
-    expect(() => checkView(hero, null)).toThrow(/collar would be wrong/);
+    expect(() => checkView(hero, null)).toThrow(/words would be wrong/);
   });
 });
 
