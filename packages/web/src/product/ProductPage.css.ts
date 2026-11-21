@@ -681,9 +681,10 @@ export const list = style({
   paddingInlineStart: tokens.space.lg,
 });
 
-/** A name from the code, inline. */
+/** A name from the code, inline: one step smaller than the text round it, since the monospaced face draws larger at the same size. */
 export const code = style({
   fontFamily: tokens.type.familyMono,
+  fontSize: tokens.type.body.size,
   overflowWrap: "anywhere",
 });
 

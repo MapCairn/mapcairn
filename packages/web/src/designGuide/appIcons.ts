@@ -2,8 +2,6 @@
 // Copyright MapCairn contributors
 import type { IconComponent } from "@mapcairn/map";
 import {
-  Accessibility,
-  AppWindow,
   ArrowLeft,
   Bike,
   Car,
@@ -15,8 +13,6 @@ import {
   CircleCheck,
   CircleMinus,
   CirclePlus,
-  CodeXml,
-  Compass,
   Copy,
   Crosshair,
   Download,
@@ -35,9 +31,7 @@ import {
   MapPinned,
   Minus,
   Navigation2,
-  Palette,
   Pentagon,
-  Plug,
   Plus,
   Redo2,
   RotateCw,
@@ -46,7 +40,6 @@ import {
   Search,
   Settings,
   Shapes,
-  ShieldCheck,
   Trash2,
   TriangleAlert,
   Undo2,
@@ -59,7 +52,6 @@ import {
  * and fails when this list and the code disagree.
  */
 export const APP_ICONS: Readonly<Record<string, IconComponent>> = {
-  Accessibility,
   Bike,
   Car,
   ArrowLeft,
@@ -71,8 +63,6 @@ export const APP_ICONS: Readonly<Record<string, IconComponent>> = {
   CircleCheck,
   CircleMinus,
   CirclePlus,
-  CodeXml,
-  Compass,
   Copy,
   Crosshair,
   Download,
@@ -91,10 +81,7 @@ export const APP_ICONS: Readonly<Record<string, IconComponent>> = {
   MapPinned,
   Minus,
   Navigation2,
-  Palette,
-  AppWindow,
   Pentagon,
-  Plug,
   Plus,
   Redo2,
   RotateCw,
@@ -103,7 +90,6 @@ export const APP_ICONS: Readonly<Record<string, IconComponent>> = {
   Search,
   Settings,
   Shapes,
-  ShieldCheck,
   Trash2,
   TriangleAlert,
   Undo2,

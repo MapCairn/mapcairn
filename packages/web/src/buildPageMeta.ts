@@ -18,7 +18,7 @@ import type { JsonLdNode } from "./structuredData";
 export const PREVIEW_IMAGES = {
   product: {
     path: "/og-sdk.png",
-    alt: "MapCairn: accessible map interfaces for the public. An open-source React SDK for public-interest maps, beside a survey sheet of contour lines with a pin, a measured line and a cairn.",
+    alt: "MapCairn: accessible map interfaces for React and MapLibre. An open-source React SDK for public-interest maps, beside a survey sheet of contour lines with a pin, a measured line and a cairn.",
   },
   map: {
     path: "/og-image.png",

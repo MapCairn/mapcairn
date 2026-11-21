@@ -2,7 +2,7 @@
 // Copyright MapCairn contributors
 import type { ClipboardPort } from "@mapcairn/core";
 import { Icon, LiveRegionProvider, SkipLink } from "@mapcairn/map";
-import { ArrowRight, ChevronDown, Heart } from "lucide-react";
+import { ChevronDown, Heart } from "lucide-react";
 import type { ReactNode } from "react";
 import { Brand } from "../app/Brand";
 import { DOCUMENT_SCROLL } from "../app/documentScroll";
@@ -347,7 +347,6 @@ function Hero({
           data-testid="action-playground"
         >
           {PLAYGROUND_ACTION.text}
-          <Icon icon={ArrowRight} />
         </a>
         <div className={styles.installArea}>
           <InstallBlock
