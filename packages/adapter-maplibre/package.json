@@ -52,8 +52,8 @@
     "typecheck": "npm --prefix ../.. run build:sdk && tsc --noEmit"
   },
   "dependencies": {
-    "@mapcairn/core": "^0.1.0",
-    "@mapcairn/theme": "^0.1.0"
+    "@mapcairn/core": "0.1.0",
+    "@mapcairn/theme": "0.1.0"
   },
   "peerDependencies": {
     "maplibre-gl": "^6.18.0"

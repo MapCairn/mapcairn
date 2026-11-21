@@ -52,9 +52,9 @@
     "typecheck": "npm --prefix ../.. run build:sdk && tsc --noEmit"
   },
   "dependencies": {
-    "@mapcairn/core": "^0.1.0",
-    "@mapcairn/react": "^0.1.0",
-    "@mapcairn/theme": "^0.1.0",
+    "@mapcairn/core": "0.1.0",
+    "@mapcairn/react": "0.1.0",
+    "@mapcairn/theme": "0.1.0",
     "@radix-ui/react-slider": "^1.6.1",
     "@radix-ui/react-switch": "^1.4.1",
     "@radix-ui/react-toggle-group": "^1.2.1",

@@ -420,7 +420,11 @@ describe("the release guide's steps for the stable version", () => {
       const actual = readFileSync(path.join(REPO, file), "utf8")
         .split("\n")
         .find((line) => line.startsWith("**Status:**"));
-      expect(actual === expected).toBe(!versions.some(isPrerelease));
+      if (versions.some(isPrerelease)) {
+        expect(actual).not.toBe(expected);
+      } else {
+        expect(actual).toBe(expected);
+      }
     },
   );
 

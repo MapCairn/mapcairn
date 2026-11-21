@@ -4,11 +4,6 @@ import { readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
-import {
-  internalRange,
-  parseVersion,
-  // @ts-expect-error The scripts are dependency-free JavaScript with JSDoc types.
-} from "../../../../scripts/release/semver.mjs";
 
 /**
  * Keeps the umbrella package (`@mapcairn/sdk`) a set of re-exports that cannot
@@ -186,12 +181,12 @@ describe("@mapcairn/sdk manifest", () => {
     }
   });
 
-  it("depends on the four packages and the adapter at the release script's range for their version (exact for a prerelease, a caret for a release) and on nothing else", () => {
+  it("depends on the four packages and the adapter at their exact version and on nothing else", () => {
     expect(manifest.dependencies).toEqual(
       Object.fromEntries(
         [...PACKAGES, ...SUBPATH_ONLY].map((name) => [
           `@mapcairn/${name}`,
-          internalRange(parseVersion(manifestAt(`packages/${name}`).version)),
+          manifestAt(`packages/${name}`).version,
         ]),
       ),
     );

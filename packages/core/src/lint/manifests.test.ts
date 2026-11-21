@@ -224,9 +224,13 @@ function manifestAt(folder: string): Manifest {
   ) as Manifest;
 }
 
-/** The range an internal dependency must carry for a given SDK version. */
+/**
+ * The range an internal dependency must carry for a given SDK version: the
+ * exact version, for a release and a prerelease alike, because `map` and the
+ * adapter compile the theme's generated token names into their own CSS.
+ */
 function expectedRange(version: string): string {
-  return version.includes("-") ? version : `^${version}`;
+  return version;
 }
 
 /** Every shipped source file of a package, relative to the repository. */
