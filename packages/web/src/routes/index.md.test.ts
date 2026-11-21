@@ -2,12 +2,8 @@
 // Copyright MapCairn contributors
 import { describe, expect, it } from "vitest";
 import { SITE_URL } from "../constants/siteConfig";
-import {
-  EMBED_EXAMPLE_CODE,
-  HEADLINE,
-  lineToText,
-  SECTIONS,
-} from "../product/productContent";
+import { EMBED_EXAMPLE_FILES } from "../product/embedExampleFiles";
+import { HEADLINE, lineToText, SECTIONS } from "../product/productContent";
 import { loader } from "./index.md";
 
 describe("/index.md, the product page as Markdown", () => {
@@ -35,9 +31,13 @@ describe("/index.md, the product page as Markdown", () => {
     }
   });
 
-  it("carries the embedding example as a code block", async () => {
+  it("carries each file of the embedding example as a code block under its name", async () => {
     const text = await loader().text();
-    expect(text).toContain(`\`\`\`tsx\n${EMBED_EXAMPLE_CODE}\n\`\`\``);
+    for (const { name, language, code } of EMBED_EXAMPLE_FILES) {
+      expect(text).toContain(
+        `\`${name}\`:\n\n\`\`\`${language}\n${code}\n\`\`\``,
+      );
+    }
   });
 
   it("makes every link on the site absolute", async () => {

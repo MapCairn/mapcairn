@@ -24,10 +24,10 @@ import { loader as markdownLoader } from "../routes/index.md";
 import { loader as llmsLoader } from "../routes/llms.txt";
 import { loader as fullLoader } from "../routes/llms-full.txt";
 import { COPIED_FEEDBACK_MS } from "./CopyCodeButton";
+import { EMBED_EXAMPLE_FILES } from "./embedExampleFiles";
 import { ProductPage } from "./ProductPage";
 import * as styles from "./ProductPage.css";
 import {
-  EMBED_EXAMPLE_CODE,
   HEADLINE,
   INSTALL_COMMAND,
   LEDE,
@@ -45,11 +45,9 @@ const README = readFileSync(
   "utf8",
 );
 
-/** The example app the embedding example is checked against. */
-const EXAMPLE_APP = readFileSync(
-  path.resolve(__dirname, "../../../../examples/embed/src/ExampleApp.tsx"),
-  "utf8",
-);
+/** The entry file of the embedding example, the one that holds the app. */
+const MAIN_CODE =
+  EMBED_EXAMPLE_FILES.find((file) => file.name === "src/main.tsx")?.code ?? "";
 
 function renderPage(clipboard: ClipboardPort = new FakeClipboard()) {
   return render(<ProductPage clipboard={clipboard} />);
@@ -138,9 +136,7 @@ describe("the product page stands on its own", () => {
     const embed = section("Embed a map");
     const install = within(embed).getByText(INSTALL_COMMAND);
     expect(install.tagName).toBe("CODE");
-    const example = within(embed).getByRole("region", {
-      name: "Embedding example",
-    });
+    const example = within(embed).getByRole("region", { name: "index.html" });
     expect(
       install.compareDocumentPosition(example) &
         Node.DOCUMENT_POSITION_FOLLOWING,
@@ -167,22 +163,46 @@ describe("the product page stands on its own", () => {
     expect(text).toContain("advanced option");
   });
 
-  it("shows the embedding example in its own focusable, named region", () => {
+  it("shows each file of the embedding example in its own focusable region, named for the file, in the order they are made", () => {
     renderPage();
-    const code = screen.getByRole("region", { name: "Embedding example" });
-    expect(code.tagName).toBe("PRE");
-    expect(code).toHaveAttribute("tabindex", "0");
-    expect(code.textContent).toBe(EMBED_EXAMPLE_CODE);
+    const embed = section("Embed a map");
+    const regions = within(embed)
+      .getAllByRole("region")
+      .filter((region) => region.tagName === "PRE");
+    expect(regions.map((region) => region.getAttribute("aria-label"))).toEqual([
+      "index.html",
+      "src/page.css",
+      "src/main.tsx",
+    ]);
+    regions.forEach((region, index) => {
+      expect(region).toHaveAttribute("tabindex", "0");
+      expect(region.textContent).toBe(EMBED_EXAMPLE_FILES[index]?.code);
+    });
+  });
+
+  it("heads each file with its name, beside its own copy button", () => {
+    renderPage();
+    const embed = section("Embed a map");
+    for (const { name } of EMBED_EXAMPLE_FILES) {
+      const region = within(embed).getByRole("region", { name });
+      const heading = region.parentElement?.firstElementChild;
+      expect(heading?.textContent).toContain(name);
+      expect(
+        within(heading as HTMLElement).getByRole("button", {
+          name: `Copy code, ${name}`,
+        }),
+      ).toHaveTextContent("Copy code");
+    }
   });
 
   it("highlights the example's syntax with classes, never an inline style", () => {
     renderPage();
-    const code = screen.getByRole("region", { name: "Embedding example" });
+    const code = screen.getByRole("region", { name: "src/main.tsx" });
     const spans = [...code.querySelectorAll("span")];
     const classOf = (text: string) =>
       spans.find((span) => span.textContent === text)?.className;
     expect(classOf("import")).toBe(styles.codeKeyword);
-    expect(classOf('"@mapcairn/core"')).toBe(styles.codeMuted);
+    expect(classOf('"@mapcairn/sdk"')).toBe(styles.codeMuted);
     expect(classOf("11")).toBe(styles.codeMuted);
     expect(classOf("ServicesProvider")).toBe(styles.codeName);
     expect(code.querySelector("[style]")).toBeNull();
@@ -397,46 +417,84 @@ describe("the product page stands on its own", () => {
   });
 });
 
+/** The README's code blocks of one language, after its "Embed a map" heading. */
+function readmeBlocks(language: string): string[] {
+  const embed = README.slice(README.indexOf("## Embed a map"));
+  return [
+    ...embed.matchAll(
+      new RegExp(`\`\`\`${language}\\n([\\s\\S]*?)\\n\`\`\``, "g"),
+    ),
+  ].map((match) => match[1] ?? "");
+}
+
 describe("the embedding example", () => {
-  it("shares the README's interface code, character for character", () => {
-    const embed = README.slice(README.indexOf("## Embed a map"));
-    const block = /```tsx\n([\s\S]*?)\n```/.exec(embed)?.[1] ?? "";
-    const interfaceCode = EMBED_EXAMPLE_CODE.slice(
-      EMBED_EXAMPLE_CODE.indexOf("function MapScreen"),
-    );
-    expect(interfaceCode.startsWith("function MapScreen")).toBe(true);
-    expect(interfaceCode).toContain("function Chrome");
-    expect(block).toContain(interfaceCode);
-  });
-
-  it("starts at the first import, with no licence header or note", () => {
-    expect(
-      EMBED_EXAMPLE_CODE.startsWith('import "@mapcairn/theme/tokens.css";'),
-    ).toBe(true);
-    expect(EMBED_EXAMPLE_CODE).not.toMatch(/SPDX|\/\*|\/\//);
-  });
-
-  it("builds the same providers in the same order as the example app", () => {
-    const order = (source: string) =>
-      [
-        ...source.matchAll(
-          /<(ServicesProvider|LiveRegionProvider|TooltipProvider|MapView)\b/g,
-        ),
-      ].map((match) => match[1]);
-    expect(order(EMBED_EXAMPLE_CODE)).toEqual([
-      "ServicesProvider",
-      "LiveRegionProvider",
-      "TooltipProvider",
-      "MapView",
+  // `packages/core/src/lint/readme.test.ts` type-checks the README's main.tsx
+  // as an outside app would write it, so equal to the README is type-checked.
+  it("is the README's index.html, page.css and main.tsx, character for character", () => {
+    const code = (name: string) =>
+      EMBED_EXAMPLE_FILES.find((file) => file.name === name)?.code;
+    expect(EMBED_EXAMPLE_FILES.map((file) => file.name)).toEqual([
+      "index.html",
+      "src/page.css",
+      "src/main.tsx",
     ]);
-    expect(order(EXAMPLE_APP)).toEqual(order(EMBED_EXAMPLE_CODE));
+    expect(readmeBlocks("html")).toEqual([code("index.html")]);
+    expect(readmeBlocks("css")).toEqual([code("src/page.css")]);
+    expect(readmeBlocks("tsx")).toEqual([code("src/main.tsx")]);
   });
 
-  it("imports only from the SDK's public entry points and React", () => {
-    const sources = [...EMBED_EXAMPLE_CODE.matchAll(/from "([^"]+)"/g)].map(
-      (match) => match[1],
+  it("starts main.tsx with the Vite types line, and gives the map a height", () => {
+    expect(
+      MAIN_CODE.startsWith('/// <reference types="vite/client" />\n'),
+    ).toBe(true);
+    const css = EMBED_EXAMPLE_FILES.find(
+      (file) => file.name === "src/page.css",
     );
-    expect(sources).toEqual(["@mapcairn/core", "@mapcairn/map", "react"]);
+    expect(css?.code).toMatch(/height:\s*100%/);
+  });
+
+  it("imports only the umbrella, its adapter subpath, React and the page's own style sheet", () => {
+    const sources = [
+      ...MAIN_CODE.matchAll(/^import (?:[^"]*? from )?"([^"]+)"/gm),
+    ].map((match) => match[1]);
+    expect(sources).toEqual([
+      "@mapcairn/sdk/styles.css",
+      "./page.css",
+      "@mapcairn/sdk",
+      "@mapcairn/sdk/adapter-maplibre",
+      "react",
+      "react-dom/client",
+    ]);
+  });
+
+  it("draws the map with the real adapter, so the fakes alone are not the example", () => {
+    expect(MAIN_CODE).toContain("createMapLibreMapAdapter");
+    expect(MAIN_CODE).toContain("createMapAdapter");
+  });
+
+  it("is the same code in /index.md and /llms-full.txt, each file under its name", async () => {
+    for (const text of [
+      await markdownLoader().text(),
+      await fullLoader().text(),
+    ]) {
+      for (const { name, language, code } of EMBED_EXAMPLE_FILES) {
+        expect(text).toContain(
+          `\`${name}\`:\n\n\`\`\`${language}\n${code}\n\`\`\``,
+        );
+      }
+    }
+  });
+
+  it("no longer says the fakes draw a map, and says what draws it", () => {
+    renderPage();
+    const embed = section("Embed a map");
+    expect(embed.textContent).toContain(
+      "This is a whole React app in a Vite project: the map from the MapLibre adapter, the SDK's interface around it and a search box.",
+    );
+    expect(embed.textContent).toContain(
+      "with the adapter passed in to draw the map; search shows sample results until you add a search adapter",
+    );
+    expect(embed.textContent).not.toContain("draw no map tiles");
   });
 });
 
@@ -449,7 +507,7 @@ describe("copying the embedding example", () => {
   function copyButton(): HTMLElement {
     return within(
       screen.getByRole("region", { name: "Embed a map" }),
-    ).getByRole("button", { name: "Copy code" });
+    ).getByRole("button", { name: "Copy code, src/main.tsx" });
   }
 
   it("writes nothing to the clipboard until the visitor asks", () => {
@@ -463,10 +521,8 @@ describe("copying the embedding example", () => {
     const clipboard = new FakeClipboard();
     renderPage(clipboard);
     fireEvent.click(copyButton());
-    await waitFor(() =>
-      expect(clipboard.written).toEqual([EMBED_EXAMPLE_CODE]),
-    );
-    const code = screen.getByRole("region", { name: "Embedding example" });
+    await waitFor(() => expect(clipboard.written).toEqual([MAIN_CODE]));
+    const code = screen.getByRole("region", { name: "src/main.tsx" });
     expect(clipboard.written[0]).toBe(code.textContent);
   });
 
@@ -476,7 +532,7 @@ describe("copying the embedding example", () => {
     button.focus();
     fireEvent.click(button);
     expect(
-      await screen.findByRole("button", { name: "Copied" }),
+      await screen.findByRole("button", { name: "Copied, src/main.tsx" }),
     ).toBeInTheDocument();
     await waitFor(() =>
       expect(liveRegions().polite).toHaveTextContent("Code copied"),
@@ -492,7 +548,9 @@ describe("copying the embedding example", () => {
     await act(async () => {
       await Promise.resolve();
     });
-    expect(screen.getByRole("button", { name: "Copied" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Copied, src/main.tsx" }),
+    ).toBeInTheDocument();
     act(() => {
       vi.advanceTimersByTime(COPIED_FEEDBACK_MS);
     });
@@ -509,7 +567,7 @@ describe("copying the embedding example", () => {
     act(() => {
       vi.advanceTimersByTime(COPIED_FEEDBACK_MS - 100);
     });
-    const copied = screen.getByRole("button", { name: "Copied" });
+    const copied = screen.getByRole("button", { name: "Copied, src/main.tsx" });
     copied.focus();
     fireEvent.click(copied);
     await act(async () => {
@@ -518,7 +576,9 @@ describe("copying the embedding example", () => {
     act(() => {
       vi.advanceTimersByTime(COPIED_FEEDBACK_MS - 100);
     });
-    expect(screen.getByRole("button", { name: "Copied" })).toBe(copied);
+    expect(screen.getByRole("button", { name: "Copied, src/main.tsx" })).toBe(
+      copied,
+    );
     expect(copied).not.toBeDisabled();
     expect(document.activeElement).toBe(copied);
     act(() => {
@@ -544,12 +604,14 @@ describe("copying the embedding example", () => {
       pending[1]?.({ ok: true });
     });
     expect(
-      await screen.findByRole("button", { name: "Copied" }),
+      await screen.findByRole("button", { name: "Copied, src/main.tsx" }),
     ).toBeInTheDocument();
     await act(async () => {
       pending[0]?.({ ok: false, reason: "denied" });
     });
-    expect(screen.getByRole("button", { name: "Copied" })).toBe(button);
+    expect(screen.getByRole("button", { name: "Copied, src/main.tsx" })).toBe(
+      button,
+    );
     expect(liveRegions().assertive).toBeEmptyDOMElement();
   });
 
@@ -561,7 +623,7 @@ describe("copying the embedding example", () => {
     button.focus();
     fireEvent.click(button);
     expect(
-      await screen.findByRole("button", { name: "Copy failed" }),
+      await screen.findByRole("button", { name: "Copy failed, src/main.tsx" }),
     ).toBeInTheDocument();
     await waitFor(() =>
       expect(liveRegions().assertive).toHaveTextContent(
@@ -569,9 +631,9 @@ describe("copying the embedding example", () => {
       ),
     );
     expect(document.activeElement).toBe(button);
-    const code = screen.getByRole("region", { name: "Embedding example" });
+    const code = screen.getByRole("region", { name: "src/main.tsx" });
     expect(code).toHaveAttribute("tabindex", "0");
-    expect(code.textContent).toBe(EMBED_EXAMPLE_CODE);
+    expect(code.textContent).toBe(MAIN_CODE);
   });
 
   it("copies again after a failure once the clipboard works", async () => {
@@ -579,13 +641,15 @@ describe("copying the embedding example", () => {
     clipboard.failWith("unsupported");
     renderPage(clipboard);
     fireEvent.click(copyButton());
-    const failed = await screen.findByRole("button", { name: "Copy failed" });
+    const failed = await screen.findByRole("button", {
+      name: "Copy failed, src/main.tsx",
+    });
     clipboard.succeed();
     fireEvent.click(failed);
     expect(
-      await screen.findByRole("button", { name: "Copied" }),
+      await screen.findByRole("button", { name: "Copied, src/main.tsx" }),
     ).toBeInTheDocument();
-    expect(clipboard.written).toEqual([EMBED_EXAMPLE_CODE]);
+    expect(clipboard.written).toEqual([MAIN_CODE]);
   });
 
   it("renders on the server with the button and no message", () => {

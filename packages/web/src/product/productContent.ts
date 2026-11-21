@@ -4,7 +4,7 @@ import {
   PLAYGROUND_PATH,
   SOURCE_REPOSITORY_URL,
 } from "../constants/siteConfig";
-import embedExampleSource from "./embedExample.tsx?raw";
+import { EMBED_EXAMPLE_FILES } from "./embedExampleFiles";
 
 /*
  * The product page's words, once. The page (`ProductPage.tsx`), its Markdown
@@ -142,14 +142,6 @@ export const HERO_NOTE: Line = [
   "Open source under the AGPL-3.0. Contributions are welcome.",
 ];
 
-/**
- * The embedding example, from the first line that starts with `import`,
- * exactly as it compiles: the licence header and the note above it are left out.
- */
-export const EMBED_EXAMPLE_CODE = embedExampleSource
-  .slice(embedExampleSource.search(/^import /m))
-  .trimEnd();
-
 /** A line as plain text: the words of its links and names, with no markup. */
 export function lineToText(line: Line): string {
   return line
@@ -198,14 +190,26 @@ export const SECTIONS: readonly Section[] = [
       {
         kind: "paragraph",
         text: [
-          "This is a whole React app: the map, the SDK's interface around it and a search box. It imports the packages inside the SDK directly, as the project's own example does, and every name in it also comes from the umbrella. The project's tests compile and render this exact code.",
+          "This is a whole React app in a Vite project: the map from the MapLibre adapter, the SDK's interface around it and a search box. Add the three lines of CSS below so the map has a height, and replace the project's ",
+          { code: "index.html" },
+          " and ",
+          { code: "src/main.tsx" },
+          " with the other two files.",
         ],
       },
+      ...EMBED_EXAMPLE_FILES.map(
+        ({ name, language, code }): Block => ({
+          kind: "code",
+          label: name,
+          language,
+          code,
+        }),
+      ),
       {
-        kind: "code",
-        label: "Embedding example",
-        language: "tsx",
-        code: EMBED_EXAMPLE_CODE,
+        kind: "paragraph",
+        text: [
+          "The app imports only the SDK package, and the project's tests type-check this exact code the way an app outside the repository would. The map asks a public tile provider for its tiles once it mounts, so choose the basemap whose terms and privacy you accept.",
+        ],
       },
       {
         kind: "details",
@@ -217,7 +221,13 @@ export const SECTIONS: readonly Section[] = [
                 { code: "ServicesProvider" },
                 " holds the services: search, storage, the map adapter and the rest. ",
                 { code: "createFakeServices()" },
-                " gives the SDK's in-memory fakes, which request nothing and draw no map tiles; a real app passes its own adapters, such as one over MapLibre GL JS.",
+                " gives the in-memory services, with the adapter passed in to draw the map; search shows sample results until you add a search adapter.",
+              ],
+              [
+                { code: "createMapLibreMapAdapter" },
+                " draws the map with MapLibre GL JS. It needs the address of the engine's worker file, which a Vite app gets from the ",
+                { code: "?worker&url" },
+                " import.",
               ],
               [
                 { code: "LiveRegionProvider" },

@@ -68,6 +68,9 @@ const CODE_TOKEN_CLASS: Readonly<Record<CodeTokenKind, string>> = {
   name: styles.codeName,
 };
 
+/** The one language the highlighter reads; HTML and CSS stay plain, which its keyword list would only mislead. */
+const HIGHLIGHTED_LANGUAGE = "tsx";
+
 /** Code with its syntax highlighted by class; its text is the source exactly. */
 function HighlightedCode({ source }: { readonly source: string }) {
   return highlightCode(source).map((run, index) =>
@@ -168,10 +171,18 @@ function BlockView({
     case "code":
       // A named region the keyboard can reach and scroll (WCAG 2.1.1). It stays a
       // pre, which keeps the code's whitespace, rather than becoming a section.
-      // The copy button sits above it, so the code stays selectable by hand.
+      // The file's name and its copy button sit above it, so the code stays
+      // selectable by hand.
       return (
         <div className={styles.codeExample}>
-          <CopyCodeButton code={block.code} clipboard={clipboard} />
+          <div className={styles.codeHeader}>
+            <span className={styles.codeFile}>{block.label}</span>
+            <CopyCodeButton
+              code={block.code}
+              label={block.label}
+              clipboard={clipboard}
+            />
+          </div>
           {/* biome-ignore lint/a11y/useSemanticElements: a pre keeps the code's whitespace; a section would not */}
           <pre
             className={styles.codeBlock}
@@ -182,7 +193,11 @@ function BlockView({
             data-testid={`${sectionId}-code`}
           >
             <code>
-              <HighlightedCode source={block.code} />
+              {block.language === HIGHLIGHTED_LANGUAGE ? (
+                <HighlightedCode source={block.code} />
+              ) : (
+                block.code
+              )}
             </code>
           </pre>
         </div>

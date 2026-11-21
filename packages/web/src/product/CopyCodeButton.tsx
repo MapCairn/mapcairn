@@ -19,6 +19,8 @@ const ICONS = { idle: Copy, copied: Check, failed: X } as const;
 export interface CopyCodeButtonProps {
   /** The source to copy, exactly as the example shows it. */
   readonly code: string;
+  /** What the code is, such as its file name, so each button on a page has its own name. */
+  readonly label: string;
   readonly clipboard: ClipboardPort;
 }
 
@@ -29,9 +31,14 @@ export interface CopyCodeButtonProps {
  * when it worked, assertively when it did not, with how to copy by hand. Each
  * successful copy gets the full time on Copied, and only the latest click's
  * outcome is shown or announced. Focus stays on the button, which is never
- * disabled.
+ * disabled. Its visible words come first in its accessible name, which adds
+ * what it copies, because a page can hold several.
  */
-export function CopyCodeButton({ code, clipboard }: CopyCodeButtonProps) {
+export function CopyCodeButton({
+  code,
+  label,
+  clipboard,
+}: CopyCodeButtonProps) {
   // `attempt` counts outcomes, so each successful copy restarts the reset
   // timer even when the button already says Copied.
   const [{ state, attempt }, setOutcome] = useState<{
@@ -81,6 +88,7 @@ export function CopyCodeButton({ code, clipboard }: CopyCodeButtonProps) {
       className={styles.copyButton}
       data-state={state}
       data-testid="copy-code"
+      aria-label={`${COPY_CODE[state]}, ${label}`}
       onClick={copy}
     >
       <Icon icon={ICONS[state]} className={styles.copyIcon} />
