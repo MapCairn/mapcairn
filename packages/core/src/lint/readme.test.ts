@@ -339,13 +339,17 @@ describe("README.md", () => {
     const start = README.indexOf("## When MapCairn fits");
     const fits = README.slice(start, README.indexOf("\n## ", start + 1));
     expect(fits).not.toMatch(/can publish its source/);
+    expect(fits).toContain("to the people who use it");
   });
 
   it("names the licence AGPL-3.0-only as the manifests do, in the badge and in the other documents that state it", () => {
     expect(README).toContain("[![Licence: AGPL-3.0-only]");
     for (const doc of ["CONTRIBUTING.md", "GOVERNANCE.md"]) {
       const text = readFileSync(path.join(REPO, doc), "utf8");
-      expect(text, doc).not.toMatch(/AGPL-3\.0(?!-only)/);
+      expect(
+        text.replace("the AGPL-3.0 or another OSI-approved licence", ""),
+        doc,
+      ).not.toMatch(/AGPL-3\.0(?!-only)/);
     }
     const contributing = readFileSync(
       path.join(REPO, "CONTRIBUTING.md"),

@@ -154,7 +154,7 @@ Only the maintainer does these; an agent lists them and waits.
    - In the six package READMEs and the root, replace the release-candidate Status line, including its sentence "Until `0.1.0`, add `@next` to …", with the line below. The lint requires the release-candidate wording only while a version is a release candidate. In the root README write the two links as relative paths (`CHANGELOG.md`, `docs/guides/public-api.md`).
 
      ```markdown
-     **Status:** pre-1.0. While the version starts with `0.`, a minor release (`0.2.0`) can contain a breaking change to the public API and a patch release (`0.1.1`) does not, so a `^0.1.0` range does not take one. The [changelog](https://github.com/MapCairn/mapcairn/blob/main/CHANGELOG.md) names each breaking change it finds, and [what counts as the public API](https://github.com/MapCairn/mapcairn/blob/main/docs/guides/public-api.md) says what is covered.
+     **Status:** pre-1.0. While the version starts with `0.`, a minor release (the middle number) can contain a breaking change to the public API and a patch release (the last number) is not meant to, so a `^0.1.0` range does not take one. The [changelog](https://github.com/MapCairn/mapcairn/blob/main/CHANGELOG.md) names each breaking change the release finds, and [what counts as the public API](https://github.com/MapCairn/mapcairn/blob/main/docs/guides/public-api.md) says what is covered.
      ```
 
    - In `docs/guides/public-api.md` ("The package READMEs are written for the npm page"), update the sentence that says the Status line says the packages are a release candidate ("the `0.1.0` release changes it").

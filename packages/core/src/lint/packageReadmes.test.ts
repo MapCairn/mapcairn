@@ -15,6 +15,7 @@ import {
   isUsedByExample,
   LICENCE_DUTY,
   namedImports,
+  relativeLinks,
   tagAttributes,
 } from "./markdownSupport";
 
@@ -411,6 +412,40 @@ describe("the release guide's steps for the stable version", () => {
 
   it("leaves INSTALL_COMMAND to the follow-up", () => {
     expect(guide).toContain("INSTALL_COMMAND");
+  });
+
+  it("gives no example version in the Status text, and says a patch release is not meant to break", () => {
+    const [status = ""] = stableStatus(guide);
+    expect(status).not.toMatch(/0\.2\.0|0\.1\.1/);
+    expect(status).toContain(
+      "a patch release (the last number) is not meant to",
+    );
+  });
+});
+
+describe("the licence guide", () => {
+  const guide = readFileSync(path.join(REPO, "docs/guides/licence.md"), "utf8");
+
+  it("stays short and says what the duty reaches in the same words as the READMEs", () => {
+    expect(guide.split("\n").length).toBeLessThan(150);
+    expect(guide).toContain(
+      "the corresponding source of the code you combine with the SDK and serve with it, under the same licence",
+    );
+    expect(LICENCE_DUTY).toContain(
+      "the corresponding source of the code you combine with the SDK and serve with it, under the same licence",
+    );
+    expect(guide).not.toMatch(/whole (combined )?app/);
+  });
+
+  it("links only to files and headings that exist", () => {
+    for (const target of relativeLinks(guide)) {
+      expect(existsSync(path.join(REPO, "docs/guides", target)), target).toBe(
+        true,
+      );
+    }
+    expect(
+      headingAnchors(readFileSync(path.join(REPO, "README.md"), "utf8")),
+    ).toContain("licence");
   });
 });
 

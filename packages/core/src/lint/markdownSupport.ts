@@ -166,4 +166,4 @@ export function headingAnchors(markdown: string): string[] {
  * own wording of the last sentence (its tests refuse the word "offer").
  */
 export const LICENCE_DUTY =
-  "If you distribute an app that includes the SDK, including by serving it to people's browsers, you must offer them the corresponding source of the whole app under the same licence. If you modify the SDK and let people interact with your modified version over a network, you must offer them its corresponding source. A licence for closed-source use is not on offer yet.";
+  "If you distribute an app that includes the SDK, including by serving it to people's browsers, you must offer them the corresponding source of the code you combine with the SDK and serve with it, under the same licence. If you modify the SDK and let people interact with your modified version over a network, you must offer them its corresponding source. A licence for closed-source use is not on offer yet.";
