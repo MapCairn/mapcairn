@@ -54,8 +54,6 @@ export interface CaptureSubject {
   /** The size the picture is shown at, in CSS pixels; it is captured at twice this. */
   readonly width: number;
   readonly height: number;
-  /** Whether the capture is of a phone: a touch screen with the bottom sheet. */
-  readonly phone: boolean;
   /** The basemap each theme's picture is taken over. */
   readonly basemaps: Readonly<Record<CaptureTheme, CaptureBasemapId>>;
   /** What the page is made to show first. */
@@ -89,8 +87,8 @@ const LION_HEAD_LINE: CaptureArrangement = {
 /**
  * Every subject, in the order the page shows them: one view at two sizes. The
  * narrow picture is the playground at a phone's width, shown on a phone; the
- * wide one is the playground on a wide screen, shown from the tablet width at
- * the width of the page's column.
+ * wide one is the playground on a wide screen, shown from the tablet width and
+ * up to its own 1152 px on a large screen, wider than the text column.
  */
 export const CAPTURE_SUBJECTS: readonly CaptureSubject[] = [
   {
@@ -98,7 +96,6 @@ export const CAPTURE_SUBJECTS: readonly CaptureSubject[] = [
     view: CAPE_TOWN_VIEW,
     width: 400,
     height: 520,
-    phone: false,
     basemaps: BY_THEME,
     arrangement: LION_HEAD_LINE,
     budgetBytes: 60 * 1024,
@@ -106,12 +103,11 @@ export const CAPTURE_SUBJECTS: readonly CaptureSubject[] = [
   {
     id: "heroWide",
     view: CAPE_TOWN_VIEW,
-    width: 896,
-    height: 560,
-    phone: false,
+    width: 1152,
+    height: 640,
     basemaps: BY_THEME,
     arrangement: LION_HEAD_LINE,
-    budgetBytes: 110 * 1024,
+    budgetBytes: 180 * 1024,
   },
 ];
 
@@ -119,7 +115,7 @@ export const CAPTURE_SUBJECTS: readonly CaptureSubject[] = [
 export const CAPTURE_SCALE = 2;
 
 /** The most bytes all the pictures may take together, the page's whole added weight. */
-export const TOTAL_BUDGET_BYTES = 340 * 1024;
+export const TOTAL_BUDGET_BYTES = 480 * 1024;
 
 /** The name of a picture's file, which sits in `src/product/captures`. */
 export function captureFileName(

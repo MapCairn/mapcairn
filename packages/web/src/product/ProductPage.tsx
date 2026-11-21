@@ -26,6 +26,7 @@ import {
   type Disclosure,
   type Feature,
   GITHUB_ACTION,
+  type Group,
   HEADER_LINKS,
   HEADLINE,
   INSTALL_GROUP_LABEL,
@@ -35,7 +36,6 @@ import {
   LEDE,
   type Line,
   PLAYGROUND_ACTION,
-  RELEASE_NOTES_LINK,
   RELEASE_TEXT,
   REPOSITORY_PAGES,
   SECTIONS,
@@ -194,6 +194,38 @@ function Disclosures({ items }: { readonly items: readonly Disclosure[] }) {
   );
 }
 
+/**
+ * Short groups of a section, each an h3 and its lines (paragraphs, or the items
+ * of a list), set one under another on a phone and side by side on a wide
+ * screen, so the section scans instead of reading as one long column.
+ */
+function Groups({ items }: { readonly items: readonly Group[] }) {
+  return (
+    <div className={styles.groups}>
+      {items.map(({ heading, text, list }) => (
+        <div key={heading} className={styles.group}>
+          <h3 className={styles.subheading}>{heading}</h3>
+          {list === true ? (
+            <ul className={styles.list}>
+              {text.map((line) => (
+                <li key={JSON.stringify(line)}>
+                  <Text line={line} />
+                </li>
+              ))}
+            </ul>
+          ) : (
+            text.map((line) => (
+              <p key={JSON.stringify(line)} className={styles.paragraph}>
+                <Text line={line} />
+              </p>
+            ))
+          )}
+        </div>
+      ))}
+    </div>
+  );
+}
+
 /** What you get: a few benefits, each a short heading and what it lets you do, always shown. */
 function Features({ items }: { readonly items: readonly Feature[] }) {
   return (
@@ -214,11 +246,9 @@ function Features({ items }: { readonly items: readonly Feature[] }) {
 function BlockView({
   block,
   clipboard,
-  release,
 }: {
   readonly block: Block;
   readonly clipboard: ClipboardPort;
-  readonly release: ReleaseFacts;
 }): ReactNode {
   switch (block.kind) {
     case "paragraph":
@@ -245,12 +275,8 @@ function BlockView({
       return <Disclosures items={block.items} />;
     case "features":
       return <Features items={block.items} />;
-    case "release":
-      return (
-        <p className={styles.paragraph} data-testid="release-line">
-          {releaseLine(release)}
-        </p>
-      );
+    case "groups":
+      return <Groups items={block.items} />;
   }
 }
 
@@ -258,11 +284,9 @@ function BlockView({
 function SectionView({
   section,
   clipboard,
-  release,
 }: {
   readonly section: Section;
   readonly clipboard: ClipboardPort;
-  readonly release: ReleaseFacts;
 }) {
   const headingId = `${section.id}-heading`;
   return (
@@ -281,7 +305,6 @@ function SectionView({
           key={index}
           block={block}
           clipboard={clipboard}
-          release={release}
         />
       ))}
     </section>
@@ -300,7 +323,7 @@ function ProductHeader() {
         <a className={styles.brand} href={PRODUCT_PATH}>
           <Brand />
         </a>
-        <nav aria-label="Main">
+        <nav aria-label="Main" className={styles.navBox}>
           <ul className={styles.nav}>
             {HEADER_LINKS.map(({ text, href }) => (
               <li key={href}>
@@ -323,7 +346,8 @@ function ProductHeader() {
 /**
  * The hero: what MapCairn is in a heading and one sentence, the playground as
  * the page's one filled button, the install command as the second action, the
- * repository as a quiet link, then three badges and the latest release. The
+ * repository as a quiet link, then three badges and the latest release, the
+ * page's one statement of it, which links the readiness section. The
  * contour motif sits behind the words in the same grid cell.
  */
 function Hero({
@@ -367,16 +391,22 @@ function Hero({
         </a>
         <div className={styles.trust}>
           <ul className={styles.badges} aria-label={BADGES_LABEL}>
-            {BADGES.map((badge) => (
-              <li key={badge} className={styles.badge}>
-                {badge}
+            {BADGES.map(({ text, href }) => (
+              <li key={text} className={styles.badge}>
+                {href === undefined ? (
+                  text
+                ) : (
+                  <a className={styles.badgeLink} href={href}>
+                    {text}
+                  </a>
+                )}
               </li>
             ))}
           </ul>
           <p className={styles.trustLine} data-testid="hero-release">
             {releaseLine(release)}{" "}
-            <a className={styles.link} href={RELEASE_NOTES_LINK.href}>
-              {RELEASE_NOTES_LINK.text}
+            <a className={styles.link} href={RELEASE_TEXT.readiness.href}>
+              {RELEASE_TEXT.readiness.text}
             </a>
           </p>
         </div>
@@ -495,7 +525,6 @@ export function ProductPage({
               key={section.id}
               section={section}
               clipboard={clipboard}
-              release={release}
             />
           ))}
           <div className={styles.closing} data-testid="closing">

@@ -16,7 +16,6 @@ import {
   PLATES,
   PLAYGROUND_ACTION,
   plateCreditsText,
-  RELEASE_NOTES_LINK,
   RELEASE_TEXT,
   SECTIONS,
   type Section,
@@ -24,8 +23,15 @@ import {
 import { formatReleaseDate } from "./releaseDate";
 import { RELEASE } from "./releaseFacts.server";
 
-/** An address as an absolute URL: a path on this site gets the site's origin. */
+/** A line break, and the blank line between Markdown paragraphs. */
+const NEWLINE = String.fromCharCode(10);
+const PARAGRAPH = NEWLINE + NEWLINE;
+
+/** An address as an absolute URL: a path on this site gets the site's origin, and a section of the page the page's address. */
 function absoluteUrl(href: string): string {
+  if (href.startsWith("#")) {
+    return `${SITE_URL}/${href}`;
+  }
   return href.startsWith("/") ? `${SITE_URL}${href}` : href;
 }
 
@@ -86,8 +92,16 @@ function block(item: Block): string {
       return item.items
         .map(({ name, text }) => `### ${name}\n\n${lineToMarkdown(text)}`)
         .join("\n\n");
-    case "release":
-      return RELEASE_LINE;
+    case "groups":
+      return item.items
+        .map(({ heading, text, list }) => {
+          const lines =
+            list === true
+              ? text.map((line) => `- ${lineToMarkdown(line)}`).join(NEWLINE)
+              : text.map(lineToMarkdown).join(PARAGRAPH);
+          return `### ${heading}${PARAGRAPH}${lines}`;
+        })
+        .join(PARAGRAPH);
   }
 }
 
@@ -111,8 +125,8 @@ export function productMarkdown(): string {
     INSTALL_BLOCK,
     lineToMarkdown(INSTALL_REQUIREMENTS),
     linkList([GITHUB_ACTION]),
-    BADGES.join(" · "),
-    `${RELEASE_LINE} [${RELEASE_NOTES_LINK.text}](${RELEASE_NOTES_LINK.href})`,
+    BADGES.map((badge) => badge.text).join(" · "),
+    `${RELEASE_LINE} ${inline(RELEASE_TEXT.readiness)}`,
     DEMO,
     ...SECTIONS.map(section),
   ].join("\n\n")}\n`;

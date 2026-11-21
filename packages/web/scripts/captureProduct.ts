@@ -128,7 +128,7 @@ function tourAnswered() {
   };
 }
 
-/** A browser context shaped like the picture: its size, a phone's touch screen if it is one, motion off and the theme. */
+/** A browser context shaped like the picture: its size, a mouse rather than a touch screen, motion off and the theme. */
 async function openContext(
   browser: Browser,
   subject: CaptureSubject,
@@ -143,8 +143,6 @@ async function openContext(
     reducedMotion: "reduce",
     locale: "en-GB",
     serviceWorkers: "block",
-    isMobile: subject.phone,
-    hasTouch: subject.phone,
     storageState: tourAnswered(),
   });
   if (!options.record) {

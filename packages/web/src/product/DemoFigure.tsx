@@ -16,7 +16,6 @@ import {
   PLATE_CREDITS_LEAD,
   PLATES,
   plateAlt,
-  plateBasemaps,
   plateCredits,
 } from "./productContent";
 
@@ -79,7 +78,7 @@ function PlateFrame({ size }: { readonly size: keyof typeof DEMO_PLATES }) {
           src={PICTURES[id][theme]}
           width={subject.width}
           height={subject.height}
-          alt={plateAlt(id, theme)}
+          alt={plateAlt(id)}
           loading="lazy"
           decoding="async"
         />
@@ -92,8 +91,11 @@ function PlateFrame({ size }: { readonly size: keyof typeof DEMO_PLATES }) {
  * The playground at work, straight under the hero and the largest picture on
  * the page: one view captured at two sizes, the narrow one edge to edge on a
  * phone and the wide one at the column's width from the tablet width, chosen
- * by CSS alone, as each theme's picture is. The caption says what it shows,
- * its basemaps and the map's credits, which are the same for both sizes.
+ * by CSS alone, as each theme's picture is. The caption says it is a
+ * screenshot, points to the hero's button for the real thing, and gives the
+ * map's credits, which are the same for both sizes. Every image is lazy: an
+ * eager one is fetched even when it is not drawn, which would fetch the
+ * other theme's and the other size's files too.
  */
 export function DemoFigure() {
   return (
@@ -101,9 +103,7 @@ export function DemoFigure() {
       <PlateFrame size="narrow" />
       <PlateFrame size="wide" />
       <figcaption className={styles.plateCaption}>
-        <span>
-          {PLATES[DEMO_PLATES.wide].caption} {plateBasemaps(DEMO_PLATES.wide)}
-        </span>
+        <span>{PLATES[DEMO_PLATES.wide].caption}</span>
         <PlateCredits id={DEMO_PLATES.wide} />
       </figcaption>
     </figure>

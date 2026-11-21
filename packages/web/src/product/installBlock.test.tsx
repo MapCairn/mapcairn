@@ -75,7 +75,7 @@ describe("the install commands", () => {
     expect(SDK_MANIFEST.peerDependencies.react).toBe("^19.0.0");
     expect(SDK_MANIFEST.peerDependencies["maplibre-gl"]).toBe("^6.18.0");
     expect(lineToText(INSTALL_REQUIREMENTS)).toBe(
-      "Needs React 19, maplibre-gl 6.18 or later and a bundler that handles CSS imports.",
+      "It adds the SDK and its three peers. Needs React 19, maplibre-gl 6.18 or later and a bundler that handles CSS imports (tried with Vite).",
     );
   });
 });
@@ -115,7 +115,7 @@ describe("the install block on the page", () => {
 
   it("says what the SDK needs, in one line under the block", () => {
     render(<ProductPage clipboard={new FakeClipboard()} release={RELEASE} />);
-    const line = screen.getByText(/^Needs React 19,/);
+    const line = screen.getByText(/^It adds the SDK and its three peers/);
     expect(line.textContent).toBe(lineToText(INSTALL_REQUIREMENTS));
     expect(
       installGroup().compareDocumentPosition(line) &
@@ -257,7 +257,7 @@ describe("the install commands in the text twins", () => {
 
   it("/index.md says what the SDK needs under the commands", async () => {
     expect(await markdownLoader().text()).toContain(
-      "Needs React 19, `maplibre-gl` 6.18 or later and a bundler that handles CSS imports.",
+      "It adds the SDK and its three peers. Needs React 19, `maplibre-gl` 6.18 or later and a bundler that handles CSS imports (tried with Vite).",
     );
   });
 });

@@ -24,16 +24,25 @@ const RELEASE = { version: "0.1.0", date: "2026-11-21" } as const;
 /*
  * The rules every text the product page publishes keeps: the page itself, its
  * structured data, `/index.md`, `/llms.txt` and `/llms-full.txt`. They link to
- * no issue, pull request or milestone and cite none by number, say nothing
- * about npm beyond the install commands (and the package managers' names that choose them) and the link to the package (`NPM_ACTION`),
- * say nothing about commercial terms beyond the phrase "allows commercial use" (what the licence allows, in the READMEs' own words),
- * link into the repository no further than its front page and the named set below, and hold no fact that is true only today (a
- * percentage, a "coming soon"), so the page stays true as the SDK changes.
+ * no issue, pull request or milestone and cite none by number; say nothing
+ * about npm beyond the install commands (and the package managers' names that
+ * choose them) and, in `/llms.txt`, the link to the package (`NPM_ACTION`);
+ * say nothing about commercial terms beyond the phrase "allows commercial
+ * use" (what the licence allows, in the READMEs' own words) and nothing at
+ * all about any licensing or terms other than the AGPL-3.0; link into the
+ * repository no further than its front page and the named set below; and hold
+ * no fact that is true only for a while (a percentage, a "coming soon"), so
+ * the page stays true as the SDK changes. The latest release is the one
+ * exception, and it is read from the changelog when the site is built.
  */
 
 /** An issue, pull request or milestone on GitHub, or a `#123` reference. */
 const TRACKER =
   /github\.com\/[\w.-]+\/[\w.-]+\/(issues|pull|pulls|milestones?)\b|(^|[^\w&/=.])#\d+\b/i;
+
+/** Wording about licensing or terms other than the AGPL-3.0, which the project does not publish. */
+const OTHER_LICENSING =
+  /closed-source|separate terms|other terms|not on offer|alternative licen|licen[cs]e for/i;
 
 /** Wording that is true only for a while. */
 const VOLATILE =
@@ -167,6 +176,10 @@ describe.each(SOURCES)("%s", (_name, read) => {
         .replaceAll(NPM_ACTION.text, ""),
     ).not.toMatch(/npm/i);
     expect(text.replaceAll(COMMERCIAL_PHRASE, "")).not.toMatch(/commercial/i);
+  });
+
+  it("says nothing about licensing or terms other than the AGPL-3.0", async () => {
+    expect(await read()).not.toMatch(OTHER_LICENSING);
   });
 
   it("holds no fact that is true only for a while", async () => {

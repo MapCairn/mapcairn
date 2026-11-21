@@ -124,7 +124,7 @@ describe("the product page stands on its own", () => {
     );
   });
 
-  it("says under the h1, in one sentence, what MapCairn is and what it gives", () => {
+  it("says under the h1, in one sentence, what MapCairn is and what it gives, and that the services are the team's to choose", () => {
     renderPage();
     const lede = screen.getByRole("heading", { level: 1 })
       .nextElementSibling as HTMLElement;
@@ -132,32 +132,31 @@ describe("the product page stands on its own", () => {
     expect(lede).toHaveTextContent(
       "MapCairn is an open-source React SDK for public-interest maps",
     );
-    expect(lede).toHaveTextContent("the whole interface around a MapLibre map");
+    expect(lede).toHaveTextContent(
+      "the interface around a MapLibre map, with search, measuring, drawing and a layers panel",
+    );
+    expect(lede).toHaveTextContent(
+      "for the search and routing services you choose",
+    );
+    // The SDK ships no search service and no data layer of its own.
+    expect(lede).not.toHaveTextContent(/data layers|ready to use/);
     expect(lede.textContent?.match(/\.(\s|$)/g)).toHaveLength(1);
   });
 
-  it("points no answer at a section that lacks the install block, on the page, in /index.md and in /llms-full.txt", async () => {
-    const answers = faqEntries().map(({ answer }) => answer);
-    for (const answer of answers) {
-      expect(answer).not.toMatch(/\b(first|embed\w*|above) section\b/i);
-    }
-    const pointer = answers.find((answer) =>
-      answer.includes("the command at the top of the page"),
-    );
-    expect(pointer).toBeDefined();
+  it("points at nothing by its position: no answer or paragraph says the top of the page, above or below", async () => {
     renderPage();
-    const group = screen.getByRole("group", { name: "Package manager" });
-    const first = document.querySelector("main section") as HTMLElement;
-    expect(
-      group.compareDocumentPosition(first) & Node.DOCUMENT_POSITION_FOLLOWING,
-    ).toBeTruthy();
+    const prose = [...document.querySelectorAll("main p, main li")]
+      .map((element) => element.textContent ?? "")
+      .join("\n");
+    expect(prose).not.toMatch(
+      /\b(top of the page|see above|see below|the first section)\b/i,
+    );
     for (const text of [
       await markdownLoader().text(),
       await fullLoader().text(),
     ]) {
-      expect(text).toContain("the command at the top of the page");
+      expect(text).not.toMatch(/top of the page/i);
       expect(text.indexOf(INSTALL_COMMAND)).toBeLessThan(text.indexOf("\n## "));
-      expect(text).not.toMatch(/as the first section shows/);
     }
   });
 
@@ -167,14 +166,15 @@ describe("the product page stands on its own", () => {
     expect(await fullLoader().text()).toContain(hero);
   });
 
-  it("has one order, by what an evaluator needs to decide: what you get, fit, licence and readiness, the mount, then the questions", () => {
+  it("has one order, by what an evaluator needs to decide: what you get, fit, licence and cost, readiness, the mount, then the questions", () => {
     renderPage();
     expect(
       screen.getAllByRole("heading", { level: 2 }).map((h) => h.textContent),
     ).toEqual([
       "What you get",
       "When it fits, and when it does not",
-      "Licence, cost and readiness",
+      "Licence and cost",
+      "How ready it is",
       "Embed a map",
       "Questions",
     ]);
@@ -212,16 +212,25 @@ describe("the product page stands on its own", () => {
     }
   });
 
-  it("says what you get as benefits, not architecture: no port, adapter or token jargon in the names", () => {
+  it("says what you get as benefits in plain words, not architecture or jargon", () => {
     renderPage();
-    const names = within(section("What you get"))
+    const you = section("What you get");
+    const names = within(you)
       .getAllByRole("heading", { level: 3 })
       .map((heading) => heading.textContent ?? "");
     for (const name of names) {
       expect(name).not.toMatch(/\b(port|adapter|token|contract)s?\b/i);
     }
-    expect(section("What you get")).toHaveTextContent(
-      "Swap in your own search, routing or tiles without touching the interface",
+    expect(you.textContent).not.toMatch(
+      /live region|proxied|feature cards?|contract suite|\bkeys\b|\bports?\b/i,
+    );
+    expect(you).toHaveTextContent(
+      "Use your own search, routing and tiles without forking the interface",
+    );
+    expect(you).toHaveTextContent("screen readers are told what changes");
+    expect(you).toHaveTextContent("It asks for nothing until a person does");
+    expect(you).toHaveTextContent(
+      "The one exception is search suggestions, which a host may turn on and which send the text typed so far.",
     );
   });
 
@@ -310,8 +319,8 @@ describe("the product page stands on its own", () => {
     const classOf = (text: string) =>
       spans.find((span) => span.textContent === text)?.className;
     expect(classOf("function")).toBe(styles.codeKeyword);
-    expect(classOf("return")).toBe(styles.codeKeyword);
-    expect(classOf("ServicesProvider")).toBe(styles.codeName);
+    expect(classOf("const")).toBe(styles.codeKeyword);
+    expect(classOf("MapView")).toBe(styles.codeName);
     expect(code.querySelector("[style]")).toBeNull();
   });
 
@@ -339,26 +348,42 @@ describe("the product page stands on its own", () => {
     expect(github.className).not.toContain(styles.primaryAction);
   });
 
-  it("shows three badges as plain text drawn by the page, accessibility as a target", () => {
+  it("shows three badges as text drawn by the page, accessibility as a target, and the licence badge leads to the licence section", () => {
     renderPage();
     const badges = screen.getByRole("list", { name: "At a glance" });
     expect(
       within(badges)
         .getAllByRole("listitem")
         .map((badge) => badge.textContent),
-    ).toEqual(["Targets WCAG 2.2 AA", "AGPL-3.0", "MapLibre GL JS"]);
-    expect(badges.querySelector("img, svg, a")).toBeNull();
+    ).toEqual(["Targets WCAG 2.2 AA", "AGPL-3.0-only", "MapLibre GL JS"]);
+    expect(badges.querySelector("img, svg")).toBeNull();
+    const links = within(badges).getAllByRole("link");
+    expect(
+      links.map((link) => [link.textContent, link.getAttribute("href")]),
+    ).toEqual([["AGPL-3.0-only", "#licence"]]);
+    expect(document.getElementById("licence")).toBe(
+      section("Licence and cost"),
+    );
   });
 
-  it("names the latest release and its date in the hero, with the release notes, from what the loader read", () => {
-    renderPage(new FakeClipboard(), { version: "9.8.7", date: "2030-02-03" });
+  it("names the latest release and its date once, in the hero, from what the loader read, with a link to how ready it is", () => {
+    const { container } = renderPage(new FakeClipboard(), {
+      version: "9.8.7",
+      date: "2030-02-03",
+    });
     const line = screen.getByTestId("hero-release");
     expect(line).toHaveTextContent(
-      "The latest release is 9.8.7, released on 3 February 2030. Release notes",
+      "The latest release is 9.8.7, released on 3 February 2030. How ready it is",
     );
     expect(
-      within(line).getByRole("link", { name: "Release notes" }),
-    ).toHaveAttribute("href", `${REPO}/releases`);
+      within(line).getByRole("link", { name: "How ready it is" }),
+    ).toHaveAttribute("href", "#readiness");
+    expect(document.getElementById("readiness")).toBe(
+      section("How ready it is"),
+    );
+    expect(container.textContent?.match(/The latest release is/g)).toHaveLength(
+      1,
+    );
   });
 
   it("does not link the npm package from the page, which the install command already names", () => {
@@ -434,33 +459,35 @@ describe("the product page stands on its own", () => {
     );
   });
 
-  it("answers the licence, the cost and readiness in plain prose that is always shown, not behind a disclosure", () => {
+  it("answers the licence and the cost in plain prose that is always shown, in short groups", () => {
     renderPage();
-    const licence = section("Licence, cost and readiness");
+    const licence = section("Licence and cost");
     expect(licence.querySelector("details")).toBeNull();
     expect(
       within(licence)
         .getAllByRole("heading", { level: 3 })
         .map((heading) => heading.textContent),
-    ).toEqual([
-      "What the AGPL-3.0 asks of your app",
-      "Your options",
-      "What it costs",
-      "How ready it is",
-    ]);
+    ).toEqual(["What the AGPL-3.0 asks of your app", "What it costs"]);
+    expect(licence.querySelector(`.${styles.groups}`)).not.toBeNull();
   });
 
-  it("states the licence in the guide's words: open source under the AGPL-3.0-only, which allows commercial use, and the source is the price", () => {
+  it("states the licence in the guide's words: open source under the AGPL-3.0-only, which allows commercial use, on condition the source stays available", () => {
     renderPage();
-    const licence = section("Licence, cost and readiness");
+    const licence = section("Licence and cost");
     expect(licence).toHaveTextContent(
       "MapCairn is AGPL-3.0-only, an open-source licence that allows commercial use",
     );
     expect(licence).toHaveTextContent(
-      "you must offer them the corresponding source of the code you combine with the SDK and serve with it, under the same licence",
+      "The condition is that the source stays available.",
+    );
+    expect(licence).toHaveTextContent(
+      "An app you distribute with the SDK inside, including by serving it to people's browsers, is offered under the AGPL-3.0 with the corresponding source of the code you combine with the SDK and serve with it.",
     );
     expect(licence).toHaveTextContent(
       "An app that only your own staff use is not distributed",
+    );
+    expect(licence).toHaveTextContent(
+      "If you modify the SDK and let people use your version over a network, you must offer them its source.",
     );
     expect(
       within(licence).getByRole("link", { name: "licence guide" }),
@@ -468,43 +495,88 @@ describe("the product page stands on its own", () => {
     expect(licence).toHaveTextContent("It is not legal advice.");
   });
 
-  it("keeps the README's sentence that a licence for closed-source use is not on offer yet, and says closed-source use needs separate terms", () => {
-    renderPage();
-    const licence = section("Licence, cost and readiness");
-    expect(licence).toHaveTextContent(
-      "A licence for closed-source use is not on offer yet.",
-    );
-    expect(licence).toHaveTextContent(
-      "while it is distributed with the SDK inside needs separate terms",
+  it("says nothing about other licensing or terms, anywhere on the page", () => {
+    const { container } = renderPage();
+    expect(container.textContent).not.toMatch(
+      /closed-source|separate terms|other terms|not on offer|licen[cs]e for|alternative licen/i,
     );
   });
 
-  it("says what it costs: nothing to install or use, with each provider's own terms", () => {
+  it("says what it costs: nothing to install or use, each provider's own terms, and permissive dependencies", () => {
     renderPage();
-    expect(section("Licence, cost and readiness")).toHaveTextContent(
-      "Nothing to install or use. The services a map uses, such as tiles, search and routing, are yours to choose, and each provider has its own terms.",
+    const licence = section("Licence and cost");
+    expect(licence).toHaveTextContent(
+      "The SDK costs nothing to install or use.",
+    );
+    expect(licence).toHaveTextContent(
+      "The services a map uses, such as tiles, search and routing, are yours to choose, and each provider has its own terms.",
+    );
+    expect(licence).toHaveTextContent(
+      "The SDK's production dependencies are all permissively licensed, and the project's checks fail if one is not.",
     );
   });
 
-  it("says how ready it is: the latest release from the loader, that it is before 1.0, what it lacks and who maintains it", () => {
-    renderPage(new FakeClipboard(), { version: "0.3.0", date: "2027-04-09" });
-    const licence = section("Licence, cost and readiness");
-    expect(within(licence).getByTestId("release-line")).toHaveTextContent(
-      "The latest release is 0.3.0, released on 9 April 2027.",
+  it("opens how ready it is with a plain answer, then where it runs, what has been tried and what it lacks, without repeating the release", () => {
+    renderPage();
+    const ready = section("How ready it is");
+    const first = ready.querySelector("h2")?.nextElementSibling;
+    expect(first?.tagName).toBe("P");
+    expect(first).toHaveTextContent(
+      "It is before version 1.0 and not stable: a minor release can change the public API, and each release's notes say what to change.",
     );
-    expect(licence).toHaveTextContent(
-      "It is before version 1.0: a minor release can change the public API, and each release's notes name what to change.",
-    );
-    expect(licence).toHaveTextContent(
-      "a prebuilt bundle for pages without React",
-    );
-    expect(licence).toHaveTextContent(
-      "no other framework or bundler has been tried",
-    );
-    expect(licence).toHaveTextContent("one volunteer maintainer");
     expect(
-      within(licence).getByRole("link", { name: "capability matrix" }),
+      within(ready)
+        .getAllByRole("heading", { level: 3 })
+        .map((heading) => heading.textContent),
+    ).toEqual(["Where it runs", "What has been tried", "What it lacks"]);
+    expect(ready).toHaveTextContent(
+      "The reference site runs on it in production",
+    );
+    expect(ready).toHaveTextContent(
+      "The published packages are checked in a plain Vite and React app in Chromium. The reference site's browser tests run in Chromium and WebKit.",
+    );
+    expect(ready).toHaveTextContent(
+      "There is no prebuilt bundle for pages without React",
+    );
+    expect(ready).toHaveTextContent("one volunteer maintainer");
+    expect(ready).not.toHaveTextContent("The latest release is");
+    expect(
+      within(ready).getByRole("link", { name: "capability matrix" }),
     ).toHaveAttribute("href", CAPABILITY_MATRIX_LINK.href);
+  });
+
+  it("says in the fit section when it does not fit, with the real reasons", () => {
+    renderPage();
+    const fit = section("When it fits, and when it does not");
+    expect(
+      within(fit)
+        .getAllByRole("heading", { level: 3 })
+        .map((heading) => heading.textContent),
+    ).toEqual(["It fits a team that", "It does not fit if you need"]);
+    for (const reason of [
+      "a prebuilt bundle for pages without React",
+      "only Vite has",
+      "the project has one volunteer maintainer",
+      "the AGPL-3.0 asks you to offer the source of an app you distribute with the SDK inside",
+    ]) {
+      expect(fit).toHaveTextContent(reason);
+    }
+    expect(fit).toHaveTextContent("a ready-made, accessible map interface");
+  });
+
+  it("answers which frameworks it works with in the same words as the readiness text: React 19, a bundler that handles CSS, only Vite tried", () => {
+    renderPage();
+    expect(section("Questions")).toHaveTextContent(
+      "React 19, with a bundler that handles CSS imports: the styles are compiled stylesheets, so no style plugin is needed. Only Vite has been tried.",
+    );
+  });
+
+  it("asks each remaining question once: no question the sections above already answer", () => {
+    expect(faqEntries().map(({ question }) => question)).toEqual([
+      "Which packages does it install?",
+      "Which frameworks does it work with?",
+      "What does the playground use?",
+    ]);
   });
 
   it("says in an answer what the playground adds, and where its services' terms apply", () => {
@@ -524,7 +596,7 @@ describe("the product page stands on its own", () => {
     );
   });
 
-  it("links the example app, the walkthrough and the capability matrix in the text instead of naming them", () => {
+  it("links the example app, the walkthrough and the capability matrix once each, in the text, instead of naming them", () => {
     renderPage();
     expect(
       screen.getByRole("link", { name: "capability matrix" }),
@@ -532,11 +604,9 @@ describe("the product page stands on its own", () => {
     expect(
       screen.getByRole("link", { name: "examples/embed" }),
     ).toHaveAttribute("href", EXAMPLE_APP);
-    for (const link of screen.getAllByRole("link", {
-      name: "embedding walkthrough",
-    })) {
-      expect(link).toHaveAttribute("href", EMBED_GUIDE_URL);
-    }
+    expect(
+      screen.getByRole("link", { name: "embedding walkthrough" }),
+    ).toHaveAttribute("href", EMBED_GUIDE_URL);
     expect(EMBED_GUIDE_LINK.href).toBe(EMBED_GUIDE_URL);
   });
 
@@ -612,7 +682,8 @@ describe("the product page stands on its own", () => {
           /^[/#]/.test(href),
         href,
       ).toBe(true);
-      expect(href).not.toMatch(/#licence$|\/contribute/);
+      // The page's own #licence section is linked; the README's is not.
+      expect(href).not.toMatch(/github\.com.*#licence$|\/contribute/);
     }
   });
 
@@ -682,17 +753,16 @@ describe("the product page stands on its own", () => {
     ).toBeTruthy();
   });
 
-  it("draws the motif in an ink that keeps the hero's text and muted text at 4.5:1 or more where they cross it, in both themes", () => {
+  it("draws the motif in an ink that keeps the hero's text, muted text and links at 4.5:1 or more where they cross it, in both themes", () => {
     for (const theme of ["light", "dark"] as const) {
       const roles = tokenValues.themeValues[theme].opaque;
       const line = compositeOver(roles.hairline, roles.pageBackground);
-      expect(contrastRatio(roles.text, line), theme).toBeGreaterThanOrEqual(
-        4.5,
-      );
-      expect(
-        contrastRatio(roles.textMuted, line),
-        theme,
-      ).toBeGreaterThanOrEqual(4.5);
+      for (const ink of ["text", "textMuted", "accent"] as const) {
+        expect(
+          contrastRatio(roles[ink], line),
+          `${ink} in ${theme}`,
+        ).toBeGreaterThanOrEqual(4.5);
+      }
     }
   });
 
@@ -760,7 +830,7 @@ describe("the picture of the playground", () => {
         expect(image).toHaveAttribute("height", String(height));
         expect(image).toHaveAttribute("loading", "lazy");
         expect(image).toHaveAttribute("decoding", "async");
-        expect(image).toHaveAttribute("alt", plateAlt(id, theme));
+        expect(image).toHaveAttribute("alt", plateAlt(id));
         expect(image.getAttribute("src")).toMatch(
           new RegExp(`^/.*${id}-${theme}.*\\.webp$`),
         );
@@ -768,17 +838,14 @@ describe("the picture of the playground", () => {
     });
   }
 
-  it("tells in each alt text what the picture shows, the basemap and the theme, and names the length it measures", () => {
+  it("says in each alt text that the picture is a screenshot and what it shows, with the length it measures, and nothing of the theme", () => {
     for (const { id } of CAPTURE_SUBJECTS) {
-      for (const theme of CAPTURE_THEMES) {
-        const alt = plateAlt(id, theme);
-        expect(alt).toContain(PLATES[id].description);
-        expect(alt).toContain(`${theme} theme`);
-        expect(alt).toContain("3.42 km");
-      }
+      const alt = plateAlt(id);
+      expect(alt.startsWith("Screenshot: ")).toBe(true);
+      expect(alt).toContain(PLATES[id].description);
+      expect(alt).toContain("3.42 km");
+      expect(alt).not.toMatch(/theme|basemap/i);
     }
-    expect(plateAlt("heroWide", "light")).toContain("Bright basemap");
-    expect(plateAlt("heroWide", "dark")).toContain("Fiord basemap");
   });
 
   it("credits the map under the picture, in the words and links of the basemap's own definition", () => {
@@ -812,10 +879,10 @@ describe("the picture of the playground", () => {
     );
   });
 
-  it("names the basemap of each theme in the caption, so either picture is described", () => {
+  it("captions the picture as a screenshot, and points to the hero's button for the real thing without a second link", () => {
     renderPage();
     expect(screen.getByTestId("demo")).toHaveTextContent(
-      "The basemap is Bright in the light theme and Fiord in the dark theme.",
+      "Screenshot of the playground, measuring across Cape Town. The Try the playground button above opens the real thing.",
     );
   });
 
@@ -914,12 +981,12 @@ describe("the embedding example", () => {
     expect(MAIN_CODE).toContain("createMapAdapter");
   });
 
-  it("shows on the page one excerpt of about ten lines, cut from the README's main.tsx so it cannot differ from the type-checked app", () => {
+  it("shows on the page one excerpt, the part that mounts the map, cut from the README's main.tsx so it cannot differ from the type-checked app", () => {
     expect(MAIN_CODE).toContain(EMBED_EXCERPT);
-    expect(EMBED_EXCERPT.startsWith("function App() {")).toBe(true);
+    expect(EMBED_EXCERPT.startsWith("function MapScreen() {")).toBe(true);
     expect(EMBED_EXCERPT.endsWith("\n}")).toBe(true);
-    expect(EMBED_EXCERPT.split("\n").length).toBeLessThanOrEqual(12);
-    expect(EMBED_EXCERPT).toContain("<ServicesProvider services={services}>");
+    expect(EMBED_EXCERPT.split("\n").length).toBeLessThanOrEqual(14);
+    expect(EMBED_EXCERPT).toContain("<MapView");
     renderPage();
     const embed = section("Embed a map");
     const regions = within(embed).getAllByRole("region");
@@ -964,26 +1031,48 @@ describe("the embedding example", () => {
     }
   });
 
-  it("says what the excerpt leaves out, and links the walkthrough for the whole app", () => {
+  it("says the excerpt mounts the map, puts what runs on stand-ins straight under it, and links the walkthrough and the example app", () => {
     renderPage();
     const embed = section("Embed a map");
     expect(embed.textContent).toContain(
-      "A whole Vite and React app is three files: index.html, a short style sheet that gives the map a height, and src/main.tsx, which builds the services with the MapLibre adapter",
+      "The install command adds @mapcairn/sdk and its peers. A whole Vite and React app is three files: index.html, a short style sheet that gives the map a height, and src/main.tsx. This part of src/main.tsx mounts the map",
     );
-    expect(embed.textContent).toContain(
-      "Search and the rest of the interface run on in-memory fakes until you add adapters",
+    const box = screen.getByRole("region", { name: EXCERPT }).parentElement;
+    expect(box?.nextElementSibling?.tagName).toBe("P");
+    expect(box?.nextElementSibling).toHaveTextContent(
+      /^Search and the rest of the interface run on in-memory stand-ins until you add adapters/,
     );
     expect(
       within(embed).getByRole("link", { name: "embedding walkthrough" }),
     ).toHaveAttribute("href", EMBED_GUIDE_URL);
+    expect(
+      within(embed).getByRole("link", { name: "examples/embed" }),
+    ).toHaveAttribute("href", EXAMPLE_APP);
+  });
+
+  it("repeats the README's walkthrough prose in the guide word for word, so the two cannot drift", () => {
+    const start = "A map that shows is three files";
+    const end =
+      "[`examples/embed`](examples/embed/README.md) is the full version";
+    const fromReadme = README.slice(README.indexOf(start), README.indexOf(end))
+      .trimEnd()
+      .replaceAll("](docs/guides/", "](")
+      .replaceAll("](examples/", "](../../examples/")
+      .replaceAll(
+        "[`docs/guides/content-security-policy.md`]",
+        "[`content-security-policy.md`]",
+      )
+      .replaceAll("[`docs/guides/extending.md`]", "[`extending.md`]");
+    expect(README.indexOf(start)).toBeGreaterThan(0);
+    expect(EMBED_GUIDE).toContain(fromReadme);
   });
 });
 
 describe("what the page says the SDK sends", () => {
-  it("names the basemap as the one request the SDK's map makes by itself", () => {
+  it("names the basemap's tiles as the one request the map makes before a person asks for anything", () => {
     renderPage();
-    expect(section("Questions").textContent).toContain(
-      "The SDK sends nothing by itself, apart from the basemap:",
+    expect(section("What you get").textContent).toContain(
+      "It asks for nothing until a person does: the basemap's tiles when the map shows",
     );
   });
 });

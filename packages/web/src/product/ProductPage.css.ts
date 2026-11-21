@@ -2,6 +2,7 @@
 // Copyright MapCairn contributors
 import { focusRing, tokens, zLayer } from "@mapcairn/theme";
 import { globalStyle, style } from "@vanilla-extract/css";
+import { captureSubject } from "./captureSubjects";
 
 /*
  * The product page: calm, in one reading column, with generous space and no
@@ -21,6 +22,9 @@ const TABLET = "screen and (min-width: 48rem)";
 /** From here the button, the install command and the links sit side by side where they fit. */
 const ROOMY = "screen and (min-width: 30rem)";
 
+/** From here the hero is two columns: the words at the start, the install command at the end. */
+const WIDE = "screen and (min-width: 64rem)";
+
 /** The reading width of the text, about 70 characters of the large type. */
 const MEASURE = "38rem";
 
@@ -30,8 +34,15 @@ const CODE_HEIGHT = "26rem";
 /** The widest the closing relief strip gets: its sheet is 640 units wide, so it is drawn at one pixel to the unit. */
 const ART_WIDTH = "40rem";
 
-/** The widest the page gets. */
-const PAGE_WIDTH = "60rem";
+/** The widest the page gets: wide enough for two columns of short blocks, while reading text keeps its measure. */
+const PAGE_WIDTH = "72rem";
+
+/** The two sizes of the picture, as taken: its frame is never drawn wider than its capture. */
+const NARROW_CAPTURE = `${captureSubject("hero").width}px`;
+const WIDE_CAPTURE = `${captureSubject("heroWide").width}px`;
+
+/** The narrowest a short block of a grid gets before the grid drops a column. */
+const GROUP_MIN = "16rem";
 
 /** The space between sections: two of the largest steps. */
 const SECTION_SPACE = `calc(${tokens.space.xl} * 2)`;
@@ -158,7 +169,6 @@ export const headerBar = style([
   pageColumn,
   {
     display: "flex",
-    flexWrap: "wrap",
     alignItems: "center",
     justifyContent: "space-between",
     columnGap: tokens.space.sm,
@@ -194,10 +204,19 @@ export const brand = style({
   },
 });
 
-/** The header's links, in a row that wraps only when the text is very large. */
+/**
+ * The header's navigation: it may shrink, and scrolls sideways inside itself
+ * when very large text leaves no room, so the header stays one row tall and
+ * the scroll padding, which is in rem like the header, still clears it.
+ */
+export const navBox = style({
+  minWidth: 0,
+  overflowX: "auto",
+});
+
+/** The header's links, in one row. */
 export const nav = style({
   display: "flex",
-  flexWrap: "wrap",
   "@media": {
     [ROOMY]: { columnGap: tokens.space.xxs },
   },
@@ -242,10 +261,9 @@ export const navLink = style({
   },
 });
 
-/** The main landmark, the skip link's target, which lands below the header. */
+/** The main landmark, the skip link's target. */
 export const main = style({
   outline: "none",
-  scrollMarginBlockStart: ANCHOR_OFFSET,
   selectors: {
     "&:focus-visible": focusRing,
   },
@@ -304,7 +322,12 @@ export const motifIndex = style([
   },
 ]);
 
-/** The hero's words, over the motif, at the reading width. */
+/**
+ * The hero's words, over the motif, at the reading width. From the wide width
+ * they are two columns: the heading, the lede, the button, the repository link
+ * and the badges at the start, and the install command at the end, centred on
+ * them. The markup's order, and so the reading and tab order, stays the same.
+ */
 export const heroText = style({
   gridArea: "1 / 1",
   display: "flex",
@@ -313,6 +336,23 @@ export const heroText = style({
   gap: tokens.space.lg,
   minWidth: 0,
   maxWidth: MEASURE,
+  "@media": {
+    [WIDE]: {
+      display: "grid",
+      gridTemplateColumns: `minmax(0, ${MEASURE}) minmax(0, 1fr)`,
+      columnGap: SECTION_SPACE,
+      rowGap: tokens.space.lg,
+      justifyItems: "start",
+      alignContent: "start",
+      maxWidth: "none",
+    },
+  },
+});
+
+// On a wide screen every part of the hero is in the first column except the
+// install command, which spans its rows in the second.
+globalStyle(`${heroText} > *`, {
+  "@media": { [WIDE]: { gridColumn: "1" } },
 });
 
 /** The page's one h1: the display step from a large phone up, never smaller than the title step. */
@@ -409,6 +449,18 @@ export const installArea = style({
   flexDirection: "column",
   gap: tokens.space.xs,
   alignSelf: "stretch",
+  selectors: {
+    [`${heroText} > &`]: {
+      "@media": {
+        [WIDE]: {
+          gridColumn: "2",
+          gridRow: "1 / span 5",
+          alignSelf: "center",
+          justifySelf: "stretch",
+        },
+      },
+    },
+  },
 });
 
 /** What the SDK needs, under the command: quiet and small. */
@@ -498,6 +550,15 @@ export const badge = style({
   color: tokens.color.text,
 });
 
+/** The licence badge's link to the licence section: the badge's words, underlined, the whole pill its target. */
+export const badgeLink = style([
+  link,
+  {
+    color: tokens.color.text,
+    paddingBlock: 0,
+  },
+]);
+
 /** The latest release, under the badges. */
 export const trustLine = style({
   margin: 0,
@@ -510,7 +571,8 @@ export const trustLine = style({
 /**
  * The picture of the playground: the largest thing on the page, straight under
  * the hero. On a phone it runs edge to edge, up to the narrow capture's own
- * width; from the tablet width it is the wide capture at the page's column.
+ * width; from the tablet width it is the wide capture, as wide as the screen
+ * allows up to its own width, which on a large screen is the page's column.
  */
 export const demo = style([
   pageColumn,
@@ -518,6 +580,7 @@ export const demo = style([
     marginBlock: 0,
     paddingInlineStart: 0,
     paddingInlineEnd: 0,
+    maxWidth: `calc(${WIDE_CAPTURE} + 2px + ${tokens.space.xl} * 2)`,
     display: "flex",
     flexDirection: "column",
     gap: tokens.space.sm,
@@ -541,19 +604,19 @@ export const plateFrame = style({
 
 /** The narrow capture: on a phone only, never wider than it was taken. */
 export const plateNarrow = style({
-  maxWidth: "25rem",
+  maxWidth: NARROW_CAPTURE,
   "@media": {
     [TABLET]: { display: "none" },
   },
 });
 
-/** The wide capture: from the tablet width, inside the page's column, never wider than it was taken. */
+/** The wide capture: from the tablet width, never wider than it was taken (its frame adds a pixel each side). */
 export const plateWide = style({
   display: "none",
   "@media": {
     [TABLET]: {
       display: "block",
-      maxWidth: `calc(56rem + 2px)`,
+      maxWidth: `calc(${WIDE_CAPTURE} + 2px)`,
       border: `1px solid ${tokens.color.controlBoundary}`,
       borderRadius: tokens.radius.control,
     },
@@ -586,7 +649,7 @@ globalStyle(`:root:not([data-theme]) ${plateDark}`, {
   "@media": { "(prefers-color-scheme: dark)": { display: "block" } },
 });
 
-/** The words under the picture: what it shows, the basemaps, then the credits, inside the page's margins. */
+/** The words under the picture: that it is a screenshot and what opens the real thing, then the credits, inside the page's margins. */
 export const plateCaption = style({
   display: "flex",
   flexDirection: "column",
@@ -614,7 +677,6 @@ export const section = style([
     display: "flex",
     flexDirection: "column",
     alignItems: "stretch",
-    scrollMarginBlockStart: ANCHOR_OFFSET,
   },
 ]);
 
@@ -707,6 +769,31 @@ export const features = style({
       columnGap: SECTION_SPACE,
     },
   },
+});
+
+/**
+ * Short groups of a section side by side: as many columns as fit at 16rem or
+ * more, so the licence, the cost and readiness scan on a wide screen and stack
+ * on a phone.
+ */
+export const groups = style({
+  display: "grid",
+  gridTemplateColumns: `repeat(auto-fit, minmax(min(100%, ${GROUP_MIN}), 1fr))`,
+  columnGap: SECTION_SPACE,
+  rowGap: tokens.space.xl,
+  selectors: {
+    // As for the benefits: wider than the reading measure, which each group's own text keeps.
+    [`${section} > &`]: { maxWidth: "none" },
+  },
+});
+
+/** One group: its heading a small step above its lines, which are a small step apart. */
+export const group = style({
+  display: "flex",
+  flexDirection: "column",
+  gap: tokens.space.xs,
+  minWidth: 0,
+  maxWidth: MEASURE,
 });
 
 /** One benefit. */
