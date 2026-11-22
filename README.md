@@ -181,7 +181,7 @@ What is tested, and what is not, is in [Extending MapCairn](https://mapcairn.tim
 
 [`examples/embed`](examples/embed/README.md) is the full version of this app, on the fakes and written against the four packages directly, so that CI proves each package's own entry points. It has the end stack of controls, the sheet, the measure tool, layers and a search provider of its own, and a test fails if the app above uses an import, a component or a prop that the example does not (an import from `@mapcairn/sdk` counts as the package it re-exports; the adapter's import is checked by compiling the block instead). [Extending MapCairn](https://mapcairn.timothybrits.co.za/docs/guides/extending/) lists what an app provides around it, including the font, which the app above leaves to the system. Whether the SDK should ship base styles or stable alias properties for theming is not decided.
 
-The SDK does not depend on the playground's framework. The playground is a server-rendered React 19 app on React Router, Vite and Cloudflare Workers, but the SDK packages import neither React Router nor MapLibre, the two that use React (`map` and `react`) take it as a peer, and `examples/embed` is a plain Vite and React app. The SDK's styles are compiled to plain stylesheets, so it needs no vanilla-extract plugin and should render in any React 19 app whose bundler handles a CSS import, though no other framework has been tried here. There is no prebuilt bundle for pages without React yet. [`docs/guides/serving-from-iis.md`](docs/guides/serving-from-iis.md) covers serving a build you make yourself from IIS and a server-rendered page; it was checked against Microsoft's documentation and not run on a Windows server.
+The SDK does not depend on the playground's framework. The playground is a server-rendered React 19 app on React Router, Vite and Cloudflare Workers, but the SDK packages import neither React Router nor MapLibre, the two that use React (`map` and `react`) take it as a peer, and `examples/embed` is a plain Vite and React app. The SDK's styles are compiled to plain stylesheets, so it needs no vanilla-extract plugin and should render in any React 19 app whose bundler handles a CSS import, though no other framework has been tried here. There is no prebuilt bundle for pages without React yet. [Serving MapCairn from IIS](https://mapcairn.timothybrits.co.za/docs/guides/serving-from-iis/) covers serving a build you make yourself from IIS and a server-rendered page; it was checked against Microsoft's documentation and not run on a Windows server.
 
 ## Try the playground
 
@@ -240,7 +240,7 @@ const example: TileLayerDefinition = {
 export default example;
 ```
 
-Feeds, polygons and lines with patterns, heatmaps, vector tiles and queries for what is in view work the same way: see [Extending MapCairn](https://mapcairn.timothybrits.co.za/docs/guides/extending/). [`docs/guides/serving-layers.md`](docs/guides/serving-layers.md) has worked layers for OGC API Features, WMS and WMTS services.
+Feeds, polygons and lines with patterns, heatmaps, vector tiles and queries for what is in view work the same way: see [Extending MapCairn](https://mapcairn.timothybrits.co.za/docs/guides/extending/). [Serving layers to MapCairn](https://mapcairn.timothybrits.co.za/docs/guides/serving-layers/) has worked layers for OGC API Features, WMS and WMTS services.
 
 ## When MapCairn fits, and when it does not
 
@@ -300,7 +300,7 @@ Most apps install only `@mapcairn/sdk`. The packages inside it are published on 
 
 ## Documentation
 
-The documentation site is built from [`sites/docs`](sites/docs) and, once it is deployed, served at `/docs/` on the reference site ([plan 0017](docs/plans/0017-documentation-site.md)). It has the Get started page so far; the guides in the table below move into it step by step, and the table says where each one is until it does.
+The documentation site is built from [`sites/docs`](sites/docs) and served at `/docs/` on the reference site ([plan 0017](docs/plans/0017-documentation-site.md)). The guides for people who use or extend the SDK or the reference site are its pages, and the links below go to them; the site builds its Architecture and Design system pages from `ARCHITECTURE.md` and `DESIGN.md`, which stay in the repository. The rows with a file name are files in the repository.
 
 | Document                                                                                              | Covers                                                                                                     |
 | ----------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
@@ -311,9 +311,9 @@ The documentation site is built from [`sites/docs`](sites/docs) and, once it is 
 | [Extending MapCairn](https://mapcairn.timothybrits.co.za/docs/guides/extending/)                      | Embedding the SDK, and adding a basemap, each kind of data layer, a search or routing provider, an adapter |
 | [What the AGPL means for your project](https://mapcairn.timothybrits.co.za/docs/guides/licence/)      | What the AGPL means for your project, for people who know MIT, Apache-2.0 and GPL-3.0                      |
 | [Translate the SDK](https://mapcairn.timothybrits.co.za/docs/guides/translate-the-sdk/)               | Another language, a choice of languages, translating definitions, your own message-format library          |
-| [`docs/guides/serving-layers.md`](docs/guides/serving-layers.md)                                      | Which layer kind to serve from your own server, what each costs, and OGC API Features, WMS and WMTS layers |
+| [Serving layers to MapCairn](https://mapcairn.timothybrits.co.za/docs/guides/serving-layers/)         | Which layer kind to serve from your own server, what each costs, and OGC API Features, WMS and WMTS layers |
 | [Content Security Policy](https://mapcairn.timothybrits.co.za/docs/guides/content-security-policy/)   | The Content Security Policy a page hosting the SDK needs, and why                                          |
-| [`docs/guides/serving-from-iis.md`](docs/guides/serving-from-iis.md)                                  | Serving a build of the SDK from IIS and from a server-rendered page such as a Razor page                   |
+| [Serving MapCairn from IIS](https://mapcairn.timothybrits.co.za/docs/guides/serving-from-iis/)        | Serving a build of the SDK from IIS and from a server-rendered page such as a Razor page                   |
 | [Using the reference site](https://mapcairn.timothybrits.co.za/docs/guides/using-the-reference-site/) | Using the playground: search, saving the map, choosing between features, drawing, import and export        |
 | [Capability matrix](https://mapcairn.timothybrits.co.za/docs/guides/capability-matrix/)               | What a GIS application needs, what MapCairn has, partly has or lacks, and the issue for each gap           |
 | [Performance](https://mapcairn.timothybrits.co.za/docs/guides/performance/)                           | What was measured for Lighthouse, what was tried and what was left alone                                   |

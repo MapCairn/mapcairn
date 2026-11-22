@@ -17,6 +17,8 @@ export const sidebar: SidebarEntry[] = [
       "guides/extending",
       "guides/translate-the-sdk",
       "guides/content-security-policy",
+      "guides/serving-layers",
+      "guides/serving-from-iis",
     ],
   },
   {
@@ -27,6 +29,11 @@ export const sidebar: SidebarEntry[] = [
       "guides/capability-matrix",
       "guides/performance",
     ],
+  },
+  {
+    type: "category",
+    label: "Architecture and design",
+    items: ["generated/architecture", "generated/design"],
   },
   {
     type: "category",

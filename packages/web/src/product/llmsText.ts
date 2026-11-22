@@ -73,7 +73,7 @@ const DOCUMENTS: readonly (readonly [string, string, string])[] = [
   ],
   [
     "Serving layers",
-    rawFile("docs/guides/serving-layers.md"),
+    docsPage("guides/serving-layers"),
     "which layer kind to serve from your own server, with OGC API Features, WMS and WMTS examples",
   ],
   [
