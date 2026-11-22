@@ -1,7 +1,33 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
 import { describe, expect, it } from "vitest";
-import { contentTypeOf, resolveTarget } from "./serveBuild";
+import {
+  contentTypeOf,
+  decodePathname,
+  insideFolder,
+  resolveTarget,
+} from "./serveBuild";
+
+describe("decodePathname", () => {
+  it("decodes percent escapes", () => {
+    expect(decodePathname("/docs/a%20b/")).toBe("/docs/a b/");
+  });
+
+  it("returns null for a malformed percent escape instead of throwing", () => {
+    expect(decodePathname("/docs/%E0%A4%A")).toBeNull();
+    expect(decodePathname("/docs/%")).toBeNull();
+  });
+});
+
+describe("insideFolder", () => {
+  it("accepts a path under the folder and refuses the folder's siblings and parents", () => {
+    expect(insideFolder("/srv/build", "/srv/build/index.html")).toBe(true);
+    expect(insideFolder("/srv/build", "/srv/build-other/index.html")).toBe(
+      false,
+    );
+    expect(insideFolder("/srv/build", "/srv/package.json")).toBe(false);
+  });
+});
 
 const files = new Set([
   "index.html",

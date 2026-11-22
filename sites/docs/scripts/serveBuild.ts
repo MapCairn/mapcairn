@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
-import { extname, posix } from "node:path";
+import { extname, posix, sep } from "node:path";
 import { BASE_URL } from "../src/siteConfig";
 
 /** What a path in the build folder is. */
@@ -27,6 +27,29 @@ const CONTENT_TYPES: Readonly<Record<string, string>> = {
   ".png": "image/png",
   ".woff2": "font/woff2",
 };
+
+/**
+ * Decodes the percent escapes of a request path, or returns null when one is
+ * malformed (the caller answers 400).
+ * @param pathname - The path of the request URL.
+ */
+export function decodePathname(pathname: string): string | null {
+  try {
+    return decodeURIComponent(pathname);
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Whether an absolute path lies inside a folder, as a last check after the
+ * path has been resolved.
+ * @param folder - The absolute folder.
+ * @param path - The absolute path to test.
+ */
+export function insideFolder(folder: string, path: string): boolean {
+  return path.startsWith(`${folder}${sep}`);
+}
 
 /**
  * The media type of a file by its extension, binary when the build holds no

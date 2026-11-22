@@ -2,8 +2,8 @@
   "ci": {
     "collect": {
       "url": [
-        "http://localhost:4442/docs/guides/embed-a-map/",
-        "http://localhost:4442/docs/api/core/addStop/"
+        "http://127.0.0.1:4442/docs/guides/embed-a-map/",
+        "http://127.0.0.1:4442/docs/api/core/addStop/"
       ],
       "numberOfRuns": 3,
       "startServerCommand": "npm run serve -w @mapcairn/docs -- 4442",

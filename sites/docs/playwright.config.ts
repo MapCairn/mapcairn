@@ -11,7 +11,9 @@ const executablePath = existsSync(remoteSessionChromium)
 
 // Set MAPCAIRN_DOCS_E2E_PORT to run beside another server.
 const port = process.env.MAPCAIRN_DOCS_E2E_PORT || "4441";
-const origin = `http://localhost:${port}`;
+// The server listens on the loopback IPv4 address only, so the tests name it
+// rather than `localhost`, which can resolve to ::1.
+const origin = `http://127.0.0.1:${port}`;
 
 /**
  * Browser checks for the documentation site: an axe audit, the search
