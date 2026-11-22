@@ -23,6 +23,7 @@ import {
   BADGES,
   BADGES_LABEL,
   type Block,
+  CAIRN_LINE,
   type Disclosure,
   type Feature,
   GITHUB_ACTION,
@@ -364,6 +365,9 @@ function Hero({
         <h1 className={styles.headline}>{HEADLINE}</h1>
         <p className={styles.lede}>
           <Text line={LEDE} />
+        </p>
+        <p className={styles.cairnLine}>
+          <Text line={CAIRN_LINE} />
         </p>
         <a
           className={styles.primaryAction}

@@ -57,7 +57,7 @@
     "check": "npm run lint && npm run typecheck && npm test && npm run build && npm run e2e && npm run a11y"
   },
   "devDependencies": {
-    "@biomejs/biome": "^2.6.7",
+    "@biomejs/biome": "^2.6.8",
     "@microsoft/api-extractor": "^7.60.1",
     "@swc/core": "^1.16.22",
     "@vitest/coverage-v8": "^5.1.0",

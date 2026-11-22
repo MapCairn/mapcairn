@@ -1,5 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
+import { readFileSync } from "node:fs";
+import path from "node:path";
 import { FakeClipboard } from "@mapcairn/core";
 import { render } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
@@ -10,10 +12,12 @@ import { meta } from "../routes/product";
 import { EMBED_EXAMPLE_FILES } from "./embedExampleFiles";
 import { ProductPage } from "./ProductPage";
 import {
+  CAIRN_LINE,
   CAPABILITY_MATRIX_LINK,
   EMBED_GUIDE_LINK,
   EXAMPLE_APP_LINK,
   INSTALL_OPTIONS,
+  lineToText,
   NPM_ACTION,
   REPOSITORY_PAGES,
 } from "./productContent";
@@ -264,5 +268,15 @@ describe("the tracker pattern", () => {
     "&#39;",
   ])("leaves %s alone", (text) => {
     expect(text).not.toMatch(TRACKER);
+  });
+});
+
+describe("the cairn sentence", () => {
+  it("is the same sentence in the documentation site's introduction", () => {
+    const intro = readFileSync(
+      path.resolve(__dirname, "../../../../sites/docs/docs/get-started.md"),
+      "utf8",
+    );
+    expect(intro).toContain(lineToText(CAIRN_LINE));
   });
 });
