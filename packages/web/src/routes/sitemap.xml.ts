@@ -6,7 +6,9 @@ import { staticTextResponse } from "./staticTextResponse";
 /**
  * Every page this site wants indexed, kept in step with `routes.ts` by hand
  * and checked against it by a test. There is no `lastmod`: nothing records
- * when a page last changed, and a guessed date would be wrong.
+ * when a page last changed, and a guessed date would be wrong. The pages under
+ * `/docs/` are not listed: the documentation Worker writes its own sitemap,
+ * which `robots.txt` names.
  */
 const SITEMAP_XML_BODY = `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">

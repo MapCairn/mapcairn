@@ -45,6 +45,8 @@ function expectResolves(target: string): void {
     expect([
       `${SITE_URL}${DOCS_PATH}llms.txt`,
       `${SITE_URL}${DOCS_PATH}llms-full.txt`,
+      `${SITE_URL}${DOCS_PATH}pages.json`,
+      `${SITE_URL}${DOCS_PATH}api.json`,
       `${SITE_URL}${DOCS_PATH}`,
     ]).toContain(target);
     return;
@@ -146,6 +148,8 @@ describe("/llms.txt", () => {
         `${SITE_URL}${DOCS_PATH}`,
         `${SITE_URL}${DOCS_PATH}llms.txt`,
         `${SITE_URL}${DOCS_PATH}llms-full.txt`,
+        `${SITE_URL}${DOCS_PATH}pages.json`,
+        `${SITE_URL}${DOCS_PATH}api.json`,
       ]),
     );
   });
