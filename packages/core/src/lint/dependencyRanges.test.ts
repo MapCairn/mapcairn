@@ -10,9 +10,9 @@ const REPO = path.resolve(
   "../../../..",
 );
 
-/** The root manifest, then every package and example under it. */
+/** The root manifest, then every package, example and site under it. */
 function manifestPaths(): string[] {
-  const workspaces = ["packages", "examples"].flatMap((folder) =>
+  const workspaces = ["packages", "examples", "sites"].flatMap((folder) =>
     readdirSync(path.join(REPO, folder), { withFileTypes: true })
       .filter((entry) => entry.isDirectory())
       .map((entry) => `${folder}/${entry.name}/package.json`)
@@ -65,6 +65,7 @@ describe("third-party dependency ranges", () => {
         "package.json",
         "packages/core/package.json",
         "examples/embed/package.json",
+        "sites/docs/package.json",
       ]),
     );
   });

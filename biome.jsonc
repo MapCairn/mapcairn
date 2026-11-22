@@ -408,7 +408,8 @@
         "**/vitest.setup.ts",
         "packages/web/e2e/**",
         "scripts/**",
-        "packages/web/scripts/**"
+        "packages/web/scripts/**",
+        "sites/docs/scripts/**"
       ],
       "linter": {
         "rules": {

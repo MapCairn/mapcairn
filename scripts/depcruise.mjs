@@ -14,10 +14,14 @@ const examples = readdirSync("examples", { withFileTypes: true })
   .filter((entry) => entry.isDirectory())
   .map((entry) => `examples/${entry.name}/src`);
 
+/** The documentation site's code folders. */
+const sites = ["src", "plugins", "scripts"].map((name) => `sites/docs/${name}`);
+
 /** Every directory cruised; each must yield at least one module. */
 const roots = [
   ...[...BUILT_SDK_PACKAGES, "web"].map((name) => `packages/${name}/src`),
   ...examples,
+  ...sites,
 ];
 
 const result = spawnSync(

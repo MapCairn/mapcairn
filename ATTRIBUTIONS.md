@@ -87,6 +87,8 @@ MapCairn is licensed under [AGPL-3.0](LICENSE). Each SDK package (`core`, `map`,
 
 Maps are drawn with [MapLibre GL JS](https://maplibre.org), which is licensed under the BSD 3-Clause licence.
 
+The documentation site is built with [Docusaurus](https://docusaurus.io), which is licensed under the MIT licence.
+
 ## Fonts and icons
 
 [IBM Plex Sans](https://github.com/IBM/plex) is self-hosted through the `@fontsource-variable/ibm-plex-sans` package, under the SIL Open Font License 1.1.

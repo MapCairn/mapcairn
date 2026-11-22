@@ -1166,6 +1166,8 @@ interface MessageParamOverrides {
     readonly themeKey: string;
     readonly tourKey: string;
     readonly keyPrefix: string;
+    readonly docsPath: string;
+    readonly docsThemeKey: string;
   };
   readonly "privacy.analytics.body": {
     readonly scriptHost: string;

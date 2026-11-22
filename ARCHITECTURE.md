@@ -41,16 +41,19 @@ flowchart TD
 
 ## Layers and dependency rules
 
-| Layer            | Lives in                        | May import                       | Must not                                                         |
-| ---------------- | ------------------------------- | -------------------------------- | ---------------------------------------------------------------- |
-| core             | `packages/core/src`             | itself and npm maths libraries   | touch DOM, React, a map engine, a browser global or the clock    |
-| ports            | `packages/core/src/ports`       | types from core                  | contain an implementation (apart from small typed error classes) |
-| fakes            | `packages/core/src/fakes`       | ports, core                      | read browser globals                                             |
-| ui               | `packages/map/src`              | core, ports, theme, react        | import an adapter, an engine or a browser service                |
-| adapters         | `packages/web/src/adapters`     | ports, core                      | be imported by anything except the composition root              |
-| engine adapter   | `packages/adapter-maplibre/src` | core, theme, the engine (a peer) | import the ui, the hooks, the umbrella or the host               |
-| composition root | `packages/web/src/composition`  | everything                       | be imported as a singleton; it exposes `createServices()` only   |
-| umbrella         | `packages/sdk/src`              | the packages' entry points       | hold code of its own, or be imported by any package or the host  |
+| Layer              | Lives in                           | May import                          | Must not                                                                              |
+| ------------------ | ---------------------------------- | ----------------------------------- | ------------------------------------------------------------------------------------- |
+| core               | `packages/core/src`                | itself and npm maths libraries      | touch DOM, React, a map engine, a browser global or the clock                         |
+| ports              | `packages/core/src/ports`          | types from core                     | contain an implementation (apart from small typed error classes)                      |
+| fakes              | `packages/core/src/fakes`          | ports, core                         | read browser globals                                                                  |
+| ui                 | `packages/map/src`                 | core, ports, theme, react           | import an adapter, an engine or a browser service                                     |
+| adapters           | `packages/web/src/adapters`        | ports, core                         | be imported by anything except the composition root                                   |
+| engine adapter     | `packages/adapter-maplibre/src`    | core, theme, the engine (a peer)    | import the ui, the hooks, the umbrella or the host                                    |
+| composition root   | `packages/web/src/composition`     | everything                          | be imported as a singleton; it exposes `createServices()` only                        |
+| umbrella           | `packages/sdk/src`                 | the packages' entry points          | hold code of its own, or be imported by any package or the host                       |
+| documentation site | `sites/docs/{src,plugins,scripts}` | the packages' entry points, by name | import a file inside a package or the host, or be imported by a package or an example |
+
+`/docs` and `/docs/*` on the reference hostname are answered by the `mapcairn-docs` Worker (`sites/docs/cloudflare.config.ts`), which takes two routes in front of the host's Custom Domain Worker; everything else on the hostname reaches the host Worker unchanged (`docs/plans/0017-documentation-site.md`).
 
 The umbrella (`@mapcairn/sdk`, released with the other packages from `0.1.0-rc.3`) is for apps outside the repository: every file in it is `export * from` one package's entry point, plus two explicit lines in the root that settle the names two of the four declare (`ScaleBar` from `map`, `ReadingDirection` from `core`). The adapter is reachable at the subpath `@mapcairn/sdk/adapter-maplibre` only: `src/adapterMaplibre.ts` is the one script that imports `@mapcairn/adapter-maplibre`, and dependency-cruiser refuses the root and the other subpaths that import it directly (`umbrella-root-has-no-adapter`; it does not parse `src/styles.css`, whose `@import` of the adapter's stylesheet is checked by `umbrella.test.ts` and `sdkDist.test.ts`, and it does not follow a re-export through another file, which the drift tests catch), so an app that does not import the subpath has no map engine in its page or its server bundle. `maplibre-gl` is a required peer of the umbrella at the adapter's range; npm and pnpm install it, and strict pnpm and Yarn ask the app to list it. `packages/core/src/lint/umbrella.test.ts` and `packages/sdk/src/umbrella.test.ts` fail when it drifts from them (`docs/plans/0015-sdk-umbrella-package.md`).
 

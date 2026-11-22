@@ -291,6 +291,30 @@ module.exports = {
       to: { path: "^packages/", dependencyTypes: ["local"] },
     },
     {
+      name: "sites-use-public-entry-points",
+      severity: "error",
+      comment:
+        "The documentation site (`sites/docs`) uses the SDK as an outside app would: through the package entry points, never a file inside a package or the reference host.",
+      from: { path: "^sites/" },
+      to: { path: "^packages/", pathNot: SDK_ENTRY_POINTS },
+    },
+    {
+      name: "sites-import-packages-by-name",
+      severity: "error",
+      comment:
+        "A site imports the SDK by package name, never by a relative path into packages/, even to an entry point.",
+      from: { path: "^sites/" },
+      to: { path: "^packages/", dependencyTypes: ["local"] },
+    },
+    {
+      name: "packages-do-not-import-sites",
+      severity: "error",
+      comment:
+        "Sites use the packages; nothing in a package or an example may depend on a site.",
+      from: { path: "^(packages|examples)/" },
+      to: { path: "^sites/" },
+    },
+    {
       name: "packages-do-not-import-examples",
       severity: "error",
       comment:

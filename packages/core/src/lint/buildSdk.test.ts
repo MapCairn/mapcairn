@@ -320,7 +320,7 @@ describe("every package script", () => {
   it("avoids environment-variable prefixes and node conditions, which fail in the Windows shell", () => {
     const folders = [
       ".",
-      ...["packages", "examples"].flatMap((parent) =>
+      ...["packages", "examples", "sites"].flatMap((parent) =>
         readdirSync(path.join(REPO, parent)).map((name) =>
           path.join(parent, name),
         ),
