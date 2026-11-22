@@ -120,6 +120,11 @@ Written first, run to fail for the intended reason (the modules did not exist), 
 7. **Browser checks and Lighthouse for the site.** A Playwright project in `sites/docs` with axe in both themes, and a Lighthouse run with the first scores; the budget lowered.
 8. **Point the product page at the site.** The documentation links the product page and the README take today (`DOCUMENTATION_LINK`) change to `/docs/`.
 
+Later steps, after the eight above, each its own issue when it is picked up and not built here:
+
+- A roadmap page generated from `ROADMAP.md` (#670).
+- A documentation MCP server, so an agent reaches the same index as search and the Markdown copies (#665).
+
 ## Documents to update
 
 - Step 1: `README.md` (the documentation section names the site and the `sites/docs` workspace), `CONTRIBUTING.md` (how to run and build the site), `AGENTS.md` (Commands: the docs scripts, port 4410 for `dev`; Documentation: the site; the SDK licence rule's exempt list), `ROADMAP.md` (the site is noted), `DESIGN.md` ("Exempt surfaces" and the lint table: the site is outside the harmony scan and what holds its values to the tokens), `docs/plans/README.md` (this plan in the list).
@@ -142,6 +147,7 @@ Decided:
 - 2026-11-22, maintainer, on #199: the decisions in "Ground rules".
 - 2026-11-22, in step 1: workspace `sites/docs`; Docusaurus 3.10.2 with the classic preset and the blog and pages plugins off; generated custom properties for styling; a route Worker beside the Custom Domain; the deploy is `cf deploy ./build`.
 - 2026-11-22, authorised by the maintainer on #199: once the first documentation pull request is merged the site is deployed without waiting for further approval. The Workers Builds project is created with `cf builds workers create` and the site is deployed from `main` as the reference site is; if the Worker has to exist first, one `cf deploy` of the checked build creates it. The live `/docs/` route is then checked with `curl` (status, headers, policy, the Markdown copy once built) and the reference site's routes are checked to be unchanged.
+- 2026-11-22, maintainer, on #199: no versioned documentation before 1.0. `/docs/` always means the current docs, so links and citations stay stable and search, `llms-full.txt` and agents see one copy of each page. The site is built from `main`. Each page names the package versions it was checked against, a new feature carries an "Added in 0.x" note, snippets are tested in CI against the built packages, and there is a changelog page per release. The generated API reference (#434) is built per release so it matches what is on npm. When 1.0 brings breaking changes, the last 0.x docs are snapshotted at `/docs/0.x/`, `/docs/` stays the latest, and a version selector is added then. The Docusaurus versioning feature is not enabled.
 
 Open, each with a recommendation:
 
