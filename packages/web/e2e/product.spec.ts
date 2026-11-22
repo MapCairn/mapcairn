@@ -420,6 +420,33 @@ test.describe("the product page", () => {
     });
   }
 
+  for (const width of [320, 360, 390, 430, 1440]) {
+    test(`keeps every header link a 44 px target with 8 px to its neighbour at ${width}px`, async ({
+      page,
+    }) => {
+      await page.setViewportSize({ width, height: 700 });
+      const product = new ProductPage(page);
+      await product.goto();
+      const boxes = [];
+      for (const link of [
+        product.headerPlayground,
+        product.headerDocs,
+        product.headerGitHub,
+      ]) {
+        const box = await link.boundingBox();
+        expect(box?.width ?? 0).toBeGreaterThanOrEqual(44);
+        expect(box?.height ?? 0).toBeGreaterThanOrEqual(44);
+        boxes.push(box);
+      }
+      for (const [index, box] of boxes.entries()) {
+        const next = boxes[index + 1];
+        if (box && next) {
+          expect(next.x - (box.x + box.width)).toBeGreaterThanOrEqual(8);
+        }
+      }
+    });
+  }
+
   for (const [hash, name] of [
     ["#questions", "Questions"],
     ["#licence", "Licence and cost"],
