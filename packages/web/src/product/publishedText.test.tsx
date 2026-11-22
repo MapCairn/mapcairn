@@ -99,8 +99,9 @@ function normalised(link: string): string {
 
 /**
  * The pages of the repository the page may link, each for the reason an adopter
- * needs it next. The footer lists the first five; the example app is named in
- * the answer on how to use the SDK. Nothing else past the front page: no issue,
+ * needs it next. The footer lists the first four; the example app is named in
+ * the answer on how to use the SDK. The guides are pages of the documentation
+ * site on this origin, so they are not in the set. Nothing else past the front page: no issue,
  * pull request, milestone, README section or contributing page.
  */
 const ALLOWED_PAGES: ReadonlyArray<readonly [string, string]> = [
@@ -117,10 +118,6 @@ const ALLOWED_PAGES: ReadonlyArray<readonly [string, string]> = [
     "the release notes: what changed and what to change on upgrade",
   ],
   [
-    "https://github.com/MapCairn/mapcairn/blob/main/docs/guides/licence.md",
-    "the licence guide: what the AGPL-3.0 means for an adopter's project",
-  ],
-  [
     "https://github.com/MapCairn/mapcairn/blob/main/SECURITY.md",
     "the security policy: how to report a vulnerability",
   ],
@@ -131,10 +128,6 @@ const ALLOWED_PAGES: ReadonlyArray<readonly [string, string]> = [
   [
     "https://github.com/MapCairn/mapcairn/tree/main/examples/embed",
     "the example app the answer on how to start names",
-  ],
-  [
-    "https://github.com/MapCairn/mapcairn/blob/main/docs/guides/embed-a-map.md",
-    "the embedding walkthrough: the whole app the page's excerpt is cut from",
   ],
 ];
 
@@ -251,6 +244,7 @@ describe("links to the repository's front page", () => {
         EMBED_GUIDE_LINK,
       ]
         .map((link) => link.href)
+        .filter((href) => href.startsWith("https://github.com/"))
         .sort(),
     ).toEqual(ALLOWED_PAGES.map(([url]) => url).sort());
   });

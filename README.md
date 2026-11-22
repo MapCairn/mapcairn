@@ -177,9 +177,9 @@ default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data: bl
 
 [`docs/guides/content-security-policy.md`](docs/guides/content-security-policy.md) says what each directive is for, including when `worker-src` needs `blob:`. A Vite 8 build prints 18 `"use client"` warnings (`MODULE_LEVEL_DIRECTIVE`) from the Radix UI packages that `@mapcairn/map` depends on; they are expected and harmless.
 
-What is tested, and what is not, is in [`docs/guides/extending.md`](docs/guides/extending.md#show-a-real-map): a test compiles `main.tsx` as written, and the release's consumer check draws a map in Chromium from a similar app, not from this file.
+What is tested, and what is not, is in [Extending MapCairn](https://mapcairn.timothybrits.co.za/docs/guides/extending/#show-a-real-map): a test compiles `main.tsx` as written, and the release's consumer check draws a map in Chromium from a similar app, not from this file.
 
-[`examples/embed`](examples/embed/README.md) is the full version of this app, on the fakes and written against the four packages directly, so that CI proves each package's own entry points. It has the end stack of controls, the sheet, the measure tool, layers and a search provider of its own, and a test fails if the app above uses an import, a component or a prop that the example does not (an import from `@mapcairn/sdk` counts as the package it re-exports; the adapter's import is checked by compiling the block instead). [`docs/guides/extending.md`](docs/guides/extending.md) lists what an app provides around it, including the font, which the app above leaves to the system. Whether the SDK should ship base styles or stable alias properties for theming is not decided.
+[`examples/embed`](examples/embed/README.md) is the full version of this app, on the fakes and written against the four packages directly, so that CI proves each package's own entry points. It has the end stack of controls, the sheet, the measure tool, layers and a search provider of its own, and a test fails if the app above uses an import, a component or a prop that the example does not (an import from `@mapcairn/sdk` counts as the package it re-exports; the adapter's import is checked by compiling the block instead). [Extending MapCairn](https://mapcairn.timothybrits.co.za/docs/guides/extending/) lists what an app provides around it, including the font, which the app above leaves to the system. Whether the SDK should ship base styles or stable alias properties for theming is not decided.
 
 The SDK does not depend on the playground's framework. The playground is a server-rendered React 19 app on React Router, Vite and Cloudflare Workers, but the SDK packages import neither React Router nor MapLibre, the two that use React (`map` and `react`) take it as a peer, and `examples/embed` is a plain Vite and React app. The SDK's styles are compiled to plain stylesheets, so it needs no vanilla-extract plugin and should render in any React 19 app whose bundler handles a CSS import, though no other framework has been tried here. There is no prebuilt bundle for pages without React yet. [`docs/guides/serving-from-iis.md`](docs/guides/serving-from-iis.md) covers serving a build you make yourself from IIS and a server-rendered page; it was checked against Microsoft's documentation and not run on a Windows server.
 
@@ -240,7 +240,7 @@ const example: TileLayerDefinition = {
 export default example;
 ```
 
-Feeds, polygons and lines with patterns, heatmaps, vector tiles and queries for what is in view work the same way: see [`docs/guides/extending.md`](docs/guides/extending.md). [`docs/guides/serving-layers.md`](docs/guides/serving-layers.md) has worked layers for OGC API Features, WMS and WMTS services.
+Feeds, polygons and lines with patterns, heatmaps, vector tiles and queries for what is in view work the same way: see [Extending MapCairn](https://mapcairn.timothybrits.co.za/docs/guides/extending/). [`docs/guides/serving-layers.md`](docs/guides/serving-layers.md) has worked layers for OGC API Features, WMS and WMTS services.
 
 ## When MapCairn fits, and when it does not
 
@@ -302,29 +302,29 @@ Most apps install only `@mapcairn/sdk`. The packages inside it are published on 
 
 The documentation site is built from [`sites/docs`](sites/docs) and, once it is deployed, served at `/docs/` on the reference site ([plan 0017](docs/plans/0017-documentation-site.md)). It has the Get started page so far; the guides in the table below move into it step by step, and the table says where each one is until it does.
 
-| Document                                                                             | Covers                                                                                                     |
-| ------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------- |
-| [`ARCHITECTURE.md`](ARCHITECTURE.md)                                                 | Layers, ports and adapters, the map adapter, adding an adapter                                             |
-| [`DESIGN.md`](DESIGN.md)                                                             | Tokens, layout slots, accessibility contracts and the lint rules                                           |
-| [`docs/guides/public-api.md`](docs/guides/public-api.md)                             | What counts as the SDK's public API beyond its exports, the API reports and how a change is classed        |
-| [`docs/guides/embed-a-map.md`](docs/guides/embed-a-map.md)                           | The whole embedding app, file by file, with what each part does; the product page links it                 |
-| [`docs/guides/extending.md`](docs/guides/extending.md)                               | Embedding the SDK, and adding a basemap, each kind of data layer, a search or routing provider, an adapter |
-| [`docs/guides/licence.md`](docs/guides/licence.md)                                   | What the AGPL means for your project, for people who know MIT, Apache-2.0 and GPL-3.0                      |
-| [`docs/guides/translate-the-sdk.md`](docs/guides/translate-the-sdk.md)               | Another language, a choice of languages, translating definitions, your own message-format library          |
-| [`docs/guides/serving-layers.md`](docs/guides/serving-layers.md)                     | Which layer kind to serve from your own server, what each costs, and OGC API Features, WMS and WMTS layers |
-| [`docs/guides/content-security-policy.md`](docs/guides/content-security-policy.md)   | The Content Security Policy a page hosting the SDK needs, and why                                          |
-| [`docs/guides/serving-from-iis.md`](docs/guides/serving-from-iis.md)                 | Serving a build of the SDK from IIS and from a server-rendered page such as a Razor page                   |
-| [`docs/guides/using-the-reference-site.md`](docs/guides/using-the-reference-site.md) | Using the playground: search, saving the map, choosing between features, drawing, import and export        |
-| [`docs/guides/capability-matrix.md`](docs/guides/capability-matrix.md)               | What a GIS application needs, what MapCairn has, partly has or lacks, and the issue for each gap           |
-| [`docs/guides/performance.md`](docs/guides/performance.md)                           | What was measured for Lighthouse, what was tried and what was left alone                                   |
-| [`docs/guides/product-captures.md`](docs/guides/product-captures.md)                 | How the product page's pictures of the playground are taken again, their budgets and their credits         |
-| [`docs/guides/working-with-agents.md`](docs/guides/working-with-agents.md)           | Using a coding agent on this repository: what each one reads and how to start                              |
-| [`docs/guides/personal-preferences.md`](docs/guides/personal-preferences.md)         | Keeping your own working style for a coding agent in a git-ignored file, not in the shared rules           |
-| [`docs/plans/`](docs/plans/README.md)                                                | Numbered plans for work not yet built                                                                      |
-| [`GOVERNANCE.md`](GOVERNANCE.md)                                                     | The maintainer role, how decisions are made, and what is not yet covered                                   |
-| [`ROADMAP.md`](ROADMAP.md)                                                           | What the project intends to do in the next twelve months, and what it will not do                          |
-| [`docs/assurance-case.md`](docs/assurance-case.md)                                   | Security requirements, trust boundaries, threat model and the evidence for each                            |
-| [`AGENTS.md`](AGENTS.md)                                                             | Working rules for people and AI changing the code                                                          |
+| Document                                                                                              | Covers                                                                                                     |
+| ----------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| [`ARCHITECTURE.md`](ARCHITECTURE.md)                                                                  | Layers, ports and adapters, the map adapter, adding an adapter                                             |
+| [`DESIGN.md`](DESIGN.md)                                                                              | Tokens, layout slots, accessibility contracts and the lint rules                                           |
+| [`docs/guides/public-api.md`](docs/guides/public-api.md)                                              | What counts as the SDK's public API beyond its exports, the API reports and how a change is classed        |
+| [Embed a map](https://mapcairn.timothybrits.co.za/docs/guides/embed-a-map/)                           | The whole embedding app, file by file, with what each part does; the product page links it                 |
+| [Extending MapCairn](https://mapcairn.timothybrits.co.za/docs/guides/extending/)                      | Embedding the SDK, and adding a basemap, each kind of data layer, a search or routing provider, an adapter |
+| [What the AGPL means for your project](https://mapcairn.timothybrits.co.za/docs/guides/licence/)      | What the AGPL means for your project, for people who know MIT, Apache-2.0 and GPL-3.0                      |
+| [`docs/guides/translate-the-sdk.md`](docs/guides/translate-the-sdk.md)                                | Another language, a choice of languages, translating definitions, your own message-format library          |
+| [`docs/guides/serving-layers.md`](docs/guides/serving-layers.md)                                      | Which layer kind to serve from your own server, what each costs, and OGC API Features, WMS and WMTS layers |
+| [`docs/guides/content-security-policy.md`](docs/guides/content-security-policy.md)                    | The Content Security Policy a page hosting the SDK needs, and why                                          |
+| [`docs/guides/serving-from-iis.md`](docs/guides/serving-from-iis.md)                                  | Serving a build of the SDK from IIS and from a server-rendered page such as a Razor page                   |
+| [Using the reference site](https://mapcairn.timothybrits.co.za/docs/guides/using-the-reference-site/) | Using the playground: search, saving the map, choosing between features, drawing, import and export        |
+| [`docs/guides/capability-matrix.md`](docs/guides/capability-matrix.md)                                | What a GIS application needs, what MapCairn has, partly has or lacks, and the issue for each gap           |
+| [`docs/guides/performance.md`](docs/guides/performance.md)                                            | What was measured for Lighthouse, what was tried and what was left alone                                   |
+| [`docs/guides/product-captures.md`](docs/guides/product-captures.md)                                  | How the product page's pictures of the playground are taken again, their budgets and their credits         |
+| [`docs/guides/working-with-agents.md`](docs/guides/working-with-agents.md)                            | Using a coding agent on this repository: what each one reads and how to start                              |
+| [`docs/guides/personal-preferences.md`](docs/guides/personal-preferences.md)                          | Keeping your own working style for a coding agent in a git-ignored file, not in the shared rules           |
+| [`docs/plans/`](docs/plans/README.md)                                                                 | Numbered plans for work not yet built                                                                      |
+| [`GOVERNANCE.md`](GOVERNANCE.md)                                                                      | The maintainer role, how decisions are made, and what is not yet covered                                   |
+| [`ROADMAP.md`](ROADMAP.md)                                                                            | What the project intends to do in the next twelve months, and what it will not do                          |
+| [`docs/assurance-case.md`](docs/assurance-case.md)                                                    | Security requirements, trust boundaries, threat model and the evidence for each                            |
+| [`AGENTS.md`](AGENTS.md)                                                                              | Working rules for people and AI changing the code                                                          |
 
 ## Contributing, security and conduct
 
@@ -336,7 +336,7 @@ Everyone is welcome to use the coding agent they prefer, and the same rules in [
 
 ## Licence
 
-MapCairn is licensed under [AGPL-3.0-only](LICENSE), an open-source licence that allows commercial use, and each SDK package (`packages/core`, `packages/map`, `packages/react`, `packages/theme`, `packages/adapter-maplibre` and `packages/sdk`) carries its own copy. If you distribute an app that includes the SDK, including by serving it to people's browsers, you must offer them the corresponding source of the code you combine with the SDK and serve with it, under the same licence. If you modify the SDK and let people interact with your modified version over a network, you must offer them its corresponding source. [What the licence means for your project](docs/guides/licence.md) says it in plain words and is not legal advice.
+MapCairn is licensed under [AGPL-3.0-only](LICENSE), an open-source licence that allows commercial use, and each SDK package (`packages/core`, `packages/map`, `packages/react`, `packages/theme`, `packages/adapter-maplibre` and `packages/sdk`) carries its own copy. If you distribute an app that includes the SDK, including by serving it to people's browsers, you must offer them the corresponding source of the code you combine with the SDK and serve with it, under the same licence. If you modify the SDK and let people interact with your modified version over a network, you must offer them its corresponding source. [What the licence means for your project](https://mapcairn.timothybrits.co.za/docs/guides/licence/) says it in plain words and is not legal advice.
 
 The SDK packages depend only on permissively licensed packages (MIT, BSD, Apache-2.0, ISC and similar), and `npm run lint` fails when a new production dependency of one has any other licence.
 

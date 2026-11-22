@@ -50,15 +50,18 @@ const REPO = "https://github.com/MapCairn/mapcairn";
 const MASTODON = "https://en.osm.town/@mapcairn";
 const NPM_PACKAGE = "https://www.npmjs.com/package/@mapcairn/sdk";
 
+/** The licence guide's path on the documentation site, which the footer and the licence answer link. */
+const LICENCE_GUIDE_PATH = "/docs/guides/licence/";
+
 /**
- * The pages of the repository the footer links, in its order, each with the
+ * The pages the footer links, in its order, each with the
  * reason an adopter looks for it. Issue #639 allowed this named set, and
  * nothing else past the front page.
  */
 const FOOTER_REPOSITORY_PAGES = [
   ["Documentation", `${REPO}#documentation`],
   ["Release notes", `${REPO}/releases`],
-  ["Licence guide", `${REPO}/blob/main/docs/guides/licence.md`],
+  ["Licence guide", LICENCE_GUIDE_PATH],
   ["Security", `${REPO}/blob/main/SECURITY.md`],
   ["Discussions", `${REPO}/discussions`],
 ] as const;
@@ -77,12 +80,12 @@ const README = readFileSync(
 
 /** The embedding walkthrough the page links, which holds the whole app. */
 const EMBED_GUIDE = readFileSync(
-  path.resolve(__dirname, "../../../../docs/guides/embed-a-map.md"),
+  path.resolve(__dirname, "../../../../sites/docs/docs/guides/embed-a-map.md"),
   "utf8",
 );
 
-/** The walkthrough's address on GitHub, which the page links. */
-const EMBED_GUIDE_URL = `${REPO}/blob/main/docs/guides/embed-a-map.md`;
+/** The walkthrough's path on the documentation site, which the page links. */
+const EMBED_GUIDE_URL = "/docs/guides/embed-a-map/";
 
 /** The name of the excerpt's code region and of its copy button. */
 const EXCERPT = "src/main.tsx, an excerpt";
@@ -491,7 +494,7 @@ describe("the product page stands on its own", () => {
     );
     expect(
       within(licence).getByRole("link", { name: "licence guide" }),
-    ).toHaveAttribute("href", `${REPO}/blob/main/docs/guides/licence.md`);
+    ).toHaveAttribute("href", LICENCE_GUIDE_PATH);
     expect(licence).toHaveTextContent("It is not legal advice.");
   });
 
@@ -1056,13 +1059,16 @@ describe("the embedding example", () => {
       "[`examples/embed`](examples/embed/README.md) is the full version";
     const fromReadme = README.slice(README.indexOf(start), README.indexOf(end))
       .trimEnd()
-      .replaceAll("](docs/guides/", "](")
-      .replaceAll("](examples/", "](../../examples/")
+      .replace(
+        /\]\(https:\/\/mapcairn\.timothybrits\.co\.za\/docs\/guides\/([\w-]+)\/(#[^)]*)?\)/g,
+        (_link, name: string, hash = "") => `](${name}.md${hash})`,
+      )
+      .replaceAll("](docs/guides/", `](${REPO}/blob/main/docs/guides/`)
+      .replaceAll("](examples/", `](${REPO}/blob/main/examples/`)
       .replaceAll(
         "[`docs/guides/content-security-policy.md`]",
         "[`content-security-policy.md`]",
-      )
-      .replaceAll("[`docs/guides/extending.md`]", "[`extending.md`]");
+      );
     expect(README.indexOf(start)).toBeGreaterThan(0);
     expect(EMBED_GUIDE).toContain(fromReadme);
   });

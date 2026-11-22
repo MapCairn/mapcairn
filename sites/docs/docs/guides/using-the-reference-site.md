@@ -1,6 +1,15 @@
+---
+
+title: Using the reference site
+sidebar_label: Use the reference site
+description: What the reference site offers for language, search, saving the map, layers and drawing, and how each works from the keyboard and a pointer.
+---
+
 # Using the reference site
 
-What the reference host offers for choosing a language, finding its source code, searching, saving the map, reading the layer key, turning layers off and drawing, and how each works from the keyboard and a pointer.
+This page is for a person who uses the reference site, and for a developer who wants to know what a host built on the SDK offers. By the end you will know how to choose a language, find the source code, search, save the map, read the layer key, turn layers off and draw, and how each works from the keyboard and a pointer.
+
+Checked against `@mapcairn/sdk` %sdkVersion%, the version in this repository.
 
 ## The pages
 

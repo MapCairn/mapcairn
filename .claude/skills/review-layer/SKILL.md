@@ -5,7 +5,7 @@ description: "Review a proposed or changed MapCairn data layer, basemap or provi
 
 # Review a layer
 
-A layer is data: one definition, a fixture for a feed, the provider's origins in the headers and its credit in `ATTRIBUTIONS.md` ("Add a data layer" in `docs/guides/extending.md`). The loop test in `packages/web/src/layers/layers.test.ts` already fails on a schema error, an origin the production policy lacks, a credit missing from `ATTRIBUTIONS.md` or a fixture that does not decode. This skill covers what it cannot decide. Read its result first and do not repeat it.
+A layer is data: one definition, a fixture for a feed, the provider's origins in the headers and its credit in `ATTRIBUTIONS.md` ("Add a data layer" in `sites/docs/docs/guides/extending.md`). The loop test in `packages/web/src/layers/layers.test.ts` already fails on a schema error, an origin the production policy lacks, a credit missing from `ATTRIBUTIONS.md` or a fixture that does not decode. This skill covers what it cannot decide. Read its result first and do not repeat it.
 
 Adding a dataset is a maintainer decision (`AGENTS.md`, "Ask the maintainer first"). Without the maintainer's approval recorded in the issue or the conversation, review for the record, write the questions in section 4 and build nothing.
 
@@ -45,7 +45,7 @@ Run `review-security` for anything beyond the layer's own origins. Layer-specifi
 
 **Text, definition and tests**
 
-- Every word a person reads is a `MessageKey`, a host `{ key, text }` or a plain string (`docs/guides/extending.md`), with Afrikaans in `packages/web/src/i18n/af.ts` or `afDefinitionTexts.ts`. Each new key is also added to `EXPECTED_PLACEHOLDERS` in `packages/core/src/lint/messages.test.ts` (same paragraph of `extending.md`). Typecheck holds `af.ts` complete and `messages.test.ts` finds an Afrikaans value left in English; do not approve Afrikaans wording or mark it reviewed.
+- Every word a person reads is a `MessageKey`, a host `{ key, text }` or a plain string (`sites/docs/docs/guides/extending.md`), with Afrikaans in `packages/web/src/i18n/af.ts` or `afDefinitionTexts.ts`. Each new key is also added to `EXPECTED_PLACEHOLDERS` in `packages/core/src/lint/messages.test.ts` (same paragraph of `extending.md`). Typecheck holds `af.ts` complete and `messages.test.ts` finds an Afrikaans value left in English; do not approve Afrikaans wording or mark it reviewed.
 - A new layer is a new file picked up by `import.meta.glob`. A `switch` or `if` on a layer id, provider or response shape in code is a finding. A feed has a recorded fixture with a `manifest.json` count and nothing personal in it. A new provider kind rather than a new definition is a port change: `ARCHITECTURE.md` ("Adding an adapter") and `design-solution`.
 - Documents: `ATTRIBUTIONS.md`, `PRIVACY.md` with `PrivacyPage.tsx`, the guides and `docs/guides/capability-matrix.md` where a row is now true or false. Check each statement with `review-docs`.
 

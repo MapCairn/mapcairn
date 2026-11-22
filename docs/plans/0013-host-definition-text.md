@@ -97,7 +97,7 @@ plus a shared group heading.
 
 Step 1: `ARCHITECTURE.md` ("Definition text"),
 `docs/guides/translate-the-sdk.md` (with a migration note),
-`docs/guides/extending.md` and the core package README. `DESIGN.md` and the map
+`sites/docs/docs/guides/extending.md` and the core package README. `DESIGN.md` and the map
 README do not change: the accessibility contract of the Layers section is the
 same. `PRIVACY.md` needs no change: no request or data flow
 is added. Step 2 adds its helper to the translation guide.

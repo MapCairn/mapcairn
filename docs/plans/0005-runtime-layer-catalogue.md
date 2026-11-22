@@ -72,13 +72,13 @@ Step 1 comes first. Steps 2 to 4 follow it, after #88. Steps 5 and 6 need only s
 3. **Section states, refresh failure and announcements.** Tests: `LayersSection` in each state with its accessible names and focus after Try again; the composed message for each combination, run through the real announcer (`createAnnouncer`) with a clock, not a mock, asserting one message in the right order; singular and plural; a failed refresh keeps the list and shows its line; axe in both themes. Playwright reaches a scripted catalogue through the existing test seam (`ARCHITECTURE.md`, "How tests substitute services"), which takes plain data, a list of states and a delay, and builds a runtime catalogue from it. It is compiled out of production, and the production-bundle check searches for it. Cases: loading then ready, failed then Try again, empty, a waiting link layer, a refresh that removes a layer. Screenshots at phone, tablet and desktop in both themes.
 4. **Replaced definitions redraw.** Tests: one `MapDataLayers` test for each kind (feed, heatmap, vector tiles, raster) where the definition is replaced with the same URL and controls and the adapter is called again, and one where nothing changed and it is not; a changed tile URL still redraws once.
 5. **Sample mapper in the example app.** Tests: a sample server payload becomes the expected definitions; a field list it cannot map is skipped with a reason; `ExampleApp.test.tsx` shows the layer; the manifest check passes. A helper moves into core only if the sample repeats logic.
-6. **The serving guide.** Docs only; links checked from `README.md` and `docs/guides/extending.md`.
+6. **The serving guide.** Docs only; links checked from `README.md` and `sites/docs/docs/guides/extending.md`.
 
 ## Documents to update
 
 - `ARCHITECTURE.md`: the Ports table, "Data layers" (states, link, disappearing layers) and the test seam, in steps 1 to 3.
 - `DESIGN.md`: the `LayersSection` row and a catalogue status row, in step 3.
-- `docs/guides/extending.md` (supplying layers at runtime, step 5), `docs/guides/serving-layers.md` (step 6), and `README.md` and the `core` and `map` READMEs with the first step that changes what they offer.
+- `sites/docs/docs/guides/extending.md` (supplying layers at runtime, step 5), `docs/guides/serving-layers.md` (step 6), and `README.md` and the `core` and `map` READMEs with the first step that changes what they offer.
 - `PRIVACY.md`: none; the reference site makes no new request.
 
 ## Risks

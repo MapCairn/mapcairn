@@ -24,7 +24,7 @@ The SDK needs React 19, `maplibre-gl` 6.18 or later, an ESM bundler that handles
 
 ## Draw a map
 
-A map that shows is three files in a Vite and React project: the page, a style sheet that gives the map a height, and the entry file. The whole app, file by file, is in the [Embed a map guide](https://github.com/MapCairn/mapcairn/blob/main/docs/guides/embed-a-map.md) in the repository.
+A map that shows is three files in a Vite and React project: the page, a style sheet that gives the map a height, and the entry file. The whole app, file by file, is in the [Embed a map](guides/embed-a-map.md) guide.
 
 ## Status
 

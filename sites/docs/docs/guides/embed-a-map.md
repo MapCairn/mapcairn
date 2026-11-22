@@ -1,6 +1,15 @@
+---
+
+title: Embed a map
+sidebar_label: Embed a map
+description: Install the SDK and draw a map with its interface around it, file by file.
+---
+
 # Embed a map
 
-A whole app that draws a map with the SDK's interface around it, file by file. The product page shows the part that mounts it; this is the rest. It is the README's "Embed a map" example, which a test type-checks as an app outside the repository would write it, and a test keeps the code below equal to the README's.
+This page is for a developer who wants a map on a page of their own. By the end you will have a whole Vite and React app, three files, that draws a map with the SDK's interface around it and a search box at the top. The product page shows the part that mounts it; this is the rest. The code is the README's "Embed a map" example: a test type-checks it as an app outside the repository would write it, and a test keeps the code below equal to the README's.
+
+Checked against `@mapcairn/sdk` %sdkVersion%, the version in this repository.
 
 ## Install
 
@@ -146,9 +155,9 @@ Under a strict Content Security Policy, this page needs only the default basemap
 default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data: blob: https://tiles.openfreemap.org; font-src 'self'; connect-src 'self' https://tiles.openfreemap.org; worker-src 'self' blob:
 ```
 
-[`content-security-policy.md`](content-security-policy.md) says what each directive is for, including when `worker-src` needs `blob:`. A Vite 8 build prints 18 `"use client"` warnings (`MODULE_LEVEL_DIRECTIVE`) from the Radix UI packages that `@mapcairn/map` depends on; they are expected and harmless.
+[`content-security-policy.md`](https://github.com/MapCairn/mapcairn/blob/main/docs/guides/content-security-policy.md) says what each directive is for, including when `worker-src` needs `blob:`. A Vite 8 build prints 18 `"use client"` warnings (`MODULE_LEVEL_DIRECTIVE`) from the Radix UI packages that `@mapcairn/map` depends on; they are expected and harmless.
 
-What is tested, and what is not, is in [`extending.md`](extending.md#show-a-real-map): a test compiles `main.tsx` as written, and the release's consumer check draws a map in Chromium from a similar app, not from this file.
+What is tested, and what is not, is in [Extending MapCairn](extending.md#show-a-real-map): a test compiles `main.tsx` as written, and the release's consumer check draws a map in Chromium from a similar app, not from this file.
 
 ## What each part does
 
@@ -159,5 +168,5 @@ What is tested, and what is not, is in [`extending.md`](extending.md#show-a-real
 
 ## Next
 
-- [`extending.md`](extending.md) lists what an app provides around the SDK (base styles, the font, the providers' wording) and how to show a real map with another bundler, add a basemap, a data layer, a search or routing provider, or an adapter of your own.
-- [`examples/embed`](../../examples/embed/README.md) is the full version of this app, with the end stack of controls, the sheet, the measure tool, layers and a search provider of its own.
+- [Extending MapCairn](extending.md) lists what an app provides around the SDK (base styles, the font, the providers' wording) and how to show a real map with another bundler, add a basemap, a data layer, a search or routing provider, or an adapter of your own.
+- [`examples/embed`](https://github.com/MapCairn/mapcairn/blob/main/examples/embed/README.md) is the full version of this app, with the end stack of controls, the sheet, the measure tool, layers and a search provider of its own.

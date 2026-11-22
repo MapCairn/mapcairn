@@ -98,7 +98,7 @@ Steps 1 to 4 touch none of `useDataLayers`, `MapDataLayers`, `LayersSection` or 
 
 - `ARCHITECTURE.md`: the Ports rows (steps 1, 7), "Data layers" (the "Open card" rename and a selected-set bullet, step 2), the highlight (step 4).
 - `DESIGN.md`: a `SelectionSection` row, the status line, gesture equivalents and any token (steps 4, 5, 6, 8).
-- `docs/guides/extending.md` (step 8): a store, a query, real ids, and that a host which persists a set or sends a shape to a server tells its visitors. The `core` and `map` READMEs with the first step that changes what they offer. `ROADMAP.md`: in progress from step 1. `PRIVACY.md`: none.
+- `sites/docs/docs/guides/extending.md` (step 8): a store, a query, real ids, and that a host which persists a set or sends a shape to a server tells its visitors. The `core` and `map` READMEs with the first step that changes what they offer. `ROADMAP.md`: in progress from step 1. `PRIVACY.md`: none.
 
 ## Risks
 

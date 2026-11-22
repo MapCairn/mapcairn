@@ -282,7 +282,6 @@ test.describe("the product page", () => {
     for (const [name, href] of [
       ["Documentation", "#documentation"],
       ["Release notes", "/releases"],
-      ["Licence guide", "/blob/main/docs/guides/licence.md"],
       ["Security", "/blob/main/SECURITY.md"],
       ["Discussions", "/discussions"],
     ] as const) {
@@ -293,6 +292,9 @@ test.describe("the product page", () => {
       );
       expect((await link.boundingBox())?.height).toBeGreaterThanOrEqual(44);
     }
+    const licence = product.footer.getByRole("link", { name: "Licence guide" });
+    await expect(licence).toHaveAttribute("href", "/docs/guides/licence/");
+    expect((await licence.boundingBox())?.height).toBeGreaterThanOrEqual(44);
   });
 
   for (const viewport of VIEWPORTS) {
