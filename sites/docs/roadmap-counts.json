@@ -1,0 +1,61 @@
+{
+  "fetchedAt": "2026-11-22T14:14:46.267Z",
+  "milestones": {
+    "1": {
+      "open": 1,
+      "closed": 11
+    },
+    "2": {
+      "open": 1,
+      "closed": 1
+    },
+    "3": {
+      "open": 8,
+      "closed": 5
+    },
+    "4": {
+      "open": 0,
+      "closed": 29
+    },
+    "5": {
+      "open": 5,
+      "closed": 5
+    },
+    "6": {
+      "open": 26,
+      "closed": 21
+    },
+    "7": {
+      "open": 0,
+      "closed": 7
+    },
+    "8": {
+      "open": 3,
+      "closed": 67
+    },
+    "9": {
+      "open": 8,
+      "closed": 4
+    },
+    "10": {
+      "open": 6,
+      "closed": 1
+    },
+    "11": {
+      "open": 3,
+      "closed": 0
+    },
+    "12": {
+      "open": 5,
+      "closed": 3
+    },
+    "13": {
+      "open": 2,
+      "closed": 0
+    },
+    "14": {
+      "open": 26,
+      "closed": 124
+    }
+  }
+}

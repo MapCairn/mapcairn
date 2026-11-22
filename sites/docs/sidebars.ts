@@ -28,7 +28,7 @@ function apiSidebar(): SidebarEntry {
  * build on a page that is not. The API reference's part is written from the
  * packages' API models.
  */
-export const sidebar: SidebarEntry[] = ["get-started", apiSidebar()];
+export const sidebar: SidebarEntry[] = ["get-started", apiSidebar(), "roadmap"];
 
 /** The sidebars Docusaurus reads. */
 export default { docs: sidebar };

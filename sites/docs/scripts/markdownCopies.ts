@@ -35,6 +35,8 @@ const FENCE = /^\s*(```|~~~)/;
 const LINK_TARGET = /\]\(([^)\s]+)\)/g;
 const HAS_SCHEME = /^(?:[a-z][a-z0-9+.-]*:|\/\/)/i;
 const MARKDOWN_PAGE = /\.mdx?$/;
+/** A line that holds nothing but HTML tags, such as the wrapper a page puts around its blocks. */
+const TAGS_ONLY = /^\s*(?:<\/?[A-Za-z][^>]*>\s*)+$/;
 
 /** The folder part of a page id, with its trailing slash, or "". */
 function folderOf(id: string): string {
@@ -131,8 +133,9 @@ function resolveTarget(
 
 /**
  * The Markdown copy of a page: the version token resolved, every link
- * absolute (a link to another page points at that page's copy), and fenced
- * code left as written. It carries no site chrome because it is written from
+ * absolute (a link to another page points at that page's copy), lines that
+ * hold only HTML tags (the wrappers a page uses for its layout) dropped, and
+ * fenced code left as written. It carries no site chrome because it is written from
  * the source, not the HTML.
  * @param page - The page.
  * @param pages - Every page, to resolve links between them.
@@ -144,25 +147,34 @@ export function copyText(
   context: CopyContext,
 ): string {
   let inFence = false;
-  const lines = page.body
-    .split(SDK_VERSION_TOKEN)
-    .join(context.version)
-    .split("\n")
-    .map((line) => {
-      if (FENCE.test(line)) {
-        inFence = !inFence;
-        return line;
-      }
-      if (inFence) {
-        return line;
-      }
-      return line.replace(
-        LINK_TARGET,
-        (_, target: string) =>
-          `](${resolveTarget(target, page, pages, context)})`,
-      );
-    });
+  let afterDropped = false;
+  const lines: string[] = [];
+  const source = page.body.split(SDK_VERSION_TOKEN).join(context.version);
+  for (const line of source.split("\n")) {
+    if (FENCE.test(line)) {
+      inFence = !inFence;
+    }
+    const drop = !inFence && !FENCE.test(line) && TAGS_ONLY.test(line);
+    const blankAfterDrop: boolean = afterDropped && line.trim() === "";
+    afterDropped = drop || blankAfterDrop;
+    if (!drop && !blankAfterDrop) {
+      lines.push(inFence ? line : absoluteLinks(line, page, pages, context));
+    }
+  }
   return `${lines.join("\n").trimEnd()}\n`;
+}
+
+/** A line of prose with every link target made absolute; a fence line has none. */
+function absoluteLinks(
+  line: string,
+  page: DocPage,
+  pages: readonly DocPage[],
+  context: CopyContext,
+): string {
+  return line.replace(
+    LINK_TARGET,
+    (_, target: string) => `](${resolveTarget(target, page, pages, context)})`,
+  );
 }
 
 function header(context: CopyContext): string {

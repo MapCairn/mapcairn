@@ -24,6 +24,7 @@ import {
 } from "./expectedInlineScripts";
 import { markdownFindings } from "./markdownChecks";
 import type { DocPage } from "./markdownCopies";
+import { roadmapFindings } from "./roadmapChecks";
 import { SDK_VERSION } from "./sdkVersion";
 import { TARGETED_CLASSES } from "./targetedClasses";
 
@@ -106,7 +107,8 @@ function searchIndexSize(build: string): number {
  * resource from another origin, a framework class the stylesheet targets that
  * the pages no longer carry, a page without its Markdown copy or a place in
  * the llms files (`markdownChecks.ts`), a package with no API reference
- * section, and a page over the script budget.
+ * section, a roadmap page that is missing or incomplete
+ * (`roadmapChecks.ts`), and a page over the script budget.
  * @param build - The build folder.
  * @param expected - The inline scripts the pages may carry.
  * @param pages - The pages that must have a Markdown copy.
@@ -186,6 +188,7 @@ export function verifyBuild(
     }),
   );
   findings.push(...missingApiSections(build, apiSections));
+  findings.push(...roadmapFindings(build));
   const budget = scriptBudgetFor(apiPageCount(build));
   const bytes = scriptBytesFor(build, BASE_URL, BUDGET_PAGE);
   if (bytes > budget) {
