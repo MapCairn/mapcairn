@@ -1,8 +1,16 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
 import { MagnifyingGlass } from "@phosphor-icons/react";
-import { lazy, type ReactNode, Suspense, useEffect, useState } from "react";
+import {
+  lazy,
+  type ReactNode,
+  Suspense,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 import { ICON_SIZE, ICON_WEIGHT } from "../../iconMetrics";
+import { focusIsLost } from "../../search/returnFocus";
 import { isSearchShortcut } from "../../search/shortcut";
 
 /** The dialog and the search engine load the first time search is opened, so no page pays for them before. */
@@ -23,6 +31,15 @@ function isTyping(target: EventTarget | null): boolean {
  */
 export default function SearchButton(): ReactNode {
   const [open, setOpen] = useState(false);
+  const button = useRef<HTMLButtonElement>(null);
+
+  /** The dialog gives focus back to where it was; opened with `/` from the bare page that is the body, so the button takes it. */
+  const close = (): void => {
+    setOpen(false);
+    if (focusIsLost(document.activeElement, document)) {
+      button.current?.focus();
+    }
+  };
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent): void => {
@@ -46,6 +63,7 @@ export default function SearchButton(): ReactNode {
   return (
     <>
       <button
+        ref={button}
         type="button"
         className="search-button"
         aria-label="Search"
@@ -59,7 +77,7 @@ export default function SearchButton(): ReactNode {
       </button>
       {open ? (
         <Suspense fallback={null}>
-          <SearchDialog onClose={() => setOpen(false)} />
+          <SearchDialog onClose={close} />
         </Suspense>
       ) : null}
     </>
