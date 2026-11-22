@@ -69,6 +69,18 @@ export interface DrawPlan {
   readonly polygons?: readonly string[];
 }
 
+/**
+ * The tile URL template a plan's engine source requests tiles from, or
+ * undefined for a source that holds its data (points, shapes, a heatmap of
+ * points) and requests none.
+ */
+export function tileTemplateOf(source: DrawPlan["source"]): string | undefined {
+  const { tiles } = source;
+  return Array.isArray(tiles) && typeof tiles[0] === "string"
+    ? tiles[0]
+    : undefined;
+}
+
 /** The GeoJSON geometry types each kind of styled shape layer draws. */
 const STYLED_GEOMETRY_TYPES = {
   area: ["Polygon", "MultiPolygon"],

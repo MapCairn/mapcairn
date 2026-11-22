@@ -9,7 +9,11 @@ import {
   refuseBoxOnGlobe,
   toEngineZoom,
 } from "@mapcairn/core";
-import type { Map as MapLibreMap, MapOptions } from "maplibre-gl";
+import type {
+  Map as MapLibreMap,
+  MapOptions,
+  RequestTransformFunction,
+} from "maplibre-gl";
 import { loadEngine } from "./engineLoader";
 import {
   notMounted,
@@ -31,6 +35,8 @@ export interface RenderMapOpenerHost {
   engineZoom(normalisedZoom: number): number;
   /** Sets the chosen shape on `map`. */
   applyProjection(map: MapLibreMap): void;
+  /** The engine's request transform, the same as the map on screen has. */
+  readonly transformRequest: RequestTransformFunction;
 }
 
 /** A box and the options to fit it with, never past `maxZoom`. */
@@ -75,6 +81,7 @@ export class RenderMapOpener {
     const map = new maplibre.Map({
       container,
       style: source.getStyle(),
+      transformRequest: this.host.transformRequest,
       ...this.camera(view, max),
       bearing: 0,
       pitch: 0,

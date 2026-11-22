@@ -16,7 +16,9 @@ import {
   type DataLayer,
   dataLayerEngineIds,
   planDataLayer,
+  tileTemplateOf,
 } from "./dataLayerPlan";
+import type { DataLayerTileRequests } from "./dataLayerTileRequests";
 import {
   MARKER_PIXEL_RATIO,
   markerImage,
@@ -67,6 +69,8 @@ export interface DataLayerStoreHost {
   changed(): void;
   /** Follows the tile layers that are drawn. */
   readonly tileSources: TileSourceRegistry;
+  /** Keeps the tile requests of the drawn layers apart from the basemap's. */
+  readonly tileRequests: DataLayerTileRequests;
 }
 
 /** Lowest first: imagery, vector tiles, styled shapes, detail shapes, heatmaps, then points. */
@@ -278,6 +282,7 @@ export class DataLayerStore {
       return;
     }
     this.host.tileSources.release(drawn.source);
+    this.host.tileRequests.release(drawn.source);
     for (const layerId of drawn.layers) {
       if (map.getLayer(layerId)) {
         map.removeLayer(layerId);
@@ -363,6 +368,10 @@ export class DataLayerStore {
         layer.overlay.tiles,
         carried ?? "none",
       );
+    }
+    const template = tileTemplateOf(plan.source);
+    if (template) {
+      this.host.tileRequests.register(source, template);
     }
     map.addSource(source, plan.source as unknown as SourceSpecification);
     for (const engineLayer of plan.layers) {

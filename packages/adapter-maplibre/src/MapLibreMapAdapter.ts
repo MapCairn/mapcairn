@@ -43,6 +43,7 @@ import { isBasemapSource } from "./basemapTiles";
 import { Camera, pixelOf, viewOfMap } from "./camera";
 import type { DataLayer } from "./dataLayerPlan";
 import { DataLayerStore, toPropertyBag } from "./dataLayerStore";
+import { DataLayerTileRequests } from "./dataLayerTileRequests";
 import { EditHandleController } from "./editHandles";
 import { Emitter } from "./emitter";
 import { isUserEvent } from "./engineErrors";
@@ -143,6 +144,8 @@ export class MapLibreMapAdapter implements MapAdapter {
   private readonly failure: FailureDetection;
   /** The data layers the ui has set, and what the engine holds for them. */
   private readonly dataLayers: DataLayerStore;
+  /** Which tile requests belong to a data layer, so they go out with no referrer. */
+  private readonly layerTileRequests = new DataLayerTileRequests();
   private readonly loadState = new BasemapLoadState();
   /** Aborts when the adapter is destroyed, for an export that is waiting. */
   private readonly lifetime = new AbortController();
@@ -193,6 +196,7 @@ export class MapLibreMapAdapter implements MapAdapter {
         this.styleVersion += 1;
       },
       tileSources: this.failure.tileSources,
+      tileRequests: this.layerTileRequests,
     });
     this.renderMaps = new RenderMapOpener(
       {
@@ -201,6 +205,7 @@ export class MapLibreMapAdapter implements MapAdapter {
         zoomLimits: () => ({ min: this.getMinZoom(), max: this.getMaxZoom() }),
         engineZoom: (zoom) => this.camera.engineZoom(zoom),
         applyProjection: (map) => this.applyProjection(map),
+        transformRequest: this.layerTileRequests.transform,
       },
       this.loadWorkerUrl,
     );
@@ -263,6 +268,7 @@ export class MapLibreMapAdapter implements MapAdapter {
           view,
           engineZoom: this.camera.engineZoom(view.zoom),
           reducedMotion,
+          transformRequest: this.layerTileRequests.transform,
         }),
       );
     } catch (error) {

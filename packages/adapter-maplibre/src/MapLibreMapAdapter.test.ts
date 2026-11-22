@@ -4054,6 +4054,18 @@ describe("MapLibreMapAdapter data layers", () => {
         expect(adapter.getView()).toEqual(view);
       });
 
+      it("gives the render map the request policy of the map on screen", async () => {
+        const { adapter, map } = await readyForRender();
+        await adapter.toImage({
+          size: { width: 64, height: 48 },
+          pixelRatio: 1,
+          view: { center: { lat: 10, lng: 20 }, zoom: 5 },
+        });
+        expect(renderMap().options.transformRequest).toBe(
+          map.options.transformRequest,
+        );
+      });
+
       it("defaults to the size of the map on screen, and where it is looking, north-up", async () => {
         const { adapter, host } = await readyForRender();
         setLayoutSize(host, 390, 700);
