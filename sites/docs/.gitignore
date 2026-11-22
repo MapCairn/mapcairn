@@ -1,3 +1,5 @@
 build
 .docusaurus
 src/css/generated
+# The API reference, written by scripts/generateApi.ts.
+docs/api

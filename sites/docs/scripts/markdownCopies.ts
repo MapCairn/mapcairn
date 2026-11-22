@@ -57,7 +57,8 @@ function frontMatterOf(source: string): Map<string, string> {
 }
 
 function permalinkOf(id: string, slug: string | undefined): string {
-  const path = slug === undefined ? `/${id}` : slug;
+  // A folder's `index` page is the folder's own address, as the framework serves it.
+  const path = slug === undefined ? `/${id.replace(/(^|\/)index$/, "")}` : slug;
   const absolute = path.startsWith("/") ? path : `/${folderOf(id)}${path}`;
   const trimmed = absolute.replace(/\/+$/, "");
   return trimmed === "" ? "/" : `${trimmed}/`;
