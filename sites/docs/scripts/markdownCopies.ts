@@ -195,7 +195,7 @@ export function llmsTxt(
     (page) =>
       `- [${page.title}](${copyUrl(page, context)}): ${page.description}`,
   );
-  return `${header(context)}\nEvery page is also a plain Markdown file, linked below. The whole text is in ${context.origin}${context.baseUrl}llms-full.txt.\n\n## Pages\n\n${lines.join("\n")}\n`;
+  return `${header(context)}\nEvery page is also a plain Markdown file, linked below. The whole text is in ${context.origin}${context.baseUrl}llms-full.txt. The pages and the API reference are also data, in ${context.origin}${context.baseUrl}pages.json and ${context.origin}${context.baseUrl}api.json; the Machine-readable data page describes them.\n\n## Pages\n\n${lines.join("\n")}\n`;
 }
 
 /**

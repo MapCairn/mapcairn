@@ -22,6 +22,7 @@ import {
   EXPECTED_INLINE_SCRIPTS,
   type ExpectedInlineScript,
 } from "./expectedInlineScripts";
+import { machineDataFindings } from "./machineDataChecks";
 import { markdownFindings } from "./markdownChecks";
 import type { DocPage } from "./markdownCopies";
 import { roadmapFindings } from "./roadmapChecks";
@@ -108,7 +109,9 @@ function searchIndexSize(build: string): number {
  * the pages no longer carry, a page without its Markdown copy or a place in
  * the llms files (`markdownChecks.ts`), a package with no API reference
  * section, a roadmap page that is missing or incomplete
- * (`roadmapChecks.ts`), and a page over the script budget.
+ * (`roadmapChecks.ts`), `pages.json` or `api.json` missing or without a
+ * page of the sidebar (`machineDataChecks.ts`), and a page over the script
+ * budget.
  * @param build - The build folder.
  * @param expected - The inline scripts the pages may carry.
  * @param pages - The pages that must have a Markdown copy.
@@ -187,6 +190,7 @@ export function verifyBuild(
       tagline: config.tagline ?? "",
     }),
   );
+  findings.push(...machineDataFindings(build, pages, SITE_ORIGIN, BASE_URL));
   findings.push(...missingApiSections(build, apiSections));
   findings.push(...roadmapFindings(build));
   const budget = scriptBudgetFor(apiPageCount(build));

@@ -78,6 +78,7 @@ export const sidebar: SidebarEntry[] = [
       "guides/public-api",
       "guides/capability-matrix",
       "guides/performance",
+      "guides/machine-readable-data",
       "troubleshooting",
     ],
   },

@@ -92,6 +92,29 @@ Built in step 3, by `plugins/markdownCopiesPlugin.ts` from `postBuild`, with the
 - Content is not hidden in tabs: a copy that holds a `Tabs` or `TabItem` tag fails the build.
 - A request that sends `Accept: text/markdown` for a page cannot be answered by an assets-only Worker, which serves a file by its path. See the open question below.
 
+### Machine-readable data and the MCP decision record
+
+Built under [#716](https://github.com/MapCairn/mapcairn/issues/716), as the groundwork for the documentation MCP server ([#665](https://github.com/MapCairn/mapcairn/issues/665)). The server itself is not built.
+
+**The files.** Three static JSON files at stable addresses under `/docs/`, written at build time with no third party and no script, and described on the page "Machine-readable data" (`docs/guides/machine-readable-data.md`), which the sidebar lists, so the site's `llms.txt` links it, and the file's introduction names the two new files:
+
+- `search-index.json`: as before (see "Search"). It stays a bare list, because the search box reads it, so it carries no `schemaVersion`.
+- `pages.json`: `plugins/machineDataPlugin.ts` writes it after the build. One entry for every page of the sidebar, with the title, description and address from the page's source (`scripts/markdownCopies.ts`), the Markdown copy's address, the SDK version the page was checked against and its `h2` and `h3` headings with anchors, read back from the built HTML (`headingsOf` in `scripts/machineData.ts`). A last-modified date is left out: the build has no cheap, reliable source for one (a shallow clone in Workers Builds has no history), and a wrong date is worse than none.
+- `api.json`: one entry for every export (package, entry point, name, kind, group, signature, first sentence of the description, `since`, `deprecated`, page address, source address). `buildCatalogue` in `scripts/api/catalogue.ts` returns the entries beside the pages it renders, from the same placed exports, so a page and its entry cannot disagree. `npm run generate` writes them to the git-ignored `docs/api/_catalogue.json` (the leading underscore keeps it out of the pages); the plugin reads that file and fails the build with the command that writes it when it is missing.
+
+**Stability.** `pages.json` and `api.json` carry `schemaVersion` (1). Before 1.0 a change only adds fields; a removed or renamed field raises the number. A test (`machineData.test.ts`) fails when a field the code writes is not named on the page.
+
+**Checks.** `scripts/machineDataChecks.ts`, run by `verifyBuild.ts`, fails when either file is missing, not JSON, empty or without the current `schemaVersion`, and when a page of the sidebar is not in `pages.json`. The files add no script and no origin, so the policy and the script budget are unchanged.
+
+**Decision record for #665, made on 2026-11-22 and open to the maintainer's change.**
+
+- **Tools.** `search_docs` (input `query`, optional `limit`; returns page title, address with anchor and a short excerpt), `get_page` (input `path`; returns the page's Markdown), `list_pages` (no input; returns title, path and description in sidebar order) and `get_api` (input `name`, optional `package`; returns the entry and the export page's Markdown, which holds the full description). Read-only; no write tools.
+- **How each reads the files.** `search_docs` ranks the records of `search-index.json` with the same engine and settings as the site's search box (`src/search/searchEngine.ts`), so the two cannot disagree. `get_page` accepts only a path listed in `pages.json` and returns that page's Markdown copy; an unlisted path is a "not found" result, never a fetch. `list_pages` is `pages.json` without its headings. `get_api` finds the entry in `api.json` by name (an exact match, then a case-insensitive one) and reads the Markdown copy of its page. All four read files the Worker holds as its own static assets, so the server never fetches an address a caller supplies, and what it returns is only the site's own text, as data for the agent.
+- **Hosting.** The existing docs Worker (`mapcairn-docs`), at `/docs/mcp`, with `assets.runWorkerFirst` set for that one path so every other path is still answered from the static assets with no code run. A third Worker would need a second route and a second deploy for one endpoint and would read the files through a network fetch instead of its own assets. The Worker gains code, so this is a later issue with its own plan check, and the documentation Worker stays assets-only until then.
+- **Transport.** Streamable HTTP, as #665 says; the tool names, inputs and outputs are a public surface, versioned with the files' `schemaVersion`.
+- **Privacy.** No accounts, no cookies, no stored queries, no logging of queries, no authentication. A query travels in the request body, not in the address that a request log records, and the Worker writes no log line that contains a query or a result; the server's issue checks what the Worker's observability keeps before it ships. What the site would then state is that nothing is stored beyond Cloudflare's standard logs. Whether that needs a sentence in `PRIVACY.md` and the privacy page is the maintainer's call; those files are not edited here, and the server is not built before that is answered.
+- **Limits.** A cap on query length and on results, and a rate limit, in the server's issue.
+
 ### Tested snippets
 
 Built in step 5, by `scripts/snippets.ts`, run by `scripts/snippets.test.ts` (so by `npm test` and CI):
@@ -161,7 +184,7 @@ Written first, run to fail for the intended reason (the modules did not exist), 
 Later steps, after the eight above, each its own issue when it is picked up and not built here:
 
 - A roadmap page generated from `ROADMAP.md` (#670).
-- A documentation MCP server, so an agent reaches the same index as search and the Markdown copies (#665).
+- A documentation MCP server, so an agent reaches the same index as search and the Markdown copies (#665). Its data files and decision record are built (#716, "Machine-readable data and the MCP decision record"); the server is not.
 
 ## First deploy
 
@@ -199,6 +222,8 @@ Decided:
 - 2026-11-22, decided for readers by Claude and recorded on #199 (the issue comment is the maintainer's account): no versioned documentation before 1.0. `/docs/` always means the current docs, so links and citations stay stable and search, `llms-full.txt` and agents see one copy of each page. The site is built from `main`. Each page names the package versions it was checked against, a new feature carries an "Added in 0.x" note, snippets are tested in CI against the built packages, and there is a changelog page per release. The generated API reference (#434) is built per release so it matches what is on npm. When 1.0 brings breaking changes, the last 0.x docs are snapshotted at `/docs/0.x/`, `/docs/` stays the latest, and a version selector is added then. The Docusaurus versioning feature is not enabled.
 - 2026-11-22, step 6: the API reference generator is a custom one over `@microsoft/api-extractor-model`, from the comparison in "API reference generator".
 - 2026-11-22, step 6: the script budget gains an allowance of 100 bytes of gzip for each generated API page (measured at about 95), instead of a higher flat figure.
+
+- 2026-11-22, #716: the documentation publishes `pages.json` and `api.json` beside `search-index.json`, and the MCP server (#665) is specified in "Machine-readable data and the MCP decision record": four read-only tools, hosted in the docs Worker at `/docs/mcp`, reading only its own static files, storing and logging no query.
 
 Open, each with a recommendation:
 

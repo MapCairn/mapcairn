@@ -44,8 +44,33 @@ export interface PackageInput {
   readonly modules: readonly ModuleInput[];
 }
 
+/** One export as data, for `api.json`: the facts its page shows, with no markup. */
+export interface ApiEntry {
+  /** The package name, such as `@mapcairn/core`. */
+  readonly package: string;
+  /** The import specifier of the entry point, such as `@mapcairn/core/contracts`. */
+  readonly entryPoint: string;
+  readonly name: string;
+  readonly kind: ApiExport["kind"];
+  /** The id of the group the reference puts it in, such as `hooks`. */
+  readonly group: string;
+  readonly signature: string;
+  /** The first sentence of the description, as plain text. */
+  readonly summary: string;
+  /** The version the comment says it was added in, or an empty string. */
+  readonly since: string;
+  /** The deprecation notice, or an empty string. */
+  readonly deprecated: string;
+  /** The page's path under the reference folder, without an extension, such as `core/useThing`. */
+  readonly page: string;
+  /** Where the declaration is in the repository, or `null` when it is not known. */
+  readonly sourceUrl: string | null;
+}
+
 /** What building the catalogue gives. */
 export interface Catalogue {
+  /** Every export as data, in the order of the packages and their entry points. */
+  readonly entries: readonly ApiEntry[];
   /** The pages, by path relative to the catalogue folder, such as `core/parseCoordinates.md`. */
   readonly files: ReadonlyMap<string, string>;
   /** The sidebar entry for the whole reference. */
@@ -181,6 +206,27 @@ function resolveMarkers(
   );
 }
 
+function entryOf(
+  pkg: PackageInput,
+  module: ModuleInput,
+  entry: PlacedExport,
+  source: PageLink | undefined,
+): ApiEntry {
+  return {
+    package: pkg.name,
+    entryPoint: module.specifier,
+    name: entry.item.name,
+    kind: entry.item.kind,
+    group: entry.group,
+    signature: entry.item.signature,
+    summary: firstSentence(entry.summary),
+    since: entry.item.since,
+    deprecated: entry.item.deprecated,
+    page: entry.path.slice(0, -".md".length),
+    sourceUrl: source?.href ?? null,
+  };
+}
+
 function sidebarGroups(placed: readonly PlacedExport[]): SidebarEntry[] {
   return GROUPS.flatMap((group) => {
     const ids = placed
@@ -237,6 +283,7 @@ export function buildCatalogue(
     }
   }
   const undocumented: string[] = [];
+  const entries: ApiEntry[] = [];
 
   for (const { pkg, module, placed } of modules) {
     for (const entry of placed) {
@@ -255,11 +302,16 @@ export function buildCatalogue(
             ? []
             : [{ label: ref.name, href: hrefFrom(entry.path, target) }];
         });
+      const source = sourceLink(
+        module.sources.get(entry.item.name),
+        repositoryUrl,
+      );
+      entries.push(entryOf(pkg, module, entry, source));
       const page = renderExportPage({
         item: { ...entry.item, summary: entry.summary },
         specifier: module.specifier,
         version: pkg.version,
-        source: sourceLink(module.sources.get(entry.item.name), repositoryUrl),
+        source,
         related,
       });
       files.set(
@@ -374,6 +426,7 @@ export function buildCatalogue(
     }),
   );
   return {
+    entries,
     files,
     sidebar: {
       type: "category",
