@@ -8,6 +8,7 @@ import {
   type DataLayer,
   dataLayerEngineIds,
   planDataLayer,
+  tileTemplateOf,
 } from "./dataLayerPlan";
 
 const LOOK = {
@@ -82,6 +83,80 @@ describe("planDataLayer", () => {
     );
     expect(plan.lines?.length).toBeGreaterThan(0);
     expect(plan.polygons).toEqual([]);
+  });
+});
+
+describe("tileTemplateOf", () => {
+  const VECTOR = {
+    tiles: "https://v.test/{z}/{x}/{y}.pbf",
+    minzoom: 0,
+    maxzoom: 9,
+  };
+  const HEAT_STYLE = {
+    radius: 20,
+    intensity: 1,
+    opacity: 0.8,
+    ramp: ["#fee8c8", "#e34a33"],
+  };
+  const plan = (layer: DataLayer) => planDataLayer("a", layer, () => undefined);
+
+  it("finds the template of every kind of layer that requests tiles", () => {
+    expect(
+      tileTemplateOf(
+        plan({
+          kind: "tiles",
+          overlay: {
+            tiles: "https://t.test/{z}/{x}/{y}.png",
+            tileSize: 256,
+            maxzoom: 5,
+            opacity: 1,
+          },
+        }).source,
+      ),
+    ).toBe("https://t.test/{z}/{x}/{y}.png");
+    expect(
+      tileTemplateOf(
+        plan({
+          kind: "vector",
+          tiles: {
+            source: VECTOR,
+            layers: [
+              {
+                sourceLayer: "area",
+                geometry: "area",
+                rule: { kind: "fixed", look: LOOK },
+              },
+            ],
+          },
+        }).source,
+      ),
+    ).toBe(VECTOR.tiles);
+    expect(
+      tileTemplateOf(
+        plan({
+          kind: "heatmap",
+          heatmap: {
+            source: { kind: "vector", source: VECTOR, sourceLayer: "points" },
+            style: HEAT_STYLE,
+          },
+        }).source,
+      ),
+    ).toBe(VECTOR.tiles);
+  });
+
+  it("finds none for a layer that holds its own data", () => {
+    const layers: DataLayer[] = [
+      { kind: "features", features: [] },
+      { kind: "shapes", shapes: { colour: "#000", geometries: [] } },
+      { kind: "styled", layer: LINES },
+      {
+        kind: "heatmap",
+        heatmap: { source: { kind: "points", points: [] }, style: HEAT_STYLE },
+      },
+    ];
+    for (const layer of layers) {
+      expect(tileTemplateOf(plan(layer).source)).toBeUndefined();
+    }
   });
 });
 

@@ -5,7 +5,11 @@ import {
   toEngineZoom,
   type ViewState,
 } from "@mapcairn/core";
-import type { Map as MapLibreMap, MapOptions } from "maplibre-gl";
+import type {
+  Map as MapLibreMap,
+  MapOptions,
+  RequestTransformFunction,
+} from "maplibre-gl";
 import { styleFor } from "./basemapStyle";
 
 /** What the map on screen is built from. */
@@ -16,6 +20,8 @@ export interface EngineMapSettings {
   /** The engine's zoom for `view.zoom`, already held within the basemap's limits. */
   readonly engineZoom: number;
   readonly reducedMotion: boolean;
+  /** The engine's request transform; it sets the referrer policy of a data layer's tiles. */
+  readonly transformRequest: RequestTransformFunction;
 }
 
 /**
@@ -29,10 +35,12 @@ export function engineMapOptions({
   view,
   engineZoom,
   reducedMotion,
+  transformRequest,
 }: EngineMapSettings): MapOptions {
   return {
     container,
     style: styleFor(basemap),
+    transformRequest,
     center: [view.center.lng, view.center.lat],
     zoom: engineZoom,
     bearing: view.bearing,
