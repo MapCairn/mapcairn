@@ -5,7 +5,7 @@ import {
   announceImageSaved,
   type MapImageDrawing,
 } from "@mapcairn/core";
-import { Download } from "lucide-react";
+import { DownloadSimple } from "@phosphor-icons/react";
 import { type Ref, useContext, useState } from "react";
 import { MapContext } from "../../host";
 import { useMessages } from "../../services";
@@ -105,7 +105,7 @@ export function ExportSection({
       <p className={prose}>{t("panels.export.description", {})}</p>
       <Button
         variant="secondary"
-        icon={Download}
+        icon={DownloadSimple}
         busy={busy}
         disabled={!adapter}
         onClick={save}

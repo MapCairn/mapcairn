@@ -7,7 +7,7 @@ import {
   type ThemeChoice,
   type UnitSystem,
 } from "@mapcairn/core";
-import { Info } from "lucide-react";
+import { Info } from "@phosphor-icons/react";
 import type { ReactNode, Ref } from "react";
 import {
   useLanguages,

@@ -738,11 +738,12 @@ export interface IconButtonProps extends Omit<ButtonHTMLAttributes<HTMLButtonEle
 // @public
 export type IconComponent = ComponentType<SVGProps<SVGSVGElement> & {
     size?: number | string;
-    strokeWidth?: number | string;
+    weight?: "thin" | "light" | "regular" | "bold" | "fill" | "duotone";
 }>;
 
 // @public
 export interface IconProps extends Omit<SVGProps<SVGSVGElement>, "ref" | "children"> {
+    readonly filled?: boolean;
     readonly icon: IconComponent;
     readonly label?: string;
     readonly mirrorInRtl?: boolean;

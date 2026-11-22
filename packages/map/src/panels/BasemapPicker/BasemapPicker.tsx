@@ -6,7 +6,7 @@ import {
   DEFAULT_BASEMAP_BACKGROUND,
   usesMoreData,
 } from "@mapcairn/core";
-import { Check } from "lucide-react";
+import { Check } from "@phosphor-icons/react";
 import { useCallback, useId, useRef, useState } from "react";
 import {
   useBasemapAvailability,

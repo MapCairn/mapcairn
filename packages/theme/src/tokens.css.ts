@@ -98,7 +98,6 @@ export const tokens = createThemeContract({
     minTarget: null,
     gapBetweenTargets: null,
     icon: null,
-    iconStroke: null,
   },
   focus: { innerWidth: null, outerWidth: null },
   motion: {

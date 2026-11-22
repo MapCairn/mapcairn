@@ -9,16 +9,15 @@ const spin = keyframes({
 });
 
 /**
- * The icon box. Size and stroke come from the tokens and win over the
- * `width`, `height` and `stroke-width` attributes lucide writes, so an icon
- * can never be sized or weighted off the system.
+ * The icon box. Size comes from the token and wins over the `width` and
+ * `height` attributes the icon writes, so an icon can never be sized off the
+ * system.
  */
 export const icon = style({
   display: "block",
   flexShrink: 0,
   width: tokens.size.icon,
   height: tokens.size.icon,
-  strokeWidth: tokens.size.iconStroke,
 });
 
 /**

@@ -8,15 +8,15 @@ import {
 } from "@mapcairn/core";
 import { useReadingDirection } from "@mapcairn/react";
 import {
-  CircleCheck,
-  Download,
-  FileSpreadsheet,
+  CheckCircle,
+  DownloadSimple,
+  FileArrowUp,
   FileText,
-  FileUp,
+  FileXls,
   Link,
-  Trash2,
-  TriangleAlert,
-} from "lucide-react";
+  Trash,
+  Warning,
+} from "@phosphor-icons/react";
 import { type Ref, useContext, useRef } from "react";
 import { useChromeLayout } from "../../chrome/layoutContext";
 import { MapContext } from "../../host";
@@ -61,7 +61,7 @@ function Feedback({
   return (
     <p className={note} data-testid={testId}>
       <Icon
-        icon={feedback.kind === "error" ? TriangleAlert : CircleCheck}
+        icon={feedback.kind === "error" ? Warning : CheckCircle}
         className={noteIcon}
       />
       <span>{feedback.text}</span>
@@ -165,7 +165,7 @@ export function ShapesSection({
       <div className={actions}>
         <Button
           variant="secondary"
-          icon={Trash2}
+          icon={Trash}
           disabled={selection === null}
           data-testid="shapes-delete"
           onClick={draw.deleteSelected}
@@ -174,7 +174,7 @@ export function ShapesSection({
         </Button>
         <Button
           variant="secondary"
-          icon={Trash2}
+          icon={Trash}
           disabled={shapes.length === 0}
           data-testid="shapes-clear"
           onClick={draw.clear}
@@ -209,7 +209,7 @@ export function ShapesSection({
           <div className={actions}>
             <Button
               variant="secondary"
-              icon={FileUp}
+              icon={FileArrowUp}
               data-testid="shapes-import"
               onClick={importFile}
             >
@@ -237,7 +237,7 @@ export function ShapesSection({
         <div className={actions}>
           <Button
             variant="secondary"
-            icon={Download}
+            icon={DownloadSimple}
             data-testid="shapes-export-geojson"
             onClick={() => void draw.exportGeoJson()}
           >
@@ -245,7 +245,7 @@ export function ShapesSection({
           </Button>
           <Button
             variant="secondary"
-            icon={FileSpreadsheet}
+            icon={FileXls}
             data-testid="shapes-export-csv"
             onClick={() => void draw.exportCsv()}
           >

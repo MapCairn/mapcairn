@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
-import { Search } from "lucide-react";
+import { MagnifyingGlass } from "@phosphor-icons/react";
 import { IconButton } from "../../ui/IconButton";
 import { Surface } from "../../ui/Surface";
 import * as styles from "./SearchPill.css";
@@ -40,7 +40,7 @@ export function SearchPillSkeleton({ copy }: SearchPillSkeletonProps) {
         />
         <IconButton
           label={copy.searchLabel}
-          icon={Search}
+          icon={MagnifyingGlass}
           size="compact"
           disabled
           tabIndex={-1}

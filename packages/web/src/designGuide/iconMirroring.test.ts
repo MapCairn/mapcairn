@@ -48,10 +48,10 @@ describe("ICON_MIRRORING", () => {
       .map(([name]) => name);
     expect(mirrored.sort()).toEqual([
       "ArrowLeft",
-      "ChevronLeft",
-      "ChevronRight",
-      "Redo2",
-      "Undo2",
+      "ArrowUUpLeft",
+      "ArrowUUpRight",
+      "CaretLeft",
+      "CaretRight",
     ]);
   });
 
@@ -67,50 +67,50 @@ describe("ICON_MIRRORING", () => {
 
 describe("mirroringFaults", () => {
   const table = {
-    ChevronRight: { decision: "mirrors", reason: "Next." },
-    Search: { decision: "fixed", reason: "Pictogram." },
+    CaretRight: { decision: "mirrors", reason: "Next." },
+    MagnifyingGlass: { decision: "fixed", reason: "Pictogram." },
   } as const;
 
   it("accepts an icon drawn as decided", () => {
     const source = `
-      import { ChevronRight, Search } from "lucide-react";
-      <Icon icon={ChevronRight} mirrorInRtl />;
-      <IconButton label={t("x", {})} icon={Search} onClick={() => go(a > b)} />;`;
+      import { CaretRight, MagnifyingGlass } from "@phosphor-icons/react";
+      <Icon icon={CaretRight} mirrorInRtl />;
+      <IconButton label={t("x", {})} icon={MagnifyingGlass} onClick={() => go(a > b)} />;`;
     expect(mirroringFaults(source, table)).toEqual([]);
   });
 
   it("reports a mirroring icon drawn without mirrorInRtl", () => {
     expect(
-      mirroringFaults("<IconButton label={x} icon={ChevronRight} />", table),
-    ).toEqual([expect.stringContaining("ChevronRight is drawn without")]);
+      mirroringFaults("<IconButton label={x} icon={CaretRight} />", table),
+    ).toEqual([expect.stringContaining("CaretRight is drawn without")]);
   });
 
   it("reports a fixed icon drawn with mirrorInRtl", () => {
     expect(
-      mirroringFaults("<Icon icon={Search} mirrorInRtl />", table),
-    ).toEqual(["Search is fixed but drawn with mirrorInRtl"]);
+      mirroringFaults("<Icon icon={MagnifyingGlass} mirrorInRtl />", table),
+    ).toEqual(["MagnifyingGlass is fixed but drawn with mirrorInRtl"]);
   });
 
   it("reports a mirroring icon used where the check cannot see its props", () => {
     expect(
-      mirroringFaults("const NEXT = ChevronRight; <Icon icon={NEXT} />", table),
-    ).toEqual(["ChevronRight is used outside an icon component's props"]);
-    expect(mirroringFaults("<ChevronRight />", table)).toEqual([
-      "ChevronRight is used outside an icon component's props",
+      mirroringFaults("const NEXT = CaretRight; <Icon icon={NEXT} />", table),
+    ).toEqual(["CaretRight is used outside an icon component's props"]);
+    expect(mirroringFaults("<CaretRight />", table)).toEqual([
+      "CaretRight is used outside an icon component's props",
     ]);
   });
 
   it("lets a wrapper pass mirrorInRtl on without deciding", () => {
     expect(
       mirroringFaults(
-        "<Icon icon={busy ? Search : ChevronRight} mirrorInRtl={flip} />",
+        "<Icon icon={busy ? MagnifyingGlass : CaretRight} mirrorInRtl={flip} />",
         table,
       ),
     ).toEqual([]);
   });
 
   it("ignores an icon named only in an import or a comment", () => {
-    const source = `import { ChevronRight } from "lucide-react";\n// ChevronRight\n/** ChevronRight */`;
+    const source = `import { CaretRight } from "@phosphor-icons/react";\n// ChevronRight\n/** ChevronRight */`;
     expect(mirroringFaults(source, table)).toEqual([]);
   });
 });

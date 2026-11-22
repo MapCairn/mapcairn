@@ -88,7 +88,7 @@ A rule marked "(lint)" is enforced by the harmony scanner (`npm run lint:harmony
 
 ## Components
 
-- **C1** Use the primitives that exist: `IconButton`, `ControlGroup`, `Switch`, `Slider` and `SegmentedControl` (Radix wrapped in our own components), `Tooltip` (it supplements a name, never replaces one), `Sheet`, `Icon`. Icons are `lucide-react` imported by name, 24 px, through `Icon` (lint covers the import form and the size and stroke props). No second palette, icon set or font, and no Shadow DOM component library.
+- **C1** Use the primitives that exist: `IconButton`, `ControlGroup`, `Switch`, `Slider` and `SegmentedControl` (Radix wrapped in our own components), `Tooltip` (it supplements a name, never replaces one), `Sheet`, `Icon`. Icons are `@phosphor-icons/react` imported by name, 24 px, through `Icon` (lint covers the import form and the size and stroke props). No second palette, icon set or font, and no Shadow DOM component library.
 - **C2** A component matches its row in "Components and accessibility contracts" in `DESIGN.md`. If the behaviour changed, the row changed in the same pull request.
 
 ## Anti-patterns to flag

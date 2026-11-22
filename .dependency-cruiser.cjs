@@ -18,9 +18,9 @@ const ENGINE_PACKAGES =
 const ENGINE_SPECIFIERS =
   "^(@types/)?(maplibre-gl|@maplibre|maplibre-gl-[^/]+)(/|$)";
 
-/** Icon libraries other than `lucide-react`, as package name patterns. */
+/** Icon libraries other than `@phosphor-icons/react`, as package name patterns. */
 const OTHER_ICON_NAMES =
-  "(react-icons|@heroicons|heroicons|@tabler|@phosphor-icons|phosphor-react|@fortawesome|@mui/icons-material|@radix-ui/react-icons|react-feather|feather-icons|@iconify|@iconify-icons|@primer/octicons[^/]*|@carbon/icons[^/]*|@ant-design/icons[^/]*|bootstrap-icons|react-bootstrap-icons|remixicon|@remixicon|ionicons|@fluentui/react-icons|material-icons|@material-design-icons|@material-symbols|boxicons|simple-icons|@iconscout|grommet-icons|lucide|lucide-static|lucide-vue[^/]*|lucide-svelte|lucide-solid|lucide-preact|lucide-angular)(/|$)";
+  "(react-icons|@heroicons|heroicons|@tabler|phosphor-react|@phosphor-icons/(?!react(/|$))[^/]+|@fortawesome|@mui/icons-material|@radix-ui/react-icons|react-feather|feather-icons|@iconify|@iconify-icons|@primer/octicons[^/]*|@carbon/icons[^/]*|@ant-design/icons[^/]*|bootstrap-icons|react-bootstrap-icons|remixicon|@remixicon|ionicons|@fluentui/react-icons|material-icons|@material-design-icons|@material-symbols|boxicons|simple-icons|@iconscout|grommet-icons|lucide-react|lucide|lucide-static|lucide-vue[^/]*|lucide-svelte|lucide-solid|lucide-preact|lucide-angular)(/|$)";
 
 /** The same packages by resolved path. */
 const OTHER_ICON_PACKAGES = `(^|/)node_modules/${OTHER_ICON_NAMES}`;
@@ -252,9 +252,9 @@ module.exports = {
       to: { couldNotResolve: true, path: ENGINE_SPECIFIERS },
     },
     {
-      name: "icons-only-from-lucide-react",
+      name: "icons-only-from-phosphor-react",
       severity: "error",
-      comment: "lucide-react is the only icon package.",
+      comment: "@phosphor-icons/react is the only icon package.",
       from: { path: "^packages/" },
       to: { path: OTHER_ICON_PACKAGES },
     },
@@ -262,7 +262,7 @@ module.exports = {
       name: "icons-unresolved",
       severity: "error",
       comment:
-        "An icon package that cannot be resolved is still not lucide-react.",
+        "An icon package that cannot be resolved is still not @phosphor-icons/react.",
       from: { path: "^packages/" },
       to: { couldNotResolve: true, path: OTHER_ICON_SPECIFIERS },
     },

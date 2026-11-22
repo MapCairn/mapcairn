@@ -12,7 +12,7 @@ import {
   type SheetDetent,
 } from "@mapcairn/core";
 import { useLatestRef } from "@mapcairn/react";
-import { X } from "lucide-react";
+import { X } from "@phosphor-icons/react";
 import {
   type KeyboardEvent,
   type MouseEvent,

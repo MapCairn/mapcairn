@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
-import { LoaderCircle } from "lucide-react";
+import { CircleNotch } from "@phosphor-icons/react";
 import type { ButtonHTMLAttributes, MouseEvent } from "react";
 import { Icon, type IconComponent } from "../Icon";
 import { iconButton, iconSlot, pressedBar } from "./IconButton.css";
@@ -21,7 +21,7 @@ export interface IconButtonProps
   > {
   /** The accessible name. Describe the action, for example "Zoom in". */
   readonly label: string;
-  /** The icon to show, imported by name from `lucide-react`. */
+  /** The icon to show, imported by name from `@phosphor-icons/react`. */
   readonly icon: IconComponent;
   /** Flips the icon when the page reads right to left, for one that points along the reading direction. */
   readonly mirrorInRtl?: boolean;
@@ -89,7 +89,7 @@ export function IconButton({
       onClick={handleClick}
     >
       <Icon
-        icon={busy ? LoaderCircle : icon}
+        icon={busy ? CircleNotch : icon}
         spinning={busy}
         mirrorInRtl={mirrorInRtl}
         className={iconSlot}

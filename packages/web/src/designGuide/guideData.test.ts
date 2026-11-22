@@ -140,7 +140,7 @@ describe("colourRoleRows", () => {
   });
 });
 
-/** Lucide icon names imported by the app's sources, outside the style guide and tests. */
+/** Phosphor icon names imported by the app's sources, outside the style guide and tests. */
 function importedIconNames(): string[] {
   const roots = [
     path.join(__dirname, "../../../map/src"),
@@ -159,7 +159,7 @@ function importedIconNames(): string[] {
       }
       const source = readFileSync(path.join(root, file), "utf8");
       for (const match of source.matchAll(
-        /import\s*\{([^}]*)\}\s*from\s*"lucide-react"/g,
+        /import\s*\{([^}]*)\}\s*from\s*"@phosphor-icons\/react"/g,
       )) {
         for (const part of (match[1] ?? "").split(",")) {
           const name = part
@@ -177,7 +177,7 @@ function importedIconNames(): string[] {
 }
 
 describe("APP_ICONS", () => {
-  it("is exactly the set of Lucide icons the app imports", () => {
+  it("is exactly the set of Phosphor icons the app imports", () => {
     const names = importedIconNames();
     expect(names.length).toBeGreaterThan(10);
     expect(Object.keys(APP_ICONS).sort()).toEqual(names);

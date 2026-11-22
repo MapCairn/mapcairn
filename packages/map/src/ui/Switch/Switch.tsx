@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
+
+import { Check } from "@phosphor-icons/react";
 import * as RadixSwitch from "@radix-ui/react-switch";
-import { Check } from "lucide-react";
 import { useId } from "react";
 import * as styles from "./Switch.css";
 

@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
-import { Check } from "lucide-react";
+import { Check } from "@phosphor-icons/react";
 import type { LiHTMLAttributes, MouseEventHandler, ReactNode } from "react";
 import { Icon, type IconComponent } from "../Icon";
 import { check, listRow, row, secondary, text, trailing } from "./ListRow.css";
@@ -8,7 +8,7 @@ import { check, listRow, row, secondary, text, trailing } from "./ListRow.css";
 /** Props for {@link ListRow}. */
 export interface ListRowProps
   extends Omit<LiHTMLAttributes<HTMLLIElement>, "children" | "onClick"> {
-  /** A leading icon, imported by name from `lucide-react`. */
+  /** A leading icon, imported by name from `@phosphor-icons/react`. */
   readonly icon?: IconComponent;
   /** The row's main text. */
   readonly label: ReactNode;

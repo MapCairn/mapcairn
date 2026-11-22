@@ -8,7 +8,14 @@ import {
   formatLatLng,
   type LatLng,
 } from "@mapcairn/core";
-import { Check, Copy, MapPinned, Trash2, TriangleAlert, X } from "lucide-react";
+import {
+  Check,
+  Copy,
+  MapPinArea,
+  Trash,
+  Warning,
+  X,
+} from "@phosphor-icons/react";
 import {
   type ReactNode,
   type Ref,
@@ -178,7 +185,7 @@ export function PinCard({
         <div className={styles.lookup}>
           <Button
             variant="secondary"
-            icon={MapPinned}
+            icon={MapPinArea}
             busy={address.status === "loading"}
             aria-describedby={noteId}
             data-testid={
@@ -197,7 +204,7 @@ export function PinCard({
           ) : null}
           {address.status === "error" ? (
             <p className={styles.feedback} data-testid="pin-address-error">
-              <Icon icon={TriangleAlert} className={styles.feedbackError} />
+              <Icon icon={Warning} className={styles.feedbackError} />
               {t("tools.pin.lookupFailed", {})}
             </p>
           ) : null}
@@ -217,7 +224,7 @@ export function PinCard({
         </Button>
         <Button
           variant="quiet"
-          icon={Trash2}
+          icon={Trash}
           data-testid="pin-clear"
           onClick={onClear}
         >
@@ -232,7 +239,7 @@ export function PinCard({
       ) : null}
       {copy === "failed" ? (
         <p className={styles.feedback} data-testid="pin-copy-feedback">
-          <Icon icon={TriangleAlert} className={styles.feedbackError} />
+          <Icon icon={Warning} className={styles.feedbackError} />
           {t("tools.pin.copyFailed", {})}
         </p>
       ) : null}

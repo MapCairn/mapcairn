@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
 import { Icon } from "@mapcairn/map";
-import { CircleCheck, LoaderCircle, TriangleAlert } from "lucide-react";
+import { CheckCircle, CircleNotch, Warning } from "@phosphor-icons/react";
 import { useEffect, useState } from "react";
 import * as styles from "./DesignGuide.css";
 import {
@@ -40,10 +40,10 @@ export interface FontSectionProps {
 
 type GateState = "pending" | "true" | "false";
 
-const GATE_GLYPHS: Record<GateState, typeof LoaderCircle> = {
-  pending: LoaderCircle,
-  true: CircleCheck,
-  false: TriangleAlert,
+const GATE_GLYPHS: Record<GateState, typeof CircleNotch> = {
+  pending: CircleNotch,
+  true: CheckCircle,
+  false: Warning,
 };
 
 /** The gate's state for a result that may not have arrived yet. */

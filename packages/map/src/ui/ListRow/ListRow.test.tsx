@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
+
+import { Stack } from "@phosphor-icons/react";
 import { fireEvent, render, screen, within } from "@testing-library/react";
-import { Layers } from "lucide-react";
 import type { ReactNode } from "react";
 import { describe, expect, it, vi } from "vitest";
 import { ListRow } from "./ListRow";
@@ -22,7 +23,7 @@ describe("ListRow", () => {
   it("shows secondary text, a trailing node and a hidden leading icon", () => {
     renderInList(
       <ListRow
-        icon={Layers}
+        icon={Stack}
         label="Streets"
         secondary="OpenStreetMap tiles"
         trailing={<span>3 MB</span>}

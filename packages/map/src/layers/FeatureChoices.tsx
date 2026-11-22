@@ -5,7 +5,7 @@ import {
   isFeedLayer,
   resolveText,
 } from "@mapcairn/core";
-import { X } from "lucide-react";
+import { X } from "@phosphor-icons/react";
 import { type Ref, useId } from "react";
 import { useMessages } from "../services";
 import { IconButton } from "../ui/IconButton";

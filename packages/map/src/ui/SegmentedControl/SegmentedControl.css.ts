@@ -73,7 +73,6 @@ export const icon = style({
 globalStyle(`${icon} > svg`, {
   width: "100%",
   height: "100%",
-  strokeWidth: tokens.size.iconStroke,
 });
 
 /** The check mark on the selected item. */
@@ -81,5 +80,4 @@ export const check = style({
   flexShrink: 0,
   width: tokens.size.icon,
   height: tokens.size.icon,
-  strokeWidth: tokens.size.iconStroke,
 });

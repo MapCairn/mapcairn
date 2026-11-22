@@ -7,7 +7,7 @@ import { action, body, emptyIcon, emptyState, heading } from "./EmptyState.css";
 /** Props for {@link EmptyState}. */
 export interface EmptyStateProps
   extends Omit<HTMLAttributes<HTMLDivElement>, "children"> {
-  /** A decorative icon above the heading, imported by name from `lucide-react`. */
+  /** A decorative icon above the heading, imported by name from `@phosphor-icons/react`. */
   readonly icon?: IconComponent;
   /** The heading text. A blank heading renders no heading element at all. */
   readonly heading: string;

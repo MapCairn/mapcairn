@@ -7,21 +7,21 @@ import {
   type MessageCatalogue,
 } from "@mapcairn/core";
 import {
+  ArrowUUpLeft,
+  ArrowUUpRight,
+  CaretLeft,
+  CaretRight,
   Check,
-  ChevronLeft,
-  ChevronRight,
-  CircleMinus,
-  CirclePlus,
   Crosshair,
   Minus,
+  MinusCircle,
   Plus,
-  Redo2,
+  PlusCircle,
   Shapes,
-  Trash2,
-  TriangleAlert,
-  Undo2,
+  Trash,
+  Warning,
   X,
-} from "lucide-react";
+} from "@phosphor-icons/react";
 import { type KeyboardEvent, useCallback, useEffect, useRef } from "react";
 import { useFocusTarget } from "../../chrome/focusRegistry";
 import { useScrollEdges } from "../../chrome/useScrollEdges";
@@ -120,14 +120,14 @@ function SelectedGroup({ draw, shape }: SelectedGroupProps) {
           <>
             <IconButton
               label={t("tools.draw.previousPoint", {})}
-              icon={ChevronLeft}
+              icon={CaretLeft}
               mirrorInRtl
               data-testid="draw-vertex-prev"
               onClick={() => draw.stepVertex(-1)}
             />
             <IconButton
               label={t("tools.draw.nextPoint", {})}
-              icon={ChevronRight}
+              icon={CaretRight}
               mirrorInRtl
               data-testid="draw-vertex-next"
               onClick={() => draw.stepVertex(1)}
@@ -138,14 +138,14 @@ function SelectedGroup({ draw, shape }: SelectedGroupProps) {
           <>
             <IconButton
               label={t("tools.draw.insertPoint", {})}
-              icon={CirclePlus}
+              icon={PlusCircle}
               disabled={!hasVertex}
               data-testid="draw-vertex-insert"
               onClick={draw.insertAtCentre}
             />
             <IconButton
               label={t("tools.draw.removePoint", {})}
-              icon={CircleMinus}
+              icon={MinusCircle}
               disabled={!hasVertex}
               data-testid="draw-vertex-remove"
               onClick={draw.removeVertex}
@@ -310,7 +310,7 @@ export function DrawToolbar({ draw, onDone, onOpenShapes }: DrawToolbarProps) {
           </p>
           {draw.issueMessage ? (
             <p className={styles.issue} data-testid="draw-issue">
-              <Icon icon={TriangleAlert} />
+              <Icon icon={Warning} />
               <span>{draw.issueMessage}</span>
             </p>
           ) : null}
@@ -324,7 +324,7 @@ export function DrawToolbar({ draw, onDone, onOpenShapes }: DrawToolbarProps) {
               />
               <IconButton
                 label={t("tools.draw.undo", {})}
-                icon={Undo2}
+                icon={ArrowUUpLeft}
                 mirrorInRtl
                 disabled={!draw.canUndo}
                 data-testid="draw-undo"
@@ -332,7 +332,7 @@ export function DrawToolbar({ draw, onDone, onOpenShapes }: DrawToolbarProps) {
               />
               <IconButton
                 label={t("tools.draw.redo", {})}
-                icon={Redo2}
+                icon={ArrowUUpRight}
                 mirrorInRtl
                 disabled={!draw.canRedo}
                 data-testid="draw-redo"
@@ -340,7 +340,7 @@ export function DrawToolbar({ draw, onDone, onOpenShapes }: DrawToolbarProps) {
               />
               <IconButton
                 label={removeLabel}
-                icon={drawing ? X : Trash2}
+                icon={drawing ? X : Trash}
                 disabled={!drawing && selected === null}
                 data-testid="draw-remove"
                 onClick={drawing ? draw.cancel : draw.deleteSelected}

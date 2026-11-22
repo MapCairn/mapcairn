@@ -2,7 +2,7 @@
 // Copyright MapCairn contributors
 import type { ClipboardPort } from "@mapcairn/core";
 import { Icon, LiveRegionProvider, SkipLink } from "@mapcairn/map";
-import { ChevronDown, Heart } from "lucide-react";
+import { CaretDown, Heart } from "@phosphor-icons/react";
 import type { ReactNode } from "react";
 import { Brand } from "../app/Brand";
 import { DOCUMENT_SCROLL } from "../app/documentScroll";
@@ -179,7 +179,7 @@ function Disclosures({ items }: { readonly items: readonly Disclosure[] }) {
         <details key={summary} className={styles.disclosure}>
           <summary className={styles.summary}>
             <span>{summary}</span>
-            <Icon icon={ChevronDown} className={styles.marker} />
+            <Icon icon={CaretDown} className={styles.marker} />
           </summary>
           <div className={styles.detailBody}>
             {detail.map((line) => (
@@ -420,7 +420,7 @@ function ProductFooter() {
   return (
     <footer className={styles.footer}>
       <p className={styles.made}>
-        <Icon icon={Heart} className={styles.heart} />
+        <Icon icon={Heart} filled className={styles.heart} />
         Built with love in South Africa.
       </p>
       <p className={styles.footerLine}>

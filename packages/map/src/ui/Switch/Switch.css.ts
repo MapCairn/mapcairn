@@ -148,5 +148,4 @@ export const thumb = style({
 export const tick = style({
   width: "100%",
   height: "100%",
-  strokeWidth: tokens.size.iconStroke,
 });

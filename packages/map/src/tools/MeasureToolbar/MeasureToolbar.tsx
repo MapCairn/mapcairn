@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
-import { Crosshair, Trash2, Undo2 } from "lucide-react";
+import { ArrowUUpLeft, Crosshair, Trash } from "@phosphor-icons/react";
 import { useEffect, useRef } from "react";
 import { useMessages } from "../../services";
 import { Button } from "../../ui/Button";
@@ -96,7 +96,7 @@ export function MeasureToolbar({
             />
             <IconButton
               label={t("tools.measure.undo", {})}
-              icon={Undo2}
+              icon={ArrowUUpLeft}
               mirrorInRtl
               disabled={empty}
               data-testid="measure-undo"
@@ -104,7 +104,7 @@ export function MeasureToolbar({
             />
             <IconButton
               label={t("tools.measure.clear", {})}
-              icon={Trash2}
+              icon={Trash}
               disabled={empty}
               data-testid="measure-clear"
               onClick={clear}

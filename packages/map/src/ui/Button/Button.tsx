@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
-import { LoaderCircle } from "lucide-react";
+import { CircleNotch } from "@phosphor-icons/react";
 import type { ButtonHTMLAttributes, MouseEvent } from "react";
 import { Icon, type IconComponent } from "../Icon";
 import { button } from "./Button.css";
@@ -13,7 +13,7 @@ export interface ButtonProps
   > {
   /** `primary` is the filled accent button, `quiet` has no fill. Defaults to `primary`. */
   readonly variant?: "primary" | "secondary" | "quiet";
-  /** A leading icon, imported by name from `lucide-react`. */
+  /** A leading icon, imported by name from `@phosphor-icons/react`. */
   readonly icon?: IconComponent;
   /** Flips the leading icon when the page reads right to left, for one that points along the reading direction. */
   readonly mirrorInRtl?: boolean;
@@ -53,7 +53,7 @@ export function Button({
     }
     onClick?.(event);
   };
-  const leading = busy ? LoaderCircle : icon;
+  const leading = busy ? CircleNotch : icon;
   return (
     <button
       {...rest}
