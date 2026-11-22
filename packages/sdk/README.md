@@ -2,14 +2,14 @@
 
 The whole MapCairn SDK from one import: it re-exports `@mapcairn/core`, `@mapcairn/map`, `@mapcairn/react` and `@mapcairn/theme` from its root, and the MapLibre adapter, `@mapcairn/adapter-maplibre`, at the subpath `@mapcairn/sdk/adapter-maplibre`, so an app learns one package name instead of five. It is the recommended install, and it holds no code of its own. The individual packages are the advanced option, for a host that wants fewer dependencies: `core` has no React or browser dependency, and `theme` installs without the interface.
 
-**Status:** a release candidate, for early adopters. The API is still settling, so a breaking change can land before `0.1.0`; the [changelog](https://github.com/MapCairn/mapcairn/blob/main/CHANGELOG.md) lists each one. Until `0.1.0`, add `@next` to the package name in the install commands below.
+**Status:** pre-1.0. While the version starts with `0.`, a minor release (the middle number) can contain a breaking change to the public API and a patch release (the last number) is not meant to, so a `^0.1.0` range takes patch releases but not the next minor release. The [changelog](https://github.com/MapCairn/mapcairn/blob/main/CHANGELOG.md) names each breaking change the release finds, and [what counts as the public API](https://github.com/MapCairn/mapcairn/blob/main/docs/guides/public-api.md) says what is covered.
 
 ## Install
 
 ```bash
-npm install @mapcairn/sdk@next react react-dom maplibre-gl
-pnpm add @mapcairn/sdk@next react react-dom maplibre-gl
-yarn add @mapcairn/sdk@next react react-dom maplibre-gl
+npm install @mapcairn/sdk react react-dom maplibre-gl
+pnpm add @mapcairn/sdk react react-dom maplibre-gl
+yarn add @mapcairn/sdk react react-dom maplibre-gl
 ```
 
 React and React DOM 19 are peer dependencies, and your app already has them; the install line lists them because strict pnpm and Yarn want peers listed. `maplibre-gl` (`^6.18.0`) is a required peer too, because the adapter at the subpath needs it: npm and recent pnpm install it for you, and strict pnpm and Yarn ask you to list it, as they do for React. The root of the package never imports the engine, so an app that does not import the subpath has none in its page or its server bundle. The package is ESM only: it has no `main` field and no CommonJS build. A TypeScript project needs `moduleResolution` set to `node16`, `nodenext` or `bundler`; `node10` is not supported. `vitest` is an optional peer, needed only for `@mapcairn/sdk/core/contracts`.
@@ -74,7 +74,7 @@ A host that adds a service of its own by declaration merging augments `@mapcairn
 
 ## Licence
 
-`@mapcairn/sdk` is licensed under AGPL-3.0-only, an open-source licence that allows commercial use, and the [licence text](https://github.com/MapCairn/mapcairn/blob/main/packages/sdk/LICENSE) comes with the package. If you distribute an app that includes the SDK, including by serving it to people's browsers, you must offer them the corresponding source of the code you combine with the SDK and serve with it, under the same licence. If you modify the SDK and let people interact with your modified version over a network, you must offer them its corresponding source. A licence for closed-source use is not on offer yet. [What the licence means for your project](https://github.com/MapCairn/mapcairn/blob/main/docs/guides/licence.md) says it in plain words and is not legal advice. The SDK packages depend only on permissively licensed packages. The [licence section of the repository README](https://github.com/MapCairn/mapcairn#licence) says more, including how to discuss other terms for closed-source use.
+`@mapcairn/sdk` is licensed under AGPL-3.0-only, an open-source licence that allows commercial use, and the [licence text](https://github.com/MapCairn/mapcairn/blob/main/packages/sdk/LICENSE) comes with the package. If you distribute an app that includes the SDK, including by serving it to people's browsers, you must offer them the corresponding source of the code you combine with the SDK and serve with it, under the same licence. If you modify the SDK and let people interact with your modified version over a network, you must offer them its corresponding source. [What the licence means for your project](https://github.com/MapCairn/mapcairn/blob/main/docs/guides/licence.md) says it in plain words and is not legal advice. The SDK packages depend only on permissively licensed packages. The [licence section of the repository README](https://github.com/MapCairn/mapcairn#licence) says more.
 
 ## Contributing and changes
 

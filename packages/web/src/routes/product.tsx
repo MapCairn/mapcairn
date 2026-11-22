@@ -1,7 +1,11 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
 import { useState } from "react";
-import type { LinksFunction, MetaFunction } from "react-router";
+import {
+  type LinksFunction,
+  type MetaFunction,
+  useLoaderData,
+} from "react-router";
 import type { ModulePreloadHandle } from "../app/modulePreload";
 import { buildPageMeta } from "../buildPageMeta";
 import { createProductClipboard } from "../composition/productClipboard";
@@ -9,6 +13,8 @@ import { PRODUCT_DESCRIPTION, SITE_URL } from "../constants/siteConfig";
 import type { PageLanguageHandle } from "../i18n/pageLanguage";
 import { ProductPage } from "../product/ProductPage";
 import { faqEntries, PRODUCT_TITLE } from "../product/productContent";
+import type { ReleaseFacts } from "../product/releaseDate";
+import { RELEASE } from "../product/releaseFacts.server";
 import {
   faqNode,
   jsonLdGraph,
@@ -64,10 +70,20 @@ export const handle: PageLanguageHandle & ModulePreloadHandle = {
 };
 
 /**
+ * React Router route module export: the latest release, read on the server
+ * from the changelog the site was built from, so the changelog itself never
+ * reaches the browser.
+ */
+export function loader(): ReleaseFacts {
+  return RELEASE;
+}
+
+/**
  * React Router route module export: the product page at `/`, with the
- * browser clipboard for its copy button and no other service.
+ * browser clipboard for its copy buttons and no other service.
  */
 export default function ProductRoute() {
   const [clipboard] = useState(createProductClipboard);
-  return <ProductPage clipboard={clipboard} />;
+  const release = useLoaderData<typeof loader>();
+  return <ProductPage clipboard={clipboard} release={release} />;
 }

@@ -7,21 +7,42 @@ import { loader as markdownLoader } from "../routes/index.md";
 import { loader as llmsLoader } from "../routes/llms.txt";
 import { loader as fullLoader } from "../routes/llms-full.txt";
 import { meta } from "../routes/product";
+import { EMBED_EXAMPLE_FILES } from "./embedExampleFiles";
 import { ProductPage } from "./ProductPage";
-import { INSTALL_COMMAND } from "./productContent";
+import {
+  CAPABILITY_MATRIX_LINK,
+  EMBED_GUIDE_LINK,
+  EXAMPLE_APP_LINK,
+  INSTALL_OPTIONS,
+  NPM_ACTION,
+  REPOSITORY_PAGES,
+} from "./productContent";
+
+/** A release for the page to name, as the route's loader gives it. */
+const RELEASE = { version: "0.1.0", date: "2026-11-21" } as const;
 
 /*
  * The rules every text the product page publishes keeps: the page itself, its
  * structured data, `/index.md`, `/llms.txt` and `/llms-full.txt`. They link to
- * no issue, pull request or milestone and cite none by number, say nothing
- * about npm beyond `INSTALL_COMMAND` (with its `@next`, the one allowed exception), never mention commercial terms, and hold no fact that is true
- * only today (a percentage, a "coming soon"), so the page stays true as the
- * SDK changes.
+ * no issue, pull request or milestone and cite none by number; say nothing
+ * about npm beyond the install commands (and the package managers' names that
+ * choose them) and, in `/llms.txt`, the link to the package (`NPM_ACTION`);
+ * say nothing about commercial terms beyond the phrase "allows commercial
+ * use" (what the licence allows, in the READMEs' own words) and nothing at
+ * all about any licensing or terms other than the AGPL-3.0; link into the
+ * repository no further than its front page and the named set below; and hold
+ * no fact that is true only for a while (a percentage, a "coming soon"), so
+ * the page stays true as the SDK changes. The latest release is the one
+ * exception, and it is read from the changelog when the site is built.
  */
 
 /** An issue, pull request or milestone on GitHub, or a `#123` reference. */
 const TRACKER =
   /github\.com\/[\w.-]+\/[\w.-]+\/(issues|pull|pulls|milestones?)\b|(^|[^\w&/=.])#\d+\b/i;
+
+/** Wording about licensing or terms other than the AGPL-3.0, which the project does not publish. */
+const OTHER_LICENSING =
+  /closed-source|separate terms|other terms|not on offer|alternative licen|licen[cs]e for/i;
 
 /** Wording that is true only for a while. */
 const VOLATILE =
@@ -29,7 +50,16 @@ const VOLATILE =
 
 /** Everything the rendered page says and links to, as one text. */
 function pageText(): string {
-  const { container } = render(<ProductPage clipboard={new FakeClipboard()} />);
+  const { container } = render(
+    <ProductPage clipboard={new FakeClipboard()} release={RELEASE} />,
+  );
+  // The install block's choices are the package managers' names, npm among them.
+  const managers = INSTALL_OPTIONS.map(({ manager }) => manager);
+  for (const choice of container.querySelectorAll("fieldset label")) {
+    if (managers.includes(choice.textContent ?? "")) {
+      choice.remove();
+    }
+  }
   const hrefs = [...container.querySelectorAll("a")].map(
     (link) => link.getAttribute("href") ?? "",
   );
@@ -51,9 +81,72 @@ const SOURCES: ReadonlyArray<readonly [string, () => Promise<string>]> = [
   ["/llms-full.txt", () => fullLoader().text()],
 ];
 
-/** A link into the repository past its front page: a README section, a folder or the contributing page. */
-const REPOSITORY_DEEP_LINK =
-  /github\.com\/MapCairn\/mapcairn(#(documentation|licence)\b|\/tree\/|\/contribute\b)/i;
+/** The one phrase about commercial terms the page may use: what the licence allows. */
+const COMMERCIAL_PHRASE = "allows commercial use";
+
+/** Every link into the repository, front page or deeper, as written in a text. */
+const REPOSITORY_LINK =
+  /(?:https?:\/\/)?(?:www\.)?github\.com\/MapCairn\/mapcairn[^\s)"'\]\\<>]*/gi;
+
+/** The repository's front page. */
+const FRONT_PAGE = "https://github.com/MapCairn/mapcairn";
+
+/** A link as compared: with its scheme, no `www.`, no trailing punctuation and in lower case. */
+function normalised(link: string): string {
+  const bare = link.replace(/^(?:https?:\/\/)?(?:www\.)?/i, "");
+  return `https://${bare.replace(/[.,;:]+$/, "")}`.toLowerCase();
+}
+
+/**
+ * The pages of the repository the page may link, each for the reason an adopter
+ * needs it next. The footer lists the first five; the example app is named in
+ * the answer on how to use the SDK. Nothing else past the front page: no issue,
+ * pull request, milestone, README section or contributing page.
+ */
+const ALLOWED_PAGES: ReadonlyArray<readonly [string, string]> = [
+  [
+    "https://github.com/MapCairn/mapcairn#documentation",
+    "the documentation: the README's index of the guides",
+  ],
+  [
+    "https://github.com/MapCairn/mapcairn/blob/main/docs/guides/capability-matrix.md",
+    "the capability matrix: what the SDK has and lacks, which the production answer links",
+  ],
+  [
+    "https://github.com/MapCairn/mapcairn/releases",
+    "the release notes: what changed and what to change on upgrade",
+  ],
+  [
+    "https://github.com/MapCairn/mapcairn/blob/main/docs/guides/licence.md",
+    "the licence guide: what the AGPL-3.0 means for an adopter's project",
+  ],
+  [
+    "https://github.com/MapCairn/mapcairn/blob/main/SECURITY.md",
+    "the security policy: how to report a vulnerability",
+  ],
+  [
+    "https://github.com/MapCairn/mapcairn/discussions",
+    "Discussions: where questions are asked in public",
+  ],
+  [
+    "https://github.com/MapCairn/mapcairn/tree/main/examples/embed",
+    "the example app the answer on how to start names",
+  ],
+  [
+    "https://github.com/MapCairn/mapcairn/blob/main/docs/guides/embed-a-map.md",
+    "the embedding walkthrough: the whole app the page's excerpt is cut from",
+  ],
+];
+
+/** The links a text makes into the repository that are neither its front page nor in the named set. */
+function unlistedRepositoryLinks(text: string): string[] {
+  const allowed = new Set(
+    [FRONT_PAGE, ...ALLOWED_PAGES.map(([url]) => url)].map(normalised),
+  );
+  return (text.match(REPOSITORY_LINK) ?? []).filter(
+    (url) => !allowed.has(normalised(url)),
+  );
+}
 
 /** How many times a text links the repository's front page. */
 function frontPageLinks(text: string): number {
@@ -68,28 +161,48 @@ describe.each(SOURCES)("%s", (_name, read) => {
     expect(await read()).not.toMatch(TRACKER);
   });
 
-  it("links into the repository no further than its front page", async () => {
-    expect(await read()).not.toMatch(REPOSITORY_DEEP_LINK);
+  it("links into the repository no further than its front page and the named set of pages", async () => {
+    expect(unlistedRepositoryLinks(await read())).toEqual([]);
   });
 
-  it("says nothing about npm beyond the install command, and nothing about commercial terms", async () => {
+  it("says nothing about npm beyond the install command and the link to the package, and nothing about commercial terms beyond what the licence allows", async () => {
     const text = await read();
-    expect(text.replaceAll(INSTALL_COMMAND, "")).not.toMatch(/npm/i);
-    expect(text).not.toMatch(/commercial/i);
+    expect(
+      INSTALL_OPTIONS.reduce(
+        (rest, { command }) => rest.replaceAll(command, ""),
+        text,
+      )
+        .replaceAll(NPM_ACTION.href, "")
+        .replaceAll(NPM_ACTION.text, ""),
+    ).not.toMatch(/npm/i);
+    expect(text.replaceAll(COMMERCIAL_PHRASE, "")).not.toMatch(/commercial/i);
+  });
+
+  it("says nothing about licensing or terms other than the AGPL-3.0", async () => {
+    expect(await read()).not.toMatch(OTHER_LICENSING);
   });
 
   it("holds no fact that is true only for a while", async () => {
-    expect(await read()).not.toMatch(VOLATILE);
+    // The example's code is not a statement about today: `height: 100%` is CSS.
+    const prose = EMBED_EXAMPLE_FILES.reduce(
+      (text, { code }) => text.replaceAll(code, ""),
+      await read(),
+    );
+    expect(prose).not.toMatch(VOLATILE);
   });
 });
 
 describe("links to the repository's front page", () => {
   it.each([
-    ["the page: the hero's button and the footer's Source code", pageText, 2],
-    ["/index.md: the hero's button", () => markdownLoader().text(), 1],
+    [
+      "the page: the header's GitHub, the hero's View on GitHub and the footer's Source code",
+      pageText,
+      3,
+    ],
+    ["/index.md: the hero's View on GitHub", () => markdownLoader().text(), 1],
     ["/llms.txt: Source code", () => llmsLoader().text(), 1],
     [
-      "/llms-full.txt: its own Source code and the page's button",
+      "/llms-full.txt: its own Source code and the page's View on GitHub",
       () => fullLoader().text(),
       2,
     ],
@@ -106,12 +219,40 @@ describe("links to the repository's front page", () => {
   });
 
   it.each([
-    "https://github.com/MapCairn/mapcairn#documentation",
     "https://github.com/MapCairn/mapcairn#licence",
-    "https://github.com/MapCairn/mapcairn/tree/main/examples/embed",
+    "github.com/MapCairn/mapcairn/issues/1",
+    "http://www.github.com/MapCairn/mapcairn/pull/2",
+    "HTTPS://GITHUB.COM/MAPCAIRN/MAPCAIRN/Blob/main/README.md",
+    "https://github.com/MapCairn/mapcairn/tree/main/src",
     "https://github.com/MapCairn/mapcairn/contribute",
+    "https://github.com/MapCairn/mapcairn/blob/main/README.md",
   ])("refuses the deep link %s", (text) => {
-    expect(text).toMatch(REPOSITORY_DEEP_LINK);
+    expect(unlistedRepositoryLinks(`[a](${text})`)).toEqual([text]);
+  });
+
+  it("reads an allowed link with its trailing punctuation, in any case or scheme, as the allowed link", () => {
+    expect(
+      unlistedRepositoryLinks(
+        "See HTTP://www.GitHub.com/mapcairn/mapcairn/discussions. And github.com/MapCairn/mapcairn,",
+      ),
+    ).toEqual([]);
+  });
+
+  it.each(ALLOWED_PAGES)("allows %s, for a reason: %s", (url) => {
+    expect(unlistedRepositoryLinks(`[a](${url}) ${url}`)).toEqual([]);
+  });
+
+  it("keeps the allowed set equal to the pages the content links", () => {
+    expect(
+      [
+        ...REPOSITORY_PAGES,
+        CAPABILITY_MATRIX_LINK,
+        EXAMPLE_APP_LINK,
+        EMBED_GUIDE_LINK,
+      ]
+        .map((link) => link.href)
+        .sort(),
+    ).toEqual(ALLOWED_PAGES.map(([url]) => url).sort());
   });
 });
 

@@ -147,6 +147,7 @@ const EXPECTED_PLACEHOLDERS: Record<MessageKey, readonly string[]> = {
   "announce.detailShown": ["title"],
   "announce.detailError": [],
   "announce.searchResults": ["count"],
+  "announce.searchPicked": ["label"],
   "announce.coordinateResult": ["results", "label"],
   "announce.noResults": [],
   "announce.suggestions": ["count"],
@@ -696,6 +697,7 @@ const EXPECTED_PLACEHOLDERS: Record<MessageKey, readonly string[]> = {
   "host.notes.pinLookup": [],
   "host.notes.routing": [],
   "host.credits.fixTheMap": [],
+  "host.credits.about": [],
   "host.title.map": [],
   "privacy.title": [],
   "privacy.updated": ["date"],
@@ -731,6 +733,7 @@ const EXPECTED_PLACEHOLDERS: Record<MessageKey, readonly string[]> = {
   "host.about.link": [],
   "host.about.product": [],
   "host.map.summary": [],
+  "host.map.noScript": [],
 };
 
 /** Every `{name}` placeholder used in `value`, deduplicated. */

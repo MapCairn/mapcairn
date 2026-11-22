@@ -4,6 +4,7 @@ import { DRAW_KEY_HELP, MAP_KEY_HELP, resolveText } from "@mapcairn/core";
 import type { Ref } from "react";
 import { useMessages, usePreferences } from "../../services";
 import { Button } from "../../ui/Button";
+import { isSitePath, isWebAddress } from "../../ui/linkAddress";
 import { VisuallyHidden } from "../../ui/VisuallyHidden";
 import {
   type HeadingLevel,
@@ -13,25 +14,6 @@ import {
 } from "../Section";
 import { link, prose, subsection } from "../Section/Section.css";
 import { action, keys, shortcut, shortcuts } from "./HelpSection.css";
-
-/** Whether `href` is an absolute http or https address, the only kind the About link may point to. */
-function isWebAddress(href: string): boolean {
-  try {
-    const { protocol } = new URL(href);
-    return protocol === "http:" || protocol === "https:";
-  } catch {
-    return false;
-  }
-}
-
-/**
- * Whether `href` is a path on the host's own site (`/about`), the other kind of
- * address the About block's own-page link may take. A browser reads `//` and
- * `/\` as the start of another site's address, so neither counts.
- */
-function isSitePath(href: string): boolean {
-  return /^\/(?![/\\])/.test(href);
-}
 
 /** A link in the About block: where it goes and what it is called. */
 export interface HelpAboutLink {

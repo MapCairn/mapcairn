@@ -10,10 +10,15 @@ export const AA_NON_TEXT = 3;
 
 /**
  * Name of one of the representative map backdrops: white, black, a light map
- * and the default basemap's land colour. Indexing `representativeBackdrops`
- * with it keeps the two in step at compile time.
+ * and the land colours of the light and dark default basemaps. Indexing
+ * `representativeBackdrops` with it keeps the two in step at compile time.
  */
-export type BackdropName = "white" | "black" | "lightMap" | "defaultBasemap";
+export type BackdropName =
+  | "white"
+  | "black"
+  | "lightMap"
+  | "defaultBasemap"
+  | "defaultDarkBasemap";
 
 /** What a pair's foreground is: text, or a non-text mark such as an edge or ring. */
 export type PairKind = "text" | "non-text";
@@ -53,6 +58,12 @@ export type ContrastBackground =
 /** One foreground-and-background pair that must reach a contrast ratio. */
 export interface ContrastPair {
   foreground: ThemeColourRole;
+  /**
+   * A second colour that may carry the pair instead of the foreground, for
+   * a two-tone mark such as the focus ring: the pair holds when either tone
+   * reaches the ratio. The tones are held apart by a pair of their own.
+   */
+  alternate?: ThemeColourRole;
   background: ContrastBackground;
   kind: PairKind;
   /** Minimum contrast ratio. */
@@ -65,18 +76,23 @@ export interface ContrastPair {
 }
 
 /**
- * White and black bracket every map. The light map and the default basemap
- * are named as well rather than assumed to fall between them: a surface's
- * tint can make a mid-light backdrop the worst case for a colour that clears
- * both extremes.
+ * White and black bracket every map. The light map and the two default
+ * basemaps are named as well rather than assumed to fall between them: a
+ * surface's tint can make a mid-tone backdrop the worst case for a colour that
+ * clears both extremes, and Fiord's mid-dark blue is one.
  */
 const everyBackdrop: readonly BackdropName[] = [
   "white",
   "black",
   "lightMap",
   "defaultBasemap",
+  "defaultDarkBasemap",
 ];
-const bareMapBackdrops: readonly BackdropName[] = ["white", "black"];
+const bareMapBackdrops: readonly BackdropName[] = [
+  "white",
+  "black",
+  "defaultDarkBasemap",
+];
 
 const surfaceRoles = ["surface", "surfaceRaised"] as const;
 
@@ -139,6 +155,7 @@ export const contrastPairs: readonly ContrastPair[] = [
   opaquePair("danger", "dangerTint", "text"),
   {
     foreground: "focusRing",
+    alternate: "focusRingInner",
     background: "map",
     kind: "non-text",
     required: AA_NON_TEXT,
@@ -176,7 +193,12 @@ export function measurePair(
   backdrop: BackdropName | undefined,
 ): number {
   const under = backgroundUnder(roles, pair, backdrop);
-  return contrastRatio(compositeOver(roles[pair.foreground], under), under);
+  const ratioOf = (role: ThemeColourRole): number =>
+    contrastRatio(compositeOver(roles[role], under), under);
+  const own = ratioOf(pair.foreground);
+  return pair.alternate === undefined
+    ? own
+    : Math.max(own, ratioOf(pair.alternate));
 }
 
 function backgroundUnder(

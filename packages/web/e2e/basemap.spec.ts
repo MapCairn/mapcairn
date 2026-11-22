@@ -104,7 +104,7 @@ test.describe("basemaps", () => {
   }
 
   for (const colorScheme of ["light", "dark"] as const) {
-    test(`the picker is a radio group that starts on the default basemap in a ${colorScheme} theme`, async ({
+    test(`the picker is a radio group that starts on the theme's default basemap in a ${colorScheme} theme`, async ({
       page,
       mapPage,
     }) => {
@@ -116,7 +116,10 @@ test.describe("basemaps", () => {
       await expect(radios).toHaveCount(BASEMAP_COUNT);
       await expect(
         mapPage.basemapPicker.getByRole("radio", {
-          name: DEFAULT_VECTOR_BASEMAP_NAME,
+          name:
+            colorScheme === "dark"
+              ? FIORD_BASEMAP_NAME
+              : DEFAULT_VECTOR_BASEMAP_NAME,
         }),
       ).toBeChecked();
       await expect(
@@ -401,6 +404,39 @@ test.describe("basemaps", () => {
     });
   }
 
+  // Light chrome over Fiord, and dark chrome over Bright, happen when a visitor
+  // picks a basemap that is not their theme's default.
+  for (const colorScheme of ["light", "dark"] as const) {
+    for (const [basemapId, name] of [
+      [DEFAULT_VECTOR_BASEMAP_ID, DEFAULT_VECTOR_BASEMAP_NAME],
+      [FIORD_BASEMAP_ID, FIORD_BASEMAP_NAME],
+    ] as const) {
+      test(`has no axe violation over ${name} in a ${colorScheme} theme, with the sheet and the credits open @a11y`, async ({
+        page,
+        mapPage,
+      }) => {
+        await page.emulateMedia({ colorScheme });
+        await seedStoredSettings(page, { basemapId });
+        await mapPage.goto();
+        await collapseCredits(mapPage);
+        await mapPage.openMapOptions();
+        await expect(
+          mapPage.basemapPicker.getByRole("radio", { name, exact: true }),
+        ).toBeChecked();
+        expect(await axeViolations(page)).toEqual([]);
+        await mapPage.creditsButton.click();
+        await expect(mapPage.creditsRegion.getByRole("link")).toHaveText([
+          "© OpenStreetMap contributors",
+          "OpenFreeMap",
+          "OpenMapTiles",
+          "MapLibre",
+          "About MapCairn",
+        ]);
+        expect(await axeViolations(page)).toEqual([]);
+      });
+    }
+  }
+
   test("Dark is chosen from the picker, loads its own OpenFreeMap style, is saved, leaves Save image on, and a linked dark opens on it", async ({
     page,
     mapPage,
@@ -522,6 +558,7 @@ test.describe("basemaps", () => {
       await expect(mapPage.creditsRegion.getByRole("link")).toHaveText([
         RASTER_BASEMAP_CREDIT,
         "MapLibre",
+        "About MapCairn",
       ]);
       await mapPage.page.keyboard.press("Escape");
 
@@ -533,6 +570,7 @@ test.describe("basemaps", () => {
         "OpenFreeMap",
         "OpenMapTiles",
         "MapLibre",
+        "About MapCairn",
       ]);
 
       await mapPage.goto(`#basemap=${DARK_BASEMAP_ID}`);
@@ -543,6 +581,7 @@ test.describe("basemaps", () => {
         "OpenFreeMap",
         "OpenMapTiles",
         "MapLibre",
+        "About MapCairn",
       ]);
     });
   });

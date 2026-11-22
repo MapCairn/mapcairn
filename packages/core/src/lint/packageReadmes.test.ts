@@ -356,12 +356,20 @@ describe("the Next steps list in the README of @mapcairn/sdk", () => {
   });
 });
 
-/** The stable Status text the release guide gives the Release pull request. */
+/** The stable Status text the release guide gives every README. */
 function stableStatus(guide: string): string[] {
   return guide
     .split("\n")
     .map((line) => line.trim())
     .filter((line) => line.startsWith("**Status:** pre-1.0"));
+}
+
+/** The root README's form of the stable Status text: its links are relative. */
+function rootStatus(status: string): string {
+  return status.replaceAll(
+    "https://github.com/MapCairn/mapcairn/blob/main/",
+    "",
+  );
 }
 
 describe("the release guide's steps for the stable version", () => {
@@ -370,24 +378,55 @@ describe("the release guide's steps for the stable version", () => {
     "utf8",
   );
 
-  it("names the two test files whose install literals the Release pull request updates, and each still holds its literal", () => {
+  it("names the two test files whose install literals the Release pull request updated, and each holds its literal without `@next`", () => {
     for (const [file, literal] of [
       [
         "packages/core/src/lint/readme.test.ts",
-        "npm install @mapcairn/sdk@next react react-dom maplibre-gl",
+        "npm install @mapcairn/sdk react react-dom maplibre-gl",
       ],
       [
         "packages/core/src/lint/packageReadmes.test.ts",
-        "npm install @mapcairn/map@next @mapcairn/core@next @mapcairn/theme@next",
+        "npm install @mapcairn/map @mapcairn/core @mapcairn/theme",
       ],
     ] as const) {
       expect(guide, file).toContain(file);
-      expect(guide, literal).toContain(literal);
       expect(readFileSync(path.join(REPO, file), "utf8"), file).toContain(
         literal,
       );
     }
   });
+
+  it.each([
+    "README.md",
+    ...(BUILT_SDK_PACKAGES as string[]).map(
+      (name) => `packages/${name}/README.md`,
+    ),
+  ])(
+    "gives %s the stable Status line while no version is a prerelease",
+    (file) => {
+      const versions = (BUILT_SDK_PACKAGES as string[]).map(
+        (name) =>
+          (
+            JSON.parse(
+              readFileSync(
+                path.join(REPO, "packages", name, "package.json"),
+                "utf8",
+              ),
+            ) as { readonly version: string }
+          ).version,
+      );
+      const [status = ""] = stableStatus(guide);
+      const expected = file === "README.md" ? rootStatus(status) : status;
+      const actual = readFileSync(path.join(REPO, file), "utf8")
+        .split("\n")
+        .find((line) => line.startsWith("**Status:**"));
+      if (versions.some(isPrerelease)) {
+        expect(actual).not.toBe(expected);
+      } else {
+        expect(actual).toBe(expected);
+      }
+    },
+  );
 
   it("holds one stable Status line that the Status rules accept once no version is a release candidate", () => {
     const [status = "", ...others] = stableStatus(guide);
@@ -403,10 +442,13 @@ describe("the release guide's steps for the stable version", () => {
     );
   });
 
-  it("names the sentences in each README the Release pull request changes", () => {
-    expect(guide).toContain("Until `0.1.0`, add `@next`");
-    expect(guide).toContain("docs/guides/public-api.md");
-    expect(guide).toContain("the `0.1.0` release changes it");
+  it("leaves no release-candidate wording in the public API guide's sentence on the Status line", () => {
+    const publicApi = readFileSync(
+      path.join(REPO, "docs/guides/public-api.md"),
+      "utf8",
+    );
+    expect(publicApi).not.toContain("the `0.1.0` release changes it");
+    expect(publicApi).toContain("docs/guides/releasing.md");
   });
 
   it("leaves INSTALL_COMMAND to the follow-up", () => {
@@ -523,7 +565,7 @@ describe("the README of @mapcairn/map", () => {
 
   it("installs core and theme beside it, because the examples import them", () => {
     expect(readme).toContain(
-      "npm install @mapcairn/map@next @mapcairn/core@next @mapcairn/theme@next",
+      "npm install @mapcairn/map @mapcairn/core @mapcairn/theme",
     );
   });
 

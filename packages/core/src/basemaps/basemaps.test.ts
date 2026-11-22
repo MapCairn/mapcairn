@@ -17,9 +17,13 @@ import {
   creditsLine,
   DEFAULT_BASEMAP_BACKGROUND,
   DEFAULT_BASEMAP_ID,
+  DEFAULT_DARK_BASEMAP_BACKGROUND,
+  DEFAULT_DARK_BASEMAP_ID,
+  defaultBasemapFor,
   getBasemap,
   MAPLIBRE_CREDIT,
   omittedLayers,
+  resolveBasemapFor,
   usesMoreData,
 } from "./basemaps";
 
@@ -255,7 +259,7 @@ describe("BASEMAPS", () => {
     expect(getBasemap("dark")?.swatch).toBe("#0c0c0c");
   });
 
-  it("gives every light built-in basemap no swatch, so it shows the default land colour", () => {
+  it("gives every light built-in basemap no swatch, so it shows the light default's land colour", () => {
     for (const basemap of BASEMAPS) {
       if (basemap.appearance === "light") {
         expect(basemap.swatch, basemap.id).toBeUndefined();
@@ -519,5 +523,96 @@ describe("the built-in basemaps' names", () => {
     expect(
       BASEMAPS.every((basemap) => basemap.name.startsWith("basemap.")),
     ).toBe(true);
+  });
+});
+
+describe("the default for each theme", () => {
+  it("is Bright in the light theme and Fiord in the dark theme", () => {
+    expect(DEFAULT_BASEMAP_ID).toBe("bright");
+    expect(DEFAULT_DARK_BASEMAP_ID).toBe("fiord");
+    expect(defaultBasemapFor(BUILT_IN_BASEMAP_CATALOGUE, "light").id).toBe(
+      "bright",
+    );
+    expect(defaultBasemapFor(BUILT_IN_BASEMAP_CATALOGUE, "dark").id).toBe(
+      "fiord",
+    );
+  });
+
+  it("names Fiord's own land colour as the dark default's background", () => {
+    expect(DEFAULT_DARK_BASEMAP_BACKGROUND).toBe("#45516e");
+    expect(getBasemap(DEFAULT_DARK_BASEMAP_ID)?.swatch).toBe(
+      DEFAULT_DARK_BASEMAP_BACKGROUND,
+    );
+  });
+
+  it("is the same basemap in both themes for a catalogue that names no per-theme default", () => {
+    const catalogue = createBasemapCatalogue(
+      [FAKE_VECTOR_BASEMAP, FAKE_RASTER_BASEMAP],
+      "fake-raster",
+    );
+    expect(defaultBasemapFor(catalogue, "light").id).toBe("fake-raster");
+    expect(defaultBasemapFor(catalogue, "dark").id).toBe("fake-raster");
+  });
+
+  it("takes each theme's default from the host, and falls back to the default for a theme it leaves out", () => {
+    const list = [
+      FAKE_VECTOR_BASEMAP,
+      FAKE_RASTER_BASEMAP,
+      FAKE_HYBRID_BASEMAP,
+    ];
+    const catalogue = createBasemapCatalogue(list, "fake-vector", {
+      dark: "fake-hybrid",
+    });
+    expect(defaultBasemapFor(catalogue, "light").id).toBe("fake-vector");
+    expect(defaultBasemapFor(catalogue, "dark").id).toBe("fake-hybrid");
+    const both = createBasemapCatalogue(list, "fake-vector", {
+      light: "fake-raster",
+      dark: "fake-hybrid",
+    });
+    expect(defaultBasemapFor(both, "light").id).toBe("fake-raster");
+  });
+
+  it("treats a per-theme default set to undefined as left out, as a host that spreads optional config may pass it", () => {
+    const list = [FAKE_VECTOR_BASEMAP, FAKE_RASTER_BASEMAP];
+    const catalogue = createBasemapCatalogue(list, "fake-raster", {
+      light: undefined,
+      dark: undefined,
+    });
+    expect(defaultBasemapFor(catalogue, "dark").id).toBe("fake-raster");
+    const mixed = createBasemapCatalogue(list, "fake-vector", {
+      light: undefined,
+      dark: "fake-raster",
+    });
+    expect(defaultBasemapFor(mixed, "light").id).toBe("fake-vector");
+    expect(defaultBasemapFor(mixed, "dark").id).toBe("fake-raster");
+  });
+
+  it("refuses a per-theme default that is not in the catalogue", () => {
+    expect(() =>
+      createBasemapCatalogue([FAKE_VECTOR_BASEMAP], "fake-vector", {
+        dark: "missing",
+      }),
+    ).toThrow(/missing/);
+  });
+
+  it("resolves a stored or linked id to its basemap, and nothing or an unknown id to the theme's default", () => {
+    const catalogue = BUILT_IN_BASEMAP_CATALOGUE;
+    expect(resolveBasemapFor(catalogue, "liberty", "dark").id).toBe("liberty");
+    expect(resolveBasemapFor(catalogue, "bright", "dark").id).toBe("bright");
+    for (const id of [
+      null,
+      undefined,
+      "auto",
+      "maptoolkit-dark",
+      "",
+      "__proto__",
+    ]) {
+      expect(resolveBasemapFor(catalogue, id, "light").id, String(id)).toBe(
+        "bright",
+      );
+      expect(resolveBasemapFor(catalogue, id, "dark").id, String(id)).toBe(
+        "fiord",
+      );
+    }
   });
 });

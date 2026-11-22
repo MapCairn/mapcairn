@@ -35,6 +35,11 @@ export interface ContrastPair {
   readonly kind: PairKind;
   /** The AA minimum ratio for {@link kind}. */
   readonly minimum: number;
+  /**
+   * True for a map overlay that is drawn on a halo (`mapHalo`), so it may show
+   * by its halo. A mark drawn without one is measured against the map alone.
+   */
+  readonly drawnWithHalo?: boolean;
 }
 
 /** Builds a pair with the minimum that matches its kind. */
@@ -124,14 +129,26 @@ export const CONTRAST_PAIRS: readonly ContrastPair[] = [
     "focusRing",
     "non-text",
   ),
-  pair("pin-basemap", "Pin on any basemap", "mapPin", "basemaps", "non-text"),
-  pair(
-    "accuracy-basemap",
-    "Accuracy outline on any basemap",
-    "mapAccuracy",
-    "basemaps",
-    "non-text",
-  ),
+  {
+    ...pair(
+      "pin-basemap",
+      "Pin on any basemap",
+      "mapPin",
+      "basemaps",
+      "non-text",
+    ),
+    drawnWithHalo: true,
+  },
+  {
+    ...pair(
+      "accuracy-basemap",
+      "Accuracy outline on any basemap",
+      "mapAccuracy",
+      "basemaps",
+      "non-text",
+    ),
+    drawnWithHalo: true,
+  },
   pair("pin-halo", "Pin against its halo", "mapPin", "mapHalo", "non-text"),
   pair(
     "line-halo",
@@ -180,9 +197,9 @@ export const ROLE_PAIRS: Readonly<Record<ColourRole, string | ExemptRole>> = {
 
 /**
  * The opaque colours a pair's background becomes. A translucent surface takes
- * on whatever map is under it, so it is flattened over pure white and pure
- * black, the two extremes; a map overlay is placed on every representative
- * basemap.
+ * on whatever map is under it, so it is flattened over pure white, pure black
+ * and Fiord's mid-dark land, the extremes and the mid-tone; a map overlay is
+ * placed on every representative basemap.
  */
 function backgroundsFor(pairing: ContrastPair, roles: ColourRoles): Rgba[] {
   if (pairing.background === "basemaps") {
@@ -191,16 +208,42 @@ function backgroundsFor(pairing: ContrastPair, roles: ColourRoles): Rgba[] {
     );
   }
   const role = roles[pairing.background];
-  return [representativeBackdrops.white, representativeBackdrops.black].map(
-    (backdrop) => compositeOver(role, backdrop),
+  return [
+    representativeBackdrops.white,
+    representativeBackdrops.black,
+    representativeBackdrops.defaultDarkBasemap,
+  ].map((backdrop) => compositeOver(role, backdrop));
+}
+
+/**
+ * The contrast of a pair over one backdrop. A map overlay drawn on a halo shows
+ * when the mark clears the backdrop, or when its halo clears the backdrop and
+ * the mark clears its halo; any other pair, and a mark with no halo, is the
+ * plain ratio.
+ */
+function ratioOver(
+  pairing: ContrastPair,
+  roles: ColourRoles,
+  under: Rgba,
+): number {
+  const mark = compositeOver(roles[pairing.foreground], under);
+  const direct = contrastRatio(mark, under);
+  if (pairing.background !== "basemaps" || pairing.drawnWithHalo !== true) {
+    return direct;
+  }
+  const halo = parseColour(roles.mapHalo);
+  const byHalo = Math.min(
+    contrastRatio(halo, under),
+    contrastRatio(mark, halo),
   );
+  return Math.max(direct, byHalo);
 }
 
 /** The worst-case contrast ratio of a pair in one set of colour roles. */
 export function measurePair(pairing: ContrastPair, roles: ColourRoles): number {
   return Math.min(
     ...backgroundsFor(pairing, roles).map((under) =>
-      contrastRatio(compositeOver(roles[pairing.foreground], under), under),
+      ratioOver(pairing, roles, under),
     ),
   );
 }

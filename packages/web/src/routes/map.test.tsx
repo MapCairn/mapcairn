@@ -56,6 +56,7 @@ describe("map route server render", () => {
         { key: "ui.skipToMap", params: {} },
         { key: "app.loadingMap", params: {} },
         { key: "host.map.summary", params: {} },
+        { key: "host.map.noScript", params: {} },
         { key: "host.about.product", params: {} },
       ]),
     );
@@ -76,11 +77,24 @@ describe("map route server render", () => {
 
   it("says in the server's HTML what the playground is, for readers that do not run the app", () => {
     const header = html.slice(
-      html.indexOf("<header>"),
+      html.indexOf("<header"),
       html.indexOf("</header>"),
     );
     expect(header).toContain(
       "The MapCairn playground is an interactive map built with the MapCairn SDK.",
+    );
+  });
+
+  it("puts the no-script notice inside the main landmark, so it is not empty, and not in the banner", () => {
+    const header = html.slice(
+      html.indexOf("<header"),
+      html.indexOf("</header>"),
+    );
+    const main = html.slice(html.indexOf("<main"), html.indexOf("</main>"));
+    expect(header).not.toContain("<noscript>");
+    expect(main).toContain("<noscript>");
+    expect(main.indexOf("<noscript>")).toBeLessThan(
+      main.indexOf('data-testid="chrome-skeleton"'),
     );
   });
 
@@ -90,13 +104,16 @@ describe("map route server render", () => {
       html.indexOf("</noscript>"),
     );
     expect(noscript).toContain(
-      '<a href="/">About MapCairn, the SDK behind this map</a>',
+      "The map needs JavaScript. You can still read about MapCairn, its source code and its privacy policy.",
     );
-    expect(noscript).toContain(
-      '<a href="https://github.com/MapCairn/mapcairn">View the source code and licence on GitHub</a>',
+    expect(noscript).toMatch(
+      /<a class="[^"]+" href="\/">About MapCairn, the SDK behind this map<\/a>/,
     );
-    expect(noscript).toContain(
-      '<a href="/privacy">Read the privacy policy</a>',
+    expect(noscript).toMatch(
+      /<a class="[^"]+" href="https:\/\/github\.com\/MapCairn\/mapcairn">View the source code and licence on GitHub<\/a>/,
+    );
+    expect(noscript).toMatch(
+      /<a class="[^"]+" href="\/privacy">Read the privacy policy<\/a>/,
     );
   });
 

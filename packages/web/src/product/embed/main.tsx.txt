@@ -1,19 +1,8 @@
-// SPDX-License-Identifier: AGPL-3.0-only
-// Copyright MapCairn contributors
-/*
- * The embedding example the product page shows, from the first import on
- * (`EMBED_EXAMPLE_CODE` in `productContent.ts`). The README's "Embed a map"
- * `main.tsx` carries the same `MapScreen` and `Chrome`, character for
- * character, and a test keeps them equal; the README's file adds the page's
- * entry and the MapLibre adapter, which this page leaves on the fakes. It is
- * real code: typecheck compiles it against the SDK's entry points and
- * `embedExample.test.tsx` renders it, so the page cannot show code that does
- * not work.
- */
-import "@mapcairn/theme/tokens.css";
-import "@mapcairn/map/styles.css";
-import { createFakeServices } from "@mapcairn/core";
+/// <reference types="vite/client" />
+import "@mapcairn/sdk/styles.css";
+import "./page.css";
 import {
+  createFakeServices,
   FocusRegistryProvider,
   LiveRegionProvider,
   MapChrome,
@@ -23,11 +12,24 @@ import {
   TooltipProvider,
   useBasemaps,
   useMap,
-} from "@mapcairn/map";
-import { type ReactNode, useState } from "react";
+} from "@mapcairn/sdk";
+import { createMapLibreMapAdapter } from "@mapcairn/sdk/adapter-maplibre";
+import { type ReactNode, StrictMode } from "react";
+import { createRoot } from "react-dom/client";
 
-export function App() {
-  const [services] = useState(createFakeServices);
+const services = createFakeServices({
+  createMapAdapter: () =>
+    createMapLibreMapAdapter({
+      loadWorkerUrl: async () => {
+        const worker = await import(
+          "maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url"
+        );
+        return worker.default;
+      },
+    }),
+});
+
+function App() {
   return (
     <ServicesProvider services={services}>
       <LiveRegionProvider>
@@ -72,3 +74,13 @@ function Chrome({ background }: { readonly background: ReactNode }) {
     </FocusRegistryProvider>
   );
 }
+
+const root = document.getElementById("root");
+if (!root) {
+  throw new Error("The page has no #root element.");
+}
+createRoot(root).render(
+  <StrictMode>
+    <App />
+  </StrictMode>,
+);

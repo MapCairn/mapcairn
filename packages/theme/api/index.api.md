@@ -5,7 +5,7 @@
 ```ts
 
 // @public
-export type BackdropName = "white" | "black" | "lightMap" | "defaultBasemap";
+export type BackdropName = "white" | "black" | "lightMap" | "defaultBasemap" | "defaultDarkBasemap";
 
 // @public
 const blur_2: `var(--${string})`;

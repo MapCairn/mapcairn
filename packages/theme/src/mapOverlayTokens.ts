@@ -8,9 +8,11 @@ import { tokens } from "./tokens.css";
  * tile-error banner. Overlay components style from these alone, so they
  * look the same on every map engine and never import an engine's styles.
  *
- * Each colour clears 3:1 against light and dark basemaps; `contrast.test.ts`
- * enforces it. The fills are translucent by design, so the outline beside
- * them carries the contrast.
+ * Each colour shows over light and dark basemaps by clearing 3:1 itself, or
+ * by its halo (which the pin, the lines and the accuracy outline all draw)
+ * clearing 3:1 and the colour clearing 3:1 against the halo;
+ * `contrast.test.ts` enforces it. The fills are translucent by design, so the
+ * outline beside them carries the contrast.
  */
 export const mapOverlayTokens = {
   /** The map element's colour before tiles load. */

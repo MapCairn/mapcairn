@@ -169,9 +169,9 @@ describe("LocalStorageSettingsStore", () => {
     expect(store.get().basemapId).toBe("liberty");
   });
 
-  it("starts on the default basemap when nothing is saved, and saves nothing until a choice is made", () => {
+  it("has no basemap choice when nothing is saved, so the default follows the theme, and saves nothing until a choice is made", () => {
     const { store, storage } = setup({});
-    expect(store.get().basemapId).toBe("bright");
+    expect(store.get().basemapId).toBeNull();
     store.set({ units: "imperial" });
     expect(storage.getItem("mapcairn:basemapId")).toBeNull();
   });
@@ -194,11 +194,26 @@ describe("LocalStorageSettingsStore", () => {
       zoomButtons: null,
       saveData: null,
       projection: "flat",
-      basemapId: "bright",
+      basemapId: null,
       lastView: null,
       tourSeen: null,
       language: null,
     });
+  });
+
+  it("keeps a stored Bright as a choice, because only a pick is ever saved", () => {
+    const { store } = setup({ "mapcairn:basemapId": '"bright"' });
+    expect(store.get().basemapId).toBe("bright");
+  });
+
+  it("reads a stored null as no choice, and writes one when a choice is cleared", () => {
+    const { store, storage } = setup({ "mapcairn:basemapId": '"osm"' });
+    store.set({ basemapId: null });
+    expect(store.get().basemapId).toBeNull();
+    expect(storage.getItem("mapcairn:basemapId")).toBe("null");
+    expect(
+      setup({ "mapcairn:basemapId": "null" }).store.get().basemapId,
+    ).toBeNull();
   });
 
   it("reads a stored language tag, and ignores anything that is not a tag", () => {

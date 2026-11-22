@@ -19,19 +19,27 @@ const ICONS = { idle: Copy, copied: Check, failed: X } as const;
 export interface CopyCodeButtonProps {
   /** The source to copy, exactly as the example shows it. */
   readonly code: string;
+  /** What the code is, such as its file name, so each button on a page has its own name. */
+  readonly label: string;
   readonly clipboard: ClipboardPort;
 }
 
 /**
- * Copies a code example on click. The button's own words show the outcome
- * (Copied, which reverts after {@link COPIED_FEEDBACK_MS}, or Copy failed,
- * which stays until the next try), and the outcome is also announced: politely
- * when it worked, assertively when it did not, with how to copy by hand. Each
+ * Copies a code example on click: a small icon button that sits in the
+ * corner of its code. Its icon shows the outcome (a check once copied, which
+ * reverts after {@link COPIED_FEEDBACK_MS}, or a cross if the copy failed,
+ * which stays until the next try), its accessible name says it in words
+ * ("Copied, src/main.tsx"), and the outcome is also announced: politely when
+ * it worked, assertively when it did not, with how to copy by hand. Each
  * successful copy gets the full time on Copied, and only the latest click's
  * outcome is shown or announced. Focus stays on the button, which is never
- * disabled.
+ * disabled. Its name adds what it copies, because a page can hold several.
  */
-export function CopyCodeButton({ code, clipboard }: CopyCodeButtonProps) {
+export function CopyCodeButton({
+  code,
+  label,
+  clipboard,
+}: CopyCodeButtonProps) {
   // `attempt` counts outcomes, so each successful copy restarts the reset
   // timer even when the button already says Copied.
   const [{ state, attempt }, setOutcome] = useState<{
@@ -68,10 +76,13 @@ export function CopyCodeButton({ code, clipboard }: CopyCodeButtonProps) {
     }
     if (result.ok) {
       setOutcome({ state: "copied", attempt: click });
-      announce(COPY_CODE.copiedMessage, { keep: true });
+      announce(COPY_CODE.copiedMessage(label), { keep: true });
     } else {
       setOutcome({ state: "failed", attempt: click });
-      announce(COPY_CODE.failedMessage, { priority: "assertive", keep: true });
+      announce(COPY_CODE.failedMessage(label), {
+        priority: "assertive",
+        keep: true,
+      });
     }
   }
 
@@ -80,11 +91,10 @@ export function CopyCodeButton({ code, clipboard }: CopyCodeButtonProps) {
       type="button"
       className={styles.copyButton}
       data-state={state}
-      data-testid="copy-code"
+      aria-label={`${COPY_CODE[state]}, ${label}`}
       onClick={copy}
     >
       <Icon icon={ICONS[state]} className={styles.copyIcon} />
-      {COPY_CODE[state]}
     </button>
   );
 }

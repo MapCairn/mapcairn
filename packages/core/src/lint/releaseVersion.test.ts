@@ -82,8 +82,8 @@ describe("versions", () => {
     ).toBeGreaterThan(0);
   });
 
-  it("gives an internal range a caret for a release and the exact version for a prerelease", () => {
-    expect(internalRange(version("0.1.0"))).toBe("^0.1.0");
+  it("gives an internal range the exact version, for a release and a prerelease alike", () => {
+    expect(internalRange(version("0.1.0"))).toBe("0.1.0");
     expect(internalRange(version("0.1.0-rc.1"))).toBe("0.1.0-rc.1");
   });
 

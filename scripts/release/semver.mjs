@@ -88,16 +88,18 @@ export function compareVersions(a, b) {
 }
 
 /**
- * The range an internal dependency on a release takes: a caret range for a
- * release and the exact version for a prerelease, because `^0.1.0` does not
- * match `0.1.0-rc.1` and `AGENTS.md` pins prereleases exactly.
+ * The range an internal dependency on a release takes: always the exact
+ * version, for a release and a prerelease alike. `map` and
+ * `adapter-maplibre` compile the theme's token names into their own CSS, and
+ * those generated names may change in any release, so a package must only
+ * ever meet the theme (and the other SDK packages) it was built with. A
+ * prerelease needs it anyway, because `^0.1.0` does not match `0.1.0-rc.1`.
  *
  * @param {Version} version
  * @returns {string}
  */
 export function internalRange(version) {
-  const text = formatVersion(version);
-  return isPrerelease(version) ? text : `^${text}`;
+  return formatVersion(version);
 }
 
 /**

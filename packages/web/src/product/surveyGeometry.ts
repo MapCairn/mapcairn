@@ -10,23 +10,24 @@ import { STONES } from "../app/cairnStones";
 import { CONTOUR_VIEW_BOX, SUMMIT } from "./contours";
 
 /*
- * Where every mark of the product page's survey sheet goes, worked out once
+ * Where every mark of the product page's relief strip goes, worked out once
  * from a few constants, so the marks agree by construction: the measured line
- * starts at the pin's tip and ends at the cairn's foot; its label is its own
- * length on the scale bar's scale; the scale bar's ticks are that scale's
- * quarters; the crosshair's lines meet on its centre; the north arrow points
- * up the grid. `SurveyArt.tsx` draws only what this module returns, the link
- * preview image reuses it, and `surveyGeometry.test.ts` checks the relations
- * and that no two marks overlap.
+ * starts at the pin's tip and ends at the cairn's foot, and its label is its
+ * own length on the sheet's scale. `SurveyArt.tsx` draws only what this module
+ * returns, its stylesheet places the two text labels with the same numbers,
+ * the link preview image reuses the pin, the cairn and the grid, and
+ * `surveyGeometry.test.ts` checks the relations. The drawing holds no text:
+ * the two labels are HTML at a fixed size, set beside the marks they name, so
+ * they never shrink with the drawing.
  */
 
-/** A point in the art's view box. */
+/** A point in the sheet's view box. */
 export interface Point {
   readonly x: number;
   readonly y: number;
 }
 
-/** A box in the art's view box. */
+/** A box in the sheet's view box. */
 export interface Box {
   readonly left: number;
   readonly top: number;
@@ -36,17 +37,6 @@ export interface Box {
 
 /** The size of the sheet, in view box units. */
 export const SHEET = CONTOUR_VIEW_BOX;
-
-/** The room around the sheet for the grid numbers. */
-export const COLLAR = 26;
-
-/** The art's whole view box: the sheet and its collar. */
-export const VIEW_BOX = {
-  x: -COLLAR,
-  y: -COLLAR,
-  width: SHEET.width + COLLAR * 2,
-  height: SHEET.height + COLLAR * 2,
-} as const;
 
 /** The language the page's figures are written in. */
 export const LANGUAGE = "en-GB";
@@ -58,60 +48,53 @@ const FIGURE_MESSAGES = createMessageCatalogue(
   EN_GB_CATALOGUE,
 );
 
-/** The size of the art's labels, in view box units (the type scale's small step at the sheet's own scale). */
-export const LABEL_SIZE = 13;
-
 /** View box units in one kilometre on the ground. */
 export const UNITS_PER_KM = 160;
 
 /** Metres in a kilometre. */
 const METRES_PER_KM = 1000;
 
-/** The grid's spacing in view box units: one kilometre, so each grid number is a kilometre. */
-export const GRID_STEP = UNITS_PER_KM;
+/** The grid's spacing in view box units: one kilometre. */
+const GRID_STEP = UNITS_PER_KM;
 
-/** How far a grid tick reaches into the sheet. */
+/** How far a grid tick reaches into the sheet. The strip does not draw the grid; the link preview image does. */
 export const TICK_LENGTH = 6;
 
-/** The first easting along the top and the first northing down the side, as on a sheet's grid references. */
-const FIRST_EASTING = 41;
-const FIRST_NORTHING = 12;
-
-/** The grid lines' positions along each axis, inside the sheet. */
-function gridPositions(extent: number): number[] {
-  const positions: number[] = [];
-  for (let at = GRID_STEP; at < extent; at += GRID_STEP) {
-    positions.push(at);
-  }
-  return positions;
-}
-
-/** A grid tick and its number, centred on the tick. */
+/** A grid line's place along an axis. */
 export interface GridTick {
   readonly at: number;
-  readonly label: string;
 }
 
-/** Two figures, padded, as grid numbers are written. */
-function gridNumber(value: number): string {
-  return String(value).padStart(2, "0");
+/** The grid lines' ticks along an axis, a kilometre apart, inside the sheet. */
+function gridTicks(extent: number): GridTick[] {
+  const ticks: GridTick[] = [];
+  for (let at = GRID_STEP; at < extent; at += GRID_STEP) {
+    ticks.push({ at });
+  }
+  return ticks;
 }
 
-/** The eastings: ticks along the top edge, numbered left to right. */
-export const EASTINGS: readonly GridTick[] = gridPositions(SHEET.width).map(
-  (at) => ({ at, label: gridNumber(FIRST_EASTING + at / GRID_STEP) }),
-);
+/** The eastings: ticks along the top edge. */
+export const EASTINGS: readonly GridTick[] = gridTicks(SHEET.width);
 
-/** The northings: ticks down the left edge, numbered so north (up) is the larger. */
-export const NORTHINGS: readonly GridTick[] = gridPositions(SHEET.height).map(
-  (at) => ({ at, label: gridNumber(FIRST_NORTHING - at / GRID_STEP) }),
-);
+/** The northings: ticks down the left edge. */
+export const NORTHINGS: readonly GridTick[] = gridTicks(SHEET.height);
 
 /** The cairn stands on the summit: its foot is the summit point. */
 export const CAIRN_FOOT: Point = { x: SUMMIT.x, y: SUMMIT.y };
 
 /** How much the brand's stones are scaled down for the art. */
-export const CAIRN_SCALE = 0.075;
+export const CAIRN_SCALE = 0.1;
+
+/** The box of a list of points. */
+function boxOf(points: readonly Point[]): Box {
+  return {
+    left: Math.min(...points.map((point) => point.x)),
+    right: Math.max(...points.map((point) => point.x)),
+    top: Math.min(...points.map((point) => point.y)),
+    bottom: Math.max(...points.map((point) => point.y)),
+  };
+}
 
 /** The brand's stones' points, in the master's coordinates. */
 function stonePoints(): Point[] {
@@ -127,8 +110,7 @@ function stonePoints(): Point[] {
 }
 
 /** The master's stones' extent: their foot is the middle of the lowest edge. */
-const STONE_POINTS = stonePoints();
-const STONES_BOX = boxOf(STONE_POINTS);
+const STONES_BOX = boxOf(stonePoints());
 const STONES_FOOT: Point = {
   x: (STONES_BOX.left + STONES_BOX.right) / 2,
   y: STONES_BOX.bottom,
@@ -145,10 +127,15 @@ export const CAIRN_BOX: Box = {
   bottom: CAIRN_FOOT.y,
 };
 
-/** The summit's spot height, beside the cairn. */
+/**
+ * The summit's spot height, set on the cairn's start side, so it has room at
+ * any text size however near the strip's end edge the cairn is: `at` is the
+ * middle of the cairn's start edge, and the label's end edge goes a gap before
+ * it (the stylesheet adds the gap and shifts the label by its own width).
+ */
 export const SPOT_HEIGHT = {
   text: formatNumber(SUMMIT.metres, LANGUAGE),
-  at: { x: CAIRN_BOX.right + 6, y: CAIRN_FOOT.y - 4 },
+  at: { x: CAIRN_BOX.left, y: (CAIRN_BOX.top + CAIRN_BOX.bottom) / 2 },
 } as const;
 
 /** The dropped pin: its tip is the point it marks. */
@@ -181,210 +168,83 @@ export const MEASURE_UNITS = Math.hypot(
   MEASURE.to.y - MEASURE.from.y,
 );
 
-/** The measured line's length on the ground, in metres, on the scale bar's scale. */
+/** The measured line's length on the ground, in metres, on the sheet's scale. */
 export const MEASURE_METRES = (MEASURE_UNITS / UNITS_PER_KM) * METRES_PER_KM;
 
-/** The clear space between the length label's box and the line. */
-const LABEL_CLEARANCE = 4;
+/**
+ * The length label, written as the playground's measure tool writes it. `at`
+ * is the line's middle: the stylesheet sets the label's top start corner a
+ * fixed distance down and along from it, on the side of the line the line
+ * rises away from, so the line never crosses the label at any scale.
+ */
+export const MEASURE_LABEL = {
+  text: formatDistance(MEASURE_METRES, "metric", FIGURE_MESSAGES),
+  at: {
+    x: (MEASURE.from.x + MEASURE.to.x) / 2,
+    y: (MEASURE.from.y + MEASURE.to.y) / 2,
+  },
+} as const;
 
-/** Where a label's box sits around its baseline anchor: its middle is this far above the baseline. */
-const LABEL_MIDDLE_ABOVE_BASELINE = LABEL_SIZE * 0.375;
+/** The clear space kept round the marks a crop must show. */
+const CROP_MARGIN = 24;
+
+/** The part of the sheet the strip shows, top to bottom: the marks and a margin. */
+const BAND = {
+  top: Math.min(CAIRN_BOX.top, PIN_BOX.top) - CROP_MARGIN,
+  bottom: Math.max(CAIRN_BOX.bottom, PIN_BOX.bottom) + CROP_MARGIN,
+} as const;
 
 /**
- * The length label: the line's own length, written as the playground's
- * measure tool writes it, beside the line's middle on its lower side. Its box
- * is moved out along the line's normal just far enough that the line clears
- * it by {@link LABEL_CLEARANCE}.
+ * A crop: which part of the sheet a frame shows. The frame has the crop's
+ * shape (`aspect`, as width over height); the drawing inside it is `zoom`
+ * times the frame's width and is moved by `marginInlineStart` and
+ * `marginBlockStart`, which are shares of the frame's width (a percentage
+ * margin is always one), so the crop's top start corner lands on the frame's.
  */
-export const MEASURE_LABEL = (() => {
-  const text = formatDistance(MEASURE_METRES, "metric", FIGURE_MESSAGES);
-  const dx = (MEASURE.to.x - MEASURE.from.x) / MEASURE_UNITS;
-  const dy = (MEASURE.to.y - MEASURE.from.y) / MEASURE_UNITS;
-  // One of the two unit normals points down the sheet; the label goes that way.
-  const sign = dx >= 0 ? 1 : -1;
-  const normal = { x: -dy * sign, y: dx * sign };
-  const box = labelBox(text, { x: 0, y: 0 }, "middle");
-  const halfWidth = (box.right - box.left) / 2;
-  const halfHeight = (box.bottom - box.top) / 2;
-  const reach =
-    halfWidth * Math.abs(normal.x) +
-    halfHeight * Math.abs(normal.y) +
-    LABEL_CLEARANCE;
-  const centre = {
-    x: (MEASURE.from.x + MEASURE.to.x) / 2 + normal.x * reach,
-    y: (MEASURE.from.y + MEASURE.to.y) / 2 + normal.y * reach,
-  };
+export interface Crop {
+  readonly box: Box;
+  readonly zoom: number;
+  readonly aspect: number;
+  readonly marginInlineStart: number;
+  readonly marginBlockStart: number;
+}
+
+/** The crop that shows `box` of the sheet. */
+export function cropOf(box: Box): Crop {
+  const width = box.right - box.left;
+  const height = box.bottom - box.top;
   return {
-    text,
-    at: { x: centre.x, y: centre.y + LABEL_MIDDLE_ABOVE_BASELINE },
-  } as const;
-})();
-
-/** The crosshair: the map's centre, as the playground marks it while placing a point. */
-export const CROSSHAIR = {
-  centre: { x: 520, y: 340 },
-  radius: 9,
-  gap: 5,
-  reach: 16,
-} as const;
-
-/** The crosshair's four arms, each a segment on a line through its centre. */
-export const CROSSHAIR_ARMS: readonly (readonly [Point, Point])[] = (() => {
-  const { centre, gap, reach } = CROSSHAIR;
-  return [
-    [
-      { x: centre.x - reach, y: centre.y },
-      { x: centre.x - gap, y: centre.y },
-    ],
-    [
-      { x: centre.x + gap, y: centre.y },
-      { x: centre.x + reach, y: centre.y },
-    ],
-    [
-      { x: centre.x, y: centre.y - reach },
-      { x: centre.x, y: centre.y - gap },
-    ],
-    [
-      { x: centre.x, y: centre.y + gap },
-      { x: centre.x, y: centre.y + reach },
-    ],
-  ];
-})();
-
-/** The north arrow: its tip is straight above the middle of its base, so it points up the grid. */
-export const NORTH = {
-  tip: { x: SHEET.width - 34, y: 18 },
-  baseY: 48,
-  notchY: 42,
-  halfWidth: 9,
-  labelY: 66,
-} as const;
-
-/** The north arrow's two halves: the filled one and the outlined one. */
-export const NORTH_HALVES = {
-  dark: `M${NORTH.tip.x} ${NORTH.tip.y}L${NORTH.tip.x + NORTH.halfWidth} ${NORTH.baseY}L${NORTH.tip.x} ${NORTH.notchY}Z`,
-  light: `M${NORTH.tip.x} ${NORTH.tip.y}L${NORTH.tip.x - NORTH.halfWidth} ${NORTH.baseY}L${NORTH.tip.x} ${NORTH.notchY}Z`,
-} as const;
-
-/** The scale bar: one kilometre on {@link UNITS_PER_KM}, in alternate quarters, with its two ends labelled. */
-export const SCALE_BAR = (() => {
-  const origin = { x: 96, y: SHEET.height - 30 };
-  const quarter = UNITS_PER_KM / 4;
-  return {
-    origin,
-    height: 6,
-    quarters: [0, 1, 2, 3].map((step) => ({
-      x: origin.x + step * quarter,
-      width: quarter,
-      dark: step % 2 === 0,
-    })),
-    labels: [
-      { x: origin.x, text: "0" },
-      {
-        x: origin.x + UNITS_PER_KM,
-        text: formatDistance(METRES_PER_KM, "metric", FIGURE_MESSAGES),
-      },
-    ],
-    labelY: origin.y - 6,
-  } as const;
-})();
-
-/** The clear space kept round the marks a narrow crop must show. */
-const CROP_MARGIN = 12;
-
-/**
- * How the art is cropped on a narrow screen, so its labels stay legible: the
- * same drawing, enlarged by {@link NARROW_CROP.zoom}, round the marks that
- * tell the story (the pin, the measured line and its length, the cairn and
- * its height, and the scale bar the length is read against), in a frame of
- * {@link NARROW_CROP.aspect}. The zoom is the largest that keeps all of them
- * in the frame. Nothing is redrawn, so every relation holds. `box` is the
- * part of the view box that shows; `marginInlineStart` and `marginBlockStart`
- * are the offsets, as shares of the frame's width, that put it in the frame.
- */
-export const NARROW_CROP = (() => {
-  const aspect = 4 / 3;
-  const { pin, cairn, spotHeight, measureLabel, scaleBar } = markBoxes();
-  const kept = [pin, cairn, spotHeight, measureLabel, scaleBar];
-  const left = Math.min(...kept.map((box) => box.left)) - CROP_MARGIN;
-  const right = Math.max(...kept.map((box) => box.right)) + CROP_MARGIN;
-  const top = Math.min(...kept.map((box) => box.top)) - CROP_MARGIN;
-  const bottom = Math.max(...kept.map((box) => box.bottom)) + CROP_MARGIN;
-  const zoom = Math.min(
-    VIEW_BOX.width / (right - left),
-    VIEW_BOX.width / ((bottom - top) * aspect),
-  );
-  const focus = { x: (left + right) / 2, y: (top + bottom) / 2 };
-  const shownWidth = VIEW_BOX.width / zoom;
-  const shownHeight = shownWidth / aspect;
-  const fx = (focus.x - VIEW_BOX.x) / VIEW_BOX.width;
-  const fy = (focus.y - VIEW_BOX.y) / VIEW_BOX.height;
-  const heightPerWidth = (zoom * VIEW_BOX.height) / VIEW_BOX.width;
-  return {
-    zoom,
-    aspect,
-    focus,
-    box: {
-      left: focus.x - shownWidth / 2,
-      right: focus.x + shownWidth / 2,
-      top: focus.y - shownHeight / 2,
-      bottom: focus.y + shownHeight / 2,
-    },
-    marginInlineStart: 0.5 - fx * zoom,
-    marginBlockStart: 0.5 / aspect - fy * heightPerWidth,
-  } as const;
-})();
-
-/** The box of a list of points. */
-function boxOf(points: readonly Point[]): Box {
-  return {
-    left: Math.min(...points.map((point) => point.x)),
-    right: Math.max(...points.map((point) => point.x)),
-    top: Math.min(...points.map((point) => point.y)),
-    bottom: Math.max(...points.map((point) => point.y)),
+    box,
+    zoom: SHEET.width / width,
+    aspect: width / height,
+    marginInlineStart: -box.left / width,
+    marginBlockStart: -box.top / width,
   };
 }
 
-/** The box a label of `text` takes, from its anchor, at {@link LABEL_SIZE}; an estimate wide enough for Plex's figures. */
-export function labelBox(
-  text: string,
-  at: Point,
-  anchor: "start" | "middle" | "end",
-): Box {
-  const width = text.length * LABEL_SIZE * 0.62;
-  const shift = { start: 0, middle: width / 2, end: width }[anchor];
-  return {
-    left: at.x - shift,
-    right: at.x - shift + width,
-    top: at.y - LABEL_SIZE,
-    bottom: at.y + LABEL_SIZE * 0.25,
-  };
-}
+/** The strip at its widest: the sheet's whole width, cut to the band the marks stand in. */
+export const WIDE_CROP: Crop = cropOf({
+  left: 0,
+  right: SHEET.width,
+  top: BAND.top,
+  bottom: BAND.bottom,
+});
 
-/** Every mark on the sheet and the box it takes, for the overlap test. */
-export function markBoxes() {
+/** The strip on a narrow screen: the same band, enlarged round the marks, so they stay big enough. */
+export const NARROW_CROP: Crop = cropOf({
+  left: PIN_BOX.left - CROP_MARGIN,
+  right: CAIRN_BOX.right + CROP_MARGIN,
+  top: BAND.top,
+  bottom: BAND.bottom,
+});
+
+/** Where a point of the sheet falls in a crop's frame, as shares of the frame's width and height. */
+export function placeIn(
+  crop: Crop,
+  point: Point,
+): { inline: number; block: number } {
   return {
-    cairn: CAIRN_BOX,
-    spotHeight: labelBox(SPOT_HEIGHT.text, SPOT_HEIGHT.at, "start"),
-    pin: PIN_BOX,
-    measureLabel: labelBox(MEASURE_LABEL.text, MEASURE_LABEL.at, "middle"),
-    crosshair: {
-      left: CROSSHAIR.centre.x - CROSSHAIR.reach,
-      right: CROSSHAIR.centre.x + CROSSHAIR.reach,
-      top: CROSSHAIR.centre.y - CROSSHAIR.reach,
-      bottom: CROSSHAIR.centre.y + CROSSHAIR.reach,
-    },
-    north: {
-      left: NORTH.tip.x - NORTH.halfWidth,
-      right: NORTH.tip.x + NORTH.halfWidth,
-      top: NORTH.tip.y,
-      bottom: NORTH.labelY + LABEL_SIZE * 0.25,
-    },
-    scaleBar: {
-      left: SCALE_BAR.origin.x - LABEL_SIZE,
-      right: SCALE_BAR.origin.x + UNITS_PER_KM + LABEL_SIZE * 1.5,
-      top: SCALE_BAR.labelY - LABEL_SIZE,
-      bottom: SCALE_BAR.origin.y + SCALE_BAR.height,
-    },
+    inline: (point.x - crop.box.left) / (crop.box.right - crop.box.left),
+    block: (point.y - crop.box.top) / (crop.box.bottom - crop.box.top),
   };
 }

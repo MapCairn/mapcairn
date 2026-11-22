@@ -156,19 +156,19 @@ test.describe("search", () => {
     const delayMs = 800;
     await scriptSearch(page, {
       delayMs,
-      byQuery: { "cape t": SAMPLE_RESULTS.slice(0, 1) },
+      byQuery: { "cape t": SAMPLE_RESULTS.slice(0, 2) },
     });
     await page.clock.install();
     await mapPage.goto();
     await mapPage.search("cape");
     await expect(mapPage.searchPanel).toContainText("Searching...");
     await mapPage.search("cape t");
-    await expect(mapPage.searchOptions).toHaveText([/Cape Town/]);
+    await expect(mapPage.searchOptions).toHaveText([/Cape Town/, /Cape Coast/]);
     expect(await searchedQueries(page)).toEqual(["cape", "cape t"]);
     // Run the clock past the older search's answer, had it not been cancelled.
     await page.clock.runFor(delayMs + TIMER_SLACK_MS);
     await settleFrames(page);
-    await expect(mapPage.searchOptions).toHaveCount(1);
+    await expect(mapPage.searchOptions).toHaveCount(2);
   });
 
   test("the Search button searches, and Enter on the same text only reopens the list", async ({
@@ -243,27 +243,23 @@ test.describe("search", () => {
     await expect(mapPage.searchRetry).toHaveCount(0);
   });
 
-  test("a coordinate pair is its own result, picked like any other", async ({
+  test("a coordinate pair is its own result, and Enter goes straight to it", async ({
     page,
     mapPage,
   }) => {
     await scriptSearch(page);
     await mapPage.goto();
     await mapPage.search("-26.2041, 28.0473");
-    await expect(mapPage.searchOptions).toHaveText([
-      "Coordinates 26.20410° S, 28.04730° E",
-    ]);
-    await expect(mapPage.searchPanel).not.toContainText("Searching");
-    await expect
-      .poll(() => mapPage.announcements())
-      .toContain("1 result, Coordinates 26.20410° S, 28.04730° E");
-
-    await page.keyboard.press("ArrowDown");
-    await page.keyboard.press("Enter");
     await expect(mapPage.searchInput).toHaveValue(
       "Coordinates 26.20410° S, 28.04730° E",
     );
     await expect(mapPage.searchInput).toBeFocused();
+    await expect(mapPage.searchInput).toHaveAttribute("aria-expanded", "false");
+    await expect(mapPage.searchOptions).toHaveCount(0);
+    await expect(mapPage.searchPanel).not.toContainText("Searching");
+    await expect
+      .poll(() => mapPage.announcements())
+      .toContain("Showing Coordinates 26.20410° S, 28.04730° E on the map.");
     await expect
       .poll(async () => (await mapPage.hashView())?.lat)
       .toBeCloseTo(-26.2041, 3);
@@ -280,14 +276,52 @@ test.describe("search", () => {
     await scriptSearch(page);
     await mapPage.goto();
     await mapPage.search(`26°12'14.8"S 28°02'50.3"E`);
-    await expect(mapPage.searchOptions).toHaveText([
+    await expect(mapPage.searchInput).toHaveValue(
       "Coordinates 26.20411° S, 28.04731° E",
-    ]);
-    await mapPage.searchOptions.first().click();
+    );
     await expect
       .poll(async () => (await mapPage.hashView())?.lng)
       .toBeCloseTo(28.0473, 3);
     expect(await searchedQueries(page)).toEqual([]);
+  });
+
+  test("Enter with exactly one result goes to it: the map moves, the box names it, focus stays and it is announced", async ({
+    page,
+    mapPage,
+  }) => {
+    const capeTown = SAMPLE_RESULTS.slice(0, 1);
+    await scriptSearch(page, { byQuery: { "cape town": capeTown } });
+    await mapPage.goto();
+    await mapPage.searchInput.focus();
+    await mapPage.search("cape town");
+    await expect(mapPage.searchInput).toHaveValue("Cape Town");
+    await expect(mapPage.searchInput).toBeFocused();
+    await expect(mapPage.searchInput).toHaveAttribute("aria-expanded", "false");
+    await expect(mapPage.searchOptions).toHaveCount(0);
+    await expect
+      .poll(() => mapPage.announcements())
+      .toContain("Showing Cape Town on the map.");
+    await expect
+      .poll(async () => (await mapPage.hashView())?.lat)
+      .toBeCloseTo(-33.9249, 2);
+    const view = await mapPage.hashView();
+    expect(view?.lng).toBeCloseTo(18.4241, 2);
+    expect(await searchedQueries(page)).toEqual(["cape town"]);
+  });
+
+  test("Enter with several results keeps the list and moves nothing", async ({
+    page,
+    mapPage,
+  }) => {
+    await scriptSearch(page);
+    await mapPage.goto();
+    const before = await mapPage.hashView();
+    await mapPage.search("cape");
+    await expect(mapPage.searchOptions).toHaveCount(3);
+    await expect(mapPage.searchInput).toHaveValue("cape");
+    await expect(mapPage.searchInput).toHaveAttribute("aria-expanded", "true");
+    await expect.poll(() => mapPage.announcements()).toContain("3 results");
+    expect(await mapPage.hashView()).toEqual(before);
   });
 
   test("text that only looks like numbers is searched as a place", async ({
@@ -319,13 +353,11 @@ test.describe("search", () => {
       });
       await mapPage.goto();
       await mapPage.search("-26.2041, 28.0473");
-      await expect(mapPage.searchOptions).toHaveCount(1);
-      await mapPage.searchOptions.first().click();
       await expect
         .poll(async () => (await mapPage.hashView())?.lat)
         .toBeCloseTo(-26.2041, 3);
       await mapPage.search("Soweto");
-      await expect(mapPage.searchOptions).toHaveCount(1);
+      await expect(mapPage.searchInput).toHaveValue(/Soweto/);
       expect(requests).toHaveLength(1);
       expect(requests[0]).toContain("Soweto");
     });
@@ -342,9 +374,7 @@ test.describe("search", () => {
       const params = new URL((await request).url()).searchParams;
       expect(params.get("q")).toBe("Soweto");
       expect(params.get("viewbox")).toBeNull();
-      await expect(mapPage.searchOptions).toHaveCount(1);
-      await expect(mapPage.searchOptions.first()).toContainText("Soweto");
-      await mapPage.searchOptions.first().click();
+      await expect(mapPage.searchInput).toHaveValue(/Soweto/);
       await expect
         .poll(async () => (await mapPage.hashView())?.lng ?? 0)
         .toBeGreaterThan(27.75);

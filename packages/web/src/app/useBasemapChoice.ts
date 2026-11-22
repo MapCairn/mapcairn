@@ -1,15 +1,18 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
-import type {
-  BasemapDefinition,
-  DefinitionText,
-  MapEngineError,
+import {
+  type BasemapDefinition,
+  type DefinitionText,
+  defaultBasemapFor,
+  type MapEngineError,
+  resolveBasemapFor,
 } from "@mapcairn/core";
 import {
   useBasemapAvailability,
   useBasemaps,
   useServices,
   useSettings,
+  useTheme,
 } from "@mapcairn/map";
 import { useCallback, useRef, useState } from "react";
 
@@ -23,7 +26,8 @@ export interface BasemapFailure {
   readonly kept: BasemapDefinition;
   /**
    * True when the basemap failed while the map was starting, so there was no
-   * earlier basemap and `kept` is the default. Going back then saves it.
+   * earlier basemap and `kept` is the theme's default. Going back then saves
+   * it.
    */
   readonly atMount?: boolean;
   /**
@@ -92,12 +96,14 @@ export interface BasemapChoice {
 /**
  * The basemap choice: a basemap named by a shared link wins once, at load,
  * without overwriting the saved choice; after that the saved setting decides.
- * A saved or linked id that names no basemap the host offers (one that has
- * been removed, such as "maptoolkit-dark", or the "auto" choice of earlier versions,
- * which followed the theme) counts as the host's default basemap, so the
- * picker always has a checked option that matches the map. Nothing is saved
- * until the person picks a basemap. The basemap never depends on the interface
- * theme.
+ * Until the person picks a basemap there is no saved choice, and the basemap
+ * is the host's default for the theme shown (Bright in light, Fiord in dark
+ * on the reference host), changing live when the theme does. A saved or
+ * linked id that names no basemap the host offers (one that has been removed,
+ * such as "maptoolkit-dark", or the "auto" choice of earlier versions) counts
+ * as no choice, so the picker always has a checked option that matches the
+ * map. Nothing is saved until the person picks a basemap, and once one is,
+ * it is kept across theme changes and reloads.
  *
  * @remarks A new choice is held as pending and saved only when the map
  *   reports that it loaded, so a basemap that fails is never saved or written
@@ -114,11 +120,21 @@ export function useBasemapChoice(
   linkedBasemapId: string | undefined,
 ): BasemapChoice {
   const catalogue = useBasemaps();
+  const { resolved: theme } = useTheme();
   const { settings, update } = useSettings();
   // Read when a report arrives, which can be before the render that follows
   // a save, so the stored value is read from the store, not from this render.
   const { settings: store } = useServices();
   const [linked, setLinked] = useState(linkedBasemapId);
+  // A link's basemap holds across a reload, but a visitor with no saved choice
+  // who changes the theme goes back to following it.
+  const [seenTheme, setSeenTheme] = useState(theme);
+  if (theme !== seenTheme) {
+    setSeenTheme(theme);
+    if (settings.basemapId === null && linked !== undefined) {
+      setLinked(undefined);
+    }
+  }
   const [pending, setPending] = useState<string | undefined>(undefined);
   const [failure, setFailure] = useState<BasemapFailure | null>(null);
   const { unavailable, markUnavailable, clear } = useBasemapAvailability();
@@ -126,15 +142,22 @@ export function useBasemapChoice(
   const previous = useRef<BasemapDefinition | undefined>(undefined);
   // The last choice the person made and saved here, with the stored id it
   // replaced, so a choice whose provider turns out to be down is undone.
-  const chosen = useRef<{ id: string; before: string } | undefined>(undefined);
+  const chosen = useRef<{ id: string; before: string | null } | undefined>(
+    undefined,
+  );
 
   const requested = linked ?? settings.basemapId;
-  const savedChoice = catalogue.resolve(requested).id;
+  const savedChoice = resolveBasemapFor(catalogue, requested, theme).id;
   const choice = pending ?? savedChoice;
-  const basemap = failure ? failure.kept : catalogue.resolve(choice);
-  // The map starts on the saved or linked basemap, so that is what it draws
-  // until a swap loads (`applied`) or fails and keeps the old one (`failed`).
-  const [drawn, setDrawn] = useState(() => catalogue.resolve(requested));
+  const basemap = failure
+    ? failure.kept
+    : resolveBasemapFor(catalogue, choice, theme);
+  // The map starts on the saved or linked basemap, or the theme's default,
+  // so that is what it draws until a swap loads (`applied`) or fails and
+  // keeps the old one (`failed`).
+  const [drawn, setDrawn] = useState(() =>
+    resolveBasemapFor(catalogue, requested, theme),
+  );
 
   const save = useCallback(
     (id: string) => {
@@ -147,13 +170,15 @@ export function useBasemapChoice(
 
   const saveChoice = useCallback(
     (id: string) => {
-      chosen.current = {
-        id: catalogue.resolve(id).id,
-        before: store.get().basemapId,
-      };
+      const resolved = resolveBasemapFor(catalogue, id, theme).id;
+      // Pressing the basemap that is already saved changes nothing, so what
+      // an outage would put back stays what it was before that choice.
+      if (store.get().basemapId !== resolved) {
+        chosen.current = { id: resolved, before: store.get().basemapId };
+      }
       save(id);
     },
-    [catalogue, store, save],
+    [catalogue, theme, store, save],
   );
 
   const choose = useCallback(
@@ -161,13 +186,16 @@ export function useBasemapChoice(
       setFailure(null);
       // Saved at once only when nothing is loading: while a swap is in
       // flight, `basemap` is the one asked for, not yet the one drawn.
-      if (pending === undefined && catalogue.resolve(id).id === basemap.id) {
+      if (
+        pending === undefined &&
+        resolveBasemapFor(catalogue, id, theme).id === basemap.id
+      ) {
         saveChoice(id);
       } else {
         setPending(id);
       }
     },
-    [catalogue, basemap.id, pending, saveChoice],
+    [catalogue, theme, basemap.id, pending, saveChoice],
   );
 
   const applied = useCallback(
@@ -182,12 +210,12 @@ export function useBasemapChoice(
       clear(loaded.id);
       if (
         pending !== undefined &&
-        catalogue.resolve(pending).id === loaded.id
+        resolveBasemapFor(catalogue, pending, theme).id === loaded.id
       ) {
         saveChoice(pending);
       }
     },
-    [catalogue, pending, saveChoice, drawn, clear],
+    [catalogue, theme, pending, saveChoice, drawn, clear],
   );
 
   const failed = useCallback(
@@ -200,7 +228,7 @@ export function useBasemapChoice(
 
   const mountFailed = useCallback(
     (error: MapEngineError, which: BasemapDefinition) => {
-      const fallback = catalogue.resolve(catalogue.defaultId);
+      const fallback = defaultBasemapFor(catalogue, theme);
       if (error.reason !== "load-failed" || which.id === fallback.id) {
         return;
       }
@@ -212,14 +240,17 @@ export function useBasemapChoice(
         atMount: true,
       });
     },
-    [catalogue],
+    [catalogue, theme],
   );
 
   const unavailableNow = useCallback(
     (which: BasemapDefinition) => {
       markUnavailable(which.id);
       if (chosen.current?.id === which.id) {
-        if (catalogue.resolve(store.get().basemapId).id === which.id) {
+        if (
+          resolveBasemapFor(catalogue, store.get().basemapId, theme).id ===
+          which.id
+        ) {
           update({ basemapId: chosen.current.before });
         }
         chosen.current = undefined;
@@ -228,10 +259,7 @@ export function useBasemapChoice(
       if (which.id !== basemap.id) {
         return;
       }
-      const fallback = [
-        previous.current,
-        catalogue.resolve(catalogue.defaultId),
-      ]
+      const fallback = [previous.current, defaultBasemapFor(catalogue, theme)]
         .filter((candidate): candidate is BasemapDefinition => !!candidate)
         .find(
           (candidate) =>
@@ -241,16 +269,21 @@ export function useBasemapChoice(
       setDrawn(kept);
       setFailure({ id: which.id, name: which.name, kept, unavailable: true });
     },
-    [catalogue, markUnavailable, unavailable, basemap.id, store, update],
+    [catalogue, theme, markUnavailable, unavailable, basemap.id, store, update],
   );
 
   const goBack = useCallback(() => {
     setPending(undefined);
     setFailure(null);
-    if (failure?.atMount || failure?.unavailable) {
+    // The basemap the map kept becomes the choice, unless it is already what
+    // is shown: a visitor following the theme stays a follower.
+    if (
+      (failure?.atMount || failure?.unavailable) &&
+      failure.kept.id !== savedChoice
+    ) {
       save(failure.kept.id);
     }
-  }, [failure, save]);
+  }, [failure, savedChoice, save]);
 
   return {
     choice,

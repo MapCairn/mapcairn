@@ -3,6 +3,7 @@
 import {
   announceBasemap,
   type BasemapDefinition,
+  DEFAULT_BASEMAP_BACKGROUND,
   usesMoreData,
 } from "@mapcairn/core";
 import { Check } from "lucide-react";
@@ -43,7 +44,12 @@ export interface BasemapPickerProps {
    * the default basemap.
    */
   readonly value: string;
-  /** Called with the id of the tile the user chose. */
+  /**
+   * Called with the id of the tile the user pressed. Pressing the tile that
+   * is already shown calls it too, because a host whose default follows the
+   * theme takes that as the person choosing it, so it stays when the theme
+   * changes.
+   */
   readonly onChange: (id: string) => void;
 }
 
@@ -58,13 +64,14 @@ export interface BasemapPickerProps {
  * selected tile has an accent outline and a check badge, so selection never
  * relies on colour. A preview that fails to load gives way to the basemap's
  * swatch, as a basemap with no preview does, with the name still visible. The
- * basemap does not follow the interface theme: a host's dark basemap is an
- * ordinary choice, as the others are.
+ * picker never follows the interface theme itself: a host's dark basemap is
+ * an ordinary choice, as the others are, and what shows as chosen is the
+ * `value` the host passes.
  *
  * @remarks In Save data mode (`useSaveData`), and for a basemap that has no
  *   preview image, no preview is requested: the tile shows the same frame
  *   with a plain colour swatch, the basemap's own `swatch` colour or else the
- *   map background. A basemap whose tiles are images (`usesMoreData`: a
+ *   light default's land colour. A basemap whose tiles are images (`usesMoreData`: a
  *   raster map, or imagery under labels) carries the note "Uses more data". Names,
  *   the radios and the selection badge are unchanged, and every basemap can
  *   still be chosen.
@@ -100,6 +107,10 @@ export function BasemapPicker({ value, onChange }: BasemapPickerProps) {
     onChange(basemap.id);
   };
 
+  // The tile already shown gives no change event, so its press is reported
+  // here, without an announcement: nothing about the map changed.
+  const keep = (basemap: BasemapDefinition) => onChange(basemap.id);
+
   return (
     <>
       <div
@@ -118,6 +129,7 @@ export function BasemapPicker({ value, onChange }: BasemapPickerProps) {
             saveData={saveData}
             unavailable={unavailable.has(basemap.id)}
             onChoose={() => choose(basemap)}
+            onKeep={() => keep(basemap)}
           />
         ))}
       </div>
@@ -150,6 +162,8 @@ interface BasemapTileProps {
   readonly unavailable: boolean;
   /** Called when this tile is chosen. */
   readonly onChoose: () => void;
+  /** Called when this tile is pressed while it is already the chosen one. */
+  readonly onKeep: () => void;
 }
 
 function BasemapTile({
@@ -159,6 +173,7 @@ function BasemapTile({
   saveData,
   unavailable,
   onChoose,
+  onKeep,
 }: BasemapTileProps) {
   const { t } = useMessages();
   const resolve = useResolveText();
@@ -175,18 +190,16 @@ function BasemapTile({
     node.addEventListener("error", fail);
     return () => node.removeEventListener("error", fail);
   }, []);
-  // The basemap's own swatch colour, through a custom property.
-  const swatchColour = basemap.swatch;
+  // The basemap's own swatch colour, through a custom property. One with none
+  // is a light map, so it shows the light default's land colour in both themes
+  // (the map background token follows the theme and would turn it dark).
+  const swatchColour = basemap.swatch ?? DEFAULT_BASEMAP_BACKGROUND;
   const paintSwatch = useCallback(
     (element: HTMLElement | null) => {
       if (!element) {
         return;
       }
-      if (swatchColour === undefined) {
-        element.style.removeProperty(swatchColourVar);
-      } else {
-        element.style.setProperty(swatchColourVar, swatchColour);
-      }
+      element.style.setProperty(swatchColourVar, swatchColour);
     },
     [swatchColour],
   );
@@ -200,6 +213,7 @@ function BasemapTile({
         checked={selected}
         disabled={unavailable && !selected}
         onChange={onChoose}
+        onClick={selected ? onKeep : undefined}
       />
       <span className={thumb({ selected, unavailable })}>
         {showSwatch ? (

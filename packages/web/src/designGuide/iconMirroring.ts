@@ -42,8 +42,6 @@ export const ICON_MIRRORING: Readonly<Record<string, IconMirroring>> = {
   CircleCheck: fixed("A tick means done in every direction."),
   CircleMinus: fixed("A minus sign has no direction."),
   CirclePlus: fixed("A plus sign has no direction."),
-  CodeXml: fixed("Code brackets read the same way in every language."),
-  Compass: fixed("A map direction stays physical: north does not move."),
   Copy: fixed("Two sheets of paper, not a direction."),
   Crosshair: fixed("A symmetric target."),
   Download: fixed("Points down in both directions."),

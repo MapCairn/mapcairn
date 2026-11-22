@@ -3,7 +3,7 @@
 import { describe, expect, it } from "vitest";
 import { SITE_URL } from "../constants/siteConfig";
 import {
-  EMBED_EXAMPLE_CODE,
+  EMBED_EXCERPT,
   HEADLINE,
   lineToText,
   SECTIONS,
@@ -35,9 +35,12 @@ describe("/index.md, the product page as Markdown", () => {
     }
   });
 
-  it("carries the embedding example as a code block", async () => {
+  it("carries the page's excerpt of the embedding example as a code block under its name, and not the whole app", async () => {
     const text = await loader().text();
-    expect(text).toContain(`\`\`\`tsx\n${EMBED_EXAMPLE_CODE}\n\`\`\``);
+    expect(text).toContain(
+      `\`src/main.tsx, an excerpt\`:\n\n\`\`\`tsx\n${EMBED_EXCERPT}\n\`\`\``,
+    );
+    expect(text).not.toContain("createRoot(root)");
   });
 
   it("makes every link on the site absolute", async () => {

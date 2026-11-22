@@ -149,6 +149,16 @@ export const list = style({
 });
 
 /**
+ * The host's About link, set apart from the credits by a hairline so it does
+ * not read as one of them.
+ */
+export const about = style({
+  marginBlockStart: tokens.space.xxs,
+  paddingBlockStart: tokens.space.xxs,
+  borderBlockStart: `1px solid ${tokens.color.hairline}`,
+});
+
+/**
  * A credit link: underlined so it is not identified by colour alone, with a
  * tall enough line box to stay easy to hit inside the popover.
  */

@@ -145,6 +145,20 @@ describe("theme-color", () => {
   });
 });
 
+describe("surface", () => {
+  /** The share of the map that may show through floating chrome, so place names cannot be read through its text. */
+  const MAX_SHOW_THROUGH = 0.1;
+
+  it.each(["light", "dark"] as const)(
+    "is at least 90 percent opaque in the %s theme",
+    (theme) => {
+      const { a } = parseColour(themeValues[theme].colour.surface);
+      expect(1 - a).toBeLessThanOrEqual(MAX_SHOW_THROUGH);
+      expect(a).toBeLessThan(1);
+    },
+  );
+});
+
 describe("scales", () => {
   it("keeps spacing, inset and radii to the documented values", () => {
     expect(Object.values(space)).toEqual([

@@ -4,7 +4,14 @@ import { existsSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
 import { SITE_URL } from "../constants/siteConfig";
-import { INSTALL_COMMAND } from "../product/productContent";
+import {
+  DISCUSSIONS_LINK,
+  EXAMPLE_APP_LINK,
+  INSTALL_OPTIONS,
+  NPM_ACTION,
+  RELEASE_NOTES_LINK,
+  STATUS_LINE,
+} from "../product/productContent";
 import { productMarkdown } from "../product/productMarkdown";
 import { routePaths } from "../routePaths";
 import routes from "../routes";
@@ -37,9 +44,33 @@ function expectResolves(target: string): void {
       return;
     }
   }
+  if (target === EXAMPLE_APP_LINK.href) {
+    expect(existsSync(path.join(REPO_ROOT, "examples/embed")), target).toBe(
+      true,
+    );
+    return;
+  }
+  // Pages on GitHub that are not files: the repository's own release and discussion pages.
+  if (
+    [NPM_ACTION.href, RELEASE_NOTES_LINK.href, DISCUSSIONS_LINK.href].includes(
+      target,
+    )
+  ) {
+    return;
+  }
   expect(target, "a link outside the site and the repository").toMatch(
     /^https:\/\/github\.com\/MapCairn\/mapcairn$/,
   );
+}
+
+/** A text with the install commands and the link to the npm package taken out. */
+function withoutNpmLink(text: string): string {
+  return INSTALL_OPTIONS.reduce(
+    (rest, { command }) => rest.replaceAll(command, ""),
+    text,
+  )
+    .replaceAll(NPM_ACTION.href, "")
+    .replaceAll(NPM_ACTION.text, "");
 }
 
 describe("/llms.txt", () => {
@@ -68,17 +99,18 @@ describe("/llms.txt", () => {
     );
   });
 
-  it("says what MapCairn is not and how to use it today, and leads with the install command and nothing else about npm", async () => {
+  it("says what MapCairn is not and how to use it today, and leads with the install commands and says nothing else about npm but the link to the package", async () => {
     const text = await loader().text();
     expect(text).toContain(
       "It is not a hosted service, a dataset or a GIS analysis engine",
     );
-    expect(text).toContain(INSTALL_COMMAND);
+    for (const { command } of INSTALL_OPTIONS) {
+      expect(text).toContain(command);
+    }
     expect(text).toContain("advanced option");
-    expect(text.replaceAll(INSTALL_COMMAND, "")).not.toMatch(/npm/i);
-    expect(
-      (await fullLoader().text()).replaceAll(INSTALL_COMMAND, ""),
-    ).not.toMatch(/npm/i);
+    expect(text).toContain(`[${NPM_ACTION.text}](${NPM_ACTION.href})`);
+    expect(withoutNpmLink(text)).not.toMatch(/npm/i);
+    expect(withoutNpmLink(await fullLoader().text())).not.toMatch(/npm/i);
   });
 
   it("links only to pages the site serves and files the repository has", async () => {
@@ -88,6 +120,31 @@ describe("/llms.txt", () => {
     for (const target of targets) {
       expectResolves(target);
     }
+  });
+
+  it("lists the licence guide, the public API guide and the changelog among the documents", async () => {
+    const text = await loader().text();
+    for (const file of [
+      "docs/guides/licence.md",
+      "docs/guides/public-api.md",
+      "CHANGELOG.md",
+    ]) {
+      expect(text).toContain(`(${RAW_PREFIX}${file})`);
+    }
+  });
+
+  it("links the release notes, the security policy and Discussions, and says the licence allows commercial use and the SDK is before 1.0", async () => {
+    const text = await loader().text();
+    expect(linkTargets(text)).toEqual(
+      expect.arrayContaining([
+        RELEASE_NOTES_LINK.href,
+        DISCUSSIONS_LINK.href,
+        `${BLOB_PREFIX}SECURITY.md`,
+      ]),
+    );
+    expect(text).toContain("The licence allows commercial use");
+    expect(text).toContain(STATUS_LINE);
+    expect(text).toContain(EXAMPLE_APP_LINK.href);
   });
 
   it("links to each target once", async () => {

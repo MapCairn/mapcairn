@@ -5,6 +5,7 @@ import {
   type BasemapDefinition,
   createBasemapCatalogue,
   DEFAULT_BASEMAP_ID,
+  DEFAULT_DARK_BASEMAP_ID,
   getBasemap,
 } from "@mapcairn/core";
 import { BASEMAP_THUMBNAILS } from "./basemapThumbnails";
@@ -57,11 +58,13 @@ function withThumbnail(basemap: BasemapDefinition): BasemapDefinition {
 
 /**
  * The catalogue the reference host passes as `Services.basemaps`: the six
- * basemaps in {@link HOST_BASEMAP_IDS}, each with its preview, Bright the
- * default. A saved or linked id the host does not offer (such as `colorful`)
- * opens on Bright.
+ * basemaps in {@link HOST_BASEMAP_IDS}, each with its preview. A visitor who
+ * has chosen no basemap sees Bright in the light theme and Fiord in the dark
+ * theme. A saved or linked id the host does not offer (such as `colorful`) is
+ * no choice, so it shows the theme's default.
  */
 export const HOST_BASEMAP_CATALOGUE: BasemapCatalogue = createBasemapCatalogue(
   selectBasemaps(HOST_BASEMAP_IDS).map(withThumbnail),
   DEFAULT_BASEMAP_ID,
+  { light: DEFAULT_BASEMAP_ID, dark: DEFAULT_DARK_BASEMAP_ID },
 );

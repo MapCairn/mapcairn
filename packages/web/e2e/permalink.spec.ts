@@ -4,6 +4,8 @@ import { expect, test } from "./fixtures";
 import {
   DEFAULT_VECTOR_BASEMAP_ID,
   DEFAULT_VECTOR_BASEMAP_NAME,
+  FIORD_BASEMAP_ID,
+  FIORD_BASEMAP_NAME,
   OTHER_VECTOR_BASEMAP_ID,
   OTHER_VECTOR_BASEMAP_NAME,
   RASTER_BASEMAP_ID,
@@ -86,7 +88,7 @@ test.describe("permalink", () => {
     REMOVED_MAPTOOLKIT_BASEMAP_ID,
     ...UNOFFERED_BASEMAP_IDS,
   ]) {
-    test(`a link to the ${retired} basemap, which the site does not offer, opens on the default basemap`, async ({
+    test(`a link to the ${retired} basemap, which the site does not offer, opens on the viewer's default basemap`, async ({
       page,
       mapPage,
     }) => {
@@ -95,17 +97,59 @@ test.describe("permalink", () => {
       // The address is rewritten when the map next settles.
       await mapPage.focusMap();
       await page.keyboard.press("+");
-      await expect
-        .poll(() => mapPage.hashBasemap())
-        .toBe(DEFAULT_VECTOR_BASEMAP_ID);
+      await expect.poll(() => mapPage.hashBasemap()).toBe(FIORD_BASEMAP_ID);
       await mapPage.openMapOptions();
       await expect(
         mapPage.basemapPicker.getByRole("radio", {
-          name: DEFAULT_VECTOR_BASEMAP_NAME,
+          name: FIORD_BASEMAP_NAME,
         }),
       ).toBeChecked();
     });
   }
+
+  // A link records the basemap that was showing, so it shows the same map to
+  // everyone; a link without one is shown in the viewer's own default.
+  for (const [colorScheme, linked, name] of [
+    ["dark", DEFAULT_VECTOR_BASEMAP_ID, DEFAULT_VECTOR_BASEMAP_NAME],
+    ["light", FIORD_BASEMAP_ID, FIORD_BASEMAP_NAME],
+  ] as const) {
+    test(`a link to ${name} opens on it for a viewer in a ${colorScheme} theme, without saving it`, async ({
+      page,
+      mapPage,
+    }) => {
+      await page.emulateMedia({ colorScheme });
+      await mapPage.goto(`#map=5.00/10.00000/20.00000&basemap=${linked}`);
+      await mapPage.openMapOptions();
+      await expect(
+        mapPage.basemapPicker.getByRole("radio", { name, exact: true }),
+      ).toBeChecked();
+      expect(
+        await page.evaluate(() => localStorage.getItem("mapcairn:basemapId")),
+      ).toBeNull();
+    });
+  }
+
+  test("a link made while following the dark theme names Fiord, and opens on it in a light theme", async ({
+    page,
+    mapPage,
+  }) => {
+    await page.emulateMedia({ colorScheme: "dark" });
+    await mapPage.goto("#map=5.00/10.00000/20.00000");
+    await mapPage.focusMap();
+    await page.keyboard.press("+");
+    await expect.poll(() => mapPage.hashBasemap()).toBe(FIORD_BASEMAP_ID);
+    const link = await page.evaluate(() => location.hash);
+
+    await page.emulateMedia({ colorScheme: "light" });
+    await mapPage.goto(link);
+    await mapPage.openMapOptions();
+    await expect(
+      mapPage.basemapPicker.getByRole("radio", {
+        name: FIORD_BASEMAP_NAME,
+        exact: true,
+      }),
+    ).toBeChecked();
+  });
 
   test("without a link the last view is restored", async ({
     page,

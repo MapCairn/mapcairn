@@ -1,21 +1,37 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
+
 import { SITE_URL } from "../constants/siteConfig";
 import {
+  BADGES,
   type Block,
+  DEMO_PLATES,
   GITHUB_ACTION,
   HEADLINE,
-  HERO_NOTE,
+  INSTALL_OPTIONS,
+  INSTALL_REQUIREMENTS,
   type Inline,
   LEDE,
   type Line,
+  PLATES,
   PLAYGROUND_ACTION,
+  plateCreditsText,
+  RELEASE_TEXT,
   SECTIONS,
   type Section,
 } from "./productContent";
+import { formatReleaseDate } from "./releaseDate";
+import { RELEASE } from "./releaseFacts.server";
 
-/** An address as an absolute URL: a path on this site gets the site's origin. */
+/** A line break, and the blank line between Markdown paragraphs. */
+const NEWLINE = String.fromCharCode(10);
+const PARAGRAPH = NEWLINE + NEWLINE;
+
+/** An address as an absolute URL: a path on this site gets the site's origin, and a section of the page the page's address. */
 function absoluteUrl(href: string): string {
+  if (href.startsWith("#")) {
+    return `${SITE_URL}/${href}`;
+  }
   return href.startsWith("/") ? `${SITE_URL}${href}` : href;
 }
 
@@ -42,8 +58,17 @@ function linkList(links: readonly { text: string; href: string }[]): string {
     .join("\n");
 }
 
-/** The two actions, as a list of links. */
-const ACTIONS = linkList([GITHUB_ACTION, PLAYGROUND_ACTION]);
+/** The latest release, as the page's sentence says it. */
+const RELEASE_LINE = RELEASE_TEXT.line(
+  RELEASE.version,
+  formatReleaseDate(RELEASE.date),
+);
+
+/** The install commands, one for each package manager, as one block. */
+const INSTALL_BLOCK = `\`\`\`bash\n${INSTALL_OPTIONS.map((option) => option.command).join("\n")}\n\`\`\``;
+
+/** The picture of the playground, as words: what it shows and its credits. */
+const DEMO = `${PLATES[DEMO_PLATES.wide].description} ${plateCreditsText(DEMO_PLATES.wide)}`;
 
 /** One block as Markdown. */
 function block(item: Block): string {
@@ -55,7 +80,7 @@ function block(item: Block): string {
     case "subheading":
       return `### ${item.text}`;
     case "code":
-      return `\`\`\`${item.language}\n${item.code}\n\`\`\``;
+      return `\`${item.label}\`:\n\n\`\`\`${item.language}\n${item.code}\n\`\`\``;
     case "details":
       return item.items
         .map(
@@ -63,8 +88,20 @@ function block(item: Block): string {
             `### ${summary}\n\n${detail.map(lineToMarkdown).join("\n\n")}`,
         )
         .join("\n\n");
-    case "deepLinks":
-      return linkList(item.links);
+    case "features":
+      return item.items
+        .map(({ name, text }) => `### ${name}\n\n${lineToMarkdown(text)}`)
+        .join("\n\n");
+    case "groups":
+      return item.items
+        .map(({ heading, text, list }) => {
+          const lines =
+            list === true
+              ? text.map((line) => `- ${lineToMarkdown(line)}`).join(NEWLINE)
+              : text.map(lineToMarkdown).join(PARAGRAPH);
+          return `### ${heading}${PARAGRAPH}${lines}`;
+        })
+        .join(PARAGRAPH);
   }
 }
 
@@ -75,15 +112,22 @@ function section({ heading, blocks }: Section): string {
 
 /**
  * The product page as Markdown, from the same content the page renders, with
- * every link absolute and every disclosure open. Served at `/index.md` and
+ * every link absolute and every disclosure open: the hero (the playground,
+ * the install commands, the repository, the badges and the latest release),
+ * the picture in words, then the sections. Served at `/index.md` and
  * included in `/llms-full.txt`.
  */
 export function productMarkdown(): string {
   return `${[
     `# ${HEADLINE}`,
     lineToMarkdown(LEDE),
-    ACTIONS,
-    lineToMarkdown(HERO_NOTE),
+    linkList([PLAYGROUND_ACTION]),
+    INSTALL_BLOCK,
+    lineToMarkdown(INSTALL_REQUIREMENTS),
+    linkList([GITHUB_ACTION]),
+    BADGES.map((badge) => badge.text).join(" · "),
+    `${RELEASE_LINE} ${inline(RELEASE_TEXT.readiness)}`,
+    DEMO,
     ...SECTIONS.map(section),
   ].join("\n\n")}\n`;
 }

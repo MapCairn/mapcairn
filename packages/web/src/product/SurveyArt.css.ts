@@ -1,14 +1,24 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
 import { tokens } from "@mapcairn/theme";
-import { keyframes, style } from "@vanilla-extract/css";
-import { NARROW_CROP } from "./surveyGeometry";
+import { style } from "@vanilla-extract/css";
+import {
+  type Crop,
+  MEASURE_LABEL,
+  NARROW_CROP,
+  type Point,
+  placeIn,
+  SPOT_HEIGHT,
+  WIDE_CROP,
+} from "./surveyGeometry";
 
 /*
- * The survey sheet's inks. Every colour is a token, so the art follows the
- * theme; lines keep their width at any size (`non-scaling-stroke`). The one
- * moment of motion is the pin dropping and the measured line appearing after
- * it; the motion tokens shrink to nothing under reduced motion.
+ * The relief strip's inks. Every colour is a token, so the art follows the
+ * theme: the survey marks (the cairn, the pin, the measured line) are the logo's
+ * blue, which is a graphic colour and never text, the contours are the muted
+ * ink and the two labels are the page's text colour. Lines keep their width at
+ * any size (`non-scaling-stroke`). Nothing moves. In forced colours every mark
+ * is drawn in the system's own colours.
  */
 
 /** Line widths, in screen pixels. */
@@ -23,42 +33,55 @@ const INDEX_CONTOUR_OPACITY = 0.6;
 /** The measured line's dash, in view box units. */
 const DASH = "7 6";
 
-/** Below this width the art is shown cropped round the measured line, so its labels stay legible. */
+/** Below this width the strip is shown enlarged round its marks, so they stay big enough. */
 const NARROW = "screen and (max-width: 36rem)";
 
-/** A share of the frame's width as a percentage. */
+const FORCED = "(forced-colors: active)";
+
+/** A share as a percentage. */
 const percent = (share: number): string => `${(share * 100).toFixed(4)}%`;
 
 /**
- * The art's frame. On a narrow screen it has the crop's shape and hides what
- * falls outside it (`NARROW_CROP` in `surveyGeometry.ts`).
+ * The strip's frame: the crop's shape in a 1 px neatline, hiding what falls
+ * outside it, as the pictures' neatline does. The drawing and the two labels
+ * share its one grid cell, so the labels lie over the drawing without being
+ * positioned out of flow.
  */
 export const frame = style({
+  display: "grid",
+  gridTemplateColumns: "minmax(0, 1fr)",
+  gridTemplateRows: "minmax(0, 1fr)",
+  overflow: "hidden",
+  boxSizing: "content-box",
+  border: `1px solid ${tokens.color.controlBoundary}`,
+  aspectRatio: String(WIDE_CROP.aspect),
   "@media": {
     [NARROW]: {
       aspectRatio: String(NARROW_CROP.aspect),
-      overflow: "hidden",
     },
+    [FORCED]: { borderColor: "CanvasText" },
   },
 });
 
-/** The whole drawing: as wide as its frame, or `zoom` times as wide and offset onto the crop on a narrow screen. */
+/** The drawing: `zoom` times as wide as its frame, offset onto the crop. */
+const artSize = (crop: Crop) =>
+  ({
+    width: percent(crop.zoom),
+    marginInlineStart: percent(crop.marginInlineStart),
+    marginBlockStart: percent(crop.marginBlockStart),
+  }) as const;
+
+/** The whole drawing, enlarged and offset onto the frame's crop. */
 export const art = style({
+  gridArea: "1 / 1",
+  minWidth: 0,
   display: "block",
-  width: "100%",
   height: "auto",
+  maxWidth: "none",
+  ...artSize(WIDE_CROP),
   "@media": {
-    [NARROW]: {
-      width: percent(NARROW_CROP.zoom),
-      maxWidth: "none",
-      marginInlineStart: percent(NARROW_CROP.marginInlineStart),
-      marginBlockStart: percent(NARROW_CROP.marginBlockStart),
-    },
+    [NARROW]: artSize(NARROW_CROP),
   },
-  color: tokens.color.text,
-  fontFamily: tokens.type.family,
-  fontVariantNumeric: "tabular-nums",
-  overflow: "visible",
 });
 
 const stroke = (width: number) =>
@@ -68,18 +91,15 @@ const stroke = (width: number) =>
     vectorEffect: "non-scaling-stroke",
   }) as const;
 
-/** The grid ticks on the sheet's edges. */
-export const tick = style({
-  ...stroke(HAIR),
-  stroke: tokens.color.controlBoundary,
-});
-
 /** An ordinary contour. */
 export const contour = style({
   ...stroke(HAIR),
   stroke: tokens.color.textMuted,
   strokeOpacity: CONTOUR_OPACITY,
   strokeLinejoin: "round",
+  "@media": {
+    [FORCED]: { stroke: "CanvasText" },
+  },
 });
 
 /** An index contour, every fifth. */
@@ -88,86 +108,46 @@ export const indexContour = style({
   stroke: tokens.color.textMuted,
   strokeOpacity: INDEX_CONTOUR_OPACITY,
   strokeLinejoin: "round",
-});
-
-/** The frame. */
-export const neatline = style({
-  ...stroke(FINE),
-  stroke: tokens.color.controlBoundary,
-});
-
-/** The grid numbers in the collar. */
-export const collarText = style({
-  fill: tokens.color.textMuted,
-  fontSize: tokens.type.small.size,
-});
-
-/** A label on the sheet: the spot height, the scale and the north arrow's letter. */
-export const label = style({
-  fill: tokens.color.text,
-  fontSize: tokens.type.small.size,
-  fontWeight: tokens.type.weight.semibold,
-  paintOrder: "stroke",
-  stroke: tokens.color.mapHalo,
-  strokeWidth: 3,
-  strokeLinejoin: "round",
+  "@media": {
+    [FORCED]: { stroke: "CanvasText" },
+  },
 });
 
 /** The line around each stone, in the halo colour, as the brand mark draws it. */
 export const halo = style({
   fill: tokens.color.mapHalo,
   stroke: tokens.color.mapHalo,
-});
-
-/** A stone of the cairn. */
-export const stone = style({
-  fill: tokens.color.accent,
-  stroke: tokens.color.accent,
-});
-
-const drop = keyframes({
-  from: {
-    opacity: 0,
-    transform: `translateY(calc(-1 * ${tokens.space.lg}))`,
+  "@media": {
+    [FORCED]: { fill: "Canvas", stroke: "Canvas" },
   },
-  to: { opacity: 1, transform: "none" },
 });
 
-const appear = keyframes({
-  from: { opacity: 0 },
-  to: { opacity: 1 },
+/** A stone of the cairn, in the logo's blue. */
+export const stone = style({
+  fill: tokens.color.mapMeasureLine,
+  stroke: tokens.color.mapMeasureLine,
+  "@media": {
+    [FORCED]: { fill: "CanvasText", stroke: "CanvasText" },
+  },
 });
 
-/** The pin, which drops into place once when the page opens. */
-export const pin = style({
-  transformBox: "fill-box",
-  transformOrigin: "center",
-  animationName: drop,
-  animationDuration: tokens.motion.duration.slow,
-  animationTimingFunction: tokens.motion.easing,
-  animationFillMode: "both",
-});
-
-/** The pin's body. */
+/** The pin's body, in the blue of the playground's own pin. */
 export const pinBody = style({
   fill: tokens.color.mapPin,
   stroke: tokens.color.mapHalo,
   strokeWidth: BOLD,
   vectorEffect: "non-scaling-stroke",
+  "@media": {
+    [FORCED]: { fill: "CanvasText", stroke: "Canvas" },
+  },
 });
 
 /** The dot in the pin's head. */
 export const pinDot = style({
   fill: tokens.color.mapHalo,
-});
-
-/** The measured line and its length, which appear once the pin has landed. */
-export const measure = style({
-  animationName: appear,
-  animationDuration: tokens.motion.duration.slow,
-  animationDelay: tokens.motion.duration.slow,
-  animationTimingFunction: tokens.motion.easing,
-  animationFillMode: "both",
+  "@media": {
+    [FORCED]: { fill: "Canvas" },
+  },
 });
 
 /** The measured line itself. */
@@ -176,37 +156,93 @@ export const measureLine = style({
   stroke: tokens.color.mapMeasureLine,
   strokeDasharray: DASH,
   strokeLinecap: "round",
+  "@media": {
+    [FORCED]: { stroke: "CanvasText" },
+  },
 });
 
-/** The measured length. */
-export const measureLabel = style([
+/**
+ * A label: HTML at the small step, so it is 13 px at every width, in the
+ * page's text colour on a plate of the page's own ground, which knocks the
+ * contours out behind the figures.
+ */
+const label = style({
+  gridArea: "1 / 1",
+  justifySelf: "start",
+  alignSelf: "start",
+  paddingInline: tokens.space.xxs,
+  color: tokens.color.text,
+  backgroundColor: tokens.color.pageBackground,
+  fontFamily: tokens.type.family,
+  fontSize: tokens.type.small.size,
+  fontWeight: tokens.type.weight.semibold,
+  fontVariantNumeric: "tabular-nums",
+  lineHeight: tokens.type.small.lineHeight,
+  whiteSpace: "nowrap",
+  "@media": {
+    [FORCED]: { color: "CanvasText", backgroundColor: "Canvas" },
+  },
+});
+
+/** A small step back along the inline axis, for a label that sits before its mark. */
+const BEFORE = `calc(-1 * ${tokens.space.xs})`;
+
+/**
+ * Where a label's top start corner goes in a crop's frame, from a point of the
+ * sheet and a gap along the inline axis: the start margin is a share of the
+ * frame's width, and so is the block margin (a percentage margin always is), so
+ * the point's share of the frame's height becomes that share over the frame's
+ * `aspect`.
+ */
+const labelMargins = (crop: Crop, point: Point, gap: string, drop: string) => {
+  const { inline, block } = placeIn(crop, point);
+  return {
+    marginInlineStart: `calc(${percent(inline)} + ${gap})`,
+    marginBlockStart: `calc(${percent(block / crop.aspect)} + ${drop})`,
+  } as const;
+};
+
+/**
+ * Beside the cairn, on its start side: the label's end edge a small step
+ * before the cairn, its middle level with the middle of the cairn. Moved back
+ * by its own width, so it never needs room beyond the cairn, at any text size.
+ */
+export const spotHeight = style([
   label,
   {
-    fill: tokens.color.accent,
+    ...labelMargins(WIDE_CROP, SPOT_HEIGHT.at, BEFORE, "0px"),
+    transform: "translate(-100%, -50%)",
+    selectors: {
+      // The page's root is always left to right; the mirrored shift is what the harmony scanner asks of any horizontal translation.
+      '[dir="rtl"] &': { transform: "translate(100%, -50%)" },
+    },
+    "@media": {
+      [NARROW]: labelMargins(NARROW_CROP, SPOT_HEIGHT.at, BEFORE, "0px"),
+    },
   },
 ]);
 
-/** The cross at the map's centre. */
-export const crosshair = style({
-  ...stroke(FINE),
-  stroke: tokens.color.text,
-});
-
-/** The filled half of the north arrow, and the dark quarters of the scale bar. */
-export const arrowDark = style({
-  fill: tokens.color.text,
-});
-
-/** The outlined half of the north arrow. */
-export const arrowLight = style({
-  fill: tokens.color.mapHalo,
-  stroke: tokens.color.text,
-  strokeWidth: HAIR,
-  vectorEffect: "non-scaling-stroke",
-});
-
-/** A dark quarter of the scale bar. */
-export const barDark = arrowDark;
-
-/** A light quarter of the scale bar. */
-export const barLight = arrowLight;
+/**
+ * The line's length: its top start corner a small step after and below the
+ * line's middle. The line rises as it goes on, so it passes above the label
+ * at every scale.
+ */
+export const length = style([
+  label,
+  {
+    ...labelMargins(
+      WIDE_CROP,
+      MEASURE_LABEL.at,
+      tokens.space.sm,
+      tokens.space.xxs,
+    ),
+    "@media": {
+      [NARROW]: labelMargins(
+        NARROW_CROP,
+        MEASURE_LABEL.at,
+        tokens.space.sm,
+        tokens.space.xxs,
+      ),
+    },
+  },
+]);

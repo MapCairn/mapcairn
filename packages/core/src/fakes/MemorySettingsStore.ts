@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
-import { DEFAULT_BASEMAP_ID } from "../basemaps/basemaps";
 import type { Settings, SettingsStore } from "../ports/settings";
 
 /** What a fresh {@link MemorySettingsStore} holds. */
@@ -10,7 +9,7 @@ export const DEFAULT_FAKE_SETTINGS: Settings = Object.freeze({
   zoomButtons: null,
   saveData: null,
   projection: "flat",
-  basemapId: DEFAULT_BASEMAP_ID,
+  basemapId: null,
   lastView: null,
   tourSeen: null,
   language: null,

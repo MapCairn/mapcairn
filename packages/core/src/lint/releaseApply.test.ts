@@ -116,7 +116,7 @@ function repository(
       manifest(`@mapcairn/${name}`, options.versions?.[name] ?? "0.0.0", {
         dependencies:
           name === "map"
-            ? { ...sdkDependencies("^0.0.0"), "left-pad": "^1.0.0" }
+            ? { ...sdkDependencies("0.0.0"), "left-pad": "^1.0.0" }
             : { "left-pad": "^1.0.0" },
         peerDependencies: name === "react" ? { react: "^19.0.0" } : {},
       }),
@@ -127,7 +127,7 @@ function repository(
     "packages/web/package.json",
     manifest("@mapcairn/web", "1.0.0", {
       private: true,
-      dependencies: { ...sdkDependencies("^0.0.0"), "@mapcairn/map": "^0.0.0" },
+      dependencies: { ...sdkDependencies("0.0.0"), "@mapcairn/map": "0.0.0" },
     }),
   );
   write(
@@ -135,7 +135,7 @@ function repository(
     "examples/embed/package.json",
     manifest("@mapcairn/example-embed", "1.0.0", {
       private: true,
-      devDependencies: { "@mapcairn/core": "^0.0.0" },
+      devDependencies: { "@mapcairn/core": "0.0.0" },
     }),
   );
   write(root, "package-lock.json", '{ "lock": 1 }\n');
@@ -205,14 +205,14 @@ describe("setReleaseInManifest", () => {
     const next = JSON.parse(setReleaseInManifest(text, "0.1.0"));
     expect(next).toMatchObject({
       version: "0.1.0",
-      dependencies: { "@mapcairn/core": "^0.1.0", "left-pad": "^1.0.0" },
-      devDependencies: { "@mapcairn/theme": "^0.1.0" },
-      peerDependencies: { "@mapcairn/react": "^0.1.0" },
-      optionalDependencies: { "@mapcairn/core": "^0.1.0" },
+      dependencies: { "@mapcairn/core": "0.1.0", "left-pad": "^1.0.0" },
+      devDependencies: { "@mapcairn/theme": "0.1.0" },
+      peerDependencies: { "@mapcairn/react": "0.1.0" },
+      optionalDependencies: { "@mapcairn/core": "0.1.0" },
     });
   });
 
-  it("uses the exact version for a prerelease", () => {
+  it("uses the exact version for a prerelease too", () => {
     const text = manifest("@mapcairn/map", "0.0.0", {
       dependencies: { "@mapcairn/core": "^0.0.0" },
     });
@@ -234,7 +234,7 @@ describe("setReleaseInManifest", () => {
       "\t",
     );
     const next = setReleaseInManifest(`${text}\n`, "0.1.0");
-    expect(next).toBe(`${text.replace("^0.0.0", "^0.1.0")}\n`);
+    expect(next).toBe(`${text.replace("^0.0.0", "0.1.0")}\n`);
   });
 
   it("returns an unrelated manifest as it was", () => {
@@ -286,7 +286,7 @@ describe("workspaces", () => {
       }),
     );
     expect(readSdkState(fine).rangeProblems).toEqual([
-      "packages/web/package.json: dependencies @mapcairn/core is ^0.5.0, expected ^0.0.0",
+      "packages/web/package.json: dependencies @mapcairn/core is ^0.5.0, expected 0.0.0",
     ]);
   });
 
@@ -335,19 +335,19 @@ describe("applyRelease", () => {
     expect(
       JSON.parse(read(root, "packages/map/package.json")).dependencies,
     ).toEqual({
-      "@mapcairn/core": "^0.1.0",
-      "@mapcairn/react": "^0.1.0",
-      "@mapcairn/theme": "^0.1.0",
+      "@mapcairn/core": "0.1.0",
+      "@mapcairn/react": "0.1.0",
+      "@mapcairn/theme": "0.1.0",
       "left-pad": "^1.0.0",
     });
     const web = JSON.parse(read(root, "packages/web/package.json"));
     expect(web.version).toBe("1.0.0");
-    expect(web.dependencies["@mapcairn/map"]).toBe("^0.1.0");
+    expect(web.dependencies["@mapcairn/map"]).toBe("0.1.0");
     expect(
       JSON.parse(read(root, "examples/embed/package.json")).devDependencies[
         "@mapcairn/core"
       ],
-    ).toBe("^0.1.0");
+    ).toBe("0.1.0");
     expect(
       JSON.parse(read(root, "packages/react/package.json")).peerDependencies,
     ).toEqual({ react: "^19.0.0" });
@@ -796,11 +796,11 @@ describe("applyRelease with the real npm", () => {
     const lock = JSON.parse(read(root, "package-lock.json"));
     expect(lock.packages["packages/core"].version).toBe("0.1.0");
     expect(lock.packages["packages/map"].dependencies["@mapcairn/core"]).toBe(
-      "^0.1.0",
+      "0.1.0",
     );
     expect(lock.packages["packages/sdk"].version).toBe("0.1.0");
     expect(lock.packages["packages/sdk"].dependencies["@mapcairn/theme"]).toBe(
-      "^0.1.0",
+      "0.1.0",
     );
     expect(npm(["ci", "--ignore-scripts"], root).ok).toBe(true);
   }, 120_000);
