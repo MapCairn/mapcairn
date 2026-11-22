@@ -369,7 +369,7 @@ body {
   padding-block: var(--mc-space-xxs);
   padding-inline: var(--mc-space-md);
   border-inline-start: 2px solid transparent;
-  border-radius: 0;
+  border-radius: unset;
   color: var(--mc-color-text-muted);
   background-color: transparent;
   font-size: var(--mc-type-small-size);
