@@ -1,9 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
-import {
-  parseRoadmap as parseRoadmapSource,
-  // @ts-expect-error The script is dependency-free JavaScript with JSDoc types.
-} from "../../../scripts/roadmap-check.mjs";
+import { parseRoadmap as parseRoadmapSource } from "../../../scripts/roadmap-check.mjs";
 
 /** One ranked milestone, as `ROADMAP.md` lists it. */
 export interface RoadmapItem {
@@ -38,5 +35,5 @@ export interface Roadmap {
  * @param markdown - The text of `ROADMAP.md`.
  */
 export function parseRoadmap(markdown: string): Roadmap {
-  return parseRoadmapSource(markdown) as Roadmap;
+  return parseRoadmapSource(markdown);
 }
