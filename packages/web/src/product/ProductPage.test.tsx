@@ -985,7 +985,7 @@ describe("the embedding example", () => {
     expect(MAIN_CODE).toContain(EMBED_EXCERPT);
     expect(EMBED_EXCERPT.startsWith("function MapScreen() {")).toBe(true);
     expect(EMBED_EXCERPT.endsWith("\n}")).toBe(true);
-    expect(EMBED_EXCERPT.split("\n").length).toBeLessThanOrEqual(14);
+    expect(EMBED_EXCERPT.split("\n").length).toBeLessThanOrEqual(15);
     expect(EMBED_EXCERPT).toContain("<MapView");
     renderPage();
     const embed = section("Embed a map");

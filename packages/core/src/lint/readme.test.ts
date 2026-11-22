@@ -253,7 +253,7 @@ describe("README.md", () => {
     expect(section).toContain("TS2882");
     expect(section).toContain("`MODULE_LEVEL_DIRECTIVE`");
     expect(section).toContain("search shows sample results");
-    expect(section).toContain("The basemap catalogue's default");
+    expect(section).toContain("The basemap shown follows the theme");
   });
 
   it("gives one policy line whose directives are the ones the consumer check's browser leg runs under", () => {
@@ -309,6 +309,13 @@ describe("README.md", () => {
       }
     }
     expect(unknown).toEqual([]);
+  });
+
+  it("chooses the basemap from the resolved theme, and says what a fixed basemap does", () => {
+    expect(snippet).toContain("defaultBasemapFor(basemaps, resolved)");
+    expect(snippet).toContain("const { resolved } = useTheme();");
+    expect(snippet).not.toContain("basemaps.defaultId");
+    expect(README).toContain("To show one basemap in every theme");
   });
 
   it("links only to files and directories that exist", () => {

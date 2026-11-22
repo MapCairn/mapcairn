@@ -184,4 +184,31 @@ describe("ExampleApp", () => {
 
     expect(document.documentElement.getAttribute("data-theme")).toBe("dark");
   });
+
+  it("draws the theme's default basemap until one is picked, then keeps the pick", async () => {
+    render(<ExampleApp />);
+
+    fireEvent.click(await screen.findByRole("button", { name: "Settings" }));
+    fireEvent.click(await screen.findByRole("radio", { name: "Dark" }));
+    fireEvent.click(screen.getByRole("button", { name: "Map options" }));
+    const picker = await screen.findByRole("radiogroup", { name: "Basemap" });
+    expect(
+      (within(picker).getByRole("radio", { name: /Fiord/ }) as HTMLInputElement)
+        .checked,
+    ).toBe(true);
+
+    fireEvent.click(within(picker).getByRole("radio", { name: /Positron/ }));
+    fireEvent.click(screen.getByRole("button", { name: "Settings" }));
+    fireEvent.click(await screen.findByRole("radio", { name: "Light" }));
+    fireEvent.click(screen.getByRole("button", { name: "Map options" }));
+    expect(
+      (
+        within(
+          await screen.findByRole("radiogroup", { name: "Basemap" }),
+        ).getByRole("radio", {
+          name: /Positron/,
+        }) as HTMLInputElement
+      ).checked,
+    ).toBe(true);
+  });
 });

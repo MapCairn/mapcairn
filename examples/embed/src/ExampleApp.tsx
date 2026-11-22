@@ -1,10 +1,11 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
-import type {
-  LatLng,
-  SearchResult,
-  SheetDetent,
-  ViewState,
+import {
+  defaultBasemapFor,
+  type LatLng,
+  type SearchResult,
+  type SheetDetent,
+  type ViewState,
 } from "@mapcairn/core";
 import {
   AccuracyCircle,
@@ -36,6 +37,7 @@ import {
   useMap,
   useMeasure,
   useSettings,
+  useTheme,
 } from "@mapcairn/map";
 import { useModelContextTool } from "@mapcairn/react";
 import { type ReactNode, useState } from "react";
@@ -90,7 +92,12 @@ interface ExampleState {
 function ExampleMap() {
   const { settings } = useSettings();
   const catalogue = useBasemaps();
-  const [basemapId, setBasemapId] = useState(catalogue.defaultId);
+  const { resolved } = useTheme();
+  const [chosenId, setBasemapId] = useState<string | null>(null);
+  const basemap =
+    chosenId === null
+      ? defaultBasemapFor(catalogue, resolved)
+      : catalogue.resolve(chosenId);
   const [measuring, setMeasuring] = useState(false);
   const [pin, setPin] = useState<LatLng | null>(null);
   const layers = useDataLayers();
@@ -105,7 +112,7 @@ function ExampleMap() {
     setMeasuring,
     pin,
     setPin,
-    basemapId,
+    basemapId: basemap.id,
     setBasemapId,
   };
 
@@ -128,7 +135,7 @@ function ExampleMap() {
       <MapView
         id={MAP_ID}
         initialView={INITIAL_VIEW}
-        basemap={catalogue.resolve(basemapId)}
+        basemap={basemap}
         cursor={measuring ? "crosshair" : "grab"}
         onClick={(event) => {
           if (measuring) {

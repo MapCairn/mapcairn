@@ -44,7 +44,7 @@ The generated names of the CSS custom properties in `tokens.css` are private and
 Build the services once, wrap the tree, then render the map with its chrome. This is a whole app. It runs on the SDK's in-memory fakes, so it requests nothing and draws no map tiles; a real map swaps in the MapLibre adapter, as the [adapter's README](https://github.com/MapCairn/mapcairn/tree/main/packages/adapter-maplibre) shows.
 
 ```tsx
-import { createFakeServices } from "@mapcairn/core";
+import { createFakeServices, defaultBasemapFor } from "@mapcairn/core";
 import {
   FocusRegistryProvider,
   LiveRegionProvider,
@@ -55,6 +55,7 @@ import {
   TooltipProvider,
   useBasemaps,
   useMap,
+  useTheme,
 } from "@mapcairn/map";
 import { type ReactNode, useState } from "react";
 
@@ -73,6 +74,7 @@ export function App() {
 
 function MapScreen() {
   const basemaps = useBasemaps();
+  const { resolved } = useTheme();
   return (
     <MapView
       initialView={{
@@ -80,7 +82,7 @@ function MapScreen() {
         zoom: 11,
         bearing: 0,
       }}
-      basemap={basemaps.resolve(basemaps.defaultId)}
+      basemap={defaultBasemapFor(basemaps, resolved)}
       chrome={(background) => <Chrome background={background} />}
     />
   );
@@ -106,7 +108,7 @@ function Chrome({ background }: { readonly background: ReactNode }) {
 }
 ```
 
-The repository's `examples/embed` is the full version of this app, with the end stack of controls, the sheet, the measure tool, layers and a search provider of its own. A test in the repository fails if this snippet uses an import, a component or a prop that the example does not. `LiveRegionProvider` is the one announcer: without it, announcements are dropped.
+The repository's `examples/embed` is the full version of this app, with the end stack of controls, the sheet, the measure tool, layers and a search provider of its own. A test in the repository fails if this snippet uses an import, a component or a prop that the example does not. `LiveRegionProvider` is the one announcer: without it, announcements are dropped. The basemap follows the theme: `defaultBasemapFor(basemaps, resolved)` is Bright in the light theme and Fiord in the dark theme in the built-in catalogue. To show one basemap in every theme, pass `basemaps.resolve(id)` and leave `useTheme` out.
 
 ## Loading the map in a chunk of its own
 
