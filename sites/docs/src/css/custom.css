@@ -163,6 +163,11 @@ body {
  * which has the room, keeps its name.
  */
 @media (max-width: 22.49rem) {
+  .navbar__inner .navbar__brand {
+    min-width: var(--mc-size-min-target);
+    justify-content: center;
+  }
+
   .navbar__inner .navbar__title {
     position: absolute;
     width: 1px;
