@@ -41,7 +41,7 @@ export class DataLayerTileRequests {
    * MapLibre's `transformRequest`: adds `referrerPolicy: "no-referrer"` to a
    * request for a data layer's tile and returns every other request unchanged.
    */
-  transform = (url: string, _resourceType?: string): RequestParameters => {
+  transform = (url: string): RequestParameters => {
     for (const pattern of this.patterns.values()) {
       if (pattern.test(url)) {
         return { url, referrerPolicy: "no-referrer" };

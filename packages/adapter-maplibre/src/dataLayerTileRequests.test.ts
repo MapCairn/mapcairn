@@ -11,7 +11,7 @@ describe("DataLayerTileRequests", () => {
   it("sends no referrer with a tile of a registered data layer", () => {
     const requests = new DataLayerTileRequests();
     requests.register("mapcairn:a", LAYER_TEMPLATE);
-    expect(requests.transform(LAYER_TILE, "Tile")).toEqual({
+    expect(requests.transform(LAYER_TILE)).toEqual({
       url: LAYER_TILE,
       referrerPolicy: "no-referrer",
     });
@@ -20,11 +20,11 @@ describe("DataLayerTileRequests", () => {
   it("leaves a request that is not a data layer's tile as it was", () => {
     const requests = new DataLayerTileRequests();
     requests.register("mapcairn:a", LAYER_TEMPLATE);
-    expect(requests.transform(BASEMAP_TILE, "Tile")).toEqual({
+    expect(requests.transform(BASEMAP_TILE)).toEqual({
       url: BASEMAP_TILE,
     });
     expect(
-      requests.transform("https://layers.example/other/3/5/2.png", "Tile"),
+      requests.transform("https://layers.example/other/3/5/2.png"),
     ).toEqual({ url: "https://layers.example/other/3/5/2.png" });
   });
 
@@ -36,15 +36,14 @@ describe("DataLayerTileRequests", () => {
     );
     const tile =
       "https://layers.example/wms?bbox=-20037508,0,0,20037508&size=256&tile=0123";
-    expect(requests.transform(tile, "Tile").referrerPolicy).toBe("no-referrer");
+    expect(requests.transform(tile).referrerPolicy).toBe("no-referrer");
   });
 
   it("does not read a dot or other character of a template as a pattern", () => {
     const requests = new DataLayerTileRequests();
     requests.register("mapcairn:a", "https://layers.example/a.b/{z}.png");
     expect(
-      requests.transform("https://layers.example/aXb/3.png", "Tile")
-        .referrerPolicy,
+      requests.transform("https://layers.example/aXb/3.png").referrerPolicy,
     ).toBeUndefined();
   });
 
@@ -52,19 +51,16 @@ describe("DataLayerTileRequests", () => {
     const requests = new DataLayerTileRequests();
     requests.register("mapcairn:a", LAYER_TEMPLATE);
     requests.release("mapcairn:a");
-    expect(requests.transform(LAYER_TILE, "Tile")).toEqual({ url: LAYER_TILE });
+    expect(requests.transform(LAYER_TILE)).toEqual({ url: LAYER_TILE });
   });
 
   it("drawing a source again replaces its template", () => {
     const requests = new DataLayerTileRequests();
     requests.register("mapcairn:a", LAYER_TEMPLATE);
     requests.register("mapcairn:a", "https://new.example/{z}/{x}/{y}.png");
-    expect(requests.transform(LAYER_TILE, "Tile").referrerPolicy).toBe(
-      undefined,
-    );
+    expect(requests.transform(LAYER_TILE).referrerPolicy).toBe(undefined);
     expect(
-      requests.transform("https://new.example/1/2/3.png", "Tile")
-        .referrerPolicy,
+      requests.transform("https://new.example/1/2/3.png").referrerPolicy,
     ).toBe("no-referrer");
   });
 });
