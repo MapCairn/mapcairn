@@ -4,7 +4,6 @@
     <img src="docs/brand/logo-mark-light.svg" alt="The MapCairn logo: a stack of four uneven stones" width="96" height="96">
   </picture>
 </p>
-
 # MapCairn
 
 [![CI](https://github.com/MapCairn/mapcairn/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/MapCairn/mapcairn/actions/workflows/ci.yml)
