@@ -1050,42 +1050,74 @@ describe("published text", () => {
     /** The smallest size tried, and how many times the larger run is bigger. */
     const START = 25_000;
     const FACTOR = 4;
-    /** The small run must cost at least this much CPU time to be measured. */
+    /**
+     * The small run must cost at least this much CPU time to be measured, and
+     * it is also the smallest timing a ratio is taken against: a clock that
+     * counts in coarse steps can read 0 for a run that did take time.
+     */
     const FLOOR_MS = 2;
     /** The small size never grows past this, so a shape that stays cheap ends. */
     const MAX_SMALL = 400_000;
-    /** Linear work grows about 4 times from small to large, quadratic about 16. */
-    const MAX_GROWTH = 10;
+    /**
+     * Linear work grows about 4 times from small to large and quadratic work
+     * about 16, but real linear work is not exact: shapes of many short lines
+     * measured 4.5 to 5.5 times for 4 times the size (7 on a loaded machine)
+     * and a quadratic scan measured 12.6 to 14.8 times. The limit sits between
+     * them. A quadratic cost much smaller than that scan would stay under it.
+     */
+    const MAX_GROWTH = 12;
     /**
      * Each timing is the best of the runs so far, small and large taken in
      * turn so a burst of load on the machine hits both. Load only ever makes a
      * run slower, so the best run is the closest to the real cost: after
      * MIN_ROUNDS the loop stops once the best timings are within the limit, and
-     * otherwise keeps sampling up to MAX_ROUNDS. Work that really is quadratic
-     * is never faster than its best run, so it fails after all of them.
+     * otherwise keeps sampling up to the round cap. Work that really is
+     * quadratic is never faster than its best run, so it fails after all of
+     * them.
      */
     const MIN_ROUNDS = 3;
     const MAX_ROUNDS = 15;
+    /**
+     * The control case never gets under the limit, so it samples only
+     * MIN_ROUNDS times, and compares sizes six times apart: quadratic work then
+     * grows about 36 times against a limit of 12, so a noisy small run cannot
+     * hide it.
+     */
+    const CONTROL_FACTOR = 6;
 
     type Run = (text: string) => unknown;
 
-    function bestOf(runs: number, text: string, run: Run): number {
-      let best = Number.POSITIVE_INFINITY;
-      for (let count = 0; count < runs; count += 1) {
-        const started = cpuMs();
-        run(text);
-        best = Math.min(best, cpuMs() - started);
-      }
-      return best;
+    interface Options {
+      /** What is timed; the checker unless a test supplies another. */
+      readonly run?: Run;
+      /** The clock, in milliseconds; CPU time unless a test supplies another. */
+      readonly clock?: () => number;
+      /** The most rounds to sample before the limit is judged. */
+      readonly maxRounds?: number;
+      /** How many times the larger run is bigger than the small one. */
+      readonly factor?: number;
+    }
+
+    function timeOnce(text: string, run: Run, clock: () => number): number {
+      const started = clock();
+      run(text);
+      return clock() - started;
     }
 
     /**
      * Doubles the size until one run costs at least the floor, so a cheap shape
-     * is measured on a run long enough to tell linear from quadratic work.
+     * is measured on a run long enough to tell linear from quadratic work. The
+     * sizing run is a single sample, and load can only make it look slower, so
+     * the error is towards a bigger size, never a smaller one. A shape whose
+     * size is a line count is costly per unit and stays at the start size.
      */
-    function sizeToMeasure(make: (size: number) => string, run: Run): number {
+    function sizeToMeasure(
+      make: (size: number) => string,
+      run: Run,
+      clock: () => number,
+    ): number {
       let size = START;
-      while (size < MAX_SMALL && bestOf(1, make(size), run) < FLOOR_MS) {
+      while (size < MAX_SMALL && timeOnce(make(size), run, clock) < FLOOR_MS) {
         size *= 2;
       }
       return size;
@@ -1099,24 +1131,29 @@ describe("published text", () => {
      */
     function expectLinear(
       make: (size: number) => string,
-      run: Run = checkChangelog,
+      {
+        run = checkChangelog,
+        clock = cpuMs,
+        maxRounds = MAX_ROUNDS,
+        factor = FACTOR,
+      }: Options = {},
     ): void {
-      const size = sizeToMeasure(make, run);
+      const size = sizeToMeasure(make, run, clock);
       const smallText = make(size);
-      const largeText = make(FACTOR * size);
+      const largeText = make(factor * size);
       let small = Number.POSITIVE_INFINITY;
       let large = Number.POSITIVE_INFINITY;
-      const growth = () => large / Math.max(small, Number.EPSILON);
-      for (let round = 1; round <= MAX_ROUNDS; round += 1) {
-        small = Math.min(small, bestOf(1, smallText, run));
-        large = Math.min(large, bestOf(1, largeText, run));
+      const growth = () => large / Math.max(small, FLOOR_MS);
+      for (let round = 1; round <= maxRounds; round += 1) {
+        small = Math.min(small, timeOnce(smallText, run, clock));
+        large = Math.min(large, timeOnce(largeText, run, clock));
         if (round >= MIN_ROUNDS && growth() < MAX_GROWTH) {
           break;
         }
       }
       expect(
         growth(),
-        `${size} units took ${small.toFixed(2)} ms and ${FACTOR * size} took ${large.toFixed(2)} ms of CPU time`,
+        `${size} units took ${small.toFixed(2)} ms and ${factor * size} took ${large.toFixed(2)} ms of CPU time`,
       ).toBeLessThan(MAX_GROWTH);
     }
 
@@ -1137,9 +1174,24 @@ describe("published text", () => {
     it("fails a quadratic control character scan on a line of spaces, and shows both timings", () => {
       const spaces = (size: number) => `${HEAD}${" ".repeat(size)}\n`;
       expectLinear(spaces);
-      expect(() => expectLinear(spaces, withQuadraticControlScan)).toThrow(
-        /\d+ units took [\d.]+ ms and \d+ took [\d.]+ ms of CPU time/,
-      );
+      expect(() =>
+        expectLinear(spaces, {
+          run: withQuadraticControlScan,
+          maxRounds: MIN_ROUNDS,
+          factor: CONTROL_FACTOR,
+        }),
+      ).toThrow(/\d+ units took [\d.]+ ms and \d+ took [\d.]+ ms of CPU time/);
+    });
+
+    it("does not fail when a coarse clock reads 0 for the small run", () => {
+      let now = 0;
+      const coarse = (text: string) => {
+        now += text.length > 1_000_000 ? 1 : 0;
+      };
+      expectLinear((size) => "a".repeat(size), {
+        run: coarse,
+        clock: () => now,
+      });
     });
 
     it.each(UNITS)("scales linearly on a line of %j", (unit) => {
@@ -1154,6 +1206,7 @@ describe("published text", () => {
     });
 
     it("scales linearly on many ATX version headings", () => {
+      // The size is a line count here, so even the start size is costly.
       expectLinear(
         (size) => `${HEAD}${"## 0.1.0 (2026-12-01)\n".repeat(size)}`,
       );
