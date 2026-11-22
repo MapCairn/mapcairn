@@ -1,8 +1,8 @@
 # Contributor licence agreement
 
-Version 1.3
+Version 1.4
 
-MapCairn is licensed under [AGPL-3.0](LICENSE), and its author may also agree other licence terms by arrangement, for example for closed-source use. To make both possible, everyone who contributes code, documentation or other material to MapCairn agrees to the terms below. You keep the copyright in your contribution. You give the project owner the rights needed to distribute it under both kinds of licence.
+MapCairn is licensed under [AGPL-3.0](LICENSE). Everyone who contributes code, documentation or other material to MapCairn agrees to the terms below. You keep the copyright in your contribution. You give the project owner the rights needed to distribute it.
 
 ## Definitions
 
@@ -13,7 +13,7 @@ MapCairn is licensed under [AGPL-3.0](LICENSE), and its author may also agree ot
 
 ## 1. Copyright licence
 
-You give the Owner and every recipient of the Project a perpetual, worldwide, non-exclusive, royalty-free, irrevocable licence to reproduce, prepare derivative works of, publicly display, publicly perform, sublicense and distribute your Contribution and any derivative works, in source and object form, under any licence terms the Owner chooses. Those terms include the AGPL-3.0 and commercial or proprietary terms.
+You give the Owner and every recipient of the Project a perpetual, worldwide, non-exclusive, royalty-free, irrevocable licence to reproduce, prepare derivative works of, publicly display, publicly perform, sublicense and distribute your Contribution and any derivative works, in source and object form, under any licence terms the Owner chooses.
 
 ## 2. Patent licence
 
@@ -35,7 +35,7 @@ You confirm that:
 
 ## 5. What the Owner promises
 
-The Owner will keep the Project available to the public under the AGPL-3.0, or under another licence approved by the Open Source Initiative, for as long as it is published. This promise does not stop the Owner from also offering the Project under other terms.
+The Owner will keep the Project available to the public under the AGPL-3.0, or under another licence approved by the Open Source Initiative, for as long as it is published.
 
 ## 6. General
 
