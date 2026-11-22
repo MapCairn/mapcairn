@@ -562,10 +562,11 @@ blockquote {
   max-height: calc(100dvh - 2 * var(--mc-space-xl));
   margin-block: var(--mc-space-xl) auto;
   margin-inline: auto;
-  padding: var(--mc-space-sm);
+  padding: 0;
   border: 1px solid var(--mc-color-hairline);
   border-radius: var(--mc-radius-sheet);
   background-color: var(--mc-color-surface);
+  backdrop-filter: blur(var(--mc-effect-blur));
   box-shadow: var(--mc-shadow-floating);
   color: var(--mc-color-text);
   overflow: hidden;
@@ -574,7 +575,15 @@ blockquote {
 .search-dialog[open] {
   display: flex;
   flex-direction: column;
+}
+
+.search-dialog__content {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
   gap: var(--mc-space-xs);
+  min-height: 0;
+  padding: var(--mc-space-sm);
 }
 
 .search-dialog::backdrop {
@@ -641,6 +650,7 @@ blockquote {
   margin: 0;
   padding: 0;
   list-style: none;
+  min-height: 0;
   overflow-y: auto;
   overscroll-behavior: contain;
 }

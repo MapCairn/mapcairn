@@ -85,6 +85,20 @@ describe("extractRecords", () => {
     expect(new Set(ids).size).toBe(3);
   });
 
+  it("joins words that inline markup splits, and separates block text", () => {
+    const page =
+      "<article><h1>T</h1><p><strong>Map</strong>View and <code>@mapcairn</code>/sdk</p><p>Next</p></article>";
+    expect(extractRecords(page, "/docs/t/")[0]?.text).toBe(
+      "MapView and @mapcairn/sdk Next",
+    );
+  });
+
+  it("takes the anchor from id, not data-id", () => {
+    const page =
+      '<article><h1>T</h1><h2 data-id="no" id="yes">H</h2><p>x</p></article>';
+    expect(extractRecords(page, "/docs/t/")[0]?.url).toBe("/docs/t/#yes");
+  });
+
   it("returns nothing for a page with no article", () => {
     expect(extractRecords("<html><body>x</body></html>", "/docs/")).toEqual([]);
   });

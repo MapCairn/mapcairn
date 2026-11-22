@@ -85,6 +85,8 @@ export default function SearchDialog({
   });
   const [query, setQuery] = useState("");
   const [attempt, setAttempt] = useState(0);
+  /** Whether the press that began a click was on the backdrop, so a drag that ends there does not close the dialog. */
+  const pressedBackdrop = useRef(false);
 
   useEffect(() => {
     dialog.current?.showModal();
@@ -116,7 +118,7 @@ export default function SearchDialog({
     if (event.key === "ArrowDown") {
       event.preventDefault();
       links()[0]?.focus();
-    } else if (event.key === "Enter") {
+    } else if (event.key === "Enter" && !event.nativeEvent.isComposing) {
       links()[0]?.click();
     }
   };
@@ -144,82 +146,87 @@ export default function SearchDialog({
       className="search-dialog"
       aria-label="Search the documentation"
       onClose={onClose}
+      onMouseDown={(event) => {
+        pressedBackdrop.current = event.target === dialog.current;
+      }}
       onClick={(event) => {
-        if (event.target === dialog.current) {
+        if (pressedBackdrop.current && event.target === dialog.current) {
           dialog.current?.close();
         }
       }}
     >
-      <div className="search-dialog__bar">
-        <input
-          ref={input}
-          className="search-dialog__input"
-          type="search"
-          aria-label="Search the documentation"
-          placeholder="Search the documentation"
-          autoComplete="off"
-          autoCapitalize="off"
-          spellCheck={false}
-          enterKeyHint="go"
-          autoFocus
-          value={query}
-          onChange={(event) => setQuery(event.target.value)}
-          onKeyDown={onInputKeyDown}
-        />
-        <button
-          type="button"
-          className="search-dialog__close"
-          onClick={() => dialog.current?.close()}
-        >
-          Close
-        </button>
-      </div>
-      <p className="search-dialog__status" role="status">
-        {announcement(view, query, results.length)}
-      </p>
-      {view === "hint" && (
-        <p className="search-dialog__message">
-          Type a name, a word or a phrase. Names such as <code>MapView</code>{" "}
-          come first.
-        </p>
-      )}
-      {view === "loading" && (
-        <p className="search-dialog__message">Loading search…</p>
-      )}
-      {view === "error" && (
-        <p className="search-dialog__message">
-          Search could not be loaded.{" "}
+      <div className="search-dialog__content">
+        <div className="search-dialog__bar">
+          <input
+            ref={input}
+            className="search-dialog__input"
+            type="search"
+            aria-label="Search the documentation"
+            placeholder="Search the documentation"
+            autoComplete="off"
+            autoCapitalize="off"
+            spellCheck={false}
+            enterKeyHint="go"
+            autoFocus
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            onKeyDown={onInputKeyDown}
+          />
           <button
             type="button"
-            className="search-dialog__retry"
-            onClick={() => setAttempt(attempt + 1)}
+            className="search-dialog__close"
+            onClick={() => dialog.current?.close()}
           >
-            Try again
+            Close
           </button>
+        </div>
+        <p className="search-dialog__status" role="status">
+          {announcement(view, query, results.length)}
         </p>
-      )}
-      {view === "empty" && (
-        <p className="search-dialog__message">
-          Nothing matches “{query.trim()}”. Try a shorter word, or the name of
-          an export.
-        </p>
-      )}
-      {view === "results" && (
-        // biome-ignore lint/a11y/noNoninteractiveElementInteractions: the arrow keys move between the links inside this list
-        <ul
-          ref={list}
-          className="search-dialog__results"
-          onKeyDown={onListKeyDown}
-        >
-          {results.map((result) => (
-            <ResultItem
-              key={result.id}
-              result={result}
-              onChoose={() => dialog.current?.close()}
-            />
-          ))}
-        </ul>
-      )}
+        {view === "hint" && (
+          <p className="search-dialog__message">
+            Type a name, a word or a phrase. Names such as <code>MapView</code>{" "}
+            come first. Press Enter to open the first result.
+          </p>
+        )}
+        {view === "loading" && (
+          <p className="search-dialog__message">Loading search…</p>
+        )}
+        {view === "error" && (
+          <p className="search-dialog__message">
+            Search could not be loaded.{" "}
+            <button
+              type="button"
+              className="search-dialog__retry"
+              onClick={() => setAttempt(attempt + 1)}
+            >
+              Try again
+            </button>
+          </p>
+        )}
+        {view === "empty" && (
+          <p className="search-dialog__message">
+            Nothing matches “{query.trim()}”. Try a shorter word, or the name of
+            an export.
+          </p>
+        )}
+        {view === "results" && (
+          // biome-ignore lint/a11y/noNoninteractiveElementInteractions: the arrow keys move between the links inside this list
+          <ul
+            ref={list}
+            className="search-dialog__results"
+            onKeyDown={onListKeyDown}
+          >
+            {results.map((result) => (
+              <ResultItem
+                key={result.id}
+                result={result}
+                onChoose={() => dialog.current?.close()}
+              />
+            ))}
+          </ul>
+        )}
+      </div>
     </dialog>
   );
 }

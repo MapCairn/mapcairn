@@ -32,6 +32,7 @@ const ZERO_WIDTH_SPACE = /\u200b/g;
 function plainText(markup: string): string {
   return markup
     .replace(/<(script|style|nav|button|svg)\b[\s\S]*?<\/\1>/gi, " ")
+    .replace(/<\/?(?:span|code|a|strong|em|b|i|mark|kbd|sub|sup)\b[^>]*>/gi, "")
     .replace(/<[^>]+>/g, " ")
     .replace(/&(?:#x?[0-9a-f]+|[a-z]+);/gi, (entity) => {
       return ENTITIES[entity.toLowerCase()] ?? decodeNumeric(entity);
@@ -103,7 +104,7 @@ export function extractRecords(html: string, pageUrl: string): SearchRecord[] {
         ? { heading: "", anchor: "" }
         : {
             heading: plainText(match[3] ?? ""),
-            anchor: /\bid="([^"]*)"/.exec(match[2] ?? "")?.[1] ?? "",
+            anchor: /\sid="([^"]*)"/.exec(match[2] ?? "")?.[1] ?? "",
           };
   }
   add(current.heading, current.anchor, article.slice(cursor));

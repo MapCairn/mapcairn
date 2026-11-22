@@ -74,7 +74,7 @@ export function createSearch(records: readonly SearchRecord[]): Search {
     tokenize,
     searchOptions: {
       boost: { heading: HEADING_BOOST, page: PAGE_BOOST },
-      prefix: true,
+      prefix: (_term, position, terms) => position === terms.length - 1,
     },
   });
   index.addAll([...records]);
@@ -136,7 +136,7 @@ export function excerptSegments(
     usable.length === 0
       ? null
       : new RegExp(
-          `(?:${usable.map(escapeForPattern).join("|")})[\\p{L}\\p{N}]*`,
+          `(?<![\\p{L}\\p{N}])(?:${usable.map(escapeForPattern).join("|")})[\\p{L}\\p{N}]*`,
           "giu",
         );
   const first = pattern ? text.search(pattern) : -1;

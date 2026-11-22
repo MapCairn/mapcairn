@@ -87,6 +87,10 @@ describe("createSearch", () => {
     );
   });
 
+  it("treats the last term as a prefix while typing", () => {
+    expect(search("install th").map((r) => r.url)).toContain("/docs/#install");
+  });
+
   it("caps the number of results", () => {
     expect(search("the", 2)).toHaveLength(2);
   });
@@ -106,6 +110,11 @@ describe("excerptSegments", () => {
       "mapview",
     ]);
     expect(segments[0]).toEqual({ text: "MapView", match: true });
+  });
+
+  it("does not mark a term inside a longer word", () => {
+    const segments = excerptSegments("a bitmap and a map", ["map"]);
+    expect(segments.filter((s) => s.match).map((s) => s.text)).toEqual(["map"]);
   });
 
   it("returns the start of the text when nothing matches", () => {
