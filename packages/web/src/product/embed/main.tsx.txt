@@ -3,6 +3,7 @@ import "@mapcairn/sdk/styles.css";
 import "./page.css";
 import {
   createFakeServices,
+  defaultBasemapFor,
   FocusRegistryProvider,
   LiveRegionProvider,
   MapChrome,
@@ -12,6 +13,7 @@ import {
   TooltipProvider,
   useBasemaps,
   useMap,
+  useTheme,
 } from "@mapcairn/sdk";
 import { createMapLibreMapAdapter } from "@mapcairn/sdk/adapter-maplibre";
 import { type ReactNode, StrictMode } from "react";
@@ -43,6 +45,7 @@ function App() {
 
 function MapScreen() {
   const basemaps = useBasemaps();
+  const { resolved } = useTheme();
   return (
     <MapView
       initialView={{
@@ -50,7 +53,7 @@ function MapScreen() {
         zoom: 11,
         bearing: 0,
       }}
-      basemap={basemaps.resolve(basemaps.defaultId)}
+      basemap={defaultBasemapFor(basemaps, resolved)}
       chrome={(background) => <Chrome background={background} />}
     />
   );
