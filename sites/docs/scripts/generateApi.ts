@@ -6,6 +6,7 @@ import { fileURLToPath } from "node:url";
 import { REPOSITORY_URL } from "../src/siteConfig";
 import { buildCatalogue, requireDescriptions } from "./api/catalogue";
 import { loadPackage } from "./api/loadPackages";
+import { CATALOGUE_FILE_NAME, type CatalogueData } from "./machineData";
 
 const REPOSITORY_ROOT = fileURLToPath(new URL("../../..", import.meta.url));
 
@@ -18,7 +19,8 @@ export const API_OUTPUT = fileURLToPath(
 export const SIDEBAR_FILE = join(API_OUTPUT, "_sidebar.json");
 
 /**
- * Writes the API reference pages and their sidebar. It stops, listing them,
+ * Writes the API reference pages, their sidebar and the catalogue data the
+ * build turns into `api.json`. It stops, listing them,
  * when an export has no description.
  */
 export async function generateApi(): Promise<void> {
@@ -38,6 +40,14 @@ export async function generateApi(): Promise<void> {
   writeFileSync(
     SIDEBAR_FILE,
     `${JSON.stringify(catalogue.sidebar, null, 2)}\n`,
+  );
+  const data: CatalogueData = {
+    packages: packages.map(({ name, version }) => ({ name, version })),
+    entries: catalogue.entries,
+  };
+  writeFileSync(
+    join(API_OUTPUT, CATALOGUE_FILE_NAME),
+    `${JSON.stringify(data, null, 2)}\n`,
   );
   console.log(
     `API reference: ${catalogue.files.size} pages from ${packages.length} packages.`,

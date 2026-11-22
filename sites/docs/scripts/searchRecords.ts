@@ -83,7 +83,7 @@ function stripTags(markup: string): string {
 }
 
 /** Plain text of a piece of markup: tags removed, entities decoded, spaces collapsed. */
-function plainText(markup: string): string {
+export function plainText(markup: string): string {
   return stripTags(markup)
     .replace(/&(?:#x?[0-9a-f]+|[a-z]+);/gi, (entity) => {
       return ENTITIES[entity.toLowerCase()] ?? decodeNumeric(entity);

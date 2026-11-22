@@ -9,6 +9,7 @@ import config from "../docusaurus.config";
 import { writeMarkdownFiles } from "../plugins/markdownCopiesPlugin";
 import { BASE_URL, SITE_ORIGIN } from "../src/siteConfig";
 import { inlineScriptHashes } from "./builtSite";
+import { MACHINE_DATA_SCHEMA_VERSION } from "./machineData";
 import { parseDocSource } from "./markdownCopies";
 import { PRIORITY_NOT_SCHEDULE } from "./roadmapPage";
 import { SDK_VERSION } from "./sdkVersion";
@@ -56,6 +57,20 @@ function builtSite(
   );
   writeFileSync(join(root, "sitemap.xml"), "<urlset></urlset>");
   writeMarkdownFiles(root, [], CONTEXT);
+  writeFileSync(
+    join(root, "pages.json"),
+    JSON.stringify({
+      schemaVersion: MACHINE_DATA_SCHEMA_VERSION,
+      pages: [{ url: `${SITE_ORIGIN}${BASE_URL}` }],
+    }),
+  );
+  writeFileSync(
+    join(root, "api.json"),
+    JSON.stringify({
+      schemaVersion: MACHINE_DATA_SCHEMA_VERSION,
+      entries: [{ name: "go" }],
+    }),
+  );
   mkdirSync(join(root, "roadmap"));
   writeFileSync(
     join(root, "roadmap", "index.html"),
@@ -147,6 +162,20 @@ describe("verifyBuild", () => {
     );
     expect(verifyBuild(root, [ONE], [page]).join("\n")).toContain(
       'The page "extra" has no Markdown copy',
+    );
+  });
+
+  it("reports a missing api.json and a sidebar page that pages.json does not list", () => {
+    const root = builtSite("<script>one()</script>");
+    rmSync(join(root, "api.json"));
+    const page = parseDocSource(
+      "extra",
+      "---\ntitle: Extra\ndescription: More.\n---\n# Extra\n",
+    );
+    const findings = verifyBuild(root, [ONE], [page]).join("\n");
+    expect(findings).toContain("api.json is missing");
+    expect(findings).toContain(
+      '"extra" is in the sidebar but not in pages.json',
     );
   });
 

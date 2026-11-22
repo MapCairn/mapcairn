@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
 import type { Config } from "@docusaurus/types";
+import machineDataPlugin from "./plugins/machineDataPlugin";
 import markdownCopiesPlugin from "./plugins/markdownCopiesPlugin";
 import { remarkSdkVersion } from "./plugins/remarkSdkVersion";
 import searchIndexPlugin from "./plugins/searchIndexPlugin";
@@ -60,6 +61,7 @@ const config: Config = {
   ],
   plugins: [
     searchIndexPlugin,
+    machineDataPlugin,
     securityHeadersPlugin,
     markdownCopiesPlugin(sdkVersion),
   ],
