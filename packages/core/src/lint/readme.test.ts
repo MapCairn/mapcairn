@@ -410,7 +410,7 @@ describe("README.md", () => {
     const manifest = JSON.parse(
       readFileSync(path.join(REPO, "packages/sdk/package.json"), "utf8"),
     ) as { readonly peerDependencies: Record<string, string> };
-    expect(manifest.peerDependencies["react"]).toMatch(/^\^19\./);
+    expect(manifest.peerDependencies.react).toMatch(/^\^19\./);
     expect(manifest.peerDependencies["maplibre-gl"]).toBe("^6.18.0");
   });
 
