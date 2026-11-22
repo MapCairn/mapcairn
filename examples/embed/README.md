@@ -1,6 +1,6 @@
 # `@mapcairn/example-embed`
 
-A one-page Vite and React app that uses the SDK the way an outside app does: it imports `@mapcairn/core`, `@mapcairn/map`, `@mapcairn/react` and `@mapcairn/theme` by package name and nothing else from this repository. It runs on the SDK's fakes, so it requests nothing and loads no map engine. Its search runs over a few invented places held in memory. [`docs/guides/extending.md`](../../docs/guides/extending.md) says what it proves and what an app of your own provides.
+A one-page Vite and React app that uses the SDK the way an outside app does: it imports `@mapcairn/core`, `@mapcairn/map`, `@mapcairn/react` and `@mapcairn/theme` by package name and nothing else from this repository. It runs on the SDK's fakes, so it requests nothing and loads no map engine. Its search runs over a few invented places held in memory. [Extending MapCairn](https://mapcairn.timothybrits.co.za/docs/guides/extending/) says what it proves and what an app of your own provides.
 
 It builds against the packages' `dist` (each script builds them first with `npm run build:sdk`) and needs no vanilla-extract plugin: `src/main.tsx` imports `@mapcairn/theme/tokens.css` and `@mapcairn/map/styles.css`, and `src/page.css` is a plain stylesheet whose rules (a box model, the page height) change no primitive, so it needs no cascade layer (see the extending guide for an app whose base styles do).
 
@@ -13,12 +13,12 @@ npm test -w @mapcairn/example-embed
 
 The example's layers come from a runtime layer catalogue, built by `createExampleCatalogue` in `src/exampleServices.ts`.
 
-| File                        | What it holds                                                                                                                                                                               |
-| --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `src/cairnsLayer.ts`        | One layer written by hand, as an outside app would write it, and the features the fake layer source returns for it.                                                                         |
-| `src/serverMetadata.ts`     | The types of a made-up server's layer metadata: ids, titles, geometry types, field lists, renderers (unique values, class breaks, equal intervals), a feature or tile service and a credit. |
-| `src/sampleServerLayers.ts` | That server's answer for four layers, a constant that nothing requests, and the features the fake source returns for two of them.                                                           |
-| `src/mapServerLayers.ts`    | The sample mapper: server metadata to layer definitions. Read [Supply layers at runtime](../../docs/guides/extending.md#supply-layers-at-runtime) for what it maps.                         |
+| File                        | What it holds                                                                                                                                                                                   |
+| --------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `src/cairnsLayer.ts`        | One layer written by hand, as an outside app would write it, and the features the fake layer source returns for it.                                                                             |
+| `src/serverMetadata.ts`     | The types of a made-up server's layer metadata: ids, titles, geometry types, field lists, renderers (unique values, class breaks, equal intervals), a feature or tile service and a credit.     |
+| `src/sampleServerLayers.ts` | That server's answer for four layers, a constant that nothing requests, and the features the fake source returns for two of them.                                                               |
+| `src/mapServerLayers.ts`    | The sample mapper: server metadata to layer definitions. Read [Supply layers at runtime](https://mapcairn.timothybrits.co.za/docs/guides/extending/#supply-layers-at-runtime) for what it maps. |
 
 One of the four sample layers, `survey-notes`, has no text field to title a feature with, so the catalogue skips it and the example logs the reason to the console, one line with the path of each problem.
 
@@ -33,7 +33,7 @@ The example supplies a search provider and a suggestion provider of its own, so 
 | `src/showResult.ts`       | Moves the map to a picked result: fits its extent when it has one, otherwise centres on its point.                                                                    |
 | `src/placeSearch.test.ts` | Runs the SDK's `runSearchProviderContract` and `runSuggestionProviderContract` against the providers, through `@mapcairn/core/contracts`.                             |
 
-[Write a search provider](../../docs/guides/extending.md#write-a-search-provider) explains each part and what to tell visitors. The example does not mount the pin card, so nothing on its page calls `reverse`; the contract suite and the tests cover it.
+[Write a search provider](https://mapcairn.timothybrits.co.za/docs/guides/extending/#write-a-search-provider) explains each part and what to tell visitors. The example does not mount the pin card, so nothing on its page calls `reverse`; the contract suite and the tests cover it.
 
 ## Content Security Policy
 

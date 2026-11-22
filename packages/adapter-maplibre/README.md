@@ -30,7 +30,7 @@ const createMap = () =>
   });
 ```
 
-A Vite app takes the URL from the bundler's own worker import, and another bundler must serve the file the same way. [Show a real map](https://github.com/MapCairn/mapcairn/blob/main/docs/guides/extending.md#show-a-real-map) has the steps, and the [Content Security Policy guide](https://github.com/MapCairn/mapcairn/blob/main/docs/guides/content-security-policy.md#worker-src) covers `worker-src`.
+A Vite app takes the URL from the bundler's own worker import, and another bundler must serve the file the same way. [Show a real map](https://mapcairn.timothybrits.co.za/docs/guides/extending/#show-a-real-map) has the steps, and the [Content Security Policy guide](https://github.com/MapCairn/mapcairn/blob/main/docs/guides/content-security-policy.md#worker-src) covers `worker-src`.
 
 `createMap` is the adapter factory that goes in the `Services` bundle that `ServicesProvider` supplies to `@mapcairn/map`.
 
@@ -54,7 +54,7 @@ The adapter class, the engine loader and the options only tests use are not expo
 
 ## Licence
 
-`@mapcairn/adapter-maplibre` is licensed under AGPL-3.0-only, an open-source licence that allows commercial use, and the [licence text](https://github.com/MapCairn/mapcairn/blob/main/packages/adapter-maplibre/LICENSE) comes with the package. If you distribute an app that includes the SDK, including by serving it to people's browsers, you must offer them the corresponding source of the code you combine with the SDK and serve with it, under the same licence. If you modify the SDK and let people interact with your modified version over a network, you must offer them its corresponding source. [What the licence means for your project](https://github.com/MapCairn/mapcairn/blob/main/docs/guides/licence.md) says it in plain words and is not legal advice. The SDK packages depend only on permissively licensed packages, and `maplibre-gl` is BSD-3-Clause. The [licence section of the repository README](https://github.com/MapCairn/mapcairn#licence) says more.
+`@mapcairn/adapter-maplibre` is licensed under AGPL-3.0-only, an open-source licence that allows commercial use, and the [licence text](https://github.com/MapCairn/mapcairn/blob/main/packages/adapter-maplibre/LICENSE) comes with the package. If you distribute an app that includes the SDK, including by serving it to people's browsers, you must offer them the corresponding source of the code you combine with the SDK and serve with it, under the same licence. If you modify the SDK and let people interact with your modified version over a network, you must offer them its corresponding source. [What the licence means for your project](https://mapcairn.timothybrits.co.za/docs/guides/licence/) says it in plain words and is not legal advice. The SDK packages depend only on permissively licensed packages, and `maplibre-gl` is BSD-3-Clause. The [licence section of the repository README](https://github.com/MapCairn/mapcairn#licence) says more.
 
 ## Contributing and changes
 

@@ -21,7 +21,7 @@ const CHILD_TIMEOUT_MS = 30_000;
 
 const CONTENTS: Record<string, string> = {
   "README.md": "",
-  "docs/guides/extending.md": "",
+  "docs/guides/releasing.md": "",
   "docs/guides/sibling.md": "",
   "packages/web/src/app/root.tsx": "",
   "scripts/agents/port.mjs": "",
@@ -43,7 +43,7 @@ describe("findDeadReferences", () => {
   it("accepts a path, a directory, a link and a script that exist", () => {
     const text = [
       "See `packages/web/src/app/root.tsx` and `scripts/agents/`.",
-      "Run `npm run lint`, then [the guide](docs/guides/extending.md#top).",
+      "Run `npm run lint`, then [the guide](docs/guides/releasing.md#top).",
       "Run `node scripts/agents/port.mjs 5173` and `npm run dev -w @mapcairn/web`.",
     ].join("\n");
     expect(dead(text)).toEqual([]);
@@ -59,7 +59,7 @@ describe("findDeadReferences", () => {
   });
 
   it("resolves a link and a path relative to the document's folder", () => {
-    expect(dead("[x](extending.md)", "docs/guides/other.md")).toEqual([]);
+    expect(dead("[x](releasing.md)", "docs/guides/other.md")).toEqual([]);
     expect(dead("[x](missing.md)", "docs/guides/other.md")).toEqual([
       "1 missing.md",
     ]);
@@ -79,8 +79,8 @@ describe("findDeadReferences", () => {
   });
 
   it("matches letter case exactly", () => {
-    expect(dead("`docs/Guides/extending.md`")).toEqual([
-      "1 docs/Guides/extending.md",
+    expect(dead("`docs/Guides/releasing.md`")).toEqual([
+      "1 docs/Guides/releasing.md",
     ]);
     expect(dead("`scripts/Agents/port.mjs`")).toEqual([
       "1 scripts/Agents/port.mjs",
@@ -123,9 +123,9 @@ describe("findDeadReferences", () => {
 
   it("reads Windows separators as forward slashes", () => {
     expect(
-      dead("`docs\\guides\\extending.md` `docs\\guides\\gone.md`"),
+      dead("`docs\\guides\\releasing.md` `docs\\guides\\gone.md`"),
     ).toEqual(["1 docs/guides/gone.md"]);
-    expect(dead("[x](docs\\guides\\extending.md)")).toEqual([]);
+    expect(dead("[x](docs\\guides\\releasing.md)")).toEqual([]);
   });
 
   it("ignores placeholders, urls, routes, scopes and generated folders", () => {

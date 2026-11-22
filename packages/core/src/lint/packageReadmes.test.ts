@@ -37,6 +37,8 @@ const EXAMPLE_SOURCE = "examples/embed/src";
 
 /** Where a link to a file of the repository must start. */
 const REPOSITORY_FILES = "https://github.com/MapCairn/mapcairn/blob/main/";
+/** The documentation site's guides, which the READMEs link by address. */
+const DOCUMENTATION_GUIDES = "https://mapcairn.timothybrits.co.za/docs/guides/";
 /** Where a link to a folder of the repository must start. */
 const REPOSITORY_FOLDERS = "https://github.com/MapCairn/mapcairn/tree/main/";
 
@@ -289,9 +291,7 @@ describe.each(BUILT_SDK_PACKAGES)("the README of @mapcairn/%s", (name) => {
     );
     expect(section).toContain(LICENCE_DUTY);
     expect(section).not.toMatch(/publish the corresponding source/);
-    expect(linkTargets(section)).toContain(
-      `${REPOSITORY_FILES}docs/guides/licence.md`,
-    );
+    expect(linkTargets(section)).toContain(`${DOCUMENTATION_GUIDES}licence/`);
   });
 
   it("points every link with an anchor at a heading that exists, in a file or in a folder's README", () => {
@@ -338,12 +338,12 @@ describe("the Next steps list in the README of @mapcairn/sdk", () => {
   it("links the guides, the playground and the whole-app example", () => {
     expect(readme).toContain("## Next steps");
     for (const wanted of [
-      "docs/guides/extending.md#show-a-real-map",
-      "docs/guides/extending.md#theme-the-sdk-with-your-own-colours",
+      "docs/guides/extending/#show-a-real-map",
+      "docs/guides/extending/#theme-the-sdk-with-your-own-colours",
       "docs/guides/translate-the-sdk.md",
-      "docs/guides/extending.md#write-a-search-provider",
-      "docs/guides/extending.md#add-a-routing-provider",
-      "docs/guides/extending.md#add-a-data-layer",
+      "docs/guides/extending/#write-a-search-provider",
+      "docs/guides/extending/#add-a-routing-provider",
+      "docs/guides/extending/#add-a-data-layer",
       "docs/guides/content-security-policy.md",
       "examples/embed",
     ]) {
@@ -465,7 +465,10 @@ describe("the release guide's steps for the stable version", () => {
 });
 
 describe("the licence guide", () => {
-  const guide = readFileSync(path.join(REPO, "docs/guides/licence.md"), "utf8");
+  const guide = readFileSync(
+    path.join(REPO, "sites/docs/docs/guides/licence.md"),
+    "utf8",
+  );
 
   it("stays short and says what the duty reaches in the same words as the READMEs", () => {
     expect(guide.split("\n").length).toBeLessThan(90);
@@ -485,7 +488,9 @@ describe("the licence guide", () => {
     expect(targets.length).toBeGreaterThan(0);
     for (const target of targets) {
       const [file = "", anchor] = target.split("#");
-      const found = path.join(REPO, "docs/guides", file);
+      const found = file.startsWith(REPOSITORY_FILES)
+        ? path.join(REPO, file.slice(REPOSITORY_FILES.length))
+        : path.join(REPO, "sites/docs/docs/guides", file);
       expect(existsSync(found), target).toBe(true);
       if (anchor !== undefined) {
         expect(headingAnchors(readFileSync(found, "utf8")), target).toContain(

@@ -91,6 +91,7 @@ describe("isChecked", () => {
     ".claude/skills/land-pr/SKILL.md",
     ".claude/agents/implementer.md",
     "docs/guides/working-with-agents.md",
+    "sites/docs/docs/guides/extending.md",
     "AGENTS.md",
     "CLAUDE.md",
     "CONTRIBUTING.md",

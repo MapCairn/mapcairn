@@ -7,7 +7,19 @@ import type { SidebarEntry } from "./scripts/docChecks";
  * here: `scripts/verifyBuild.ts` and `scripts/docChecks.test.ts` fail the
  * build on a page that is not.
  */
-export const sidebar: SidebarEntry[] = ["get-started"];
+export const sidebar: SidebarEntry[] = [
+  "get-started",
+  {
+    type: "category",
+    label: "Build an app",
+    items: ["guides/embed-a-map", "guides/extending"],
+  },
+  {
+    type: "category",
+    label: "About the project",
+    items: ["guides/using-the-reference-site", "guides/licence"],
+  },
+];
 
 /** The sidebars Docusaurus reads. */
 export default { docs: sidebar };

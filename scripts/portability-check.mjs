@@ -16,7 +16,12 @@ import { isEntryPoint } from "./entryPoint.mjs";
 /** The one file that has to spell out the patterns it looks for. */
 const SELF = "scripts/portability-check.mjs";
 /** Folders whose tracked files are checked. */
-const CHECKED_FOLDERS = ["scripts/", ".claude/", "docs/guides/"];
+const CHECKED_FOLDERS = [
+  "scripts/",
+  ".claude/",
+  "docs/guides/",
+  "sites/docs/docs/",
+];
 /** Tracked files, outside those folders, that are checked. */
 const CHECKED_FILES = new Set([
   "AGENTS.md",

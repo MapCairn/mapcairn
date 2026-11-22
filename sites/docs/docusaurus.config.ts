@@ -40,7 +40,12 @@ const config: Config = {
   onBrokenLinks: "throw",
   onBrokenAnchors: "throw",
   onDuplicateRoutes: "throw",
-  markdown: { hooks: { onBrokenMarkdownLinks: "throw" } },
+  // `.md` files are CommonMark, so a guide may hold `{`, `<` and `>` in prose
+  // as it does on GitHub; only `.mdx` files are MDX.
+  markdown: {
+    format: "detect",
+    hooks: { onBrokenMarkdownLinks: "throw" },
+  },
   i18n: {
     defaultLocale: "en",
     locales: ["en"],

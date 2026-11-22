@@ -1,6 +1,15 @@
+---
+
+title: What the AGPL means for your project
+sidebar_label: Licence
+description: A plain-words guide to what MapCairn's AGPL-3.0-only licence asks of a project that uses the SDK.
+---
+
 # What the AGPL means for your project
 
-This is a plain-words guide for people who know MIT, Apache-2.0 or GPL-3.0 and want to know what MapCairn's licence asks of them. It is not legal advice. The licence text is the only authority, so if your project matters, read the [`LICENSE`](../../LICENSE) file and ask your own lawyer.
+This page is for people who know MIT, Apache-2.0 or GPL-3.0 and want to know what MapCairn's licence asks of them. By the end you will know when the AGPL applies to your app and what you must do when it does. It is not legal advice. The licence text is the only authority, so if your project matters, read the [LICENSE](https://github.com/MapCairn/mapcairn/blob/main/LICENSE) file and ask your own lawyer.
+
+Checked against `@mapcairn/sdk` %sdkVersion%, the version in this repository.
 
 ## The short version
 
@@ -59,7 +68,7 @@ Using the SDK, even unmodified, as a dependency of a closed-source product you d
 
 ## Contributing
 
-To contribute code, documentation or other material you agree to the contributor licence agreement. [`CONTRIBUTING.md`](../../CONTRIBUTING.md) says how, and [`CLA.md`](../../CLA.md) is the agreement; it uses the family name "AGPL-3.0" where this guide says `AGPL-3.0-only`. You keep the copyright in what you contribute. Section 5 of the agreement promises the project stays available under the AGPL-3.0 or another OSI-approved licence for as long as it is published.
+To contribute code, documentation or other material you agree to the contributor licence agreement. [`CONTRIBUTING.md`](https://github.com/MapCairn/mapcairn/blob/main/CONTRIBUTING.md) says how, and [`CLA.md`](https://github.com/MapCairn/mapcairn/blob/main/CLA.md) is the agreement; it uses the family name "AGPL-3.0" where this guide says `AGPL-3.0-only`. You keep the copyright in what you contribute. Section 5 of the agreement promises the project stays available under the AGPL-3.0 or another OSI-approved licence for as long as it is published.
 
 ## What this guide is unsure about
 
@@ -68,4 +77,4 @@ To contribute code, documentation or other material you agree to the contributor
 - Where the combined work ends: code loaded separately (another script tag or a code-split chunk), and server-rendering code that imports the SDK.
 - How the AGPL fits with the terms of an app store.
 
-For any of these, ask your own lawyer, and read the [`LICENSE`](../../LICENSE) file: sections 4 to 6 cover conveying (distributing), and section 13 covers use over a network.
+For any of these, ask your own lawyer, and read the [`LICENSE`](https://github.com/MapCairn/mapcairn/blob/main/LICENSE) file: sections 4 to 6 cover conveying (distributing), and section 13 covers use over a network.

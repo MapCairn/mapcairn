@@ -18,7 +18,7 @@ Example: a plan ships compiled CSS and checks its public API with an API report 
 
 1. The "Read before you change" rows of `AGENTS.md` for the code involved, then those sections of `ARCHITECTURE.md` (and `DESIGN.md` for interface work).
 2. The code each option would touch, not only the documents about it. Check that every file, symbol, script and command you will name exists and works as you will say.
-3. `docs/guides/extending.md` for what hosts are told today, `docs/guides/capability-matrix.md` for the row, `ROADMAP.md` "Non-goals", and the open plans and pull requests on the same modules.
+3. `sites/docs/docs/guides/extending.md` for what hosts are told today, `docs/guides/capability-matrix.md` for the row, `ROADMAP.md` "Non-goals", and the open plans and pull requests on the same modules.
 
 ## 2. List the options
 

@@ -6,6 +6,7 @@ import {
   getBasemap,
 } from "@mapcairn/core";
 import {
+  DOCS_PATH,
   PLAYGROUND_PATH,
   SOURCE_REPOSITORY_URL,
 } from "../constants/siteConfig";
@@ -110,6 +111,9 @@ export interface Section {
 /** The repository's pages on GitHub, which are not its front page. */
 const REPOSITORY_BLOB = `${SOURCE_REPOSITORY_URL}/blob/main`;
 
+/** The guides on the documentation site, which shares this origin, so a path is enough. */
+const GUIDES_PATH = `${DOCS_PATH}guides`;
+
 /** The README's documentation section, the index of the guides, which the header and footer name Docs and Documentation. */
 export const DOCUMENTATION_LINK: InlineLink = {
   text: "Documentation",
@@ -125,7 +129,7 @@ export const CAPABILITY_MATRIX_LINK: InlineLink = {
 /** The whole embedding app, file by file, which the page's excerpt leads to. */
 export const EMBED_GUIDE_LINK: InlineLink = {
   text: "embedding walkthrough",
-  href: `${REPOSITORY_BLOB}/docs/guides/embed-a-map.md`,
+  href: `${GUIDES_PATH}/embed-a-map/`,
 };
 
 /** What changed in each release. */
@@ -137,7 +141,7 @@ export const RELEASE_NOTES_LINK: InlineLink = {
 /** What the AGPL-3.0 means for an app that uses the SDK, in plain words. */
 export const LICENCE_GUIDE_LINK: InlineLink = {
   text: "Licence guide",
-  href: `${REPOSITORY_BLOB}/docs/guides/licence.md`,
+  href: `${GUIDES_PATH}/licence/`,
 };
 
 /** How to report a vulnerability, and what the project supports. */

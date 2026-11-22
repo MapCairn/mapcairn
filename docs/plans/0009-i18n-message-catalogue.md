@@ -107,7 +107,7 @@ Splitting these into GitHub issues is the `split-plan` skill's job, once this pl
 - `ARCHITECTURE.md`: the ports table gains `MessageCatalogue`; "Pure helpers" notes that announcement and describe functions now return keys, not text; a new short section describes the catalogue and the language setting the way "Host-supplied basemaps" describes `BasemapCatalogue`. Steps 1, 2, 6.
 - `DESIGN.md`: a components-and-accessibility note that a name or announcement is now a key, and the logical-properties rule. Steps 1, 8.
 - `README.md` and the package READMEs (`core`, `react`, `map`): the SDK offers any language, not English only. Step 1 or 6.
-- `docs/guides/extending.md`: a "Translate the SDK" section, or the new guide linked from it. Step 9.
+- `sites/docs/docs/guides/extending.md`: a "Translate the SDK" section, or the new guide linked from it. Step 9.
 - `docs/guides/performance.md`: a note on the on-demand language weight. Step 6 or 7.
 - `ATTRIBUTIONS.md`: translator credit for the Afrikaans catalogue. Step 7.
 - `CONTRIBUTING.md`: how to add a language (a catalogue file and the checks step 1 and 7 add). Step 7 or 9.

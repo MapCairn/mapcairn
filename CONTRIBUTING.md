@@ -38,7 +38,7 @@ On Windows, use PowerShell or Git Bash. The project's scripts are Node and run t
 - `packages/theme`: the design tokens.
 - `packages/web`: the SSR host, which holds the adapters and the composition root, with no bundled datasets.
 
-[`ARCHITECTURE.md`](ARCHITECTURE.md) describes the layers and the dependency rules, and how to add an adapter. `npm run lint` enforces the rules, so supply services through the composition root and `ServicesProvider` rather than importing an adapter or an engine into the user interface. [`DESIGN.md`](DESIGN.md) describes the tokens and the accessibility contracts. The [extending guide](docs/guides/extending.md) has short how-tos for adding a basemap, a data layer, a routing provider and an adapter.
+[`ARCHITECTURE.md`](ARCHITECTURE.md) describes the layers and the dependency rules, and how to add an adapter. `npm run lint` enforces the rules, so supply services through the composition root and `ServicesProvider` rather than importing an adapter or an engine into the user interface. [`DESIGN.md`](DESIGN.md) describes the tokens and the accessibility contracts. The [extending guide](https://mapcairn.timothybrits.co.za/docs/guides/extending/) has short how-tos for adding a basemap, a data layer, a routing provider and an adapter.
 
 ## Translations
 
@@ -125,7 +125,7 @@ The project has one maintainer, so the maintainer's own pull requests are checke
 
 ## Security and licence
 
-Report suspected vulnerabilities privately through [`SECURITY.md`](SECURITY.md). MapCairn is licensed under [AGPL-3.0-only](LICENSE). [What the licence means for your project](docs/guides/licence.md) explains it in plain words.
+Report suspected vulnerabilities privately through [`SECURITY.md`](SECURITY.md). MapCairn is licensed under [AGPL-3.0-only](LICENSE). [What the licence means for your project](https://mapcairn.timothybrits.co.za/docs/guides/licence/) explains it in plain words.
 
 A dependency of an SDK package (`core`, `map`, `react`, `theme`, `sdk`) must allow commercial use. `npm run lint` checks the licence of every production dependency of those packages against the permissive list in `scripts/sdkLicences.allowlist.json`, and fails on a different or missing one. Do not edit that file to get a change through: say in the pull request which package it is and why, and the maintainer decides.
 

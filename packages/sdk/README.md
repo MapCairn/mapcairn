@@ -23,7 +23,7 @@ import "@mapcairn/sdk/styles.css";
 import { MapChrome, ServicesProvider } from "@mapcairn/sdk";
 ```
 
-For a real map, add the adapter from its subpath. It needs the URL of the engine's worker, as the [adapter's README](https://github.com/MapCairn/mapcairn/tree/main/packages/adapter-maplibre) explains. [Show a real map](https://github.com/MapCairn/mapcairn/blob/main/docs/guides/extending.md#show-a-real-map) has the steps and the Vite form:
+For a real map, add the adapter from its subpath. It needs the URL of the engine's worker, as the [adapter's README](https://github.com/MapCairn/mapcairn/tree/main/packages/adapter-maplibre) explains. [Show a real map](https://mapcairn.timothybrits.co.za/docs/guides/extending/#show-a-real-map) has the steps and the Vite form:
 
 ```ts
 import { createMapLibreMapAdapter } from "@mapcairn/sdk/adapter-maplibre";
@@ -35,12 +35,12 @@ The [repository README's "Embed a map"](https://github.com/MapCairn/mapcairn#emb
 
 ## Next steps
 
-- [Show a real map](https://github.com/MapCairn/mapcairn/blob/main/docs/guides/extending.md#show-a-real-map): the adapter, the engine's worker file and a basemap.
-- [Theme the interface with your own colours](https://github.com/MapCairn/mapcairn/blob/main/docs/guides/extending.md#theme-the-sdk-with-your-own-colours), checked against WCAG 2.2 AA.
+- [Show a real map](https://mapcairn.timothybrits.co.za/docs/guides/extending/#show-a-real-map): the adapter, the engine's worker file and a basemap.
+- [Theme the interface with your own colours](https://mapcairn.timothybrits.co.za/docs/guides/extending/#theme-the-sdk-with-your-own-colours), checked against WCAG 2.2 AA.
 - [Translate the interface](https://github.com/MapCairn/mapcairn/blob/main/docs/guides/translate-the-sdk.md) or offer a choice of languages.
-- [Write a search provider](https://github.com/MapCairn/mapcairn/blob/main/docs/guides/extending.md#write-a-search-provider).
-- [Add a routing provider](https://github.com/MapCairn/mapcairn/blob/main/docs/guides/extending.md#add-a-routing-provider).
-- [Add a data layer](https://github.com/MapCairn/mapcairn/blob/main/docs/guides/extending.md#add-a-data-layer).
+- [Write a search provider](https://mapcairn.timothybrits.co.za/docs/guides/extending/#write-a-search-provider).
+- [Add a routing provider](https://mapcairn.timothybrits.co.za/docs/guides/extending/#add-a-routing-provider).
+- [Add a data layer](https://mapcairn.timothybrits.co.za/docs/guides/extending/#add-a-data-layer).
 - Read the [Content Security Policy guide](https://github.com/MapCairn/mapcairn/blob/main/docs/guides/content-security-policy.md) before you deploy.
 - Try the [playground](https://mapcairn.timothybrits.co.za/map), and read [`examples/embed`](https://github.com/MapCairn/mapcairn/tree/main/examples/embed), a whole app written against the packages.
 
@@ -74,7 +74,7 @@ A host that adds a service of its own by declaration merging augments `@mapcairn
 
 ## Licence
 
-`@mapcairn/sdk` is licensed under AGPL-3.0-only, an open-source licence that allows commercial use, and the [licence text](https://github.com/MapCairn/mapcairn/blob/main/packages/sdk/LICENSE) comes with the package. If you distribute an app that includes the SDK, including by serving it to people's browsers, you must offer them the corresponding source of the code you combine with the SDK and serve with it, under the same licence. If you modify the SDK and let people interact with your modified version over a network, you must offer them its corresponding source. [What the licence means for your project](https://github.com/MapCairn/mapcairn/blob/main/docs/guides/licence.md) says it in plain words and is not legal advice. The SDK packages depend only on permissively licensed packages. The [licence section of the repository README](https://github.com/MapCairn/mapcairn#licence) says more.
+`@mapcairn/sdk` is licensed under AGPL-3.0-only, an open-source licence that allows commercial use, and the [licence text](https://github.com/MapCairn/mapcairn/blob/main/packages/sdk/LICENSE) comes with the package. If you distribute an app that includes the SDK, including by serving it to people's browsers, you must offer them the corresponding source of the code you combine with the SDK and serve with it, under the same licence. If you modify the SDK and let people interact with your modified version over a network, you must offer them its corresponding source. [What the licence means for your project](https://mapcairn.timothybrits.co.za/docs/guides/licence/) says it in plain words and is not legal advice. The SDK packages depend only on permissively licensed packages. The [licence section of the repository README](https://github.com/MapCairn/mapcairn#licence) says more.
 
 ## Contributing and changes
 

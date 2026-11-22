@@ -219,7 +219,7 @@ describe("README.md", () => {
   it("says what the real map asks of a host: the other bundlers, the policy and the privacy default", () => {
     const section = README.slice(README.indexOf("## Embed a map"));
     expect(section).toContain("docs/guides/content-security-policy.md");
-    expect(section).toContain("docs/guides/extending.md#show-a-real-map");
+    expect(section).toContain("docs/guides/extending/#show-a-real-map");
     expect(section).toMatch(/makes no request until/);
     expect(section).toContain("a similar app, not from this file");
     expect(section).not.toContain("not yet shipped");
@@ -227,7 +227,7 @@ describe("README.md", () => {
 
   it("leaves what is tested, and the bundlers and browsers tried, to the extending guide, which says them", () => {
     const guide = readFileSync(
-      path.join(REPO, "docs/guides/extending.md"),
+      path.join(REPO, "sites/docs/docs/guides/extending.md"),
       "utf8",
     );
     const section = guide.slice(guide.indexOf("## Show a real map"));
@@ -342,7 +342,9 @@ describe("README.md", () => {
     );
     expect(section).toContain(LICENCE_DUTY);
     expect(section).not.toMatch(/publish the corresponding source/);
-    expect(section).toContain("(docs/guides/licence.md)");
+    expect(section).toContain(
+      "(https://mapcairn.timothybrits.co.za/docs/guides/licence/)",
+    );
     const start = README.indexOf("## When MapCairn fits");
     const fits = README.slice(start, README.indexOf("\n## ", start + 1));
     expect(fits).not.toMatch(/can publish its source/);
@@ -362,7 +364,9 @@ describe("README.md", () => {
       path.join(REPO, "CONTRIBUTING.md"),
       "utf8",
     );
-    expect(contributing).toContain("(docs/guides/licence.md)");
+    expect(contributing).toContain(
+      "(https://mapcairn.timothybrits.co.za/docs/guides/licence/)",
+    );
     expect(contributing).not.toMatch(/may agree other licence terms/);
   });
 

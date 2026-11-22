@@ -34,6 +34,14 @@ const ROUTE_PATHS = new Set(routePaths(routes));
 function expectResolves(target: string): void {
   if (target.startsWith(`${SITE_URL}${DOCS_PATH}`)) {
     // The documentation site is a second Worker, built by `sites/docs`.
+    const guide = target.match(/\/docs\/guides\/([\w-]+)(?:\.md|\/)$/)?.[1];
+    if (guide !== undefined) {
+      expect(
+        existsSync(path.join(REPO_ROOT, `sites/docs/docs/guides/${guide}.md`)),
+        target,
+      ).toBe(true);
+      return;
+    }
     expect([
       `${SITE_URL}${DOCS_PATH}llms.txt`,
       `${SITE_URL}${DOCS_PATH}llms-full.txt`,
@@ -144,11 +152,8 @@ describe("/llms.txt", () => {
 
   it("lists the licence guide, the public API guide and the changelog among the documents", async () => {
     const text = await loader().text();
-    for (const file of [
-      "docs/guides/licence.md",
-      "docs/guides/public-api.md",
-      "CHANGELOG.md",
-    ]) {
+    expect(text).toContain(`(${SITE_URL}${DOCS_PATH}guides/licence.md)`);
+    for (const file of ["docs/guides/public-api.md", "CHANGELOG.md"]) {
       expect(text).toContain(`(${RAW_PREFIX}${file})`);
     }
   });

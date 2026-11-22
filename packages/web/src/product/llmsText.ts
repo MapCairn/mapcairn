@@ -31,6 +31,11 @@ function rawFile(path: string): string {
   return `${SOURCE_REPOSITORY_URL.replace("https://github.com/", "https://raw.githubusercontent.com/")}/main/${path}`;
 }
 
+/** A page of the documentation site, as its Markdown copy. */
+function docsPage(path: string): string {
+  return `${SITE_URL}${DOCS_PATH}${path}.md`;
+}
+
 /** The one-sentence summary. */
 const SUMMARY =
   "MapCairn is an open-source SDK, under the AGPL-3.0, for building accessible, privacy-respecting map applications on MapLibre GL JS and React.";
@@ -49,71 +54,71 @@ The package re-exports the interface, the logic, the hooks and the design tokens
 /** The playground's description, the same words its page renders for crawlers. */
 const PLAYGROUND_SUMMARY = EN_GB_CATALOGUE["host.map.summary"];
 
-/** The guides and documents, as raw Markdown. */
+/** The guides and documents as Markdown: the documentation site's copies and the repository's raw files. */
 const DOCUMENTS: readonly (readonly [string, string, string])[] = [
   [
     "README",
-    "README.md",
+    rawFile("README.md"),
     "what the SDK offers, how to install and embed it, and the packages",
   ],
   [
     "Embedding walkthrough",
-    "docs/guides/embed-a-map.md",
+    docsPage("guides/embed-a-map"),
     "the whole embedding app, file by file, with what each part does",
   ],
   [
     "Embedding and extending",
-    "docs/guides/extending.md",
+    docsPage("guides/extending"),
     "embedding the SDK in an app, and adding basemaps, layers, search and routing providers and adapters",
   ],
   [
     "Serving layers",
-    "docs/guides/serving-layers.md",
+    rawFile("docs/guides/serving-layers.md"),
     "which layer kind to serve from your own server, with OGC API Features, WMS and WMTS examples",
   ],
   [
     "Content Security Policy",
-    "docs/guides/content-security-policy.md",
+    rawFile("docs/guides/content-security-policy.md"),
     "the directives a page hosting the SDK needs, and why",
   ],
   [
     "Licence guide",
-    "docs/guides/licence.md",
+    docsPage("guides/licence"),
     "what the AGPL-3.0 means for an app that uses the SDK",
   ],
   [
     "Public API",
-    "docs/guides/public-api.md",
+    rawFile("docs/guides/public-api.md"),
     "what counts as the public API of the six packages, and how a change to it is reported",
   ],
   [
     "Changelog",
-    "CHANGELOG.md",
+    rawFile("CHANGELOG.md"),
     "what changed in each release, and what to change when you upgrade",
   ],
   [
     "Translating the SDK",
-    "docs/guides/translate-the-sdk.md",
+    rawFile("docs/guides/translate-the-sdk.md"),
     "using the SDK in another language and offering a choice of languages",
   ],
   [
     "Capability matrix",
-    "docs/guides/capability-matrix.md",
+    rawFile("docs/guides/capability-matrix.md"),
     "what a GIS application needs, and what MapCairn has, partly has or lacks",
   ],
   [
     "Architecture",
-    "ARCHITECTURE.md",
+    rawFile("ARCHITECTURE.md"),
     "layers, ports and adapters, the map adapter and data layers",
   ],
   [
     "Design system",
-    "DESIGN.md",
+    rawFile("DESIGN.md"),
     "tokens, layout slots and accessibility contracts",
   ],
   [
     "Roadmap",
-    "ROADMAP.md",
+    rawFile("ROADMAP.md"),
     "where the project is going, and what it will not do",
   ],
 ];
@@ -121,7 +126,7 @@ const DOCUMENTS: readonly (readonly [string, string, string])[] = [
 /** The links of `/llms.txt`, by section. */
 function linkSections(): string {
   const docs = DOCUMENTS.map(
-    ([name, path, note]) => `- [${name}](${rawFile(path)}): ${note}.`,
+    ([name, address, note]) => `- [${name}](${address}): ${note}.`,
   ).join("\n");
   return `## Product
 
