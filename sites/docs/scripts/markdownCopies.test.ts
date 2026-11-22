@@ -108,6 +108,18 @@ describe("parseDocSource", () => {
     expect(absolute.permalink).toBe("/top/");
   });
 
+  it("gives a folder's index page the folder's address, as the framework serves it", () => {
+    const source = "---\ntitle: T\ndescription: d\n---\n# T\n";
+    expect(parseDocSource("api/core/index", source)).toMatchObject({
+      permalink: "/api/core/",
+      copyPath: "api/core.md",
+    });
+    expect(parseDocSource("api/index", source).permalink).toBe("/api/");
+    expect(parseDocSource("api/core/reindex", source).permalink).toBe(
+      "/api/core/reindex/",
+    );
+  });
+
   it("refuses a page with no title or description, which the llms.txt files need", () => {
     expect(() => parseDocSource("x", "# X\n")).toThrow(/title/);
     expect(() => parseDocSource("x", "---\ntitle: X\n---\n# X\n")).toThrow(

@@ -5,12 +5,12 @@
   "license": "AGPL-3.0-only",
   "private": true,
   "scripts": {
-    "generate": "node --import tsx scripts/generateTheme.ts && node --import tsx scripts/generateRoadmap.ts",
+    "generate": "node --import tsx scripts/generateTheme.ts && node --import tsx scripts/generateApi.ts && node --import tsx scripts/generateRoadmap.ts",
     "deploy": "cf deploy ./build",
     "dev": "npm run generate && docusaurus start --port 4410",
     "build": "npm --prefix ../.. run build:sdk && npm run generate && docusaurus build && node --import tsx scripts/verifyBuild.ts",
-    "typecheck": "npm --prefix ../.. run build:sdk && tsc --noEmit",
-    "test": "npm --prefix ../.. run build:sdk && vitest run"
+    "typecheck": "npm --prefix ../.. run build:sdk && npm run generate && tsc --noEmit",
+    "test": "npm --prefix ../.. run build:sdk && npm run generate && vitest run"
   },
   "dependencies": {
     "@docusaurus/core": "^3.10.2",
@@ -30,6 +30,7 @@
   "devDependencies": {
     "@docusaurus/module-type-aliases": "^3.10.2",
     "@docusaurus/tsconfig": "^3.10.2",
+    "@microsoft/api-extractor-model": "^7.33.16",
     "@types/node": "^26.6.6",
     "@types/react": "^19.3.0",
     "cf": "1.0.0-beta.32",
