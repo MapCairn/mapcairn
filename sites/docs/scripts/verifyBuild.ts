@@ -3,9 +3,9 @@
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { SDK_PACKAGES } from "../../../scripts/sdkPackages.mjs";
 import config from "../docusaurus.config";
 import { readDocPages } from "../plugins/markdownCopiesPlugin";
-import { SDK_PACKAGES } from "../../../scripts/sdkPackages.mjs";
 import { SEARCH_INDEX_FILE } from "../plugins/searchIndexPlugin";
 import { sidebar } from "../sidebars";
 import { BASE_URL, HOST_PATHS, SITE_ORIGIN } from "../src/siteConfig";
@@ -61,6 +61,28 @@ export function scriptBudgetFor(apiPages: number): number {
 
 /** The page the budget is measured on: the front page of the documentation. */
 const BUDGET_PAGE = "index.html";
+
+/** How many pages the build holds under the API reference's folder. */
+function apiPageCount(build: string): number {
+  return htmlFiles(build).filter((page) =>
+    page.startsWith(`${API_BUILD_FOLDER}/`),
+  ).length;
+}
+
+/** A finding for each package whose API reference section was not built. */
+function missingApiSections(
+  build: string,
+  sections: readonly string[],
+): string[] {
+  return sections
+    .filter(
+      (dir) => !existsSync(join(build, API_BUILD_FOLDER, dir, "index.html")),
+    )
+    .map(
+      (dir) =>
+        `The API reference has no section for packages/${dir}: ${API_BUILD_FOLDER}/${dir}/index.html was not built.`,
+    );
+}
 
 /** One problem found in the build, as a line for the log. */
 type Finding = string;
@@ -163,17 +185,8 @@ export function verifyBuild(
       tagline: config.tagline ?? "",
     }),
   );
-  for (const dir of apiSections) {
-    if (!existsSync(join(build, API_BUILD_FOLDER, dir, "index.html"))) {
-      findings.push(
-        `The API reference has no section for packages/${dir}: ${API_BUILD_FOLDER}/${dir}/index.html was not built.`,
-      );
-    }
-  }
-  const apiPages = htmlFiles(build).filter((page) =>
-    page.startsWith(`${API_BUILD_FOLDER}/`),
-  ).length;
-  const budget = scriptBudgetFor(apiPages);
+  findings.push(...missingApiSections(build, apiSections));
+  const budget = scriptBudgetFor(apiPageCount(build));
   const bytes = scriptBytesFor(build, BASE_URL, BUDGET_PAGE);
   if (bytes > budget) {
     findings.push(
@@ -184,7 +197,12 @@ export function verifyBuild(
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
-  const findings = verifyBuild(BUILD, EXPECTED_INLINE_SCRIPTS, SDK_PACKAGES);
+  const findings = verifyBuild(
+    BUILD,
+    EXPECTED_INLINE_SCRIPTS,
+    undefined,
+    SDK_PACKAGES,
+  );
   for (const finding of findings) {
     console.error(finding);
   }

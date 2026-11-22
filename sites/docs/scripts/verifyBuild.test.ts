@@ -136,7 +136,7 @@ describe("verifyBuild", () => {
     const root = builtSite("<script>one()</script>", {
       "api/core/index.html": "<p>core</p>",
     });
-    const findings = verifyBuild(root, [ONE], ["core", "react"]).join("\n");
+    const findings = verifyBuild(root, [ONE], [], ["core", "react"]).join("\n");
     expect(findings).toContain(
       "The API reference has no section for packages/react",
     );
@@ -157,12 +157,14 @@ describe("verifyBuild", () => {
       SCRIPT_BUDGET_BYTES + 100 * API_PAGE_ALLOWANCE_BYTES,
     );
     const without = builtSite(tag, { "assets/js/main.js": script });
-    expect(verifyBuild(without, [ONE]).join("\n")).toContain("over the budget");
+    expect(verifyBuild(without, [ONE], []).join("\n")).toContain(
+      "over the budget",
+    );
     const withPages = builtSite(tag, {
       "assets/js/main.js": script,
       ...pages,
     });
-    expect(verifyBuild(withPages, [ONE])).toEqual([]);
+    expect(verifyBuild(withPages, [ONE], [])).toEqual([]);
   });
 
   it("reports a front page that loads more script than the budget", () => {
