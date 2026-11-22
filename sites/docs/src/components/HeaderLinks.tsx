@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
+import { useLocation } from "@docusaurus/router";
 import type { ReactNode } from "react";
-import { HEADER_LINKS } from "../headerLinks";
+import { ariaCurrentFor, HEADER_LINKS } from "../headerLinks";
 
 /**
  * The product page's three links as a list of links. The header shows it from
@@ -15,17 +16,18 @@ export default function HeaderLinks({
 }: {
   className: string;
 }): ReactNode {
+  const { pathname } = useLocation();
   return (
     <nav aria-label="Site links" className={className}>
       <ul className="header-links__list">
-        {HEADER_LINKS.map(({ text, href, current }) => (
-          <li key={href}>
+        {HEADER_LINKS.map((link) => (
+          <li key={link.href}>
             <a
               className="navbar__link"
-              href={href}
-              aria-current={current ? "page" : undefined}
+              href={link.href}
+              aria-current={ariaCurrentFor(link, pathname)}
             >
-              {text}
+              {link.text}
             </a>
           </li>
         ))}

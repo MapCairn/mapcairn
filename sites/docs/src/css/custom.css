@@ -669,6 +669,8 @@ blockquote {
 
 .search-dialog__close,
 .search-dialog__retry {
+  flex-shrink: 0;
+  white-space: nowrap;
   min-height: var(--mc-size-min-target);
   min-width: var(--mc-size-min-target);
   padding-inline: var(--mc-space-sm);
@@ -694,6 +696,13 @@ blockquote {
   overflow: hidden;
   clip-path: inset(50%);
   white-space: nowrap;
+}
+
+.search-dialog__hint {
+  margin: 0;
+  color: var(--mc-color-text-muted);
+  font-size: var(--mc-type-small-size);
+  line-height: var(--mc-type-small-line-height);
 }
 
 .search-dialog__message {

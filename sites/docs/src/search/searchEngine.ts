@@ -51,8 +51,20 @@ export interface SearchResult extends SearchRecord {
   readonly terms: readonly string[];
 }
 
+/** What a search finds. */
+export interface SearchOutcome {
+  /** The best results, at most the limit. */
+  readonly results: SearchResult[];
+  /** How many sections matched, which is more than `results` holds when the limit cut the list. */
+  readonly total: number;
+  /** True when no section had every word, so the results are sections with some of them. */
+  readonly partial: boolean;
+}
+
 /** A search over the built site's sections. */
-export type Search = (query: string, limit?: number) => SearchResult[];
+export type Search = (query: string, limit?: number) => SearchOutcome;
+
+const NOTHING: SearchOutcome = { results: [], total: 0, partial: false };
 
 /** The label that names a section: its heading, or the page title for an introduction. */
 function label(record: SearchRecord): string {
@@ -82,14 +94,15 @@ export function createSearch(records: readonly SearchRecord[]): Search {
   return (query, limit = DEFAULT_RESULT_LIMIT) => {
     const wanted = query.trim().toLowerCase();
     if (wanted === "") {
-      return [];
+      return NOTHING;
     }
     let hits = index.search(query, { combineWith: "AND" });
-    if (hits.length === 0) {
+    const partial = hits.length === 0;
+    if (partial) {
       hits = index.search(query, { combineWith: "OR" });
     }
     const terms = tokenize(query);
-    return hits
+    const results = hits
       .map((hit) => ({
         score: hit.score,
         exact: label(hit as unknown as SearchRecord).toLowerCase() === wanted,
@@ -105,6 +118,7 @@ export function createSearch(records: readonly SearchRecord[]): Search {
       .sort((a, b) => Number(b.exact) - Number(a.exact) || b.score - a.score)
       .slice(0, limit)
       .map(({ result }) => result);
+    return { results, total: hits.length, partial: partial && hits.length > 0 };
   };
 }
 

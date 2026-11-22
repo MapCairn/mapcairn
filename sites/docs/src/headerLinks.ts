@@ -21,3 +21,20 @@ export const HEADER_LINKS: readonly HeaderLink[] = [
   { text: "Docs", href: "/docs/", current: true },
   { text: "GitHub", href: REPOSITORY_URL },
 ];
+
+/**
+ * The `aria-current` value for a header link. The Docs link stands for a whole
+ * section, so on any page inside it the value is `true` (the current section)
+ * and only on its own front page is it `page`, which says this very page.
+ * @param link - The header link.
+ * @param pathname - The path of the page being read.
+ */
+export function ariaCurrentFor(
+  link: HeaderLink,
+  pathname: string,
+): "page" | "true" | undefined {
+  if (!link.current) {
+    return undefined;
+  }
+  return pathname === link.href ? "page" : "true";
+}

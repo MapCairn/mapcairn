@@ -22,3 +22,21 @@ export function focusIsLost(
     active === page.documentElement
   );
 }
+
+/**
+ * The id of the heading a search result points at, when the result is on the
+ * page being read. Following such a link only scrolls, so focus has to be sent
+ * to the heading by hand; a link to another page loads it and needs nothing.
+ * @param href - The result's address, with its hash.
+ * @param current - The page being read.
+ */
+export function sameDocumentTarget(
+  href: string,
+  current: { readonly pathname: string },
+): string | null {
+  const url = new URL(href, "https://docs.invalid");
+  if (url.pathname !== current.pathname || url.hash.length <= 1) {
+    return null;
+  }
+  return decodeURIComponent(url.hash.slice(1));
+}
