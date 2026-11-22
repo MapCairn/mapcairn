@@ -22,7 +22,7 @@ import {
 } from "../index";
 
 /**
- * The worked layer definitions in `docs/guides/serving-layers.md`, one for each
+ * The worked layer definitions in `sites/docs/docs/guides/serving-layers.md`, one for each
  * open standard a team's services usually speak, with the request each would
  * make compared to the shape the standard defines. The hosts are invented and
  * sit under a reserved domain. `engineFills` re-implements MapLibre's documented
@@ -33,7 +33,7 @@ import {
 const GUIDE = readFileSync(
   path.resolve(
     path.dirname(fileURLToPath(import.meta.url)),
-    "../../../../docs/guides/serving-layers.md",
+    "../../../../sites/docs/docs/guides/serving-layers.md",
   ),
   "utf8",
 );

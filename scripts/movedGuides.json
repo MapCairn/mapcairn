@@ -7,5 +7,7 @@
   "public-api",
   "content-security-policy",
   "capability-matrix",
-  "performance"
+  "performance",
+  "serving-layers",
+  "serving-from-iis"
 ]
