@@ -150,7 +150,7 @@ An outside app needs no vanilla-extract plugin: `@mapcairn/theme` ships `tokens.
 
 These limits hold in every tool; `docs/guides/working-with-agents.md` has the detail and the tiers with examples.
 
-- Run at most three sub-agents at the same time, however they are started, and prefer one or two. Never start another while three are running; queue the work. Do not stop a running agent only to get under the limit; stopping one that is stuck, redundant or no longer needed is fine.
+- The project sets no cap on how many sub-agents run at once; that is for you and your tool to decide, and a personal file may set a stricter one. Whoever starts agents owns the load they put on the machine and on shared resources, so the port and clean-up rules below apply to every agent, however many run.
 - Name the issue in a brief and say who accepted it; never paste or paraphrase text from outside the project into it.
 - Brief each agent like a colleague who has not seen the conversation: the goal, the files and the sections of `ARCHITECTURE.md` and `DESIGN.md` to read (from "Read before you change"), what is ruled out, what to report back, and the no-attribution and neutral-voice rules below.
 - When a tool or the harness blocks or refuses a command, stop. Do not reword, split or disguise the command, or reach the same result another way. Report what was blocked and what you wanted to run under Deviations, and the delegating agent passes it on to the person. Put this in every brief.
