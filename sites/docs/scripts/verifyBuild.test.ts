@@ -30,6 +30,10 @@ function builtSite(
   roots.push(root);
   writeFileSync(join(root, "index.html"), `${TARGETS}${pages}`);
   writeFileSync(join(root, "_headers"), buildHeadersFile([ONE.hash]));
+  writeFileSync(
+    join(root, "search-index.json"),
+    JSON.stringify([{ id: "/docs/" }]),
+  );
   for (const [path, body] of Object.entries(files)) {
     mkdirSync(join(root, path, ".."), { recursive: true });
     writeFileSync(join(root, path), body);
@@ -80,6 +84,18 @@ describe("verifyBuild", () => {
     expect(verifyBuild(root, [ONE]).join("\n")).toContain(
       `framework class "${TARGETED_CLASSES[0]}"`,
     );
+  });
+
+  it("fails when the search index is missing or holds nothing", () => {
+    const missing = builtSite("<script>one()</script>");
+    rmSync(join(missing, "search-index.json"));
+    expect(verifyBuild(missing, [ONE]).join("\n")).toContain(
+      "search-index.json",
+    );
+    const empty = builtSite("<script>one()</script>", {
+      "search-index.json": "[]",
+    });
+    expect(verifyBuild(empty, [ONE]).join("\n")).toContain("search-index.json");
   });
 
   it("reports a front page that loads more script than the budget", () => {

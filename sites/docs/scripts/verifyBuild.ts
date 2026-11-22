@@ -3,6 +3,7 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { SEARCH_INDEX_FILE } from "../plugins/searchIndexPlugin";
 import { sidebar } from "../sidebars";
 import { BASE_URL, HOST_PATHS } from "../src/siteConfig";
 import {
@@ -37,12 +38,25 @@ const BUDGET_PAGE = "index.html";
 /** One problem found in the build, as a line for the log. */
 type Finding = string;
 
+/** How many sections the build's search index holds; 0 when it is missing or unreadable. */
+function searchIndexSize(build: string): number {
+  try {
+    const records: unknown = JSON.parse(
+      readFileSync(join(build, SEARCH_INDEX_FILE), "utf8"),
+    );
+    return Array.isArray(records) ? records.length : 0;
+  } catch {
+    return 0;
+  }
+}
+
 /**
  * Checks a finished build and returns what is wrong with it: a page missing
  * from the sidebar, a link that goes nowhere, a style attribute or an inline
  * script that is not on the committed list (or one on it that is gone), a
  * resource from another origin, a framework class the stylesheet targets that
- * the pages no longer carry, and a page over the script budget.
+ * the pages no longer carry, a missing or empty search index, and a page over
+ * the script budget.
  * @param build - The build folder.
  * @param expected - The inline scripts the pages may carry.
  */
@@ -103,6 +117,9 @@ export function verifyBuild(
         `The stylesheet targets the framework class "${name}", which no page carries.`,
       );
     }
+  }
+  if (searchIndexSize(build) === 0) {
+    findings.push("search-index.json is missing or holds no sections.");
   }
   const bytes = scriptBytesFor(build, BASE_URL, BUDGET_PAGE);
   if (bytes > SCRIPT_BUDGET_BYTES) {

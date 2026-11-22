@@ -3,6 +3,7 @@
 import { readFileSync } from "node:fs";
 import type { Config } from "@docusaurus/types";
 import { remarkSdkVersion } from "./plugins/remarkSdkVersion";
+import searchIndexPlugin from "./plugins/searchIndexPlugin";
 import securityHeadersPlugin from "./plugins/securityHeadersPlugin";
 import { BASE_URL, REPOSITORY_URL, SITE_ORIGIN } from "./src/siteConfig";
 import { THEME_BRIDGE_SCRIPT } from "./src/themeBridge";
@@ -61,7 +62,7 @@ const config: Config = {
       attributes: { rel: "icon", href: "/favicon.svg", type: "image/svg+xml" },
     },
   ],
-  plugins: [securityHeadersPlugin],
+  plugins: [searchIndexPlugin, securityHeadersPlugin],
   presets: [
     [
       "classic",

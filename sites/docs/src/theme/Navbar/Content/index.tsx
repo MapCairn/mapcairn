@@ -7,6 +7,7 @@ import NavbarLogo from "@theme/Navbar/Logo";
 import NavbarMobileSidebarToggle from "@theme/Navbar/MobileSidebar/Toggle";
 import clsx from "clsx";
 import type { ReactNode } from "react";
+import SearchButton from "../../../components/Search/SearchButton";
 import { HEADER_LINKS } from "../../../headerLinks";
 
 /**
@@ -51,6 +52,7 @@ export default function NavbarContent(): ReactNode {
             ))}
           </ul>
         </nav>
+        <SearchButton />
         <NavbarColorModeToggle />
       </div>
     </div>
