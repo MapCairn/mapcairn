@@ -28,23 +28,58 @@ const ENTITIES: Readonly<Record<string, string>> = {
 /** The zero-width space the framework puts inside each heading's link. */
 const ZERO_WIDTH_SPACE = /\u200b/g;
 
-/** Removes tags: whole blocks that are not text, inline tags joined to their words, then any other tag as a space. */
-function stripTagsOnce(markup: string): string {
-  return markup
-    .replace(/<(script|style|nav|button|svg)\b[\s\S]*?<\/\1>/gi, " ")
-    .replace(/<\/?(?:span|code|a|strong|em|b|i|mark|kbd|sub|sup)\b[^>]*>/gi, "")
-    .replace(/<[^>]+>/g, " ");
-}
+/** A comment, a tag (closing slash and name captured), a run of text, or a stray `<`. */
+const TOKEN = /<!--[\s\S]*?-->|<(\/?)([a-z][a-z0-9-]*)[^>]*>|[^<]+|</gi;
 
-/** Removes tags until none is left, so a tag built from pieces of two others does not survive one pass. */
+/** Elements whose content is not page text. */
+const SKIPPED_ELEMENTS = new Set(["script", "style", "nav", "button", "svg"]);
+
+/** Elements that sit inside a word, so removing them must not split it. */
+const INLINE_ELEMENTS = new Set([
+  "span",
+  "code",
+  "a",
+  "strong",
+  "em",
+  "b",
+  "i",
+  "mark",
+  "kbd",
+  "sub",
+  "sup",
+]);
+
+/**
+ * The text of some markup, found by reading it as tokens rather than by
+ * rewriting it: the content of skipped elements is dropped, an inline tag
+ * leaves its words joined, any other tag becomes a space, and a stray `<` is
+ * dropped, so no part of a tag can be left in the text.
+ */
 function stripTags(markup: string): string {
-  let previous = markup;
-  let current = stripTagsOnce(previous);
-  while (current !== previous) {
-    previous = current;
-    current = stripTagsOnce(previous);
+  let text = "";
+  let skipping = "";
+  let depth = 0;
+  for (const [token, closing, name] of markup.matchAll(TOKEN)) {
+    if (name === undefined) {
+      if (skipping === "" && token !== "<" && !token.startsWith("<!--")) {
+        text += token;
+      }
+      continue;
+    }
+    const tag = name.toLowerCase();
+    if (skipping !== "") {
+      if (tag === skipping) {
+        depth += closing ? -1 : 1;
+        skipping = depth === 0 ? "" : skipping;
+      }
+    } else if (!closing && SKIPPED_ELEMENTS.has(tag)) {
+      skipping = tag;
+      depth = 1;
+    } else if (!INLINE_ELEMENTS.has(tag)) {
+      text += " ";
+    }
   }
-  return current;
+  return text;
 }
 
 /** Plain text of a piece of markup: tags removed, entities decoded, spaces collapsed. */
