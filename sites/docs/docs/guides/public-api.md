@@ -70,7 +70,7 @@ The same check then repeats the render, the three `tsc` runs, the plain Vite bui
 
 CI runs both in the `SDK packages` job, which is a required check on `main`, and the weekly Repeatable build compares the `dist` folders and the tarballs of two clean builds.
 
-The package READMEs are written for the npm page, which shows each one away from the repository. They install the package with npm, pnpm and yarn side by side, hold one **Status** line that says what a `0.x` version promises (the text is in [`docs/guides/releasing.md`](https://github.com/MapCairn/mapcairn/blob/main/docs/guides/releasing.md), "The first release", step 4), and link to the repository only by absolute URL, because a relative link means nothing on npm. `packages/core/src/lint/packageReadmes.test.ts` checks this, and that the code in them imports only what `examples/embed` imports. The `repository.url` is `git+https://github.com/MapCairn/mapcairn.git`: npm's trusted publishing requires it to match the GitHub repository exactly, so a fork that publishes must change it.
+The package READMEs are written for the npm page, which shows each one away from the repository. They install the package with npm, pnpm and yarn side by side, hold one **Status** line that says what a `0.x` version promises (the text is in [[`docs/guides/releasing.md`](https://github.com/MapCairn/mapcairn/blob/main/docs/guides/releasing.md)](https://github.com/MapCairn/mapcairn/blob/main/docs/guides/releasing.md), "The first release", step 4), and link to the repository only by absolute URL, because a relative link means nothing on npm. `packages/core/src/lint/packageReadmes.test.ts` checks this, and that the code in them imports only what `examples/embed` imports. The `repository.url` is `git+https://github.com/MapCairn/mapcairn.git`: npm's trusted publishing requires it to match the GitHub repository exactly, so a fork that publishes must change it.
 
 ## The report of the exports
 
@@ -132,7 +132,7 @@ CI prints each warning in a group and a count for each package as one annotation
 
 ## How a change is classed for a release
 
-`npm run release:plan` (`scripts/release/plan.mjs`, described in [`docs/guides/releasing.md`](https://github.com/MapCairn/mapcairn/blob/main/docs/guides/releasing.md)) reads the reports' change since the last tag and the commits' types, and flags each change below as a likely breaking change. It cannot see everything above, so a person reads the go/no-go list in the Release pull request.
+`npm run release:plan` (`scripts/release/plan.mjs`, described in [[`docs/guides/releasing.md`](https://github.com/MapCairn/mapcairn/blob/main/docs/guides/releasing.md)](https://github.com/MapCairn/mapcairn/blob/main/docs/guides/releasing.md)) reads the reports' change since the last tag and the commits' types, and flags each change below as a likely breaking change. It cannot see everything above, so a person reads the go/no-go list in the Release pull request.
 
 - a removed or changed line in a report, and a line that gained an `@internal` tag;
 - a required member added to an exported interface or abstract class a host implements (an optional member, or a member of an ordinary class, does not count; for an abstract class only a new abstract member does). Hosts implement the ports, so adding a required member to one breaks them;

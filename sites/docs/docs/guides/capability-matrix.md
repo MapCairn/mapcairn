@@ -34,9 +34,9 @@ The areas were drawn up from the public documentation of commercial and open-sou
 | Point, line and polygon features from a GeoJSON document, with fields read by path | has     | `FeedSource` and the `geojson` decoder in `packages/core/src/layers`                                                              | none                                   |
 | Any other JSON shape through a registered decoder                                  | has     | `decodeWith` and the decoder registry in `packages/core/src/layers/decoders.ts`                                                   | none                                   |
 | Only the features in view, from a bounding box query, with a cap                   | has     | `QuerySource` (`maxFeatures` 1 to 5000)                                                                                           | none                                   |
-| Raster tiles, including a WMS through a box template                               | has     | `TileSource` (`{z}/{x}/{y}` and `{bbox-epsg-3857}`), `docs/guides/serving-layers.md`                                              | none                                   |
+| Raster tiles, including a WMS through a box template                               | has     | `TileSource` (`{z}/{x}/{y}` and `{bbox-epsg-3857}`), [Serving layers to MapCairn](serving-layers.md)                              | none                                   |
 | Vector tiles styled by source layer                                                | has     | `VectorTileSource`, [Extending MapCairn](extending.md)                                                                            | none                                   |
-| Worked recipes for OGC API Features, WMS and WMTS endpoints                        | has     | `docs/guides/serving-layers.md`, checked in `packages/core/src/layers/openStandards.test.ts`                                      | none                                   |
+| Worked recipes for OGC API Features, WMS and WMTS endpoints                        | has     | [Serving layers to MapCairn](serving-layers.md), checked in `packages/core/src/layers/openStandards.test.ts`                      | none                                   |
 | Tiles read from a single-file archive                                              | lacks   | none                                                                                                                              | [#192]                                 |
 | Newer vector tile encodings                                                        | lacks   | none                                                                                                                              | [#197]                                 |
 | Layers supplied at runtime, per user, validated one at a time                      | has     | `createRuntimeLayerCatalogue` and `partitionDefinitions` (steps closed as #94 to #99)                                             | none (#46 closed)                      |
@@ -163,14 +163,14 @@ The areas were drawn up from the public documentation of commercial and open-sou
 
 ## Performance on large data
 
-| Capability                                         | Status | Evidence                                       | Tracked by     |
-| -------------------------------------------------- | ------ | ---------------------------------------------- | -------------- |
-| Ask only for the view, with a cap and a zoom floor | has    | `QuerySource`, `docs/guides/serving-layers.md` | none           |
-| Raster and vector tiles for dense drawings         | has    | `TileSource`, `VectorTileSource`               | none           |
-| A reused response within a page                    | has    | `packages/core/src/layers/responseCache.ts`    | none           |
-| A measured budget for tiles per view               | lacks  | none                                           | [#194]         |
-| Clustering and tile archives                       | lacks  | none                                           | [#183], [#192] |
-| Measured Lighthouse work on the reference site     | has    | [Performance](performance.md)                  | none           |
+| Capability                                         | Status | Evidence                                                       | Tracked by     |
+| -------------------------------------------------- | ------ | -------------------------------------------------------------- | -------------- |
+| Ask only for the view, with a cap and a zoom floor | has    | `QuerySource`, [Serving layers to MapCairn](serving-layers.md) | none           |
+| Raster and vector tiles for dense drawings         | has    | `TileSource`, `VectorTileSource`                               | none           |
+| A reused response within a page                    | has    | `packages/core/src/layers/responseCache.ts`                    | none           |
+| A measured budget for tiles per view               | lacks  | none                                                           | [#194]         |
+| Clustering and tile archives                       | lacks  | none                                                           | [#183], [#192] |
+| Measured Lighthouse work on the reference site     | has    | [Performance](performance.md)                                  | none           |
 
 ## Embedding and server-rendered pages
 
@@ -179,7 +179,7 @@ The areas were drawn up from the public documentation of commercial and open-sou
 | React components in the `core`, `map`, `react` and `theme` packages, with an example app that uses only their public entry points | has     | `examples/embed`, [Extending MapCairn](extending.md)                                                                                                                                   | none                |
 | The map engine adapter as an optional package                                                                                     | has     | `packages/adapter-maplibre` is in the release set from `0.1.0-rc.3` and the umbrella re-exports it at `@mapcairn/sdk/adapter-maplibre`                                                 | none                |
 | A script and stylesheet with a mount function for pages without React                                                             | lacks   | none                                                                                                                                                                                   | [#44]               |
-| A guide for serving the bundle from a Windows web server and server-rendered pages                                                | partial | `docs/guides/serving-from-iis.md`, checked against Microsoft's documentation and not run on a server; it has no prebuilt bundle or mount function to describe                          | [#221], after [#44] |
+| A guide for serving the bundle from a Windows web server and server-rendered pages                                                | partial | [Serving MapCairn from IIS](serving-from-iis.md), checked against Microsoft's documentation and not run on a server; it has no prebuilt bundle or mount function to describe           | [#221], after [#44] |
 | The Content Security Policy a host needs                                                                                          | has     | [Content Security Policy](content-security-policy.md), `buildContentSecurityPolicy` in `examples/embed/src/contentSecurityPolicy.ts`                                                   | none (#230 closed)  |
 | Making the SDK easy to drop into existing server-rendered applications                                                            | lacks   | the tracker for the items above                                                                                                                                                        | [#51]               |
 | The interface text and language chosen by the host                                                                                | partial | A message catalogue and language setting for left-to-right and right-to-left languages; the site offers English and Afrikaans, shows a failed language load with a retry (#280 closed) | [#231]              |
@@ -274,7 +274,7 @@ These come from [`ROADMAP.md`](https://github.com/MapCairn/mapcairn/blob/main/RO
 A gap is filed only when it is real, small enough to pick up (or says it needs a plan) and not a duplicate. These were left, with the reason, and can be filed when someone needs one.
 
 - **Binary vector files and raster files** (zipped vector sets, GeoPackage, FlatGeobuf, GeoTIFF). Each needs a reader library, which is a decision about a runtime dependency, and several are large. Wait for a named need, then start with a plan.
-- **Reading a service's capabilities document.** A definition is data a host writes on purpose, so the service's own list adds a parser and a trust question for little gain. `docs/guides/serving-layers.md` shows how to write the definitions by hand for OGC API Features, WMS and WMTS.
+- **Reading a service's capabilities document.** A definition is data a host writes on purpose, so the service's own list adds a parser and a trust question for little gain. [Serving layers to MapCairn](serving-layers.md) shows how to write the definitions by hand for OGC API Features, WMS and WMTS.
 - **Custom image icons for points.** The design contract is that colour is never the only signal and that a style names a palette slot, never a value. An image icon would need its own rules for contrast and for a text alternative, so it needs a design decision first.
 - **Bearing and angle measurement.** Low demand, and a small addition to the measure tool once someone asks.
 - **Write-back of edits to a service.** It needs a port with a write method, and no host has asked. [#45] comes first.

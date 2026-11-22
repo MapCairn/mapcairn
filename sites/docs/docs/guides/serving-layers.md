@@ -1,6 +1,15 @@
+---
+
+title: Serving layers to MapCairn
+sidebar_label: Serve layers
+description: Formats a server can offer as layers, what each costs the server, and worked definitions.
+---
+
 # Serving layers to MapCairn
 
-Which layer kind to serve from your own server, and what each costs it. A layer is a definition, described in [`extending.md`](https://mapcairn.timothybrits.co.za/docs/guides/extending/); this guide is about the server behind that definition. The browser asks for the data only when someone turns the layer on. A feed or query request carries no cookies and no referrer.
+This page is for a person who runs a server that holds map data and wants MapCairn to show it. By the end you will know which layer kind to serve from your own server, what each costs it, and how to write the definition for a feed or a query service. A layer is a definition, described in [Extending MapCairn](extending.md); this guide is about the server behind that definition. The browser asks for the data only when someone turns the layer on. A feed or query request carries no cookies and no referrer.
+
+Checked against `@mapcairn/sdk` %sdkVersion%, the version in this repository.
 
 ## Choose the shape of the data
 
@@ -21,7 +30,7 @@ A `tiles` source names a URL template with `{z}`, `{x}`, `{y}` and, for a WMS, `
 - Set `maxzoom` to the deepest level you hold and let the engine stretch it beyond that, rather than answering 404 for a level that does not exist.
 - Set `bounds` when the provider fills the rest of the world with blank or opaque tiles. The map then asks for no tile wholly outside the box. This matters at the poles, where a globe stretches the edge row of tiles over the pole.
 - Serve `Cache-Control` with a long `max-age` for a tile that never changes, and a version in the URL when it does. A browser cache and a cache in front of the server both do most of the work here.
-- A tile is a picture, so the tiles have no cards or list. An identify endpoint, which the layer's `identify` block names, gives a tap its card; see [identify features on a raster layer](https://mapcairn.timothybrits.co.za/docs/guides/extending/#identify-features-on-a-raster-layer). Offer a control such as opacity or a date and time, and say in `dataCost` what a screen costs, in words a person can read.
+- A tile is a picture, so the tiles have no cards or list. An identify endpoint, which the layer's `identify` block names, gives a tap its card; see [identify features on a raster layer](extending.md#identify-features-on-a-raster-layer). Offer a control such as opacity or a date and time, and say in `dataCost` what a screen costs, in words a person can read.
 - Say when there is no tile. This applies only to raster layers. When the map has settled and every tile the layer asked for has failed, with none loaded, the layer's entry in the list shows a status: "No imagery was found for" the chosen date or time when the layer has such a control, and otherwise "Could not load". A layer whose tiles partly load says nothing. Before the map settles, a layer that has had tiles asked for and none loaded after 10 seconds shows "Still waiting for imagery. The provider may be slow or not answering." with an hourglass, so a tile server slower than that is reported without waiting for the give-up; the line goes when a tile loads or the layer's tiles change. A server that publishes time-stamped imagery should answer `404` with `Access-Control-Allow-Origin` for a date or time it has no imagery for. A `404` counts as "no tile" only when it carries open CORS headers; without them the browser blocks the response and the engine reports a request error instead. The CORS requirement covers error responses as well as tiles.
 
 ## Vector tiles where a generator exists
@@ -61,7 +70,7 @@ Three limits hold for all three:
 
 - **Coordinate systems.** The engine asks tile layers in Web Mercator (EPSG:3857) only, and a query layer asks in WGS 84 longitude and latitude. A service that can serve nothing but another system, such as a national grid, is not supported.
 - **Cross-origin access.** The standards do not ask a server to send `Access-Control-Allow-Origin`, so check that the service does, on errors as well as answers (see "What the server should do" below).
-- **Content Security Policy.** The host page must allow each origin: a tile service in `img-src` and `connect-src`, and a feature or identify service in `connect-src`. See the [Content Security Policy guide](https://mapcairn.timothybrits.co.za/docs/guides/content-security-policy/).
+- **Content Security Policy.** The host page must allow each origin: a tile service in `img-src` and `connect-src`, and a feature or identify service in `connect-src`. See the [Content Security Policy guide](content-security-policy.md).
 
 ### OGC API Features
 
@@ -139,7 +148,7 @@ const roads: IdentifiableLayerDefinition = {
 };
 ```
 
-The engine fills `{bbox-epsg-3857}` with `minx,miny,maxx,maxy` in metres for each tile, so every tile is one `GetMap` for a square picture of that box. `WIDTH` and `HEIGHT` must equal `tileSize`. For a tap, `{bbox}` is a small square of `2 × tolerance + 1` pixels centred on the tap, `{width}` and `{height}` are its size, and `{x}` and `{y}` are the tolerance, so `I` and `J` name the middle pixel. See [identify features on a raster layer](https://mapcairn.timothybrits.co.za/docs/guides/extending/#identify-features-on-a-raster-layer) for the placeholders.
+The engine fills `{bbox-epsg-3857}` with `minx,miny,maxx,maxy` in metres for each tile, so every tile is one `GetMap` for a square picture of that box. `WIDTH` and `HEIGHT` must equal `tileSize`. For a tap, `{bbox}` is a small square of `2 × tolerance + 1` pixels centred on the tap, `{width}` and `{height}` are its size, and `{x}` and `{y}` are the tolerance, so `I` and `J` name the middle pixel. See [identify features on a raster layer](extending.md#identify-features-on-a-raster-layer) for the placeholders.
 
 - **Versions.** WMS 1.3.0 names the system `CRS` and the pixel `I` and `J`. WMS 1.1.1 names them `SRS`, `X` and `Y`, and both validate. In both, EPSG:3857 is easting first, so the box is in the order the engine writes it. Older services sometimes advertise Web Mercator as EPSG:900913 or EPSG:3785. The SDK does not read the system's text, so a host can write the code its service lists, provided it is the same Web Mercator projection.
 - **Coordinate systems.** Ask for EPSG:3857. WMS 1.3.0 puts latitude first for EPSG:4326, and the engine does not send a box in degrees, so a service that offers no EPSG:3857 is not supported.
@@ -174,7 +183,7 @@ const imagery: LayerDefinition = {
 
 This is the RESTful form. Its tile template ends `{TileMatrix}/{TileRow}/{TileCol}`, which is `{z}/{y}/{x}`: the row comes before the column. A service that offers only the key-value form uses the same three placeholders:
 
-```
+```text
 https://tiles.example.org/wmts?SERVICE=WMTS&VERSION=1.0.0&REQUEST=GetTile&LAYER=imagery&STYLE=default&TILEMATRIXSET=WebMercatorQuad&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}&FORMAT=image/jpeg
 ```
 

@@ -31,7 +31,7 @@ Read from the imports of every file in `packages/web/src/adapters/maplibre`:
 
 Options: 1. Move the folder as it is and keep the `?worker&url` import in the package. Smallest, but the published package works only in Vite. 2. First make the adapter take its worker URL from the host (step 1, inside `packages/web`), then move the folder unchanged (step 2). 3. Option 2 plus a Vite-only subpath that supplies the worker URL for Vite hosts. It saves a host one line and adds an entry point that needs Vite's pre-bundling to work.
 
-Choice: 2. The move is then only a move, and the package works with any bundler that resolves `exports` and handles a CSS import, which is what `docs/guides/serving-from-iis.md` already asks of a host.
+Choice: 2. The move is then only a move, and the package works with any bundler that resolves `exports` and handles a CSS import, which is what `sites/docs/docs/guides/serving-from-iis.md` already asks of a host.
 
 Moves to `packages/adapter-maplibre/src` (with `git mv`, so history follows): every file in `packages/web/src/adapters/maplibre` except the host's new `workerUrl.ts`, `Emitter` and its test (moved into the adapter folder in step 1), and `mapEngine.css.ts` as `styles.css.ts`. The test engine `maplibreTestEngine.ts` moves with the tests and is not exported. `imageExport.ts` (700 lines) moves as it is: it imports nothing from the host, and splitting it during a move would hide the move in the diff. Splitting it, and the pending-load lifecycle in `MapLibreMapAdapter.ts`, stays a separate refactor if one is wanted.
 
@@ -175,7 +175,7 @@ Each step is one pull request, build green, `Part of #43`.
 - Step 2: `ARCHITECTURE.md` (the diagram, a row for the package in "Layers and dependency rules", "The map adapter", "Adding an adapter", "Building the SDK packages"), `DESIGN.md` (the engine style file's path under "Exempt surfaces"), `AGENTS.md` ("About" and the package boundaries), `packages/adapter-maplibre/README.md` (new), `sites/docs/docs/guides/extending.md` (the reference adapter's path).
 - Step 3: `docs/guides/releasing.md` (six packages, two first uploads in order, the publisher linked when the next release is ready), `sites/docs/docs/guides/public-api.md`, `packages/sdk/README.md` (the subpath and the peer), `docs/plans/0014-sdk-release.md` and plan 0015's `rc.3` checklist (pointing here), `ARCHITECTURE.md` (the umbrella row).
 - Step 4: `sites/docs/docs/guides/public-api.md` (what the consumer check proves, and where the browser leg runs), `sites/docs/docs/guides/content-security-policy.md` (what was checked in a browser), `.claude/skills/release/SKILL.md` (the go/no-go item, then `npm run agents:sync`).
-- Step 5: `README.md` (quickstart with two import lines, and the Packages table), `sites/docs/docs/guides/extending.md`, `docs/guides/serving-from-iis.md`.
+- Step 5: `README.md` (quickstart with two import lines, and the Packages table), `sites/docs/docs/guides/extending.md`, `sites/docs/docs/guides/serving-from-iis.md`.
 - This pull request: `docs/plans/README.md` lists this plan.
 - `ROADMAP.md`, `PRIVACY.md`, `ATTRIBUTIONS.md`: no change. The work is in the "First release" milestone, adds no origin and no data, and MapLibre is already credited.
 
