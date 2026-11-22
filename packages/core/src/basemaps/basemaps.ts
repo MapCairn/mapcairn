@@ -144,6 +144,15 @@ const FIORD: BasemapDefinition = {
   swatch: DEFAULT_DARK_BASEMAP_BACKGROUND,
   // Nothing to leave out in Save data mode: like Bright, the style names the
   // Natural Earth raster source but draws no raster layer from it.
+  //
+  // Known, and the provider's: around Cape Town the style shows lighter,
+  // tile-edged rectangles over the sea (checked 2026-11-22). The tiles carry
+  // the marine protected areas (Robben Island, Table Mountain National Park)
+  // as `park` polygons, nested zones that share a boundary, and Fiord draws
+  // its translucent `park` fill and dashed `park_outline` above `water`, so the
+  // zones stack and their clipped tile edges show. Bright and Liberty draw
+  // `water` above `park`. Nothing here differs from the engine's plain output:
+  // the same view in a bare MapLibre map shows the same rectangles.
 };
 
 const DARK: BasemapDefinition = {
