@@ -699,3 +699,121 @@ blockquote {
   color: var(--mc-color-text);
   font-weight: var(--mc-type-weight-semibold);
 }
+
+/*
+ * Roadmap: three lanes of milestone cards, built by scripts/roadmapPage.ts.
+ * The lanes stack on a phone and sit side by side once the column is wide
+ * enough, which the column's own width decides (a container query), because
+ * the sidebar takes a different share of the screen at each size.
+ */
+.roadmap {
+  container-type: inline-size;
+  margin-block-start: var(--mc-space-lg);
+}
+
+.roadmap__lanes {
+  display: grid;
+  gap: var(--mc-space-xl);
+}
+
+/* The width at which three lanes fit: three cards of about 14 rem and the gaps between them. */
+@container (min-width: 44rem) {
+  .roadmap__lanes {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    align-items: start;
+  }
+}
+
+.roadmap__lane {
+  min-width: 0;
+}
+
+.roadmap__lane > h2 {
+  margin-block: 0 var(--mc-space-xxs);
+}
+
+.roadmap__lane > p {
+  margin-block: 0 var(--mc-space-md);
+  color: var(--mc-color-text-muted);
+  font-size: var(--mc-type-body-size);
+  line-height: var(--mc-type-body-line-height);
+}
+
+.roadmap__cards {
+  display: grid;
+  gap: var(--mc-space-md);
+}
+
+.roadmap__card {
+  display: grid;
+  gap: var(--mc-space-xs);
+  padding: var(--mc-space-md);
+  border: 1px solid var(--mc-color-hairline);
+  border-radius: var(--mc-radius-control);
+  background-color: var(--mc-color-surface-raised);
+  font-size: var(--mc-type-body-size);
+  line-height: var(--mc-type-body-line-height);
+}
+
+/* What is being worked on carries the accent on its edge; the position is also in the lane's name. */
+.roadmap__lane:first-child .roadmap__card {
+  border-inline-start: 3px solid var(--mc-color-accent);
+}
+
+.roadmap__card > * {
+  margin: 0;
+}
+
+.roadmap__card h3 {
+  font-size: var(--mc-type-large-size);
+  line-height: var(--mc-type-large-line-height);
+}
+
+/* The bar is outlined in the accent as well as filled with it, so its extent reads against either theme's ground. */
+.roadmap__bar {
+  appearance: none;
+  width: 100%;
+  height: var(--mc-space-xs);
+  border: 1px solid var(--mc-color-accent);
+  border-radius: var(--mc-radius-pill);
+  background-color: var(--mc-color-accent-tint);
+  overflow: hidden;
+}
+
+.roadmap__bar::-webkit-progress-bar {
+  background-color: var(--mc-color-accent-tint);
+}
+
+.roadmap__bar::-webkit-progress-value {
+  background-color: var(--mc-color-accent);
+}
+
+.roadmap__bar::-moz-progress-bar {
+  background-color: var(--mc-color-accent);
+}
+
+.roadmap__card > p:has(+ .roadmap__bar),
+.roadmap__card > p:last-child {
+  color: var(--mc-color-text-muted);
+  font-size: var(--mc-type-small-size);
+  line-height: var(--mc-type-small-line-height);
+}
+
+.roadmap__card strong {
+  color: var(--mc-color-text);
+  font-size: var(--mc-type-body-size);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .roadmap__card {
+    animation: roadmap-rise var(--mc-motion-duration-slow)
+      var(--mc-motion-easing) both;
+  }
+}
+
+@keyframes roadmap-rise {
+  from {
+    opacity: 0;
+    transform: translateY(var(--mc-space-xs));
+  }
+}

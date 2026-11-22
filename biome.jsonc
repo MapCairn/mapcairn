@@ -443,6 +443,15 @@
       }
     },
     {
+      // The docs build reads the public GitHub milestones once, at build time
+      // (plan 0017, "Roadmap page"). It is a script, not application code, and
+      // takes `fetch` as a parameter in its tests.
+      "includes": ["sites/docs/scripts/generateRoadmap.ts"],
+      "linter": {
+        "rules": { "style": { "noRestrictedGlobals": "off" } }
+      }
+    },
+    {
       "includes": ["packages/web/src/adapters/**"],
       "linter": {
         "rules": {

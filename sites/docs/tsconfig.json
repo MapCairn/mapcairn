@@ -9,6 +9,7 @@
     "esModuleInterop": true,
     "skipLibCheck": true,
     "resolveJsonModule": true,
+    "allowJs": true,
     "noUncheckedIndexedAccess": true,
     "noEmit": true,
     "paths": { "@site/*": ["./*"] },
