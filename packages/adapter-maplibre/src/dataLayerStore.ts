@@ -202,9 +202,15 @@ export class DataLayerStore {
   /**
    * Draws every kept layer again, then orders them once; a new style
    * starts with none, so ordering after each one would move layers that are
-   * not back yet.
+   * not back yet. A layer removed while the style was swapping is erased
+   * here, which releases what the store and the tile traffic still hold for it.
    */
   restore(map: MapLibreMap): void {
+    for (const id of [...this.drawn.keys()]) {
+      if (!this.layers.has(id)) {
+        this.erase(map, id);
+      }
+    }
     for (const id of this.layers.keys()) {
       this.draw(map, id, false);
     }

@@ -137,6 +137,21 @@ describe("DataLayerStore", () => {
     expect(tileRequests.transform(tile).referrerPolicy).toBeUndefined();
   });
 
+  it("releases a layer removed during a style swap when the swap finishes", () => {
+    const { engine, map, state, store, release, tileRequests } = setup();
+    const tile = "https://t.test/3/2/5.png";
+    store.setTiles("imagery", OVERLAY);
+    state.ready = false;
+    store.remove("imagery");
+    release.mockClear();
+    state.ready = true;
+    store.restore(map);
+    expect(release).toHaveBeenCalledWith("mapcairn:imagery");
+    expect(engine.sources.size).toBe(0);
+    expect(engine.getLayer("mapcairn:imagery:tiles")).toBeUndefined();
+    expect(tileRequests.transform(tile).referrerPolicy).toBeUndefined();
+  });
+
   it("keeps no template for a layer that holds its own data", () => {
     const { store, tileRequests } = setup();
     store.set("area", { kind: "shapes", shapes: SHAPES });
