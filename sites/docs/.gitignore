@@ -2,3 +2,6 @@ build
 .docusaurus
 src/css/generated
 docs/generated
+docs/roadmap.md
+# The API reference, written by scripts/generateApi.ts.
+docs/api

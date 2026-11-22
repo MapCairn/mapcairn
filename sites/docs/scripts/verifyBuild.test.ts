@@ -10,10 +10,16 @@ import { writeMarkdownFiles } from "../plugins/markdownCopiesPlugin";
 import { BASE_URL, SITE_ORIGIN } from "../src/siteConfig";
 import { inlineScriptHashes } from "./builtSite";
 import { parseDocSource } from "./markdownCopies";
+import { PRIORITY_NOT_SCHEDULE } from "./roadmapPage";
 import { SDK_VERSION } from "./sdkVersion";
 import { buildHeadersFile } from "./securityHeaders";
 import { TARGETED_CLASSES } from "./targetedClasses";
-import { SCRIPT_BUDGET_BYTES, verifyBuild } from "./verifyBuild";
+import {
+  API_PAGE_ALLOWANCE_BYTES,
+  SCRIPT_BUDGET_BYTES,
+  scriptBudgetFor,
+  verifyBuild,
+} from "./verifyBuild";
 
 const roots: string[] = [];
 
@@ -50,6 +56,15 @@ function builtSite(
   );
   writeFileSync(join(root, "sitemap.xml"), "<urlset></urlset>");
   writeMarkdownFiles(root, [], CONTEXT);
+  mkdirSync(join(root, "roadmap"));
+  writeFileSync(
+    join(root, "roadmap", "index.html"),
+    `${PRIORITY_NOT_SCHEDULE}${'<section class="roadmap__lane"></section>'.repeat(3)}`,
+  );
+  writeFileSync(
+    join(root, "roadmap.md"),
+    `${PRIORITY_NOT_SCHEDULE}\n## Now\n## Next\n## Later\n`,
+  );
   for (const [path, body] of Object.entries(files)) {
     mkdirSync(join(root, path, ".."), { recursive: true });
     writeFileSync(join(root, path), body);
@@ -116,6 +131,14 @@ describe("verifyBuild", () => {
     );
   });
 
+  it("reports a roadmap page that was not built", () => {
+    const root = builtSite("<script>one()</script>");
+    rmSync(join(root, "roadmap"), { recursive: true });
+    expect(verifyBuild(root, [ONE], []).join("\n")).toContain(
+      "roadmap page was not built",
+    );
+  });
+
   it("reports a page that has no Markdown copy", () => {
     const root = builtSite("<script>one()</script>");
     const page = parseDocSource(
@@ -125,6 +148,41 @@ describe("verifyBuild", () => {
     expect(verifyBuild(root, [ONE], [page]).join("\n")).toContain(
       'The page "extra" has no Markdown copy',
     );
+  });
+
+  it("reports a package whose API reference section was not built", () => {
+    const root = builtSite("<script>one()</script>", {
+      "api/core/index.html": "<p>core</p>",
+    });
+    const findings = verifyBuild(root, [ONE], [], ["core", "react"]).join("\n");
+    expect(findings).toContain(
+      "The API reference has no section for packages/react",
+    );
+    expect(findings).not.toContain("packages/core");
+  });
+
+  it("allows each generated API page a little more script than the base budget", () => {
+    const script = randomBytes(SCRIPT_BUDGET_BYTES + 5_000);
+    const pages = Object.fromEntries(
+      Array.from({ length: 100 }, (_, index) => [
+        `api/core/page${index}/index.html`,
+        "<p>page</p>",
+      ]),
+    );
+    const tag =
+      '<script src="/docs/assets/js/main.js" defer></script><script>one()</script>';
+    expect(scriptBudgetFor(100)).toBe(
+      SCRIPT_BUDGET_BYTES + 100 * API_PAGE_ALLOWANCE_BYTES,
+    );
+    const without = builtSite(tag, { "assets/js/main.js": script });
+    expect(verifyBuild(without, [ONE], []).join("\n")).toContain(
+      "over the budget",
+    );
+    const withPages = builtSite(tag, {
+      "assets/js/main.js": script,
+      ...pages,
+    });
+    expect(verifyBuild(withPages, [ONE], [])).toEqual([]);
   });
 
   it("reports a front page that loads more script than the budget", () => {

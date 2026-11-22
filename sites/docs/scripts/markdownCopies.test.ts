@@ -44,6 +44,41 @@ const GUIDE = parseDocSource(
   "---\ntitle: The guide\ndescription: A guide.\n---\n\n# The guide\n\nBody.\n",
 );
 
+describe("copyText layout tags", () => {
+  it("drops lines that hold only HTML tags and the blank lines after them, and keeps tags in code", () => {
+    const page = parseDocSource(
+      "cards",
+      [
+        "---",
+        "title: Cards",
+        "description: Cards.",
+        "---",
+        "",
+        "Intro.",
+        "",
+        '<div className="wrap">',
+        "",
+        "## Lane",
+        "",
+        '<progress value={1} max={2} aria-hidden="true"></progress>',
+        "",
+        "Text with <b>inline</b> tag.",
+        "",
+        "```html",
+        "<div>kept</div>",
+        "",
+        "```",
+        "",
+        "</div>",
+        "",
+      ].join("\n"),
+    );
+    expect(copyText(page, [page], CONTEXT)).toBe(
+      "Intro.\n\n## Lane\n\nText with <b>inline</b> tag.\n\n```html\n<div>kept</div>\n\n```\n",
+    );
+  });
+});
+
 describe("parseDocSource", () => {
   it("reads the title, description and permalink, and the body without front matter", () => {
     expect(HOME).toMatchObject({
@@ -71,6 +106,18 @@ describe("parseDocSource", () => {
       "---\ntitle: A\ndescription: d\nslug: /top\n---\n# A\n",
     );
     expect(absolute.permalink).toBe("/top/");
+  });
+
+  it("gives a folder's index page the folder's address, as the framework serves it", () => {
+    const source = "---\ntitle: T\ndescription: d\n---\n# T\n";
+    expect(parseDocSource("api/core/index", source)).toMatchObject({
+      permalink: "/api/core/",
+      copyPath: "api/core.md",
+    });
+    expect(parseDocSource("api/index", source).permalink).toBe("/api/");
+    expect(parseDocSource("api/core/reindex", source).permalink).toBe(
+      "/api/core/reindex/",
+    );
   });
 
   it("refuses a page with no title or description, which the llms.txt files need", () => {
