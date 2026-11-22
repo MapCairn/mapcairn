@@ -34,7 +34,7 @@ describe("docusaurus.config", () => {
   });
 
   it("holds no third-party plugin, theme, script or client module of its own", () => {
-    expect(config.plugins).toHaveLength(1);
+    expect(config.plugins).toHaveLength(3);
     expect(config.themes).toBeUndefined();
     expect(config.scripts).toBeUndefined();
     expect(config.clientModules).toBeUndefined();

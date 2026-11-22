@@ -3,7 +3,7 @@
 import { existsSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
-import { SITE_URL } from "../constants/siteConfig";
+import { DOCS_PATH, SITE_URL } from "../constants/siteConfig";
 import {
   DISCUSSIONS_LINK,
   EXAMPLE_APP_LINK,
@@ -32,6 +32,15 @@ const ROUTE_PATHS = new Set(routePaths(routes));
 
 /** Checks a link points at a page the site serves or a file the repository has. */
 function expectResolves(target: string): void {
+  if (target.startsWith(`${SITE_URL}${DOCS_PATH}`)) {
+    // The documentation site is a second Worker, built by `sites/docs`.
+    expect([
+      `${SITE_URL}${DOCS_PATH}llms.txt`,
+      `${SITE_URL}${DOCS_PATH}llms-full.txt`,
+      `${SITE_URL}${DOCS_PATH}`,
+    ]).toContain(target);
+    return;
+  }
   if (target.startsWith(`${SITE_URL}/`)) {
     const page = target.slice(SITE_URL.length + 1).split("#")[0] ?? "";
     expect(ROUTE_PATHS.has(page), target).toBe(true);
@@ -120,6 +129,17 @@ describe("/llms.txt", () => {
     for (const target of targets) {
       expectResolves(target);
     }
+  });
+
+  it("links the documentation site, its llms.txt and its full text", async () => {
+    const targets = linkTargets(await loader().text());
+    expect(targets).toEqual(
+      expect.arrayContaining([
+        `${SITE_URL}${DOCS_PATH}`,
+        `${SITE_URL}${DOCS_PATH}llms.txt`,
+        `${SITE_URL}${DOCS_PATH}llms-full.txt`,
+      ]),
+    );
   });
 
   it("lists the licence guide, the public API guide and the changelog among the documents", async () => {

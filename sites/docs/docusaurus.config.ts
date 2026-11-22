@@ -1,22 +1,13 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
-import { readFileSync } from "node:fs";
 import type { Config } from "@docusaurus/types";
+import markdownCopiesPlugin from "./plugins/markdownCopiesPlugin";
 import { remarkSdkVersion } from "./plugins/remarkSdkVersion";
 import searchIndexPlugin from "./plugins/searchIndexPlugin";
 import securityHeadersPlugin from "./plugins/securityHeadersPlugin";
+import { SDK_VERSION as sdkVersion } from "./scripts/sdkVersion";
 import { BASE_URL, REPOSITORY_URL, SITE_ORIGIN } from "./src/siteConfig";
 import { THEME_BRIDGE_SCRIPT } from "./src/themeBridge";
-
-/** The SDK's version, which pages name as the one they were checked against. */
-const sdkVersion = (
-  JSON.parse(
-    readFileSync(
-      new URL("../../packages/sdk/package.json", import.meta.url),
-      "utf8",
-    ),
-  ) as { version: string }
-).version;
 
 /**
  * An empty Prism theme. Highlighting is done by stylesheet rules on the token
@@ -62,7 +53,11 @@ const config: Config = {
       attributes: { rel: "icon", href: "/favicon.svg", type: "image/svg+xml" },
     },
   ],
-  plugins: [searchIndexPlugin, securityHeadersPlugin],
+  plugins: [
+    searchIndexPlugin,
+    securityHeadersPlugin,
+    markdownCopiesPlugin(sdkVersion),
+  ],
   presets: [
     [
       "classic",

@@ -2,6 +2,7 @@
 // Copyright MapCairn contributors
 import { EN_GB_CATALOGUE } from "@mapcairn/core";
 import {
+  DOCS_PATH,
   PLAYGROUND_PATH,
   SITE_URL,
   SOURCE_REPOSITORY_URL,
@@ -134,6 +135,9 @@ function linkSections(): string {
 
 ## Docs
 
+- [Documentation site](${SITE_URL}${DOCS_PATH}): the SDK's documentation, built at deploy time from Markdown, with no third party.
+- [Documentation index](${SITE_URL}${DOCS_PATH}llms.txt): every documentation page as a plain Markdown file, with a one-line description.
+- [Documentation full text](${SITE_URL}${DOCS_PATH}llms-full.txt): the whole text of every documentation page in one file.
 ${docs}
 
 ## Policies and source

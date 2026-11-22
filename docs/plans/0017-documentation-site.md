@@ -84,11 +84,12 @@ Hosted search (Algolia) is out by the rules above. `docusaurus.config.test.ts` a
 
 ### Markdown copies, `llms.txt`, robots and sitemap
 
-Not in step 1. How they will be generated:
+Built in step 3, by `plugins/markdownCopiesPlugin.ts` from `postBuild`, with the pure parts in `scripts/markdownCopies.ts`:
 
-- A build plugin reads each page's source Markdown, resolves the `%sdkVersion%` token (`plugins/remarkSdkVersion.ts`), turns relative links into full URLs, and writes it next to the page (`/docs/guides/x.md`) from `postBuild`. Each page's head gets `<link rel="alternate" type="text/markdown">`.
-- `llms.txt` and `llms-full.txt` are written from the sidebar in the same hook: the ordered titles, one-line descriptions and links, and the concatenation of every copy. The reference site's `/llms.txt` gains a link to them (a host change, in step 3).
-- The sitemap is the framework's (`/docs/sitemap.xml`), already built. The reference site's `robots.txt` names it (a host change in step 3), because a crawler reads only the root file; no crawler is blocked.
+- Each page's source Markdown is read from the sidebar's page list and written next to the page (`/docs/guides/x.md`; the front page is `/docs/index.md`). The `%sdkVersion%` token is resolved, every link becomes absolute (a link to another page points at that page's copy, a path on this origin gets the origin) and fenced code stays as written. A page's front matter must give a `title` and a `description`, or the build fails. Each page's head gets `<link rel="alternate" type="text/markdown" href="/docs/....md">`, written into the built HTML.
+- `llms.txt` (ordered titles, one-line descriptions and links to the copies) and `llms-full.txt` (the whole copy of every page, in sidebar order, separated by a rule) are written in the same hook, with a `robots.txt` that allows every crawler and names the sitemap. The reference site's `/llms.txt` links the documentation site's `llms.txt` and `llms-full.txt`.
+- The sitemap is the framework's (`/docs/sitemap.xml`), already built. The reference site's `robots.txt` names it as well, because a crawler reads only the root file; no crawler is blocked.
+- Content is not hidden in tabs: a copy that holds a `Tabs` or `TabItem` tag fails the build.
 - A request that sends `Accept: text/markdown` for a page cannot be answered by an assets-only Worker, which serves a file by its path. See the open question below.
 
 ### Budgets, stated before the content grows
@@ -107,6 +108,7 @@ Written first, run to fail for the intended reason (the modules did not exist), 
 
 - `scripts/docChecks.test.ts`: a page on disk that no sidebar lists is named, and the real `docs/` folder has none (`docusaurus.config.test.ts`). The build runs the same check in `verifyBuild.ts`.
 - Links: `onBrokenLinks`, `onBrokenAnchors`, `onDuplicateRoutes` and the Markdown-link hook are all `throw` (asserted in `docusaurus.config.test.ts`; a link to `/docs/map/` was caught by the framework in the first build). `brokenInternalLinks` in `scripts/builtSite.test.ts` checks every `href` in the built pages against the built files, and allows only the host's paths outside the base path.
+- `scripts/markdownCopies.test.ts`, `scripts/markdownChecks.test.ts` and `scripts/verifyBuild.test.ts` (step 3): the copies, the head link and the two files; the build check fails on a page with no copy or no place in `llms-full.txt`, a code fence with no language, a relative link, tabs or a `robots.txt` that blocks a crawler. The tests of the root `llms.txt` and `robots.txt` cover the links in the root files.
 - `themeCss.test.ts`, `customCss.test.ts`, `themeBridge.test.ts`, `brandMark.test.ts`, `headerLinks.test.ts`, `siteConfig.test.ts` (the origin, the base path, the route and the absence of a Custom Domain), `securityHeaders.test.ts`, `securityHeadersPlugin.test.ts` and `remarkSdkVersion.test.ts` each prove one behaviour above and fail if it is removed.
 - Build output: `verifyBuild.ts` runs after every `docusaurus build`, and CI's `build` job runs `npm run build -w @mapcairn/docs` as its own step, so the `build` check fails on a broken link, a missing sidebar entry, a policy break or the script budget. The root `build` script does not build the site: the host's Workers Build runs that script, and a fault in the documentation site must not stop the product's deploy.
 - By hand in step 1 (a browser test is step 7): the built site served with its `_headers` showed no policy violation in the console in both themes at phone, tablet and desktop widths; the stored theme from the reference site, an explicit choice and the system choice all applied; the toggle wrote `mapcairn:theme` and cleared the framework's key for `system`; axe found nothing in either theme.
@@ -115,7 +117,7 @@ Written first, run to fail for the intended reason (the modules did not exist), 
 
 1. **This pull request.** The plan; `sites/docs` with Docusaurus, the generated theme, the shell (header, footer, brand, toggle), the Get started page, the security headers, the sidebar and link checks, the script budget, `cloudflare.config.ts`, the root `workspaces` and `vitest` project, a CI step for the build, Dependabot's group, the `overrides`, the exempt-path entry in the licence report, and the documents below. After it merges, the maintainer runs the first deploy and connects the Workers Builds project (see "Decided and open" and "First deploy").
 2. **Search.** Own issue (done). The index, the dialog, its styling, the empty state and the 404 search box, the budget restated, and a build check that the index exists and is not empty (the existing checks already cover the policy).
-3. **Markdown copies and the agent files.** Own issue. The copies, `llms.txt`, `llms-full.txt`, the head link, the host's `llms.txt` and `robots.txt` lines, and a build check that every page has a copy.
+3. **Markdown copies and the agent files** (done, #684). The copies, `llms.txt`, `llms-full.txt`, the head link, the host's `llms.txt` and `robots.txt` lines, and a build check that every page has a copy.
 4. **Move the guides.** One issue, in pull requests of a few guides each, `extending.md` and the embed guide first because the README and the product page point at them. Each pull request deletes the guide from `docs/guides/`, rewrites every link to it (`AGENTS.md`, `README.md`, the package READMEs, the skills and agents) and adds the lint check that fails on a link to a moved guide.
 5. **Tested snippets and task pages.** Each guide's code compiles or runs in CI against the built packages; a page per common task; the error page; the changelog.
 6. **API reference** from #1 and #434, and **Storybook** from #174, each its own issue.

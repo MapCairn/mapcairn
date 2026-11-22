@@ -17,6 +17,12 @@ describe("/robots.txt route", () => {
     expect(body).toContain(`Sitemap: ${SITE_URL}/sitemap.xml`);
   });
 
+  it("also names the documentation site's sitemap, because a crawler reads only this file", async () => {
+    const body = await loader().text();
+
+    expect(body).toContain(`Sitemap: ${SITE_URL}/docs/sitemap.xml`);
+  });
+
   it("welcomes search and AI crawlers in a comment and blocks nothing", async () => {
     const body = await loader().text();
 

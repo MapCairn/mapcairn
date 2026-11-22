@@ -24,6 +24,12 @@ export const PRODUCT_PATH = "/";
 /** The path of the playground: the reference site's map. */
 export const PLAYGROUND_PATH = "/map";
 
+/**
+ * Where the documentation site is served on this origin, with both slashes. A
+ * second Worker answers it (`sites/docs`), so it is not a route of this app.
+ */
+export const DOCS_PATH = "/docs/";
+
 /** The public repository that holds the site's source code, linked from Help. */
 export const SOURCE_REPOSITORY_URL = "https://github.com/MapCairn/mapcairn";
 
