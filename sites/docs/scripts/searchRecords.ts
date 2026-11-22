@@ -28,12 +28,28 @@ const ENTITIES: Readonly<Record<string, string>> = {
 /** The zero-width space the framework puts inside each heading's link. */
 const ZERO_WIDTH_SPACE = /\u200b/g;
 
-/** Plain text of a piece of markup: tags removed, entities decoded, spaces collapsed. */
-function plainText(markup: string): string {
+/** Removes tags: whole blocks that are not text, inline tags joined to their words, then any other tag as a space. */
+function stripTagsOnce(markup: string): string {
   return markup
     .replace(/<(script|style|nav|button|svg)\b[\s\S]*?<\/\1>/gi, " ")
     .replace(/<\/?(?:span|code|a|strong|em|b|i|mark|kbd|sub|sup)\b[^>]*>/gi, "")
-    .replace(/<[^>]+>/g, " ")
+    .replace(/<[^>]+>/g, " ");
+}
+
+/** Removes tags until none is left, so a tag built from pieces of two others does not survive one pass. */
+function stripTags(markup: string): string {
+  let previous = markup;
+  let current = stripTagsOnce(previous);
+  while (current !== previous) {
+    previous = current;
+    current = stripTagsOnce(previous);
+  }
+  return current;
+}
+
+/** Plain text of a piece of markup: tags removed, entities decoded, spaces collapsed. */
+function plainText(markup: string): string {
+  return stripTags(markup)
     .replace(/&(?:#x?[0-9a-f]+|[a-z]+);/gi, (entity) => {
       return ENTITIES[entity.toLowerCase()] ?? decodeNumeric(entity);
     })

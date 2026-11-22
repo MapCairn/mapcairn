@@ -99,6 +99,12 @@ describe("extractRecords", () => {
     expect(extractRecords(page, "/docs/t/")[0]?.url).toBe("/docs/t/#yes");
   });
 
+  it("leaves no tag behind when tags are nested inside tags", () => {
+    const page =
+      "<article><h1>T</h1><p>a <scr<b>ipt>x</scr</b>ipt> b <<i>b>c</p></article>";
+    expect(extractRecords(page, "/docs/t/")[0]?.text).not.toMatch(/<[a-z/]/i);
+  });
+
   it("returns nothing for a page with no article", () => {
     expect(extractRecords("<html><body>x</body></html>", "/docs/")).toEqual([]);
   });
