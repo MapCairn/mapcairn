@@ -63,6 +63,12 @@ jobs:
           path: coverage/
           retention-days: 14
       - run: npm run build
+      # The documentation site has its own build step, outside the root `build`
+      # script, so a fault in it cannot stop the host's production deploy, which
+      # runs that script. It fails on a broken link, a page in no sidebar, a
+      # policy break or a script over budget (`sites/docs/scripts/verifyBuild.ts`).
+      - name: Build the documentation site
+        run: npm run build -w @mapcairn/docs
       # The build is up to date here, so this only reads its declarations. It
       # fails when a package's public API changed and its report under
       # `packages/*/api` was not updated, and prints the TSDoc warnings
