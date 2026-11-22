@@ -218,7 +218,7 @@ describe("README.md", () => {
 
   it("says what the real map asks of a host: the other bundlers, the policy and the privacy default", () => {
     const section = README.slice(README.indexOf("## Embed a map"));
-    expect(section).toContain("docs/guides/content-security-policy.md");
+    expect(section).toContain("docs/guides/content-security-policy/");
     expect(section).toContain("docs/guides/extending/#show-a-real-map");
     expect(section).toMatch(/makes no request until/);
     expect(section).toContain("a similar app, not from this file");

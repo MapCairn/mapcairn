@@ -146,7 +146,7 @@ describe("the SDK packages job in ci.yml", () => {
       "packages/web/src/App.tsx",
       "packages/web/package.json",
       "examples/embed/src/main.tsx",
-      "docs/guides/public-api.md",
+      "sites/docs/docs/guides/public-api.md",
       "scripts/names-check.mjs",
       ".github/workflows/cla.yml",
       "README.md",

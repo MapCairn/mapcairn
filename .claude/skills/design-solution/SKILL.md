@@ -18,7 +18,7 @@ Example: a plan ships compiled CSS and checks its public API with an API report 
 
 1. The "Read before you change" rows of `AGENTS.md` for the code involved, then those sections of `ARCHITECTURE.md` (and `DESIGN.md` for interface work).
 2. The code each option would touch, not only the documents about it. Check that every file, symbol, script and command you will name exists and works as you will say.
-3. `sites/docs/docs/guides/extending.md` for what hosts are told today, `docs/guides/capability-matrix.md` for the row, `ROADMAP.md` "Non-goals", and the open plans and pull requests on the same modules.
+3. `sites/docs/docs/guides/extending.md` for what hosts are told today, `sites/docs/docs/guides/capability-matrix.md` for the row, `ROADMAP.md` "Non-goals", and the open plans and pull requests on the same modules.
 
 ## 2. List the options
 
@@ -46,9 +46,9 @@ Go through every line. Write "n/a" with a reason rather than skip one.
 
 **Qualities**
 
-- Privacy: what leaves the device, to which origin, what is stored, what goes into a link. A new origin needs the reference host's CSP (`packages/web/public/_headers` and `packages/web/src/constants/securityHeaders.ts`), a line in `docs/guides/content-security-policy.md` for other hosts, and `PRIVACY.md` for the reference site (the maintainer's).
+- Privacy: what leaves the device, to which origin, what is stored, what goes into a link. A new origin needs the reference host's CSP (`packages/web/public/_headers` and `packages/web/src/constants/securityHeaders.ts`), a line in `sites/docs/docs/guides/content-security-policy.md` for other hosts, and `PRIVACY.md` for the reference site (the maintainer's).
 - Security: untrusted input (provider responses, files, links, host data) validated at the boundary and read in bounded, linear time; requests only to `https` origins the definition declares; no inline script or style, no `eval`.
-- Performance: what the first view loads and what can load later, requests per action, work per frame, the largest count of features or shapes. Measure, do not guess (`docs/guides/performance.md`, "Ground rules").
+- Performance: what the first view loads and what can load later, requests per action, work per frame, the largest count of features or shapes. Measure, do not guess (`sites/docs/docs/guides/performance.md`, "Ground rules").
 - Licensing: a new runtime dependency in an SDK package is the maintainer's call and must pass `npm run licence:sdk`; a provider's terms and attribution.
 - Failure: each async call's error kinds, cancellation, and a retry only when the person asks.
 - Language: copy as catalogue keys, logical properties, foreign text isolated.

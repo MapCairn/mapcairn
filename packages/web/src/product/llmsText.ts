@@ -78,7 +78,7 @@ const DOCUMENTS: readonly (readonly [string, string, string])[] = [
   ],
   [
     "Content Security Policy",
-    rawFile("docs/guides/content-security-policy.md"),
+    docsPage("guides/content-security-policy"),
     "the directives a page hosting the SDK needs, and why",
   ],
   [
@@ -88,7 +88,7 @@ const DOCUMENTS: readonly (readonly [string, string, string])[] = [
   ],
   [
     "Public API",
-    rawFile("docs/guides/public-api.md"),
+    docsPage("guides/public-api"),
     "what counts as the public API of the six packages, and how a change to it is reported",
   ],
   [
@@ -98,12 +98,12 @@ const DOCUMENTS: readonly (readonly [string, string, string])[] = [
   ],
   [
     "Translating the SDK",
-    rawFile("docs/guides/translate-the-sdk.md"),
+    docsPage("guides/translate-the-sdk"),
     "using the SDK in another language and offering a choice of languages",
   ],
   [
     "Capability matrix",
-    rawFile("docs/guides/capability-matrix.md"),
+    docsPage("guides/capability-matrix"),
     "what a GIS application needs, and what MapCairn has, partly has or lacks",
   ],
   [

@@ -33,7 +33,7 @@ That needs React 19, `maplibre-gl` 6.18 or later and an ESM bundler that handles
 
 The playground in its light and dark themes, with the earthquakes layer on and a distance measured. Map data and tile credits are in [`ATTRIBUTIONS.md`](ATTRIBUTIONS.md).
 
-**Status:** pre-1.0. While the version starts with `0.`, a minor release (the middle number) can contain a breaking change to the public API and a patch release (the last number) is not meant to, so a `^0.1.0` range takes patch releases but not the next minor release. The [changelog](CHANGELOG.md) names each breaking change the release finds, and [what counts as the public API](docs/guides/public-api.md) says what is covered.
+**Status:** pre-1.0. While the version starts with `0.`, a minor release (the middle number) can contain a breaking change to the public API and a patch release (the last number) is not meant to, so a `^0.1.0` range takes patch releases but not the next minor release. The [changelog](CHANGELOG.md) names each breaking change the release finds, and [what counts as the public API](https://mapcairn.timothybrits.co.za/docs/guides/public-api/) says what is covered.
 
 ## Embed a map
 
@@ -175,7 +175,7 @@ Under a strict Content Security Policy, this page needs only the default basemap
 default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data: blob: https://tiles.openfreemap.org; font-src 'self'; connect-src 'self' https://tiles.openfreemap.org; worker-src 'self' blob:
 ```
 
-[`docs/guides/content-security-policy.md`](docs/guides/content-security-policy.md) says what each directive is for, including when `worker-src` needs `blob:`. A Vite 8 build prints 18 `"use client"` warnings (`MODULE_LEVEL_DIRECTIVE`) from the Radix UI packages that `@mapcairn/map` depends on; they are expected and harmless.
+[Content Security Policy](https://mapcairn.timothybrits.co.za/docs/guides/content-security-policy/) says what each directive is for, including when `worker-src` needs `blob:`. A Vite 8 build prints 18 `"use client"` warnings (`MODULE_LEVEL_DIRECTIVE`) from the Radix UI packages that `@mapcairn/map` depends on; they are expected and harmless.
 
 What is tested, and what is not, is in [Extending MapCairn](https://mapcairn.timothybrits.co.za/docs/guides/extending/#show-a-real-map): a test compiles `main.tsx` as written, and the release's consumer check draws a map in Chromium from a similar app, not from this file.
 
@@ -208,9 +208,9 @@ The playground at [mapcairn.timothybrits.co.za/map](https://mapcairn.timothybrit
 
 **A design system.** Typed tokens only, light and dark themes, one accent, IBM Plex Sans and Phosphor icons. The contrast of every token pair is calculated in a test, and a style scanner rejects raw colours, off-scale spacing and unnamed controls.
 
-**Translation.** The interface's text is looked up by key in a message catalogue, so a host can translate or replace it, in a language written left to right or right to left. A host can also translate its layer templates, unit symbols, coordinate words and its own definition labels. The SDK sets the page direction from the language tag, formats numbers, lists and days for the language, reads coordinates typed with other digits, isolates coordinates and names inside right-to-left text, and adjusts type tracking and line height for non-Latin scripts. The SDK ships British English and the reference site offers Afrikaans; a host supplies its own catalogue for any other language, and a font for a script IBM Plex Sans does not cover. Settings offers a choice when a host offers more than one language. The [translation guide](docs/guides/translate-the-sdk.md) says what the SDK supplies, what a host supplies and what is not covered.
+**Translation.** The interface's text is looked up by key in a message catalogue, so a host can translate or replace it, in a language written left to right or right to left. A host can also translate its layer templates, unit symbols, coordinate words and its own definition labels. The SDK sets the page direction from the language tag, formats numbers, lists and days for the language, reads coordinates typed with other digits, isolates coordinates and names inside right-to-left text, and adjusts type tracking and line height for non-Latin scripts. The SDK ships British English and the reference site offers Afrikaans; a host supplies its own catalogue for any other language, and a font for a script IBM Plex Sans does not cover. Settings offers a choice when a host offers more than one language. The [translation guide](https://mapcairn.timothybrits.co.za/docs/guides/translate-the-sdk/) says what the SDK supplies, what a host supplies and what is not covered.
 
-**Server rendering.** The map host, chrome, sheet and readout are tested to render no style attributes on the server, so a server-rendered page can keep a Content Security Policy with no `unsafe-inline`. The playground renders its page and a placeholder of the chrome on the server and hydrates; the map itself is drawn in the browser. The [Content Security Policy guide](docs/guides/content-security-policy.md) lists what a host page needs.
+**Server rendering.** The map host, chrome, sheet and readout are tested to render no style attributes on the server, so a server-rendered page can keep a Content Security Policy with no `unsafe-inline`. The playground renders its page and a placeholder of the chrome on the server and hydrates; the map itself is drawn in the browser. The [Content Security Policy guide](https://mapcairn.timothybrits.co.za/docs/guides/content-security-policy/) lists what a host page needs.
 
 **Pure, tested logic.** Geometry, measurement, formatting, URL state and the surface state machine are plain functions with no DOM, and the readers of untrusted text (WKT, shape files, coordinates and share links) have property-based tests.
 
@@ -259,7 +259,7 @@ It is not the right choice today if you need:
 - to mount it in a page without React, or to reach layers behind a login;
 - your own font, or colours beyond the 14 interface roles, clustering of dense points or offline use.
 
-A map renderer on its own leaves every interface decision to you, which is the better choice when your interface has little in common with a map application. The [capability matrix](docs/guides/capability-matrix.md) lists what MapCairn has, partly has and lacks, with the issue for each gap that has one, and [`ROADMAP.md`](ROADMAP.md) says what comes next.
+A map renderer on its own leaves every interface decision to you, which is the better choice when your interface has little in common with a map application. The [capability matrix](https://mapcairn.timothybrits.co.za/docs/guides/capability-matrix/) lists what MapCairn has, partly has and lacks, with the issue for each gap that has one, and [`ROADMAP.md`](ROADMAP.md) says what comes next.
 
 ## Run the playground from source
 
@@ -306,17 +306,17 @@ The documentation site is built from [`sites/docs`](sites/docs) and, once it is 
 | ----------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
 | [`ARCHITECTURE.md`](ARCHITECTURE.md)                                                                  | Layers, ports and adapters, the map adapter, adding an adapter                                             |
 | [`DESIGN.md`](DESIGN.md)                                                                              | Tokens, layout slots, accessibility contracts and the lint rules                                           |
-| [`docs/guides/public-api.md`](docs/guides/public-api.md)                                              | What counts as the SDK's public API beyond its exports, the API reports and how a change is classed        |
+| [The public API](https://mapcairn.timothybrits.co.za/docs/guides/public-api/)                         | What counts as the SDK's public API beyond its exports, the API reports and how a change is classed        |
 | [Embed a map](https://mapcairn.timothybrits.co.za/docs/guides/embed-a-map/)                           | The whole embedding app, file by file, with what each part does; the product page links it                 |
 | [Extending MapCairn](https://mapcairn.timothybrits.co.za/docs/guides/extending/)                      | Embedding the SDK, and adding a basemap, each kind of data layer, a search or routing provider, an adapter |
 | [What the AGPL means for your project](https://mapcairn.timothybrits.co.za/docs/guides/licence/)      | What the AGPL means for your project, for people who know MIT, Apache-2.0 and GPL-3.0                      |
-| [`docs/guides/translate-the-sdk.md`](docs/guides/translate-the-sdk.md)                                | Another language, a choice of languages, translating definitions, your own message-format library          |
+| [Translate the SDK](https://mapcairn.timothybrits.co.za/docs/guides/translate-the-sdk/)               | Another language, a choice of languages, translating definitions, your own message-format library          |
 | [`docs/guides/serving-layers.md`](docs/guides/serving-layers.md)                                      | Which layer kind to serve from your own server, what each costs, and OGC API Features, WMS and WMTS layers |
-| [`docs/guides/content-security-policy.md`](docs/guides/content-security-policy.md)                    | The Content Security Policy a page hosting the SDK needs, and why                                          |
+| [Content Security Policy](https://mapcairn.timothybrits.co.za/docs/guides/content-security-policy/)   | The Content Security Policy a page hosting the SDK needs, and why                                          |
 | [`docs/guides/serving-from-iis.md`](docs/guides/serving-from-iis.md)                                  | Serving a build of the SDK from IIS and from a server-rendered page such as a Razor page                   |
 | [Using the reference site](https://mapcairn.timothybrits.co.za/docs/guides/using-the-reference-site/) | Using the playground: search, saving the map, choosing between features, drawing, import and export        |
-| [`docs/guides/capability-matrix.md`](docs/guides/capability-matrix.md)                                | What a GIS application needs, what MapCairn has, partly has or lacks, and the issue for each gap           |
-| [`docs/guides/performance.md`](docs/guides/performance.md)                                            | What was measured for Lighthouse, what was tried and what was left alone                                   |
+| [Capability matrix](https://mapcairn.timothybrits.co.za/docs/guides/capability-matrix/)               | What a GIS application needs, what MapCairn has, partly has or lacks, and the issue for each gap           |
+| [Performance](https://mapcairn.timothybrits.co.za/docs/guides/performance/)                           | What was measured for Lighthouse, what was tried and what was left alone                                   |
 | [`docs/guides/product-captures.md`](docs/guides/product-captures.md)                                  | How the product page's pictures of the playground are taken again, their budgets and their credits         |
 | [`docs/guides/working-with-agents.md`](docs/guides/working-with-agents.md)                            | Using a coding agent on this repository: what each one reads and how to start                              |
 | [`docs/guides/personal-preferences.md`](docs/guides/personal-preferences.md)                          | Keeping your own working style for a coding agent in a git-ignored file, not in the shared rules           |

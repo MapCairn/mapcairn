@@ -340,11 +340,11 @@ describe("the Next steps list in the README of @mapcairn/sdk", () => {
     for (const wanted of [
       "docs/guides/extending/#show-a-real-map",
       "docs/guides/extending/#theme-the-sdk-with-your-own-colours",
-      "docs/guides/translate-the-sdk.md",
+      "docs/guides/translate-the-sdk/",
       "docs/guides/extending/#write-a-search-provider",
       "docs/guides/extending/#add-a-routing-provider",
       "docs/guides/extending/#add-a-data-layer",
-      "docs/guides/content-security-policy.md",
+      "docs/guides/content-security-policy/",
       "examples/embed",
     ]) {
       expect(
@@ -434,9 +434,7 @@ describe("the release guide's steps for the stable version", () => {
     expect(status).toMatch(/^\*\*Status:\*\* /);
     expect(/release candidate/i.test(status)).toBe(false);
     expect(/not published to npm/i.test(status)).toBe(false);
-    expect(status).toContain(
-      "https://github.com/MapCairn/mapcairn/blob/main/docs/guides/public-api.md",
-    );
+    expect(status).toContain(`${DOCUMENTATION_GUIDES}public-api/`);
     expect(status).toContain(
       "https://github.com/MapCairn/mapcairn/blob/main/CHANGELOG.md",
     );
@@ -444,7 +442,7 @@ describe("the release guide's steps for the stable version", () => {
 
   it("leaves no release-candidate wording in the public API guide's sentence on the Status line", () => {
     const publicApi = readFileSync(
-      path.join(REPO, "docs/guides/public-api.md"),
+      path.join(REPO, "sites/docs/docs/guides/public-api.md"),
       "utf8",
     );
     expect(publicApi).not.toContain("the `0.1.0` release changes it");

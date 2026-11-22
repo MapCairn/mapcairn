@@ -123,7 +123,7 @@ export const DOCUMENTATION_LINK: InlineLink = {
 /** What a GIS application needs and what the SDK has, partly has or lacks: the readiness text links it. */
 export const CAPABILITY_MATRIX_LINK: InlineLink = {
   text: "capability matrix",
-  href: `${REPOSITORY_BLOB}/docs/guides/capability-matrix.md`,
+  href: `${GUIDES_PATH}/capability-matrix/`,
 };
 
 /** The whole embedding app, file by file, which the page's excerpt leads to. */

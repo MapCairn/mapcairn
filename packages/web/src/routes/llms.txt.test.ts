@@ -152,10 +152,10 @@ describe("/llms.txt", () => {
 
   it("lists the licence guide, the public API guide and the changelog among the documents", async () => {
     const text = await loader().text();
-    expect(text).toContain(`(${SITE_URL}${DOCS_PATH}guides/licence.md)`);
-    for (const file of ["docs/guides/public-api.md", "CHANGELOG.md"]) {
-      expect(text).toContain(`(${RAW_PREFIX}${file})`);
+    for (const guide of ["licence", "public-api"]) {
+      expect(text).toContain(`(${SITE_URL}${DOCS_PATH}guides/${guide}.md)`);
     }
+    expect(text).toContain(`(${RAW_PREFIX}CHANGELOG.md)`);
   });
 
   it("links the release notes, the security policy and Discussions, and says the licence allows commercial use and the SDK is before 1.0", async () => {

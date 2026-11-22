@@ -1,1 +1,11 @@
-["extending", "embed-a-map", "using-the-reference-site", "licence"]
+[
+  "extending",
+  "embed-a-map",
+  "using-the-reference-site",
+  "licence",
+  "translate-the-sdk",
+  "public-api",
+  "content-security-policy",
+  "capability-matrix",
+  "performance"
+]

@@ -62,7 +62,7 @@ export function consumerStyle() {
  * `buildContentSecurityPolicy` in `examples/embed` builds for a host whose one
  * basemap is {@link BROWSER_STYLE_URL} (a unit test keeps the two equal). The
  * script, style and worker directives are the strict ones
- * `docs/guides/content-security-policy.md` names: nothing inline, the engine's
+ * `sites/docs/docs/guides/content-security-policy.md` names: nothing inline, the engine's
  * worker from the page's own origin.
  *
  * @returns {string}

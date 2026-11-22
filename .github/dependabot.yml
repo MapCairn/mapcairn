@@ -33,7 +33,7 @@ updates:
         patterns:
           - "@docusaurus/*"
       # The API reports change with either of these, so the update that
-      # follows them also needs `npm run api:update` (docs/guides/public-api.md).
+      # follows them also needs `npm run api:update` (sites/docs/docs/guides/public-api.md).
       npm-api-reports:
         patterns:
           - "@microsoft/api-extractor"

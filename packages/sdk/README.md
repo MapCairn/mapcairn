@@ -2,7 +2,7 @@
 
 The whole MapCairn SDK from one import: it re-exports `@mapcairn/core`, `@mapcairn/map`, `@mapcairn/react` and `@mapcairn/theme` from its root, and the MapLibre adapter, `@mapcairn/adapter-maplibre`, at the subpath `@mapcairn/sdk/adapter-maplibre`, so an app learns one package name instead of five. It is the recommended install, and it holds no code of its own. The individual packages are the advanced option, for a host that wants fewer dependencies: `core` has no React or browser dependency, and `theme` installs without the interface.
 
-**Status:** pre-1.0. While the version starts with `0.`, a minor release (the middle number) can contain a breaking change to the public API and a patch release (the last number) is not meant to, so a `^0.1.0` range takes patch releases but not the next minor release. The [changelog](https://github.com/MapCairn/mapcairn/blob/main/CHANGELOG.md) names each breaking change the release finds, and [what counts as the public API](https://github.com/MapCairn/mapcairn/blob/main/docs/guides/public-api.md) says what is covered.
+**Status:** pre-1.0. While the version starts with `0.`, a minor release (the middle number) can contain a breaking change to the public API and a patch release (the last number) is not meant to, so a `^0.1.0` range takes patch releases but not the next minor release. The [changelog](https://github.com/MapCairn/mapcairn/blob/main/CHANGELOG.md) names each breaking change the release finds, and [what counts as the public API](https://mapcairn.timothybrits.co.za/docs/guides/public-api/) says what is covered.
 
 ## Install
 
@@ -37,11 +37,11 @@ The [repository README's "Embed a map"](https://github.com/MapCairn/mapcairn#emb
 
 - [Show a real map](https://mapcairn.timothybrits.co.za/docs/guides/extending/#show-a-real-map): the adapter, the engine's worker file and a basemap.
 - [Theme the interface with your own colours](https://mapcairn.timothybrits.co.za/docs/guides/extending/#theme-the-sdk-with-your-own-colours), checked against WCAG 2.2 AA.
-- [Translate the interface](https://github.com/MapCairn/mapcairn/blob/main/docs/guides/translate-the-sdk.md) or offer a choice of languages.
+- [Translate the interface](https://mapcairn.timothybrits.co.za/docs/guides/translate-the-sdk/) or offer a choice of languages.
 - [Write a search provider](https://mapcairn.timothybrits.co.za/docs/guides/extending/#write-a-search-provider).
 - [Add a routing provider](https://mapcairn.timothybrits.co.za/docs/guides/extending/#add-a-routing-provider).
 - [Add a data layer](https://mapcairn.timothybrits.co.za/docs/guides/extending/#add-a-data-layer).
-- Read the [Content Security Policy guide](https://github.com/MapCairn/mapcairn/blob/main/docs/guides/content-security-policy.md) before you deploy.
+- Read the [Content Security Policy guide](https://mapcairn.timothybrits.co.za/docs/guides/content-security-policy/) before you deploy.
 - Try the [playground](https://mapcairn.timothybrits.co.za/map), and read [`examples/embed`](https://github.com/MapCairn/mapcairn/tree/main/examples/embed), a whole app written against the packages.
 
 ## What it exports

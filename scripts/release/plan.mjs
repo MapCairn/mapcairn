@@ -33,7 +33,7 @@ export const SDK_FOLDERS = SDK_PACKAGES.map((name) => `packages/${name}`);
 
 /**
  * Files that stand for behaviour no type shows: links that must keep reading
- * and definitions that must keep validating (`docs/guides/public-api.md`).
+ * and definitions that must keep validating (`sites/docs/docs/guides/public-api.md`).
  * Removing or editing an entry is a likely breaking change; adding one is not.
  */
 export const COMPATIBILITY_FILES = [
@@ -43,7 +43,7 @@ export const COMPATIBILITY_FILES = [
 
 /**
  * What a person still does by hand in the Release pull
- * request (`docs/guides/public-api.md`).
+ * request (`sites/docs/docs/guides/public-api.md`).
  */
 export const REVIEW_BY_HAND = [
   "Removed or renamed message keys: the API report names them (a rename shows as lost X and gained Y); write them into the release notes and list the new keys so a host can translate them.",

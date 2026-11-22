@@ -166,7 +166,7 @@ function unique(sources: readonly string[]): string[] {
  * origins of its basemaps and layers are read from their definitions, so
  * adding a definition adds its origins and a policy never lists one nothing
  * asks for. The fixed directives are the ones
- * `docs/guides/content-security-policy.md` names: nothing inline, the engine's
+ * `sites/docs/docs/guides/content-security-policy.md` names: nothing inline, the engine's
  * worker from the page's own origin or a blob, and every closing directive set
  * to `'none'` or `'self'`.
  *

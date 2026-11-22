@@ -4,7 +4,7 @@ The MapLibre GL JS adapter for MapCairn's `MapAdapter` port, and the styles that
 
 Most apps should install [`@mapcairn/sdk`](https://github.com/MapCairn/mapcairn/tree/main/packages/sdk) instead, which has this package already: it re-exports it at `@mapcairn/sdk/adapter-maplibre`, and its root stays free of the map engine. Install `@mapcairn/adapter-maplibre` on its own as the advanced option, for a host that wants fewer dependencies.
 
-**Status:** pre-1.0. While the version starts with `0.`, a minor release (the middle number) can contain a breaking change to the public API and a patch release (the last number) is not meant to, so a `^0.1.0` range takes patch releases but not the next minor release. The [changelog](https://github.com/MapCairn/mapcairn/blob/main/CHANGELOG.md) names each breaking change the release finds, and [what counts as the public API](https://github.com/MapCairn/mapcairn/blob/main/docs/guides/public-api.md) says what is covered.
+**Status:** pre-1.0. While the version starts with `0.`, a minor release (the middle number) can contain a breaking change to the public API and a patch release (the last number) is not meant to, so a `^0.1.0` range takes patch releases but not the next minor release. The [changelog](https://github.com/MapCairn/mapcairn/blob/main/CHANGELOG.md) names each breaking change the release finds, and [what counts as the public API](https://mapcairn.timothybrits.co.za/docs/guides/public-api/) says what is covered.
 
 ## Install
 
@@ -30,7 +30,7 @@ const createMap = () =>
   });
 ```
 
-A Vite app takes the URL from the bundler's own worker import, and another bundler must serve the file the same way. [Show a real map](https://mapcairn.timothybrits.co.za/docs/guides/extending/#show-a-real-map) has the steps, and the [Content Security Policy guide](https://github.com/MapCairn/mapcairn/blob/main/docs/guides/content-security-policy.md#worker-src) covers `worker-src`.
+A Vite app takes the URL from the bundler's own worker import, and another bundler must serve the file the same way. [Show a real map](https://mapcairn.timothybrits.co.za/docs/guides/extending/#show-a-real-map) has the steps, and the [Content Security Policy guide](https://mapcairn.timothybrits.co.za/docs/guides/content-security-policy/#worker-src) covers `worker-src`.
 
 `createMap` is the adapter factory that goes in the `Services` bundle that `ServicesProvider` supplies to `@mapcairn/map`.
 

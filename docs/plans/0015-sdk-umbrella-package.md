@@ -140,7 +140,7 @@ An agent lists these and waits. Values match `docs/guides/releasing.md` and main
 All in step 4 (slice 2), apart from the first two, which are in step 3.
 
 - `packages/sdk/README.md` (new), and one line in each of the four package READMEs pointing to it.
-- `docs/guides/public-api.md`: five packages, the tie-break rule, "augment `@mapcairn/core` directly", the umbrella's report.
+- `sites/docs/docs/guides/public-api.md`: five packages, the tie-break rule, "augment `@mapcairn/core` directly", the umbrella's report.
 - `README.md`: "Embed a map" becomes one install, `import "@mapcairn/sdk/styles.css"` and one import, and the "Packages" table gets five rows, keeping the per-package install. `readme.test.ts` accepts either form.
 - `sites/docs/docs/guides/extending.md`: "Embed the SDK in an app of your own" and the licence-check sentence.
 - `docs/guides/releasing.md`: five packages, the fifth trusted-publisher link, the umbrella's first publish by hand, the umbrella last, and the per-package gate (step 2).

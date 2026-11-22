@@ -8,7 +8,7 @@ import { parseUrlHash, serialiseUrlHash } from "./index";
 /**
  * Links a person may already have shared, kept as literals. This list only
  * grows: a change to the link format that makes one of these read differently
- * is a breaking change to the public API (`docs/guides/public-api.md`), even
+ * is a breaking change to the public API (`sites/docs/docs/guides/public-api.md`), even
  * when no type changes. Remove an entry only in a release that says so.
  */
 const SHARED_LINKS: ReadonlyArray<readonly [string, UrlStateValue]> = [

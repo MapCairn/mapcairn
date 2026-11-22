@@ -12,7 +12,21 @@ export const sidebar: SidebarEntry[] = [
   {
     type: "category",
     label: "Build an app",
-    items: ["guides/embed-a-map", "guides/extending"],
+    items: [
+      "guides/embed-a-map",
+      "guides/extending",
+      "guides/translate-the-sdk",
+      "guides/content-security-policy",
+    ],
+  },
+  {
+    type: "category",
+    label: "Reference",
+    items: [
+      "guides/public-api",
+      "guides/capability-matrix",
+      "guides/performance",
+    ],
   },
   {
     type: "category",

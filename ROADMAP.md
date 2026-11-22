@@ -12,7 +12,7 @@ MapCairn aims to give a team everything it needs to build an industry-grade GIS 
 
 The order the work is done in, as GitHub milestones. A milestone is an outcome a person can name and a release note could carry. Everything smaller stays in [GitHub Issues](https://github.com/MapCairn/mapcairn/issues), grouped by its milestone, and is not listed here, so this list does not change when an issue is filed or closed and does not repeat status. A position is a plan, not a promise.
 
-Each item gives the track, the milestone, the outcome and, where one exists, the tracker issue that defines it. **SDK** is the goal in "Direction": what a team needs to build an application on MapCairn. **Site** is what visitors to the reference site see. Now holds at most three milestones and Next at most six; Later holds milestones only and has no cap. The order was set on 2026-11-14 by weighing three things: finish what is half built, open the way for other teams to embed the map early, and do the work that touches every component (language support) while the code base is young. The capability matrix, [`docs/guides/capability-matrix.md`](docs/guides/capability-matrix.md), says what each milestone adds.
+Each item gives the track, the milestone, the outcome and, where one exists, the tracker issue that defines it. **SDK** is the goal in "Direction": what a team needs to build an application on MapCairn. **Site** is what visitors to the reference site see. Now holds at most three milestones and Next at most six; Later holds milestones only and has no cap. The order was set on 2026-11-14 by weighing three things: finish what is half built, open the way for other teams to embed the map early, and do the work that touches every component (language support) while the code base is young. The capability matrix, [Capability matrix](https://mapcairn.timothybrits.co.za/docs/guides/capability-matrix/), says what each milestone adds.
 
 A milestone leaves this list in the pull request that closes its last issue. A new issue takes a milestone when one fits; only a new milestone is proposed for this list, ranked last in its section until the maintainer moves it. `npm run roadmap:check`, which `npm run lint` runs, fails on a linked milestone or issue that does not exist or is listed twice, on more than three items in Now or six in Next and on a missing section, and warns about a closed one: remove it, and update "Last reviewed" when you do.
 
@@ -36,7 +36,7 @@ A milestone leaves this list in the pull request that closes its last issue. A n
 
 ## Intentions
 
-What an industry-grade application needs, and what MapCairn has, partly has or lacks today, is in the [capability matrix](docs/guides/capability-matrix.md).
+What an industry-grade application needs, and what MapCairn has, partly has or lacks today, is in the [capability matrix](https://mapcairn.timothybrits.co.za/docs/guides/capability-matrix/).
 
 Statuses are "proposed" (written down, not started) and "in progress" (work has begun, nothing finished that you can rely on). Items for the SDK do not change the reference site unless the maintainer decides so, in the open, with a plan.
 
