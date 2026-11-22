@@ -458,6 +458,26 @@ code {
   background-color: transparent;
 }
 
+/*
+ * The copy button is shown at all times at a 44 px target. The framework
+ * hides it until the pointer is over the block, which a phone and a keyboard
+ * never reach. The selector out-ranks the framework's hover rule, and the
+ * success tick takes the accent in place of the framework's own green.
+ */
+.theme-code-block[class] [class*="buttonGroup"] button:not(:disabled) {
+  min-width: var(--mc-size-min-target);
+  min-height: var(--mc-size-min-target);
+  justify-content: center;
+  border-color: var(--mc-color-hairline);
+  background-color: var(--mc-color-surface-raised);
+  color: var(--mc-color-text);
+  opacity: 1;
+}
+
+[class*="copyButtonSuccessIcon"] {
+  color: var(--mc-color-accent);
+}
+
 .token.comment,
 .token.prolog,
 .token.punctuation {
@@ -498,6 +518,16 @@ table tr:nth-child(2n) {
 table th {
   background-color: var(--mc-color-surface-raised);
   text-align: start;
+}
+
+/* A wide table scrolls inside this box, never the page (ScrollableTable). */
+.table-scroll {
+  overflow-x: auto;
+  margin-block-end: var(--mc-space-md);
+}
+
+.table-scroll > table {
+  margin-block-end: 0;
 }
 
 blockquote {
@@ -745,11 +775,37 @@ blockquote {
   gap: var(--mc-space-xl);
 }
 
-/* The width at which three lanes fit: three cards of about 14 rem and the gaps between them. */
+/*
+ * The width at which three lanes fit: three cards of about 14 rem and the gaps
+ * between them. Each lane takes the same three rows of the grid (heading,
+ * note, cards), so the first card of every lane starts level however many
+ * lines a lane's note takes.
+ */
 @container (min-width: 44rem) {
   .roadmap__lanes {
     grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-rows: auto auto 1fr;
+    gap: 0 var(--mc-space-xl);
     align-items: start;
+  }
+
+  .roadmap__lane {
+    display: grid;
+    grid-row: span 3;
+    grid-template-rows: subgrid;
+    row-gap: 0;
+  }
+
+  .roadmap__lane > h2 {
+    grid-row: 1;
+  }
+
+  .roadmap__lane > p {
+    grid-row: 2;
+  }
+
+  .roadmap__lane > .roadmap__cards {
+    grid-row: 3;
   }
 }
 
@@ -770,6 +826,7 @@ blockquote {
 
 .roadmap__cards {
   display: grid;
+  align-content: start;
   gap: var(--mc-space-md);
 }
 
@@ -802,7 +859,7 @@ blockquote {
 .roadmap__bar {
   appearance: none;
   width: 100%;
-  height: var(--mc-space-xs);
+  height: var(--mc-space-sm);
   border: 1px solid var(--mc-color-accent);
   border-radius: var(--mc-radius-pill);
   background-color: var(--mc-color-accent-tint);
@@ -845,4 +902,24 @@ blockquote {
     opacity: 0;
     transform: translateY(var(--mc-space-xs));
   }
+}
+
+/* The page for an address that is not here: the reading column, with room for the heading. */
+.not-found {
+  max-width: 40rem;
+  margin-inline: auto;
+  padding: var(--mc-space-xl) var(--column-inline);
+  font-size: var(--mc-type-large-size);
+  line-height: var(--mc-type-large-line-height);
+}
+
+.not-found h1 {
+  font-size: var(--mc-type-display-size);
+  line-height: var(--mc-type-display-line-height);
+  letter-spacing: var(--mc-type-display-tracking);
+}
+
+.not-found a {
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
 }

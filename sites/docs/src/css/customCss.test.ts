@@ -45,6 +45,26 @@ describe("custom.css", () => {
     expect(rules.join("")).not.toMatch(/overflow/);
   });
 
+  it("scrolls a wide table inside its own box", () => {
+    expect(RULES).toMatch(/\.table-scroll\s*{[^}]*overflow-x:\s*auto/);
+  });
+
+  it("shows the code blocks' copy button without a hover, for touch and keyboard", () => {
+    expect(RULES).toMatch(
+      /\.theme-code-block[^{]*\[class\*="buttonGroup"\] button[^{]*{[^}]*opacity:\s*1/,
+    );
+  });
+
+  it("lines the roadmap lanes up on shared rows", () => {
+    expect(RULES).toMatch(/grid-template-rows:\s*subgrid/);
+  });
+
+  it("draws the roadmap bar at least as thick as a small step", () => {
+    expect(RULES).toMatch(
+      /\.roadmap__bar\s*{[^}]*height:\s*var\(--mc-space-sm\)/,
+    );
+  });
+
   it("names only token aliases that the generated stylesheet defines", async () => {
     const { tokens } = await import("@mapcairn/theme");
     const { buildThemeCss } = await import("../../scripts/themeCss");
