@@ -57,7 +57,7 @@ interface SkippedDefinition { id?: string; problems: readonly string[] }
 
 The pieces exist: `steps` and `intervals` colour rules take class breaks, the legend comes from the style, and `FieldMap` and the templates read fields by dotted path. The sample mapper in `examples/embed` shows the route through public entry points only.
 
-`docs/guides/serving-layers.md`, "Serving layers to MapCairn", names formats and what each costs the server: XYZ raster tiles for dense drawings (cheap once cached, no tap results without #47); vector tiles (MVT) where a generator exists (smaller, styled in the browser, not tappable, needs a generator and cache); GeoJSON by bounding box (a query layer with `{west}`, `{south}`, `{east}` and `{north}`, `{limit}` and `maxFeatures`) for small layers (simplest, the only kind with cards, list and selection, but each pan is a request, so it needs a spatial index and a cap). It also covers the per-person catalogue endpoint, a version in the URL when data changes, https URLs whose origins the host page's content security policy allows, and that the loop test covers only static definitions.
+`sites/docs/docs/guides/serving-layers.md`, "Serving layers to MapCairn", names formats and what each costs the server: XYZ raster tiles for dense drawings (cheap once cached, no tap results without #47); vector tiles (MVT) where a generator exists (smaller, styled in the browser, not tappable, needs a generator and cache); GeoJSON by bounding box (a query layer with `{west}`, `{south}`, `{east}` and `{north}`, `{limit}` and `maxFeatures`) for small layers (simplest, the only kind with cards, list and selection, but each pan is a request, so it needs a spatial index and a cap). It also covers the per-person catalogue endpoint, a version in the URL when data changes, https URLs whose origins the host page's content security policy allows, and that the loop test covers only static definitions.
 
 ## Tests
 
@@ -78,7 +78,7 @@ Step 1 comes first. Steps 2 to 4 follow it, after #88. Steps 5 and 6 need only s
 
 - `ARCHITECTURE.md`: the Ports table, "Data layers" (states, link, disappearing layers) and the test seam, in steps 1 to 3.
 - `DESIGN.md`: the `LayersSection` row and a catalogue status row, in step 3.
-- `sites/docs/docs/guides/extending.md` (supplying layers at runtime, step 5), `docs/guides/serving-layers.md` (step 6), and `README.md` and the `core` and `map` READMEs with the first step that changes what they offer.
+- `sites/docs/docs/guides/extending.md` (supplying layers at runtime, step 5), `sites/docs/docs/guides/serving-layers.md` (step 6), and `README.md` and the `core` and `map` READMEs with the first step that changes what they offer.
 - `PRIVACY.md`: none; the reference site makes no new request.
 
 ## Risks

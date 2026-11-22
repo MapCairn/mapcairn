@@ -1,6 +1,15 @@
+---
+
+title: Serving MapCairn from IIS
+sidebar_label: Serve from IIS
+description: Serve a MapCairn build, or a page that hosts the SDK, from IIS with the right headers.
+---
+
 # Serving the SDK from IIS and server-rendered pages
 
-How to put a MapCairn map in a page that a Windows web server serves, including a page a server renders for each request, such as a Razor page. It is for a developer at a company that runs IIS, and possibly ASP.NET Core or classic ASP.NET MVC, with no Node on the server. The architecture behind the SDK is in [`ARCHITECTURE.md`](../../ARCHITECTURE.md), the policy a page needs is in [`content-security-policy.md`](https://mapcairn.timothybrits.co.za/docs/guides/content-security-policy/), and the app side of embedding is in [`extending.md`](https://mapcairn.timothybrits.co.za/docs/guides/extending/#embed-the-sdk-in-an-app-of-your-own).
+This page is for a developer at a company that runs IIS, and possibly ASP.NET Core or classic ASP.NET MVC, with no Node on the server. By the end you will have a MapCairn map in a page that a Windows web server serves, including a page the server renders for each request, such as a Razor page. The architecture behind the SDK is in [ARCHITECTURE.md](https://github.com/MapCairn/mapcairn/blob/main/ARCHITECTURE.md), the policy a page needs is in [Content Security Policy](content-security-policy.md), and the app side of embedding is in [Extending MapCairn](extending.md#embed-the-sdk-in-an-app-of-your-own).
+
+Checked against `@mapcairn/sdk` %sdkVersion%, the version in this repository.
 
 **What was checked.** This guide was written on 2026-11-20 on a machine with no Windows, IIS or ASP.NET. Every IIS and ASP.NET claim was checked against the Microsoft Learn page linked beside it, and none was run. The `web.config` and Razor samples are taken from those pages' shapes and were not loaded by a server. The build claims were checked by running the build, as "What was tested" says. A claim without a link and without a file named beside it is a recommendation, not a finding.
 
@@ -8,9 +17,9 @@ How to put a MapCairn map in a page that a Windows web server serves, including 
 
 One thing a page needs is not built yet:
 
-- There is no prebuilt bundle and no `mountMap` function for a page without React ([#44](https://github.com/MapCairn/mapcairn/issues/44)). A page builds a small entry of its own that imports the SDK packages and calls React's `createRoot`, as [`examples/embed`](../../examples/embed/README.md) does.
+- There is no prebuilt bundle and no `mountMap` function for a page without React ([#44](https://github.com/MapCairn/mapcairn/issues/44)). A page builds a small entry of its own that imports the SDK packages and calls React's `createRoot`, as [`examples/embed`](https://github.com/MapCairn/mapcairn/blob/main/examples/embed/README.md) does.
 
-An app that builds its own entry installs `@mapcairn/sdk`, which holds the whole SDK; the individual packages that the samples below name are the advanced option, for a host that wants fewer dependencies, and the umbrella re-exports them. The map adapter is a package, `@mapcairn/adapter-maplibre`, also at `@mapcairn/sdk/adapter-maplibre`. A real map needs it, with `maplibre-gl` and a URL for the engine's worker that your server serves; [Show a real map](https://mapcairn.timothybrits.co.za/docs/guides/extending/#show-a-real-map) has the steps. `examples/embed` runs on the SDK's fakes and draws no map.
+An app that builds its own entry installs `@mapcairn/sdk`, which holds the whole SDK; the individual packages that the samples below name are the advanced option, for a host that wants fewer dependencies, and the umbrella re-exports them. The map adapter is a package, `@mapcairn/adapter-maplibre`, also at `@mapcairn/sdk/adapter-maplibre`. A real map needs it, with `maplibre-gl` and a URL for the engine's worker that your server serves; [Show a real map](extending.md#show-a-real-map) has the steps. `examples/embed` runs on the SDK's fakes and draws no map.
 
 What the SDK packages ship, from their manifests:
 
@@ -22,9 +31,9 @@ What the SDK packages ship, from their manifests:
 
 Any bundler that follows the `exports` map and handles a CSS import works; `examples/embed` uses Vite, and this guide covers only that. Build it once on a machine that has Node, and copy the output to the server. The server never needs Node.
 
-The entry file below follows `examples/embed/src/main.tsx` in its imports and differs from it in where it mounts: into an element the Razor page provides, not `#root`. It leaves out the example's `page.css`, its `StrictMode` wrapper and the code that sets the body's font and colours from `tokens`; [`extending.md`](https://mapcairn.timothybrits.co.za/docs/guides/extending/#embed-the-sdk-in-an-app-of-your-own) lists the base styles a page sets itself.
+The entry file below follows `examples/embed/src/main.tsx` in its imports and differs from it in where it mounts: into an element the Razor page provides, not `#root`. It leaves out the example's `page.css`, its `StrictMode` wrapper and the code that sets the body's font and colours from `tokens`; [Extending MapCairn](extending.md#embed-the-sdk-in-an-app-of-your-own) lists the base styles a page sets itself.
 
-```tsx
+```tsx no-check
 import "@fontsource-variable/ibm-plex-sans/wght.css";
 import "@mapcairn/theme/tokens.css";
 import "@mapcairn/map/styles.css";
@@ -37,7 +46,7 @@ if (container) {
 }
 ```
 
-`MapApp` is your component. It holds what `extending.md` says an app provides: `ServicesProvider`, `LiveRegionProvider` and `TooltipProvider` around `MapView`, `FocusRegistryProvider` around `MapChrome`, and services of your own in place of `createFakeServices()` (the [README](../../README.md#embed-a-map) has the setup). The map adapter you write also loads the engine's stylesheet: the reference adapter imports `maplibre-gl/dist/maplibre-gl.css` beside the engine and has styles of its own in `packages/adapter-maplibre/src/styles.css.ts`, which `extending.md` names as the reference. Use `createRoot`, not `hydrateRoot`: the server sends an empty element, so there is nothing to hydrate.
+`MapApp` is your component. It holds what `extending.md` says an app provides: `ServicesProvider`, `LiveRegionProvider` and `TooltipProvider` around `MapView`, `FocusRegistryProvider` around `MapChrome`, and services of your own in place of `createFakeServices()` (the [README](https://github.com/MapCairn/mapcairn/blob/main/README.md#embed-a-map) has the setup). The map adapter you write also loads the engine's stylesheet: the reference adapter imports `maplibre-gl/dist/maplibre-gl.css` beside the engine and has styles of its own in `packages/adapter-maplibre/src/styles.css.ts`, which `extending.md` names as the reference. Use `createRoot`, not `hydrateRoot`: the server sends an empty element, so there is nothing to hydrate.
 
 ### What the build emits
 
@@ -119,7 +128,7 @@ This guide does not say which ASP.NET Core version your project needs, or whethe
 
 ## Content security policy
 
-[`content-security-policy.md`](https://mapcairn.timothybrits.co.za/docs/guides/content-security-policy/) is the reference: which directives the map needs and why, and `buildContentSecurityPolicy` in `examples/embed/src/contentSecurityPolicy.ts` builds the header from the basemaps and layers your page offers. This guide does not repeat the origin lists. Send the result with `customHeaders`:
+[Content Security Policy](content-security-policy.md) is the reference: which directives the map needs and why, and `buildContentSecurityPolicy` in `examples/embed/src/contentSecurityPolicy.ts` builds the header from the basemaps and layers your page offers. This guide does not repeat the origin lists. Send the result with `customHeaders`:
 
 ```xml
 <system.webServer>
@@ -150,7 +159,7 @@ Load the file from the head with a plain `<script src="/maps/theme-bootstrap.js"
 Two points from the policy guide apply on IIS:
 
 - The worker takes its policy from its own response, and a hashed file is cached for a year, so a worker fetched before a policy change keeps the old policy. The reference host puts a key derived from the policy in the worker's URL (`packages/web/src/constants/workerCacheKey.ts`). With `customHeaders` applying to every response, do the same, or keep the worker's cache lifetime short.
-- `buildContentSecurityPolicy` throws on a definition URL that is not `https`, so serve the page over HTTPS. A script, stylesheet or font on your own origin needs no CORS header. A tile, feed or identify provider on another origin has to send `Access-Control-Allow-Origin` ([`serving-layers.md`](serving-layers.md)).
+- `buildContentSecurityPolicy` throws on a definition URL that is not `https`, so serve the page over HTTPS. A script, stylesheet or font on your own origin needs no CORS header. A tile, feed or identify provider on another origin has to send `Access-Control-Allow-Origin` ([Serving layers to MapCairn](serving-layers.md)).
 
 ## A server-rendered page
 
@@ -199,19 +208,19 @@ The layout page's own sample loads Bootstrap and jQuery from `ajax.aspnetcdn.com
 
 ### Page styles
 
-The SDK ships no base stylesheet, so the page gives `html`, `body` and the container a height and removes the body margin ([`extending.md`](https://mapcairn.timothybrits.co.za/docs/guides/extending/#embed-the-sdk-in-an-app-of-your-own)).
+The SDK ships no base stylesheet, so the page gives `html`, `body` and the container a height and removes the body margin ([Extending MapCairn](extending.md#embed-the-sdk-in-an-app-of-your-own)).
 
-An existing site stylesheet is a risk. The SDK's primitives sit in a cascade layer, so an unlayered rule in the page, such as a framework's `button` rule or a reset, beats them whatever its specificity or position ([Overriding a primitive](../../DESIGN.md#overriding-a-primitive)). The remedy there is to put the page's own base styles in an `@layer` declared before `@mapcairn/map/styles.css`. For a stylesheet you cannot edit, CSS can import a file into a named layer (`@import url("site.css") layer(base);`), but that was not tried here. Check the buttons and the focus outline in a browser after you add the map to an old page.
+An existing site stylesheet is a risk. The SDK's primitives sit in a cascade layer, so an unlayered rule in the page, such as a framework's `button` rule or a reset, beats them whatever its specificity or position ([Overriding a primitive](https://github.com/MapCairn/mapcairn/blob/main/DESIGN.md#overriding-a-primitive)). The remedy there is to put the page's own base styles in an `@layer` declared before `@mapcairn/map/styles.css`. For a stylesheet you cannot edit, CSS can import a file into a named layer (`@import url("site.css") layer(base);`), but that was not tried here. Check the buttons and the focus outline in a browser after you add the map to an old page.
 
 ### Language and direction
 
-Set `lang` and `dir` on `<html>` in the Razor layout from the page's language, for example `<html lang="en-GB" dir="ltr">`, as the [translation guide](https://mapcairn.timothybrits.co.za/docs/guides/translate-the-sdk/) says (the reference host renders its default on the server and keeps both in step on the client). `data-fixed-language` on `<html>` matters only if the theme bootstrap script is given a list of offered languages (`buildThemeBootstrapScript(offeredLanguages)`): that script then sets `lang` and `dir` from a stored choice unless the attribute is present. The call shown above passes none, so its script never touches `lang` or `dir` and the attribute changes nothing (`packages/core/src/theme/themeBootstrap.ts`).
+Set `lang` and `dir` on `<html>` in the Razor layout from the page's language, for example `<html lang="en-GB" dir="ltr">`, as the [translation guide](translate-the-sdk.md) says (the reference host renders its default on the server and keeps both in step on the client). `data-fixed-language` on `<html>` matters only if the theme bootstrap script is given a list of offered languages (`buildThemeBootstrapScript(offeredLanguages)`): that script then sets `lang` and `dir` from a stored choice unless the attribute is present. The call shown above passes none, so its script never touches `lang` or `dir` and the attribute changes nothing (`packages/core/src/theme/themeBootstrap.ts`).
 
 ### Layers, login and what stays on the server
 
-A feed or query layer's request carries no cookies and no referrer ([`serving-layers.md`](serving-layers.md)), so a layer endpoint that needs the signed-in user's cookie does not work yet. The request policy that would allow it is [#195](https://github.com/MapCairn/mapcairn/issues/195), and the wider case of a host behind a login is [#45](https://github.com/MapCairn/mapcairn/issues/45). A layer catalogue that follows the user's rights is possible: `createRuntimeLayerCatalogue` loads the catalogue from a function you write, which can call your own endpoint ([`extending.md`](https://mapcairn.timothybrits.co.za/docs/guides/extending/#supply-layers-at-runtime)). Serve data the user may see from endpoints that need no cookie, or wait for #195.
+A feed or query layer's request carries no cookies and no referrer ([Serving layers to MapCairn](serving-layers.md)), so a layer endpoint that needs the signed-in user's cookie does not work yet. The request policy that would allow it is [#195](https://github.com/MapCairn/mapcairn/issues/195), and the wider case of a host behind a login is [#45](https://github.com/MapCairn/mapcairn/issues/45). A layer catalogue that follows the user's rights is possible: `createRuntimeLayerCatalogue` loads the catalogue from a function you write, which can call your own endpoint ([Extending MapCairn](extending.md#supply-layers-at-runtime)). Serve data the user may see from endpoints that need no cookie, or wait for #195.
 
-Spatial queries and reports stay on your server. The optional `FeatureQuery` and `RoutingProvider` ports, and the map adapter's image export, are where a server plugs in ([`ARCHITECTURE.md`](../../ARCHITECTURE.md), "Ports"); the SDK ships no `FeatureQuery`.
+Spatial queries and reports stay on your server. The optional `FeatureQuery` and `RoutingProvider` ports, and the map adapter's image export, are where a server plugs in ([`ARCHITECTURE.md`](https://github.com/MapCairn/mapcairn/blob/main/ARCHITECTURE.md), "Ports"); the SDK ships no `FeatureQuery`.
 
 ### Browsers without WebGL
 

@@ -7,7 +7,7 @@ description: How-tos for embedding the SDK in your own app and for adding a base
 
 # Extending MapCairn
 
-This page is for a developer who embeds the SDK in an app of their own, or adds to the SDK and its reference host. By the end you will know how to show a real map, theme the interface and add a basemap, a data layer of each kind, layers supplied at runtime, a search provider, a routing provider or an adapter. The architecture behind these how-tos is in [ARCHITECTURE.md](https://github.com/MapCairn/mapcairn/blob/main/ARCHITECTURE.md), and the design rules are in [DESIGN.md](https://github.com/MapCairn/mapcairn/blob/main/DESIGN.md). The Content Security Policy a host page needs is in [Content Security Policy](content-security-policy.md), serving a build from IIS or a server-rendered page is in [Serving MapCairn from IIS](https://github.com/MapCairn/mapcairn/blob/main/docs/guides/serving-from-iis.md), and translating the interface or offering a choice of languages is in [Translate the SDK](translate-the-sdk.md).
+This page is for a developer who embeds the SDK in an app of their own, or adds to the SDK and its reference host. By the end you will know how to show a real map, theme the interface and add a basemap, a data layer of each kind, layers supplied at runtime, a search provider, a routing provider or an adapter. The architecture behind these how-tos is in [ARCHITECTURE.md](https://github.com/MapCairn/mapcairn/blob/main/ARCHITECTURE.md), and the design rules are in [DESIGN.md](https://github.com/MapCairn/mapcairn/blob/main/DESIGN.md). The Content Security Policy a host page needs is in [Content Security Policy](content-security-policy.md), serving a build from IIS or a server-rendered page is in [Serving MapCairn from IIS](serving-from-iis.md), and translating the interface or offering a choice of languages is in [Translate the SDK](translate-the-sdk.md).
 
 Checked against `@mapcairn/sdk` %sdkVersion%, the version in this repository.
 
@@ -116,7 +116,7 @@ The default basemap follows the theme until a visitor chooses one: Bright in the
 
 ## Add a data layer
 
-A layer is data, not code: one definition file, one recorded fixture (feeds only) and the provider's origins in the Content Security Policy. Nothing in the code names a layer, a provider or a response shape. [`serving-layers.md`](https://github.com/MapCairn/mapcairn/blob/main/docs/guides/serving-layers.md) says which kind fits which server, what each costs it, and how to point a layer at an OGC API Features, WMS or WMTS service ([worked examples](https://github.com/MapCairn/mapcairn/blob/main/docs/guides/serving-layers.md#services-that-speak-open-standards)).
+A layer is data, not code: one definition file, one recorded fixture (feeds only) and the provider's origins in the Content Security Policy. Nothing in the code names a layer, a provider or a response shape. [Serving layers to MapCairn](serving-layers.md) says which kind fits which server, what each costs it, and how to point a layer at an OGC API Features, WMS or WMTS service ([worked examples](serving-layers.md#services-that-speak-open-standards)).
 
 1. Add `packages/web/src/layers/definitions/<id>.ts` with a default export of a `LayerDefinition` (types in `packages/core/src/layers/definition.ts`). It is picked up by `import.meta.glob`, so no list needs editing. A feed names its decoder (`geojson`, or one you register in `packages/web/src/layers/index.ts`), maps fields by dotted path, and describes its style, card and list with templates such as `{time|relative}`. A colour rule needs a shape, a size or the field named on the card, so colour is never the only signal. A tile layer needs no code for a date or time its provider has no tiles for: when the map settles with none of the layer's tiles loaded, the layer's status says no imagery was found for the chosen date or time, beside its control, and says it once through the live region. The status goes when the control changes, or when a tile of the layer loads later, and the live region says so once.
 2. For a feed, record a small sample response in `packages/web/src/layers/fixtures/` and add it to `manifest.json` with the number of features it should decode to (and a detail fixture if the layer has `detail`).
@@ -131,7 +131,7 @@ Card titles and lines, list secondary lines, feed polygon and line labels, and r
 
 Run `npx --no-install vitest run packages/web/src/layers`: the definition-loop test checks the schema, the fixture, the CSP and the credit, and names the line to add for anything missing. A minimal tile layer:
 
-```ts
+```ts check
 import type { TileLayerDefinition } from "@mapcairn/core";
 
 const example: TileLayerDefinition = {
@@ -159,7 +159,7 @@ If the provider fills the part of the world it has no data for with opaque or no
 
 A product the provider names by timestamp, such as one image per half hour, takes a `datetime` control. Its value is the slot's start in UTC, written `YYYY-MM-DDtHHMM` so it fits a link, and the URL template receives it as an ISO instant (`2026-11-11T14:30:00Z`). Set `max` and `default` to the provider's latency with `{ minutesAgo }`, so times that are not out yet are never offered, and say the latency in the description. The ui shows a date input and a list of the times that exist on that day, both in UTC, with the slot shown and the newest one in words. From the half-hourly rainfall layer:
 
-```ts
+```ts no-check
 {
   kind: "datetime",
   id: "time",
@@ -178,7 +178,7 @@ with a tile URL such as `https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/IMER
 
 A feed of polygons or lines uses a `shapes` style. Colour is a rule over one field: `fixed`, `category`, `steps` (explicit class breaks) or `intervals` (equal classes between a `min` and a `max`, one ordinal colour per class). Each class may also set a `pattern` (`stripes`, `dots`, `crosshatch`), a `dash` and a `width`, and a label template draws text with a halo. The key is derived from the style, and the Layers section and the map key (`MapKey`, in `MapChrome`'s `mapKey` slot) both draw it, so a layer needs nothing extra to appear in either. Colour is never the only signal, so validation asks for a different pattern, width or dash in every class, or a label that names the field. The colour names a palette slot, never a value.
 
-```ts
+```ts check
 import type { FeedLayerDefinition, ShapeStyle } from "@mapcairn/core";
 
 const districts: FeedLayerDefinition<ShapeStyle> = {
@@ -230,7 +230,7 @@ Labels need a basemap with a glyph source, which the vector basemaps have. On a 
 
 A `heatmap` layer draws point density from a feed (or a query) and has no cards or list. The radius and intensity come from `range` controls so people can tune it, and the legend names each step of the ramp with a word.
 
-```ts
+```ts check
 import type { HeatmapLayerDefinition } from "@mapcairn/core";
 
 const density: HeatmapLayerDefinition = {
@@ -268,7 +268,7 @@ export default density;
 
 A `vector-tiles` layer names a tile URL, a zoom window for the layer, and a style per source layer. Rules read tile properties by name, and a label template may name one property, such as `{name}`. A source layer can also be a `heatmap`. The source's `minzoom` and `maxzoom` are the tile levels the service has; the layer's and each source layer's `minzoom` and `maxzoom` are the zoom levels they are visible at, from `minzoom` up to but not including `maxzoom`. Features stay in the tiles, so the layer has a key and no cards. When the map is outside the layer's own `minzoom` and `maxzoom`, its status line names the level to zoom to: "Zoom in to level 5 or closer to load this layer." or "Zoom out below level 12 to see this layer." A layer without a window says nothing about zoom, and the source's `maxzoom` does not count as one.
 
-```ts
+```ts check
 import type { VectorTileLayerDefinition } from "@mapcairn/core";
 
 const parks: VectorTileLayerDefinition = {
@@ -326,7 +326,7 @@ Tile origins go in `connect-src` and `img-src`, as for raster tiles.
 
 A raster tile layer is a picture, so the tiles themselves have no features. To give a tap a card, add an `identify` block to the layer's definition. It names an `https` URL that answers, in JSON, what is at one point. The browser asks only when someone taps the plain map, or presses `I` for the centre of the map, and only while the layer is on. Hover, movement and a layer that is off send nothing.
 
-```ts
+```ts check
 import type { IdentifiableLayerDefinition } from "@mapcairn/core";
 
 const floodDepth: IdentifiableLayerDefinition = {
@@ -423,7 +423,7 @@ The request is a `GET` over `https` with no cookies and no referrer, in CORS mod
 
 For a dataset too large to fetch whole, use a `query` source in place of a `feed`. The layer asks for the features inside the current view, after the map has been still for a moment, and asks again only when the view leaves the area it last asked for. A view across the antimeridian is asked for as two boxes, one on each side of the line, each inside -180 to 180, so it costs two requests to the provider instead of one; the answers are joined and a feature in both (the same id and geometry) is kept once. If either request fails the layer shows its error and nothing partial, and each half can return up to `maxFeatures` plus one, so such a view can fetch up to twice the data. It draws at most `maxFeatures`, says "Showing the first N. Zoom in to see more." when there are more, and below `minzoom` asks for nothing and says "Zoom in to level 9 or closer to load this layer.", naming the normalised zoom level the map readout shows. The URL must use `{west}`, `{south}`, `{east}` and `{north}`, and may use `{limit}`, which is `maxFeatures` plus one so the response shows that more exist.
 
-```ts
+```ts check
 import type { FeedLayerDefinition, PointStyle } from "@mapcairn/core";
 
 const places: FeedLayerDefinition<PointStyle> = {
@@ -456,7 +456,7 @@ export default places;
 
 ## Supply layers at runtime
 
-A host with a server of its own usually holds its layer metadata in that server's format, not as MapCairn definitions. `examples/embed/src/mapServerLayers.ts` is a sample of turning the one into the other, and [`serving-layers.md`](https://github.com/MapCairn/mapcairn/blob/main/docs/guides/serving-layers.md) covers what a host's server should serve and how `createRuntimeLayerCatalogue` behaves. The sample's server is made up: `src/serverMetadata.ts` types what it says, and `src/sampleServerLayers.ts` is its answer, a constant, so nothing is requested. `createExampleCatalogue` in `src/exampleServices.ts` passes `createRuntimeLayerCatalogue` a `load` that returns the example's own layer and the mapper's output, and the fake layer source answers for the feed layers.
+A host with a server of its own usually holds its layer metadata in that server's format, not as MapCairn definitions. `examples/embed/src/mapServerLayers.ts` is a sample of turning the one into the other, and [Serving layers to MapCairn](serving-layers.md) covers what a host's server should serve and how `createRuntimeLayerCatalogue` behaves. The sample's server is made up: `src/serverMetadata.ts` types what it says, and `src/sampleServerLayers.ts` is its answer, a constant, so nothing is requested. `createExampleCatalogue` in `src/exampleServices.ts` passes `createRuntimeLayerCatalogue` a `load` that returns the example's own layer and the mapper's output, and the fake layer source answers for the feed layers.
 
 What `mapServerLayers` maps, using only what the SDK already offers:
 
@@ -528,7 +528,7 @@ Keep the mapping in small functions that take the service's raw item and return 
 
 A service that returns a GeoJSON `FeatureCollection`, as several open geocoders do, puts the point in `geometry.coordinates` as `[longitude, latitude]` and, when it has one, the extent in `bbox` as `[west, south, east, north]` (RFC 7946). Some services use a different order for their own extent field, so read the service's documentation and test with a recorded answer.
 
-```ts
+```ts check
 import type { Bounds, SearchResult } from "@mapcairn/core";
 
 interface GeocoderFeature {
@@ -577,7 +577,7 @@ A plain JSON endpoint is the same job with that endpoint's names. The example's 
 
 The SDK's contract suites check what the ports promise: the shape of a result, an empty array for no match, each `SearchError` kind, `PortAbortError` before and during a request, and `null` from `reverse` when there is no place. Run them against your adapter with the network scripted, as `NominatimSearchProvider.test.ts` and the example's `placeSearch.test.ts` do:
 
-```ts
+```ts no-check
 import {
   runSearchProviderContract,
   runSuggestionProviderContract,
@@ -604,7 +604,7 @@ runSearchProviderContract("MySearchProvider", () => {
 
 Pass the provider in the `Services` the app is built from. A host that builds its own `Services` sets `search` and, if it has one, `suggestions`; the example starts from the fakes and replaces the two parts:
 
-```ts
+```ts no-check
 const services = createFakeServices({
   search: new MySearchProvider(),
   suggestions: new MySuggestionProvider(),

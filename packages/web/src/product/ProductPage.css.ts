@@ -332,7 +332,7 @@ export const motifIndex = style([
 
 /**
  * The hero's words, over the motif, at the reading width. From the wide width
- * they are two columns: the heading, the lede, the button, the repository link
+ * they are two columns: the heading, the lede, the cairn sentence, the button, the repository link
  * and the badges at the start, and the install command at the end, centred on
  * them. The markup's order, and so the reading and tab order, stays the same.
  */
@@ -377,6 +377,15 @@ export const headline = style({
 export const lede = style({
   margin: 0,
   color: tokens.color.textMuted,
+  textWrap: "pretty",
+});
+
+/** The sentence about the name, quieter than the lede and in the same column. */
+export const cairnLine = style({
+  margin: 0,
+  color: tokens.color.textMuted,
+  fontSize: tokens.type.small.size,
+  lineHeight: tokens.type.small.lineHeight,
   textWrap: "pretty",
 });
 
@@ -462,7 +471,7 @@ export const installArea = style({
       "@media": {
         [WIDE]: {
           gridColumn: "2",
-          gridRow: "1 / span 5",
+          gridRow: "1 / span 6",
           alignSelf: "center",
           justifySelf: "stretch",
         },

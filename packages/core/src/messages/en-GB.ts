@@ -874,7 +874,7 @@ export const EN_GB_CATALOGUE: Record<MessageKey, string> = {
   "privacy.back": "Back to the map",
   "host.about.heading": "About",
   "host.about.text":
-    "This site is open source software, released under the AGPL-3.0 licence.",
+    "This site is open source software, released under the AGPL-3.0 licence. A cairn is a pile of stones that walkers add to, marking the way for whoever comes next. People have built them for thousands of years: the Cairn of Barnenez in Brittany was begun in the fifth millennium BC, and the word comes from the Gaelic càrn.",
   "host.about.link": "View the source code and licence on GitHub",
   "host.about.product": "About MapCairn, the SDK behind this map",
   "host.map.noScript":

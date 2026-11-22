@@ -217,6 +217,11 @@ export const LEDE: Line = [
   "MapCairn is an open-source React SDK for public-interest maps: the interface around a MapLibre map, with search, measuring, drawing and a layers panel, for the search and routing services you choose.",
 ];
 
+/** What a cairn is, under the lede: the name explained in one sentence. The documentation site's introduction carries the same words. */
+export const CAIRN_LINE: Line = [
+  "A cairn is a pile of stones that walkers add to, marking the way for whoever comes next.",
+];
+
 /** One badge: its words and, for the licence, the section it leads to. */
 export interface Badge {
   readonly text: string;
