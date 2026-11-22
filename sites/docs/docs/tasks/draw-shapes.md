@@ -150,3 +150,16 @@ The measure of the shape, in the person's units, is in `draw.measure`, and the h
 `useDraw` needs the map's adapter, which is why `Chrome` writes `useMap()` into a ref that `getAdapter` reads: the hook lives above `MapView`, and the adapter exists only inside it. The units come from `useSettings`. Export, copy and import use services from `ServicesProvider`: the file saver, the clipboard and the file opener. The fakes in Get started do not write real files; a host that supplies its own adapters does. [Extending MapCairn](../guides/extending.md) lists the ports.
 
 The reference host's `App.tsx` is the full version, with the tool opened from a button, the sheet shared with other sections, and `Done` returning focus to the button.
+
+## When it goes wrong
+
+- **The list of shapes is empty.** `ShapesSection` says "Nothing drawn yet. Choose Draw shapes on the map to start." The toolbar says "Nothing to export yet. Finish a shape first." when no shape is finished.
+- **A shape is not valid.** While a person draws, `draw.issueMessage` says what is wrong and the toolbar shows it, for example "The edges cross each other. Move a point so they do not, then finish." or "Tap a second point to set the circle's radius." A circle's radius is limited to 10,000 km. A shape that is not finished, or not valid, is listed as unfinished and left out of every export.
+- **An import file cannot be used.** `draw.importFeedback` holds the outcome. A refusal says why: "The file is empty.", "This is not GeoJSON, WKT or a CSV of shapes from this map. Choose a .geojson, .json, .wkt, .txt or .csv file.", "The WKT could not be read, so none of the file was imported.", or that the file is too large or holds too many shapes or points. A file that is partly usable imports what it can and says what it skipped, such as "2 skipped: 1 with edges that cross, 1 with too few points."
+- **Export and import need services you supply.** The fakes in Get started do not save or open real files, so Export gives the person nothing and Import waits for a file that never comes. Provide a `fileSaver`, a `fileOpener` and a clipboard adapter of your own, as [What you provide](#what-you-provide) says.
+
+## Next steps
+
+- [Extending MapCairn](../guides/extending.md) lists the file and clipboard ports a host supplies.
+- [Troubleshooting](../troubleshooting.md) lists the messages from the map when it cannot start.
+- [Add a data layer](add-a-layer.md) puts data under the shapes people draw.

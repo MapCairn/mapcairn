@@ -141,3 +141,18 @@ export const services = createFakeServices({
 ## Add a basemap of your own
 
 A definition of your own is plain data: an id, a name, a source and the attribution. [Extending MapCairn](../guides/extending.md#add-a-basemap) describes every field and what the reference site adds around a new basemap, and [Content Security Policy](../guides/content-security-policy.md) says which origins a strict policy needs for it.
+
+## When it goes wrong
+
+A basemap can fail to load, and a provider can be down. `MapView` tells your app in two ways, and the SDK shows nothing itself:
+
+- `onBasemapError(error, failed, kept)` is called when a change of `basemap` could not load. The map keeps drawing `kept`, the basemap that last loaded, and the error is a `MapEngineError` that is not an engine failure: `useMap().error` stays null. Pass `kept` back as `basemap`, by setting your own choice to `kept.id`, so the picker shows what the map draws. Passing it back causes no second swap.
+- `onBasemapUnavailable(basemap)` is called when every tile of the basemap being drawn failed and none loaded, once the map has settled. The map keeps working, and your app decides whether to draw another basemap instead.
+
+The English catalogue has words for both: `app.banner.basemapFailed` ("That basemap could not be loaded.") and `app.banner.basemapUnavailable` ("{name} is not available right now."). The picker cannot be empty, because a catalogue needs at least one basemap, and a catalogue that is built wrong stops the app at start-up with a message that [Troubleshooting](../troubleshooting.md) explains.
+
+## Next steps
+
+- [Extending MapCairn](../guides/extending.md#add-a-basemap) says how to define a basemap of your own.
+- [Troubleshooting](../troubleshooting.md) lists the messages a failed basemap logs.
+- [Add a data layer](add-a-layer.md) draws data over the basemap you chose.

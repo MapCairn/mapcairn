@@ -144,3 +144,20 @@ A host whose layers come from a server, or can be wrong without stopping the app
 ## Before you publish
 
 A layer's origin must be allowed by your Content Security Policy: tile origins in `connect-src` and `img-src`, feeds in `connect-src`. [Content Security Policy](../guides/content-security-policy.md) says how. Name the provider in your privacy notice, because the visitor's browser contacts it.
+
+## When it goes wrong
+
+A layer is requested only after it is turned on, so a failure shows only then. The browser asks the provider directly, and the SDK tracks what comes back:
+
+- **A tile layer that is slow or fails.** A layer's `status.kind` is `on` until the map reports that it is still waiting for its first tile, when it becomes `tiles-slow`, and `tiles-unavailable` when none of its tiles loaded. Either clears when a tile loads later, or the layer is turned off. The button in the code above shows nothing for these, so read the status yourself. [`LayersSection`](../api/map/LayersSection.md) shows words for them: "Still waiting for imagery. The provider may be slow or not answering." and then "Could not load. Check your connection."
+- **A feed layer that fails.** The status reads "Could not load. Check your connection." when the network failed, "Could not load. You are offline." when the visitor is offline, and "Could not load: the provider sent something unexpected." when the answer could not be read. `layers.retry(id)` asks again.
+- **A layer with nothing to show.** A feed that decodes to no features says its definition's `emptyText`, after "Updated {time}."
+- **A definition that is wrong.** `createStaticLayerCatalogue` stops the app at start-up with every problem listed, so nothing reaches the person. [Troubleshooting](../troubleshooting.md) has an example.
+
+The map and the other layers keep working while one layer fails.
+
+## Next steps
+
+- [Extending MapCairn](../guides/extending.md#add-a-data-layer) shows the other kinds of layer, with a definition for each.
+- [Troubleshooting](../troubleshooting.md) explains a layer definition that is refused.
+- [Draw and edit shapes](draw-shapes.md) lets people add their own shapes over the layers.
