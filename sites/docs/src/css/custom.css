@@ -27,6 +27,8 @@ html {
   --ifm-navbar-shadow: none;
   --ifm-navbar-padding-horizontal: 0;
   --ifm-navbar-padding-vertical: 0;
+  --ifm-menu-color-background-active: transparent;
+  --ifm-menu-color-background-hover: var(--mc-color-surface-raised);
   --column-inline: max(var(--mc-space-md), env(safe-area-inset-left, 0px));
   --ifm-navbar-item-padding-horizontal: var(--mc-space-xs);
   --ifm-navbar-item-padding-vertical: 0;
@@ -335,24 +337,61 @@ body {
   min-width: var(--mc-size-min-target);
 }
 
-/* Sidebar, contents and breadcrumbs: quiet, on the same ground. */
+/*
+ * Sidebar, contents and breadcrumbs: quiet rows on the page's ground. Every
+ * row has the same inner padding and a 3 px start border that is clear until
+ * the row is current, so the text lines up whether or not a row is active.
+ * Hover is a faint neutral tint, the current row is an accent marker and
+ * accent text with no fill, and the focus ring is the global one above.
+ */
 .menu__link,
 .table-of-contents__link {
-  color: var(--mc-color-text-muted);
+  padding-block: var(--mc-space-xxs);
+  padding-inline: var(--mc-space-sm);
+  border-inline-start: 3px solid transparent;
   border-radius: var(--mc-radius-inner);
+  color: var(--mc-color-text-muted);
+  background-color: transparent;
+  font-size: var(--mc-type-small-size);
+  line-height: var(--mc-type-small-line-height);
 }
 
 .menu__link:hover,
 .table-of-contents__link:hover {
-  color: var(--mc-color-accent);
-  background-color: var(--mc-color-accent-tint);
+  color: var(--mc-color-text);
+  background-color: var(--mc-color-surface-raised);
 }
 
+.menu__link.menu__link--active:not(.menu__link--sublist),
 .menu__link--active,
-.table-of-contents__link--active {
+.menu__link--active:hover,
+.table-of-contents__link--active,
+.table-of-contents__link--active:hover {
+  border-inline-start-color: var(--mc-color-accent);
   color: var(--mc-color-accent);
   font-weight: var(--mc-type-weight-semibold);
-  background-color: var(--mc-color-accent-tint);
+  background-color: transparent;
+}
+
+.table-of-contents__link--active:hover,
+.menu__link.menu__link--active:not(.menu__link--sublist):hover {
+  background-color: var(--mc-color-surface-raised);
+}
+
+.menu__list,
+.table-of-contents {
+  margin: 0;
+  padding-inline-start: 0;
+  list-style: none;
+}
+
+.menu__list .menu__list {
+  padding-inline-start: var(--mc-space-sm);
+}
+
+.menu__list-item,
+.table-of-contents li {
+  margin: 0;
 }
 
 .breadcrumbs__link {
@@ -363,7 +402,8 @@ body {
 
 .breadcrumbs__item--active .breadcrumbs__link {
   color: var(--mc-color-text);
-  background-color: var(--mc-color-accent-tint);
+  background-color: transparent;
+  font-weight: var(--mc-type-weight-semibold);
 }
 
 /* Code: the surface tone, the token classes coloured from the tokens. */
