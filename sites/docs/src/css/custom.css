@@ -338,18 +338,38 @@ body {
 }
 
 /*
- * Sidebar, contents and breadcrumbs: quiet rows on the page's ground. Every
- * row has the same inner padding and a 3 px start border that is clear until
- * the row is current, so the text lines up whether or not a row is active.
- * Hover is a faint neutral tint, the current row is an accent marker and
- * accent text with no fill, and the focus ring is the global one above.
+ * Sidebar and contents: plain text rows beside one thin rail, no boxes, no
+ * radius and no fills. Each row has a 2 px marker that sits on the rail and is
+ * clear until the row is current, so the text lines up whether or not a row is
+ * active. Hover darkens the text, the current row is accent text with an accent
+ * marker, and the focus ring is the global one above.
  */
+.theme-doc-sidebar-menu,
+.table-of-contents {
+  margin: 0;
+  padding-inline-start: 0;
+  border-inline-start: 1px solid var(--mc-color-hairline);
+  list-style: none;
+}
+
+.menu__list .menu__list {
+  margin: 0;
+  padding-inline-start: var(--mc-space-sm);
+  list-style: none;
+}
+
+.menu__list-item,
+.table-of-contents li {
+  margin: 0;
+}
+
 .menu__link,
 .table-of-contents__link {
+  margin-inline-start: -1px;
   padding-block: var(--mc-space-xxs);
-  padding-inline: var(--mc-space-sm);
-  border-inline-start: 3px solid transparent;
-  border-radius: var(--mc-radius-inner);
+  padding-inline: var(--mc-space-md);
+  border-inline-start: 2px solid transparent;
+  border-radius: 0;
   color: var(--mc-color-text-muted);
   background-color: transparent;
   font-size: var(--mc-type-small-size);
@@ -359,39 +379,17 @@ body {
 .menu__link:hover,
 .table-of-contents__link:hover {
   color: var(--mc-color-text);
-  background-color: var(--mc-color-surface-raised);
+  background-color: transparent;
 }
 
-.menu__link.menu__link--active:not(.menu__link--sublist),
-.menu__link--active,
-.menu__link--active:hover,
+.menu__link--active:not(.menu__link--sublist),
+.menu__link--active:not(.menu__link--sublist):hover,
 .table-of-contents__link--active,
 .table-of-contents__link--active:hover {
   border-inline-start-color: var(--mc-color-accent);
   color: var(--mc-color-accent);
-  font-weight: var(--mc-type-weight-semibold);
   background-color: transparent;
-}
-
-.table-of-contents__link--active:hover,
-.menu__link.menu__link--active:not(.menu__link--sublist):hover {
-  background-color: var(--mc-color-surface-raised);
-}
-
-.menu__list,
-.table-of-contents {
-  margin: 0;
-  padding-inline-start: 0;
-  list-style: none;
-}
-
-.menu__list .menu__list {
-  padding-inline-start: var(--mc-space-sm);
-}
-
-.menu__list-item,
-.table-of-contents li {
-  margin: 0;
+  font-weight: var(--mc-type-weight-semibold);
 }
 
 .breadcrumbs__link {
