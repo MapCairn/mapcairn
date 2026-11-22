@@ -29,6 +29,22 @@ describe("custom.css", () => {
     expect(RULES).not.toContain("!important");
   });
 
+  it("applies the blur token as the whole filter, because the token is a complete value", () => {
+    expect(RULES).not.toMatch(/blur\(\s*var\(/);
+    expect(RULES).toMatch(/backdrop-filter:\s*var\(--mc-effect-blur\)/);
+  });
+
+  it("shows the header links only where the framework's drawer toggle is hidden", () => {
+    expect(RULES).toMatch(
+      /@media \(max-width: 996px\)\s*{[^}]*\.header-nav\s*{\s*display:\s*none/,
+    );
+  });
+
+  it("never clips the header links' focus ring by scrolling their row", () => {
+    const rules = RULES.match(/\.header-nav\s*{[^}]*}/g) ?? [];
+    expect(rules.join("")).not.toMatch(/overflow/);
+  });
+
   it("names only token aliases that the generated stylesheet defines", async () => {
     const { tokens } = await import("@mapcairn/theme");
     const { buildThemeCss } = await import("../../scripts/themeCss");

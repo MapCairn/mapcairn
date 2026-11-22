@@ -7,16 +7,16 @@ import NavbarLogo from "@theme/Navbar/Logo";
 import NavbarMobileSidebarToggle from "@theme/Navbar/MobileSidebar/Toggle";
 import clsx from "clsx";
 import type { ReactNode } from "react";
+import HeaderLinks from "../../../components/HeaderLinks";
 import SearchButton from "../../../components/Search/SearchButton";
-import { HEADER_LINKS } from "../../../headerLinks";
 
 /**
- * The header's content: the sidebar toggle on a narrow screen, the brand, and
- * the product page's three links with the colour-mode toggle. The links stay
- * in the bar at every width, as they do on the product page, instead of
- * moving into the framework's drawer, so there is a way back to `/` and
- * `/map` from every page. The row scrolls sideways inside itself when very
- * large text leaves no room.
+ * The header's content: the sidebar toggle on a narrow screen, the brand, the
+ * search button and the colour-mode toggle, with the product page's three
+ * links beside them from the width at which the row has room. Below that the
+ * links are the first thing in the drawer (`Navbar/MobileSidebar/Layout`), so
+ * nothing in the row overlaps and there is still a way back to `/` and `/map`
+ * from every page.
  */
 export default function NavbarContent(): ReactNode {
   const mobileSidebar = useNavbarMobileSidebar();
@@ -37,21 +37,7 @@ export default function NavbarContent(): ReactNode {
           "navbar__items navbar__items--right",
         )}
       >
-        <nav aria-label="Main" className="header-nav">
-          <ul className="header-nav__list">
-            {HEADER_LINKS.map(({ text, href, current }) => (
-              <li key={href}>
-                <a
-                  className="navbar__link"
-                  href={href}
-                  aria-current={current ? "page" : undefined}
-                >
-                  {text}
-                </a>
-              </li>
-            ))}
-          </ul>
-        </nav>
+        <HeaderLinks className="header-nav" />
         <SearchButton />
         <NavbarColorModeToggle />
       </div>
