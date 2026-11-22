@@ -4054,6 +4054,20 @@ describe("MapLibreMapAdapter data layers", () => {
         expect(adapter.getView()).toEqual(view);
       });
 
+      // MapLibre loads a raster tile with `fetch`, which honours the data
+      // layers' `no-referrer` policy, unless `refreshExpiredTiles` is false: it
+      // then uses an image element that never sets a referrer policy.
+      it("never turns off refreshExpiredTiles on the map on screen or the render map", async () => {
+        const { adapter, map } = await readyForRender();
+        await adapter.toImage({
+          size: { width: 64, height: 48 },
+          pixelRatio: 1,
+          view: { center: { lat: 10, lng: 20 }, zoom: 5 },
+        });
+        expect(map.options.refreshExpiredTiles).not.toBe(false);
+        expect(renderMap().options.refreshExpiredTiles).not.toBe(false);
+      });
+
       it("gives the render map the request policy of the map on screen", async () => {
         const { adapter, map } = await readyForRender();
         await adapter.toImage({
