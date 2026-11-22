@@ -1,6 +1,6 @@
 # Privacy policy
 
-_Last updated: 2026-11-21_
+_Last updated: 2026-11-22_
 
 _This mirrors the policy on the site at `/privacy`
 (`packages/web/src/app/PrivacyPage.tsx`). Keep both in sync when either
@@ -90,7 +90,7 @@ temperature), the Global Disaster Alert and Coordination System (GDACS) for fire
 flood, tropical cyclone, volcano and drought alerts, and the jsDelivr content
 delivery network for the country boundaries. Show affected area sends one more
 request to GDACS for that event only. Tile layers request images for the part
-of the map you are looking at, so the provider can tell roughly where you are looking. Like basemap tiles, they also carry this site's address as the referrer. Nothing passes through this site, and nothing is stored beyond the
+of the map you are looking at, so the provider can tell roughly where you are looking. Their tile requests carry no referrer, unlike basemap tile requests, which keep this site's address as the referrer because a basemap provider may ask for one. Nothing passes through this site, and nothing is stored beyond the
 page you have open. The layers you turn on are written into the page address
 so a link can be shared; they are not sent anywhere else. Opening a link that
 has layers turned on requests those layers straight away, because the link

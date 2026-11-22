@@ -4,6 +4,7 @@ import type { MapTileOverlay } from "@mapcairn/core";
 import type { Map as MapLibreMap } from "maplibre-gl";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { DataLayerStore, type TileLayerReport } from "./dataLayerStore";
+import { DataLayerTileRequests } from "./dataLayerTileRequests";
 import { FakeMapLibreMap } from "./maplibreTestEngine";
 
 const OVERLAY: MapTileOverlay = {
@@ -48,12 +49,24 @@ function setup(ready = true) {
   const register = vi.fn();
   const release = vi.fn();
   const changed = vi.fn();
+  const tileRequests = new DataLayerTileRequests();
   const store = new DataLayerStore({
     readyMap: () => (state.ready ? map : undefined),
     changed,
     tileSources: { carriedReport: carried, register, release },
+    tileRequests,
   });
-  return { engine, map, state, store, carried, register, release, changed };
+  return {
+    engine,
+    map,
+    state,
+    store,
+    carried,
+    register,
+    release,
+    changed,
+    tileRequests,
+  };
 }
 
 beforeEach(() => {
@@ -113,6 +126,23 @@ describe("DataLayerStore", () => {
     expect(carried.mock.invocationCallOrder.at(-1)).toBeLessThan(
       release.mock.invocationCallOrder[0] as number,
     );
+  });
+
+  it("keeps the template of a drawn tile layer and drops it when the layer is removed", () => {
+    const { store, tileRequests } = setup();
+    const tile = "https://t.test/3/2/5.png";
+    store.setTiles("imagery", OVERLAY);
+    expect(tileRequests.transform(tile).referrerPolicy).toBe("no-referrer");
+    store.remove("imagery");
+    expect(tileRequests.transform(tile).referrerPolicy).toBeUndefined();
+  });
+
+  it("keeps no template for a layer that holds its own data", () => {
+    const { store, tileRequests } = setup();
+    store.set("area", { kind: "shapes", shapes: SHAPES });
+    expect(
+      tileRequests.transform("https://t.test/3/2/5.png").referrerPolicy,
+    ).toBeUndefined();
   });
 
   it("registers no source for a layer that is not tiles", () => {

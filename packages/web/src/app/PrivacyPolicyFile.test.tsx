@@ -69,9 +69,9 @@ describe("PRIVACY.md mirrors the privacy page", () => {
     );
   });
 
-  it("says tile layers carry the site's address like basemap tiles", () => {
+  it("says tile layers send no referrer while basemap tiles keep the site's address", () => {
     expectBothCopies(
-      "Like basemap tiles, they also carry this site's address as the referrer.",
+      "Their tile requests carry no referrer, unlike basemap tile requests, which keep this site's address as the referrer because a basemap provider may ask for one.",
     );
   });
 

@@ -50,6 +50,7 @@ import "@mapcairn/sdk/styles.css";
 import "./page.css";
 import {
   createFakeServices,
+  defaultBasemapFor,
   FocusRegistryProvider,
   LiveRegionProvider,
   MapChrome,
@@ -59,6 +60,7 @@ import {
   TooltipProvider,
   useBasemaps,
   useMap,
+  useTheme,
 } from "@mapcairn/sdk";
 import { createMapLibreMapAdapter } from "@mapcairn/sdk/adapter-maplibre";
 import { type ReactNode, StrictMode } from "react";
@@ -90,6 +92,7 @@ function App() {
 
 function MapScreen() {
   const basemaps = useBasemaps();
+  const { resolved } = useTheme();
   return (
     <MapView
       initialView={{
@@ -97,7 +100,7 @@ function MapScreen() {
         zoom: 11,
         bearing: 0,
       }}
-      basemap={basemaps.resolve(basemaps.defaultId)}
+      basemap={defaultBasemapFor(basemaps, resolved)}
       chrome={(background) => <Chrome background={background} />}
     />
   );
@@ -135,9 +138,9 @@ createRoot(root).render(
 
 The first line of `main.tsx`, `/// <reference types="vite/client" />`, gives TypeScript the types of the `?worker&url` import and of a plain CSS import. Vite's `react-ts` template (`npm create vite@latest -- --template react-ts`, whose `index.html` and `src/main.tsx` you replace with the two above) already lists `vite/client` in its `tsconfig` types, so the line is only needed when your project does not. Without the types, `tsc --noEmit` reports TS2307 for the worker import, always, and TS2882 for `import "./page.css"` when `noUncheckedSideEffectImports` is on, as it is by default in the TypeScript 7.0 checked here.
 
-Search and the rest of the interface run on the SDK's in-memory fakes, so search shows sample results until you add a search adapter, and nothing but the map is requested. Another bundler must serve `maplibre-gl/dist/maplibre-gl-worker.mjs` as a same-origin file and resolve `loadWorkerUrl` to its address. The adapter makes no request until a map mounts, and then asks only for what the basemap you pass `MapView` names. The basemap catalogue's default, which this app resolves, names a public tile provider (OpenFreeMap), so choose the basemap whose terms and privacy you accept.
+Search and the rest of the interface run on the SDK's in-memory fakes, so search shows sample results until you add a search adapter, and nothing but the map is requested. Another bundler must serve `maplibre-gl/dist/maplibre-gl-worker.mjs` as a same-origin file and resolve `loadWorkerUrl` to its address. The adapter makes no request until a map mounts, and then asks only for what the basemap you pass `MapView` names. The basemap shown follows the theme: `defaultBasemapFor(basemaps, resolved)` gives the built-in catalogue's Bright in the light theme and Fiord in the dark theme, so the map and its placeholder colour agree in both. Both are served by a public tile provider (OpenFreeMap), so choose the basemap whose terms and privacy you accept. To show one basemap in every theme, pass `basemaps.resolve(id)` instead and leave `useTheme` out; an id the catalogue does not hold gives the catalogue's default, Bright in the built-in one.
 
-Under a strict Content Security Policy, this page needs only the default basemap's origin, `https://tiles.openfreemap.org`, in `connect-src` and `img-src`, with the worker served from the page's own origin. A policy line to start from, which is the one the consumer check's browser leg runs under with a mocked style, so it has not been run against the default basemap's real style:
+Under a strict Content Security Policy, this page needs only the default basemaps' origin (Bright and Fiord share it), `https://tiles.openfreemap.org`, in `connect-src` and `img-src`, with the worker served from the page's own origin. A policy line to start from, which is the one the consumer check's browser leg runs under with a mocked style, so it has not been run against the default basemap's real style:
 
 ```text
 default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data: blob: https://tiles.openfreemap.org; font-src 'self'; connect-src 'self' https://tiles.openfreemap.org; worker-src 'self' blob:

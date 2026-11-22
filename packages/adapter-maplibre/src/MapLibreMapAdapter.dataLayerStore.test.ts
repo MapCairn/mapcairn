@@ -148,6 +148,72 @@ function describe_(argument: unknown): string {
 }
 
 describe("MapLibreMapAdapter data layer store", () => {
+  describe("request referrer", () => {
+    type Transform = (
+      url: string,
+      type: string,
+    ) => { url: string; referrerPolicy?: string };
+
+    const transformOf = (map: FakeMapLibreMap) =>
+      map.options.transformRequest as Transform;
+
+    it("sends no referrer with the tiles of a raster data layer, and the basemap keeps its own policy", async () => {
+      const { adapter, map } = await mountedWithLog();
+      map.fire("style.load");
+      adapter.setTileLayer("imagery", OVERLAY);
+      const transform = transformOf(map);
+      expect(transform("https://t.test/3/2/5.png", "Tile")).toEqual({
+        url: "https://t.test/3/2/5.png",
+        referrerPolicy: "no-referrer",
+      });
+      expect(transform("https://tiles.example/3/2/5.png", "Tile")).toEqual({
+        url: "https://tiles.example/3/2/5.png",
+      });
+    });
+
+    it("sends no referrer with the tiles of a vector data layer", async () => {
+      const { adapter, map } = await mountedWithLog();
+      map.fire("style.load");
+      adapter.setVectorLayer("regions", {
+        source: {
+          tiles: "https://v.test/{z}/{x}/{y}.pbf",
+          minzoom: 0,
+          maxzoom: 9,
+        },
+        layers: [
+          {
+            sourceLayer: "area",
+            geometry: "area",
+            rule: {
+              kind: "fixed",
+              look: {
+                colour: "#d55e00",
+                fillOpacity: 0.5,
+                pattern: "solid",
+                dash: "solid",
+                width: 1,
+              },
+            },
+          },
+        ],
+      });
+      expect(transformOf(map)("https://v.test/3/2/5.pbf", "Tile")).toEqual({
+        url: "https://v.test/3/2/5.pbf",
+        referrerPolicy: "no-referrer",
+      });
+    });
+
+    it("stops applying it when the layer is removed", async () => {
+      const { adapter, map } = await mountedWithLog();
+      map.fire("style.load");
+      adapter.setTileLayer("imagery", OVERLAY);
+      adapter.removeLayer("imagery");
+      expect(transformOf(map)("https://t.test/3/2/5.png", "Tile")).toEqual({
+        url: "https://t.test/3/2/5.png",
+      });
+    });
+  });
+
   describe("drawing and erasing", () => {
     it("draws a layer as its source, then its layers bottom first, then orders", async () => {
       const { adapter, map, log } = await mountedWithLog();
