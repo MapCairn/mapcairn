@@ -27,6 +27,21 @@ export const REPORT_FOLDER = "api";
 const REPORT_SUFFIX = ".api.md";
 
 /**
+ * The TSDoc configuration API Extractor reads from the project folder: its
+ * own tags plus `@since`, which the documentation site shows on a page.
+ */
+const TSDOC_CONFIG = {
+  $schema:
+    "https://developer.microsoft.com/json-schemas/tsdoc/v0/tsdoc.schema.json",
+  extends: ["@microsoft/api-extractor/extends/tsdoc-base.json"],
+  tagDefinitions: [{ tagName: "@since", syntaxKind: "block" }],
+  supportForTags: { "@since": true },
+};
+
+/** The file ending of the API model API Extractor writes beside a report. */
+const MODEL_SUFFIX = ".api.json";
+
+/**
  * Message ids that are reported, as warnings. Everything else API Extractor
  * can say is left off: this check is about the public surface and its
  * documentation, not about the rest of its rule set.
@@ -63,8 +78,10 @@ function normalised(text) {
  * @param {string} folder The package folder, with its `dist` built.
  * @returns {Promise<{
  *   reports: Map<string, string>,
+ *   models: Map<string, string>,
  *   messages: Array<{ id: string, text: string, file: string | undefined, line: number | undefined }>,
- * }>} The report text for each entry point name, and the messages.
+ * }>} The report text and the API model (the JSON the documentation site
+ *   reads) for each entry point name, and the messages.
  */
 export async function generateReports(folder) {
   const { Extractor, ExtractorConfig } = await import(
@@ -75,6 +92,8 @@ export async function generateReports(folder) {
   const scratch = mkdtempSync(path.join(tmpdir(), "mapcairn-api-"));
   /** @type {Map<string, string>} */
   const reports = new Map();
+  /** @type {Map<string, string>} */
+  const models = new Map();
   /** @type {Array<{ id: string, text: string, file: string | undefined, line: number | undefined }>} */
   const messages = [];
   try {
@@ -99,6 +118,14 @@ export async function generateReports(folder) {
         path.join(scratch, name, "node_modules"),
         "junction",
       );
+      // The project folder is the scratch one, so API Extractor finds the TSDoc
+      // configuration written into it. It stops looking at a folder that holds
+      // a package.json, so the scratch folder holds an empty one.
+      writeFileSync(path.join(scratch, name, "package.json"), "{}");
+      writeFileSync(
+        path.join(scratch, name, "tsdoc.json"),
+        JSON.stringify(TSDOC_CONFIG),
+      );
       const reportFolder = path.join(scratch, name, "report");
       const tempFolder = path.join(scratch, name, "temp");
       mkdirSync(reportFolder, { recursive: true });
@@ -106,7 +133,7 @@ export async function generateReports(folder) {
         configObjectFullPath: undefined,
         packageJsonFullPath: manifestPath,
         configObject: {
-          projectFolder: folder,
+          projectFolder: path.join(scratch, name),
           newlineKind: "lf",
           mainEntryPointFilePath: copied,
           compiler: {
@@ -120,7 +147,10 @@ export async function generateReports(folder) {
             reportFolder,
             reportTempFolder: tempFolder,
           },
-          docModel: { enabled: false },
+          docModel: {
+            enabled: true,
+            apiJsonFilePath: path.join(reportFolder, `${name}${MODEL_SUFFIX}`),
+          },
           dtsRollup: { enabled: false },
           tsdocMetadata: { enabled: false },
           messages: {
@@ -161,11 +191,15 @@ export async function generateReports(folder) {
         name,
         readFileSync(path.join(tempFolder, `${name}${REPORT_SUFFIX}`), "utf8"),
       );
+      models.set(
+        name,
+        readFileSync(path.join(reportFolder, `${name}${MODEL_SUFFIX}`), "utf8"),
+      );
     }
   } finally {
     rmSync(scratch, { recursive: true, force: true });
   }
-  return { reports, messages };
+  return { reports, models, messages };
 }
 
 /**

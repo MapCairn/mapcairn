@@ -5,6 +5,7 @@ import {
   checkRoadmap,
   parseIssueStates,
   parseMilestoneStates,
+  parseRoadmap,
   readIssueStates,
   readMilestoneStates,
   runRoadmapCheck,
@@ -562,5 +563,52 @@ describe("runRoadmapCheck", () => {
     const broken = run(roadmap(["#1, #1"], ["#2"], ["#3"]), null);
     expect(broken.code).toBe(1);
     expect(broken.out).toHaveLength(1);
+  });
+});
+
+describe("parseRoadmap", () => {
+  const text = roadmap(
+    [
+      `**Site, [Selection](${MILESTONE_URL}/5) ([#49](https://github.com/MapCairn/mapcairn/issues/49)).** Select things. Then more\n   on a wrapped line.`,
+    ],
+    [`**SDK, [First release](${MILESTONE_URL}/8) (#1, #4).** Out now.`],
+    [`**Site, [Terrain](${MILESTONE_URL}/13).** Tilt.`],
+  ).replace("# Roadmap", "# Roadmap\n\n_Last reviewed: 2026-11-22. Yearly._");
+
+  it("reads each lane's milestones in order with track, title, link, trackers and text", () => {
+    const { lanes } = parseRoadmap(text);
+    expect(lanes.map((lane: { name: string }) => lane.name)).toEqual([
+      "Now",
+      "Next",
+      "Later",
+    ]);
+    expect(lanes[0].items).toEqual([
+      {
+        track: "Site",
+        title: "Selection",
+        milestone: 5,
+        milestoneUrl: `${MILESTONE_URL}/5`,
+        trackers: [49],
+        text: "Select things. Then more on a wrapped line.",
+      },
+    ]);
+    expect(lanes[1].items[0]).toMatchObject({
+      track: "SDK",
+      milestone: 8,
+      trackers: [1, 4],
+    });
+    expect(lanes[2].items[0].trackers).toEqual([]);
+  });
+
+  it("reads the date the file was last reviewed, or null", () => {
+    expect(parseRoadmap(text).reviewed).toBe("2026-11-22");
+    expect(parseRoadmap(roadmap([], [], [])).reviewed).toBeNull();
+  });
+
+  it("throws on what the check would fail on", () => {
+    expect(() => parseRoadmap("# Roadmap")).toThrow(/Priorities/);
+    expect(() => parseRoadmap(roadmap(["#1, #1"], [], []))).toThrow(
+      /listed more than once/,
+    );
   });
 });

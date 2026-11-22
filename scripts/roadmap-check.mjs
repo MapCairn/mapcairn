@@ -147,6 +147,68 @@ export function checkRoadmap(markdown, states, milestones = null) {
   };
 }
 
+/** An item as `ROADMAP.md` writes it: `**Track, [Title](milestone link) (trackers).** Text`. */
+const ITEM_SHAPE = /^\s*(?:\d+\.|-)\s+\*\*([\s\S]*?)\.\*\*\s*([\s\S]*)$/;
+/** The link to a milestone: its text, its address and its number. */
+const MILESTONE_LINK = /\[([^\]]+)\]\(([^)\s]*\/milestone\/(\d+))\)/;
+/** The line that dates the last review of the file. */
+const LAST_REVIEWED = /^_Last reviewed: (\d{4}-\d{2}-\d{2})\b/m;
+
+/**
+ * One ranked milestone of the roadmap.
+ *
+ * @typedef {object} RoadmapItem
+ * @property {string} track `SDK` or `Site`, or an empty string when the item names none.
+ * @property {string} title The milestone's title.
+ * @property {number} milestone The milestone's number.
+ * @property {string} milestoneUrl The milestone's address as the item links it.
+ * @property {number[]} trackers The issue numbers the item names, in order.
+ * @property {string} text What the milestone is for, on one line.
+ */
+
+/**
+ * Reads the ranked list of the roadmap for a page or a report to show. It
+ * reads the lists with the parts `checkRoadmap` uses, and throws on what that
+ * check would fail on without the network: a missing section, a repeated or
+ * missing milestone link or a list over its cap.
+ *
+ * @param {string} markdown The text of `ROADMAP.md`.
+ * @returns {{ lanes: { name: string, items: RoadmapItem[] }[], reviewed: string | null }} The lanes in order, and the date of the last review as `YYYY-MM-DD`, or null.
+ */
+export function parseRoadmap(markdown) {
+  const { errors } = checkRoadmap(markdown, null, null);
+  if (errors.length > 0) {
+    throw new Error(`ROADMAP.md is not well formed: ${errors.join("; ")}`);
+  }
+  const priorities = sectionLines(markdown.split(/\r?\n/), "## Priorities");
+  const lanes = SECTIONS.map((name) => ({
+    name,
+    items: itemsOf(sectionLines(priorities ?? [], `### ${name}`) ?? []).map(
+      readItem,
+    ),
+  }));
+  return { lanes, reviewed: LAST_REVIEWED.exec(markdown)?.[1] ?? null };
+}
+
+/**
+ * @param {string} item One list item, its lines joined by newlines.
+ * @returns {RoadmapItem}
+ */
+function readItem(item) {
+  const shape = ITEM_SHAPE.exec(item);
+  const heading = shape?.[1] ?? item;
+  const link = MILESTONE_LINK.exec(item);
+  const comma = heading.indexOf(", ");
+  return {
+    track: shape && comma > 0 ? heading.slice(0, comma) : "",
+    title: link?.[1] ?? "",
+    milestone: Number(link?.[3]),
+    milestoneUrl: link?.[2] ?? "",
+    trackers: issueNumbers(heading),
+    text: (shape?.[2] ?? "").replace(/\s*\n\s*/g, " ").trim(),
+  };
+}
+
 /**
  * The list items of a section, each as its lines joined, so an item that wraps
  * onto the next line is read as one.

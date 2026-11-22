@@ -10,7 +10,7 @@ MapCairn aims to give a team everything it needs to build an industry-grade GIS 
 
 ## Priorities
 
-The order the work is done in, as GitHub milestones. A milestone is an outcome a person can name and a release note could carry. Everything smaller stays in [GitHub Issues](https://github.com/MapCairn/mapcairn/issues), grouped by its milestone, and is not listed here, so this list does not change when an issue is filed or closed and does not repeat status. A position is a plan, not a promise.
+The order the work is done in, as GitHub milestones. A milestone is an outcome a person can name and a release note could carry. Everything smaller stays in [GitHub Issues](https://github.com/MapCairn/mapcairn/issues), grouped by its milestone, and is not listed here, so this list does not change when an issue is filed or closed and does not repeat status. A position is a plan, not a promise. The documentation site shows these three lists at `/docs/roadmap`, built from this file with the issue counts of each milestone.
 
 Each item gives the track, the milestone, the outcome and, where one exists, the tracker issue that defines it. **SDK** is the goal in "Direction": what a team needs to build an application on MapCairn. **Site** is what visitors to the reference site see. Now holds at most three milestones and Next at most six; Later holds milestones only and has no cap. The order was set on 2026-11-14 by weighing three things: finish what is half built, open the way for other teams to embed the map early, and do the work that touches every component (language support) while the code base is young. The capability matrix, [Capability matrix](https://mapcairn.timothybrits.co.za/docs/guides/capability-matrix/), says what each milestone adds.
 
