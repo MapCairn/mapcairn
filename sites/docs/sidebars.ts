@@ -32,6 +32,18 @@ export const sidebar: SidebarEntry[] = [
   "get-started",
   {
     type: "category",
+    label: "Tasks",
+    items: [
+      "tasks/choose-a-basemap",
+      "tasks/add-a-layer",
+      "tasks/draw-shapes",
+      "tasks/theme-the-interface",
+      "tasks/translate-the-interface",
+      "tasks/host-on-a-server-rendered-page",
+    ],
+  },
+  {
+    type: "category",
     label: "Build an app",
     items: [
       "guides/embed-a-map",
