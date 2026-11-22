@@ -27,9 +27,9 @@ const classOnlyPrismTheme = { plain: {}, styles: [] };
 
 /**
  * A link to a page of the reference site, which shares this origin but is not
- * part of this site. The framework puts its base path in front of an \`href\`
- * in the navbar and the footer, so these two are written as HTML, which it
- * leaves as written.
+ * part of this site. The framework puts its base path in front of an `href`
+ * in the footer, so these two are written as HTML, which it leaves as
+ * written. The header's links are in `src/headerLinks.ts`.
  */
 function hostLink(path: string, label: string, className: string): string {
   return `<a class="${className}" href="${path}">${label}</a>`;
