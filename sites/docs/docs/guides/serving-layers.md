@@ -76,7 +76,7 @@ Three limits hold for all three:
 
 An items resource that takes a `bbox` and a `limit` is a `query` source. The `f=json` in the URL below is a convention some servers use to pick the format, not part of the standard (see "Format" below), so remove it if your service rejects unknown parameters.
 
-```ts
+```ts check
 import type { FeedLayerDefinition, PointStyle } from "@mapcairn/core";
 
 const parks: FeedLayerDefinition<PointStyle> = {
@@ -122,7 +122,7 @@ What does not work:
 
 A WMS draws a map image for a box, so it is a `tiles` source with `{bbox-epsg-3857}`, and its `GetFeatureInfo` is the layer's `identify` block.
 
-```ts
+```ts check
 import type { IdentifiableLayerDefinition } from "@mapcairn/core";
 
 const roads: IdentifiableLayerDefinition = {
@@ -161,7 +161,7 @@ The engine fills `{bbox-epsg-3857}` with `minx,miny,maxx,maxy` in metres for eac
 
 A WMTS tile matrix set that is the XYZ grid is a `tiles` source, whichever form the service offers.
 
-```ts
+```ts check
 import type { LayerDefinition } from "@mapcairn/core";
 
 const imagery: LayerDefinition = {
