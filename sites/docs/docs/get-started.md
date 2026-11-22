@@ -8,6 +8,8 @@ slug: /
 
 # Get started
 
+A cairn is a pile of stones that walkers add to, marking the way for whoever comes next.
+
 This page gets the SDK installed and points you at the app that draws a map with it. By the end you will have `@mapcairn/sdk` in a React project and know where the three-file example lives.
 
 Checked against `@mapcairn/sdk` %sdkVersion%, the version in this repository.

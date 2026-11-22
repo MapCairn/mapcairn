@@ -10,7 +10,7 @@ describe("helpAbout", () => {
     const about = helpAbout(new FakeMessageCatalogue());
     expect(about.heading).toBe("About");
     expect(about.text).toBe(
-      "This site is open source software, released under the AGPL-3.0 licence.",
+      "This site is open source software, released under the AGPL-3.0 licence. A cairn is a pile of stones that walkers add to, marking the way for whoever comes next. People have built them for thousands of years: the Cairn of Barnenez in Brittany was begun in the fifth millennium BC, and the word comes from the Gaelic càrn.",
     );
     expect(about.link.label).toBe("View the source code and licence on GitHub");
     expect(about.link.href).toBe("https://github.com/MapCairn/mapcairn");
@@ -38,5 +38,10 @@ describe("helpAbout", () => {
   it("keeps the licence name and does not translate it", () => {
     expect(EN_GB_CATALOGUE["host.about.text"]).toContain("AGPL-3.0");
     expect(AF_CATALOGUE["host.about.text"]).toContain("AGPL-3.0");
+  });
+
+  it("gives the cairn sentence and its history in Afrikaans too", () => {
+    expect(AF_CATALOGUE["host.about.text"]).toContain("Barnenez");
+    expect(AF_CATALOGUE["host.about.text"]).toContain("càrn");
   });
 });
