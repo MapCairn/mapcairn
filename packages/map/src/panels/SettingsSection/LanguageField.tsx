@@ -5,7 +5,7 @@ import {
   type MessageCatalogue,
   message,
 } from "@mapcairn/core";
-import { RotateCw, TriangleAlert } from "lucide-react";
+import { ArrowClockwise, Warning } from "@phosphor-icons/react";
 import { type FocusEvent, useEffect, useRef } from "react";
 import {
   useLanguageLoad,
@@ -139,12 +139,12 @@ export function LanguageField() {
       {failedLabel === undefined ? null : (
         <div className={languageStatus} data-testid="language-status">
           <span className={languageStatusError}>
-            <Icon icon={TriangleAlert} />
+            <Icon icon={Warning} />
             {t("settings.language.loadFailed", { language: failedLabel })}
           </span>
           <Button
             variant="secondary"
-            icon={RotateCw}
+            icon={ArrowClockwise}
             busy={languageLoad?.retrying}
             data-testid="language-retry"
             onClick={() => languageLoad?.retry()}

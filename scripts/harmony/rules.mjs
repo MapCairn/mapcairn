@@ -396,13 +396,14 @@ function checkColours(tokens, report) {
 }
 
 /**
- * Names imported from `lucide-react`.
+ * Names imported from `@phosphor-icons/react`.
  * @param {string} code
  * @returns {Set<string>}
  */
-function lucideImportNames(code) {
+function iconImportNames(code) {
   const names = new Set();
-  const re = /import\s+(?:type\s+)?\{([^}]*)\}\s*from\s*["']lucide-react["']/g;
+  const re =
+    /import\s+(?:type\s+)?\{([^}]*)\}\s*from\s*["']@phosphor-icons\/react["']/g;
   for (const m of code.matchAll(re)) {
     for (const part of m[1].split(",")) {
       const local = part
@@ -635,7 +636,7 @@ function checkStyleProp(tag, code, report) {
 }
 
 /**
- * Checks a lucide icon or `Icon` tag for hand-set size or stroke.
+ * Checks an icon or `Icon` tag for hand-set size or weight.
  * @param {import("./lex.mjs").JsxTag} tag
  * @param {string} file
  * @param {Set<string>} icons
@@ -647,11 +648,11 @@ function checkIconSizing(tag, file, icons, report) {
     return;
   }
   for (const attr of tag.attrs) {
-    if (["size", "strokeWidth", "absoluteStrokeWidth"].includes(attr.name)) {
+    if (["size", "weight"].includes(attr.name)) {
       report(
         "icon-sizing",
         attr.line,
-        `<${tag.name} ${attr.name}=…> sizes an icon by hand. Icons take their size and stroke from packages/map/src/ui/Icon.`,
+        `<${tag.name} ${attr.name}=…> sizes an icon by hand. Icons take their size and weight from packages/map/src/ui/Icon.`,
       );
     }
   }
@@ -712,7 +713,7 @@ export function scanSource(file, source) {
     regions.push({ tokens: tokenize(code) });
   }
   if (file.endsWith(".tsx")) {
-    const icons = lucideImportNames(code);
+    const icons = iconImportNames(code);
     for (const tag of findJsxTags(code)) {
       const region = checkStyleProp(tag, code, report);
       if (region) {

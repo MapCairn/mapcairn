@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
 import { useReadingDirection } from "@mapcairn/react";
+import { Check } from "@phosphor-icons/react";
 import * as ToggleGroup from "@radix-ui/react-toggle-group";
-import { Check } from "lucide-react";
 import type { ReactNode } from "react";
 import * as styles from "./SegmentedControl.css";
 

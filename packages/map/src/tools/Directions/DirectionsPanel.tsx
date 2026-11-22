@@ -19,19 +19,19 @@ import {
   type UnitSystem,
 } from "@mapcairn/core";
 import {
-  Bike,
+  Bicycle,
   Car,
-  ChevronDown,
-  ChevronUp,
+  CaretDown,
+  CaretUp,
   Crosshair,
   Footprints,
+  MagnifyingGlass,
   MapPin,
-  Route,
-  Search,
-  Trash2,
-  TriangleAlert,
+  Path,
+  Trash,
+  Warning,
   X,
-} from "lucide-react";
+} from "@phosphor-icons/react";
 import { type ReactNode, type SyntheticEvent, useEffect, useRef } from "react";
 import {
   useFormatMessage,
@@ -53,7 +53,7 @@ import { useFreeCentre } from "./useFreeCentre";
 const MODE_ICONS: Readonly<Record<TravelMode, typeof Car>> = {
   drive: Car,
   walk: Footprints,
-  cycle: Bike,
+  cycle: Bicycle,
 };
 
 /** Props for {@link DirectionsPanel}. */
@@ -294,14 +294,14 @@ export function DirectionsPanel({
                   <span className={styles.stopActions}>
                     <IconButton
                       label={t("tools.directions.moveUp", { letter })}
-                      icon={ChevronUp}
+                      icon={CaretUp}
                       size="compact"
                       disabled={index === 0}
                       onClick={() => directions.moveStop(stop.id, -1)}
                     />
                     <IconButton
                       label={t("tools.directions.moveDown", { letter })}
-                      icon={ChevronDown}
+                      icon={CaretDown}
                       size="compact"
                       disabled={index === stops.length - 1}
                       onClick={() => directions.moveStop(stop.id, 1)}
@@ -368,7 +368,7 @@ export function DirectionsPanel({
         />
         <div className={styles.actions}>
           <Button
-            icon={Route}
+            icon={Path}
             disabled={needsTwo}
             busy={state.status === "loading" && state.request === "route"}
             data-testid="directions-get-route"
@@ -417,7 +417,7 @@ export function DirectionsPanel({
             <Button
               variant="secondary"
               type="submit"
-              icon={Search}
+              icon={MagnifyingGlass}
               disabled={search.query.trim().length < MIN_SEARCH_LENGTH || full}
               busy={search.state.status === "loading"}
               data-testid="directions-search-submit"
@@ -432,7 +432,7 @@ export function DirectionsPanel({
           ) : null}
           {search.state.status === "error" ? (
             <p className={styles.statusLine}>
-              <Icon icon={TriangleAlert} className={styles.errorIcon} />
+              <Icon icon={Warning} className={styles.errorIcon} />
               <span>{t("tools.search.unavailable", {})}</span>
               <Button variant="quiet" onClick={search.retry}>
                 {t("tools.search.retry", {})}
@@ -518,7 +518,7 @@ export function DirectionsPanel({
         {state.status === "error" ? (
           <div className={styles.group} data-testid="directions-error">
             <p className={styles.statusLine}>
-              <Icon icon={TriangleAlert} className={styles.errorIcon} />
+              <Icon icon={Warning} className={styles.errorIcon} />
               <span>
                 {format(routingErrorMessage(state.kind, state.request))}
               </span>
@@ -545,7 +545,7 @@ export function DirectionsPanel({
         <div className={styles.actions}>
           <Button
             variant="quiet"
-            icon={Trash2}
+            icon={Trash}
             data-testid="directions-clear"
             onClick={directions.clear}
           >

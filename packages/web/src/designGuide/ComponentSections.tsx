@@ -17,23 +17,23 @@ import {
   VisuallyHidden,
 } from "@mapcairn/map";
 import {
-  ChevronRight,
+  ArrowClockwise,
+  ArrowUUpLeft,
+  CaretRight,
   Copy,
   Crosshair,
+  GpsFix,
   Info,
-  Layers,
-  LocateFixed,
+  MagnifyingGlass,
   MapPin,
   Minus,
-  Navigation2,
+  NavigationArrow,
   Plus,
-  RotateCw,
   Ruler,
-  Search,
-  Trash2,
-  Undo2,
+  Stack,
+  Trash,
   X,
-} from "lucide-react";
+} from "@phosphor-icons/react";
 import { type ReactNode, useState } from "react";
 import { ClientOnly } from "../app/ClientOnly";
 import * as styles from "./DesignGuide.css";
@@ -137,12 +137,12 @@ function IconButtonDemo() {
           <IconButton label="Map credits" icon={Info} expanded />
         </State>
         <State label="Busy">
-          <IconButton label="Locate me" icon={LocateFixed} busy />
+          <IconButton label="Locate me" icon={GpsFix} busy />
         </State>
         <State label="Disabled">
           <IconButton
             label="Undo last point"
-            icon={Undo2}
+            icon={ArrowUUpLeft}
             mirrorInRtl
             disabled
           />
@@ -170,9 +170,9 @@ function ControlGroupDemo() {
         </State>
         <State label="Map tools, one pressed">
           <ControlGroup label="Map tools">
-            <IconButton label="Map options" icon={Layers} />
+            <IconButton label="Map options" icon={Stack} />
             <IconButton label="Show the centre" icon={Crosshair} pressed />
-            <IconButton label="Reset north" icon={Navigation2} />
+            <IconButton label="Reset north" icon={NavigationArrow} />
           </ControlGroup>
         </State>
       </ul>
@@ -196,7 +196,7 @@ function ButtonDemo() {
           </Button>
         </State>
         <State label="Quiet">
-          <Button variant="quiet" icon={Trash2}>
+          <Button variant="quiet" icon={Trash}>
             Clear
           </Button>
         </State>
@@ -204,7 +204,7 @@ function ButtonDemo() {
           <Button busy>Searching</Button>
         </State>
         <State label="Disabled">
-          <Button disabled icon={Trash2}>
+          <Button disabled icon={Trash}>
             Delete pin
           </Button>
         </State>
@@ -226,7 +226,7 @@ function ChipDemo() {
           <Chip>Vector</Chip>
         </State>
         <State label="Label with icon">
-          <Chip icon={Layers}>Raster</Chip>
+          <Chip icon={Stack}>Raster</Chip>
         </State>
         <State label="Toggle, off">
           <Chip
@@ -277,7 +277,7 @@ function ListRowDemo() {
           label="Liberty"
           secondary="Colourful vector basemap"
           selected={chosen === "liberty"}
-          trailing={<Icon icon={ChevronRight} mirrorInRtl />}
+          trailing={<Icon icon={CaretRight} mirrorInRtl />}
           onClick={() => setChosen("liberty")}
         />
       </ul>
@@ -292,11 +292,11 @@ function EmptyStateDemo() {
       description="What a list shows when it has nothing to show: an icon, a real heading, an explanation and an optional next step."
     >
       <EmptyState
-        icon={Search}
+        icon={MagnifyingGlass}
         heading="No places found"
         headingLevel={4}
         action={
-          <Button variant="secondary" icon={RotateCw}>
+          <Button variant="secondary" icon={ArrowClockwise}>
             Try again
           </Button>
         }
@@ -493,7 +493,7 @@ function TooltipDemo() {
         <ul className={styles.states}>
           <State label="Focus or hover to open">
             <Tooltip content="Points the map north again">
-              <IconButton label="Face north" icon={Navigation2} />
+              <IconButton label="Face north" icon={NavigationArrow} />
             </Tooltip>
           </State>
         </ul>

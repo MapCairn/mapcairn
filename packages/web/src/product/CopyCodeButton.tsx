@@ -2,7 +2,7 @@
 // Copyright MapCairn contributors
 import type { ClipboardPort } from "@mapcairn/core";
 import { Icon, useAnnounce } from "@mapcairn/map";
-import { Check, Copy, X } from "lucide-react";
+import { Check, Copy, X } from "@phosphor-icons/react";
 import { useEffect, useRef, useState } from "react";
 import * as styles from "./ProductPage.css";
 import { COPY_CODE } from "./productContent";

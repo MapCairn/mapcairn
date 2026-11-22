@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
+
+import { MagnifyingGlassMinus } from "@phosphor-icons/react";
 import { render, screen } from "@testing-library/react";
-import { SearchX } from "lucide-react";
 import { describe, expect, it } from "vitest";
 import { Button } from "../Button";
 import { EmptyState } from "./EmptyState";
@@ -37,7 +38,7 @@ describe("EmptyState", () => {
     render(
       <EmptyState
         heading="No results"
-        icon={SearchX}
+        icon={MagnifyingGlassMinus}
         action={<Button>Clear search</Button>}
         data-testid="empty"
       />,

@@ -55,13 +55,13 @@
     "@mapcairn/core": "0.1.0",
     "@mapcairn/react": "0.1.0",
     "@mapcairn/theme": "0.1.0",
+    "@phosphor-icons/react": "^2.1.10",
     "@radix-ui/react-slider": "^1.6.1",
     "@radix-ui/react-switch": "^1.4.1",
     "@radix-ui/react-toggle-group": "^1.2.1",
     "@radix-ui/react-tooltip": "^1.4.1",
     "@vanilla-extract/css": "^1.21.3",
-    "@vanilla-extract/recipes": "^0.5.7",
-    "lucide-react": "^1.72.0"
+    "@vanilla-extract/recipes": "^0.5.7"
   },
   "peerDependencies": {
     "react": "^19.0.0",

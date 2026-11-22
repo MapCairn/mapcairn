@@ -187,19 +187,40 @@
           "level": "error",
           "options": {
             "paths": {
-              "lucide-react": {
+              "@phosphor-icons/react": {
                 "importNames": ["default"],
-                "message": "Import lucide icons by name from the package root: import { Search } from \"lucide-react\"."
+                "message": "Import Phosphor icons by name from the package root: import { MagnifyingGlass } from \"@phosphor-icons/react\"."
               }
             },
             "patterns": [
               {
-                "group": ["lucide-react"],
+                "group": ["@phosphor-icons/react"],
                 "importNamePattern": "([*]|default)",
-                "message": "Import lucide icons by name from the package root: import { Search } from \"lucide-react\". Namespace and default imports defeat tree shaking."
+                "message": "Import Phosphor icons by name from the package root: import { MagnifyingGlass } from \"@phosphor-icons/react\". Namespace and default imports defeat tree shaking."
               },
               {
                 "group": [
+                  "@phosphor-icons/react/*",
+                  "@phosphor-icons/core",
+                  "@phosphor-icons/core/*",
+                  "@phosphor-icons/webcomponents",
+                  "@phosphor-icons/webcomponents/*",
+                  "@phosphor-icons/vue",
+                  "@phosphor-icons/vue/*",
+                  "@phosphor-icons/web",
+                  "@phosphor-icons/web/*",
+                  "phosphor-react"
+                ],
+                "message": "Only the root of @phosphor-icons/react is allowed: no deep or sibling icon packages."
+              },
+              {
+                "group": [
+                  "react-icons",
+                  "react-icons/*",
+                  "@heroicons/*",
+                  "heroicons",
+                  "@tabler/icons*",
+                  "lucide-react",
                   "lucide-react/*",
                   "lucide",
                   "lucide/*",
@@ -209,19 +230,7 @@
                   "lucide-svelte",
                   "lucide-solid",
                   "lucide-preact",
-                  "lucide-angular"
-                ],
-                "message": "Only the root of lucide-react is allowed: no dynamic, deep or sibling icon packages."
-              },
-              {
-                "group": [
-                  "react-icons",
-                  "react-icons/*",
-                  "@heroicons/*",
-                  "heroicons",
-                  "@tabler/icons*",
-                  "@phosphor-icons/*",
-                  "phosphor-react",
+                  "lucide-angular",
                   "@fortawesome/*",
                   "@mui/icons-material",
                   "@mui/icons-material/*",
@@ -248,7 +257,7 @@
                   "@iconscout/*",
                   "grommet-icons"
                 ],
-                "message": "lucide-react is the only icon package."
+                "message": "@phosphor-icons/react is the only icon package."
               }
             ]
           }

@@ -9,7 +9,7 @@ import {
   type LayerTemplate,
   type MessageCatalogue,
 } from "@mapcairn/core";
-import { ArrowLeft, Crosshair, Layers, TriangleAlert, X } from "lucide-react";
+import { ArrowLeft, Crosshair, Stack, Warning, X } from "@phosphor-icons/react";
 import { type Ref, useId } from "react";
 import { useMessages, useResolveText } from "../services";
 import { Button } from "../ui/Button";
@@ -152,7 +152,7 @@ export function FeatureCard({
       ) : null}
       {definition.disclaimer ? (
         <p className={styles.disclaimer} data-testid="feature-card-disclaimer">
-          <Icon icon={TriangleAlert} />
+          <Icon icon={Warning} />
           {resolve(definition.disclaimer)}
         </p>
       ) : null}
@@ -179,7 +179,7 @@ export function FeatureCard({
         {detailSource ? (
           <Button
             variant="secondary"
-            icon={Layers}
+            icon={Stack}
             busy={detail?.status === "loading"}
             data-testid="feature-card-detail"
             onClick={() =>

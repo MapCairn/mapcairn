@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
-import { MapPin } from "lucide-react";
+import { MapPin } from "@phosphor-icons/react";
 import type { ReactNode, Ref } from "react";
 import { useMessages } from "../../services";
 import { Button } from "../../ui/Button";

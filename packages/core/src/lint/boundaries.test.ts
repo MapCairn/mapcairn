@@ -145,8 +145,8 @@ describe("dependency-cruiser boundaries", () => {
       'import { FaBeer } from "react-icons/fa";\nexport const x = FaBeer;\n',
     "packages/map/src/ui/badLucideStatic.ts":
       'import { x } from "lucide-static";\nexport const y = x;\n',
-    "packages/map/src/ui/goodLucide.ts":
-      'import { Search } from "lucide-react";\nexport const x = Search;\n',
+    "packages/map/src/ui/goodPhosphor.ts":
+      'import { MagnifyingGlass } from "@phosphor-icons/react";\nexport const x = MagnifyingGlass;\n',
 
     // Radix is wrapped in four primitives.
     "packages/map/src/ui/Button/badRadix.ts":
@@ -379,7 +379,7 @@ describe("dependency-cruiser boundaries", () => {
     ).not.toEqual([]);
   });
 
-  it("catches an icon package that is not lucide-react (resolved or not)", () => {
+  it("catches an icon package that is not @phosphor-icons/react (resolved or not)", () => {
     expect(
       findings.filter((f) =>
         f.endsWith("packages/map/src/ui/badLucideStatic.ts"),
@@ -396,7 +396,7 @@ describe("dependency-cruiser boundaries", () => {
     "packages/web/src/adapters/maplibre/workerUrl.ts",
     "packages/web/src/composition/goodAdapterPackage.ts",
     "packages/web/src/composition/goodAdapterPackageByName.ts",
-    "packages/map/src/ui/goodLucide.ts",
+    "packages/map/src/ui/goodPhosphor.ts",
     "packages/map/src/ui/Switch/goodRadix.ts",
     "packages/map/src/ui/Tooltip/goodRadix.ts",
     "examples/demo/src/goodEntry.ts",
@@ -426,15 +426,15 @@ describe("Biome rules", () => {
 
   const files: Record<string, string> = {
     "packages/map/src/ui/Example/imports.tsx": lines(
-      'import * as Lucide from "lucide-react";',
-      'import Default from "lucide-react";',
-      'import { Dyn } from "lucide-react/dynamic";',
+      'import * as Phosphor from "@phosphor-icons/react";',
+      'import Default from "@phosphor-icons/react";',
+      'import { Dyn } from "@phosphor-icons/react/dist/ssr";',
       'import { FaBeer } from "react-icons/fa";',
-      "export const x = [Lucide, Default, Dyn, FaBeer];",
+      "export const x = [Phosphor, Default, Dyn, FaBeer];",
     ),
     "packages/map/src/ui/Example/goodImports.tsx": lines(
-      'import { Search } from "lucide-react";',
-      "export const x = Search;",
+      'import { MagnifyingGlass } from "@phosphor-icons/react";',
+      "export const x = MagnifyingGlass;",
     ),
     "packages/map/src/ui/Example/a11y.tsx": lines(
       "export const a = <div onClick={() => 1}>x</div>;",

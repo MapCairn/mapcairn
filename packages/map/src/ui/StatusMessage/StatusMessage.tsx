@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
 import { useLatestRef } from "@mapcairn/react";
-import { CircleCheck, Info, TriangleAlert, X } from "lucide-react";
+import { CheckCircle, Info, Warning, X } from "@phosphor-icons/react";
 import {
   type FocusEvent,
   type HTMLAttributes,
@@ -29,8 +29,8 @@ const MIN_AUTO_DISMISS_MS = 6000;
 
 const icons: Record<StatusMessageVariant, IconComponent> = {
   info: Info,
-  success: CircleCheck,
-  error: TriangleAlert,
+  success: CheckCircle,
+  error: Warning,
 };
 
 /** The kind of message. Errors never dismiss themselves. */

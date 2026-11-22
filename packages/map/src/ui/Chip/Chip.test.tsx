@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
+
+import { MapPin } from "@phosphor-icons/react";
 import { fireEvent, render, screen } from "@testing-library/react";
-import { MapPin } from "lucide-react";
 import { describe, expect, it, vi } from "vitest";
 import { Chip } from "./Chip";
 

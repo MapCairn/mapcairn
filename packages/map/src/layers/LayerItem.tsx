@@ -19,7 +19,7 @@ import {
   resolveDateBound,
   resolveLayerTemplate,
 } from "@mapcairn/core";
-import { Hourglass, RotateCw, TriangleAlert } from "lucide-react";
+import { ArrowClockwise, Hourglass, Warning } from "@phosphor-icons/react";
 import { useState } from "react";
 import {
   useFormatMessage,
@@ -395,7 +395,7 @@ export function LayerItem({
               data-testid={`layer-status-${definition.id}`}
             >
               <span className={styles.statusError}>
-                <Icon icon={TriangleAlert} />
+                <Icon icon={Warning} />
                 {format(
                   describeTilesUnavailable(
                     describeChosenTime(definition, layer.controls),
@@ -410,12 +410,12 @@ export function LayerItem({
               data-testid={`layer-status-${definition.id}`}
             >
               <span className={styles.statusError}>
-                <Icon icon={TriangleAlert} />
+                <Icon icon={Warning} />
                 {errorText(status, online, t)}
               </span>
               <Button
                 variant="secondary"
-                icon={RotateCw}
+                icon={ArrowClockwise}
                 data-testid={`layer-retry-${definition.id}`}
                 onClick={() => layers.retry(definition.id)}
               >
@@ -446,7 +446,7 @@ export function LayerItem({
           ) : null}
           {definition.disclaimer ? (
             <p className={styles.disclaimer}>
-              <Icon icon={TriangleAlert} />
+              <Icon icon={Warning} />
               {resolve(definition.disclaimer)}
             </p>
           ) : null}

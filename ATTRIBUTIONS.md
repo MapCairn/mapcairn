@@ -93,7 +93,7 @@ The documentation site is built with [Docusaurus](https://docusaurus.io), which 
 
 [IBM Plex Sans](https://github.com/IBM/plex) is self-hosted through the `@fontsource-variable/ibm-plex-sans` package, under the SIL Open Font License 1.1.
 
-Icons are from [Lucide](https://lucide.dev), through the `lucide-react` package, under the ISC licence.
+Icons are from [Phosphor](https://phosphoricons.com), through the `@phosphor-icons/react` package, under the MIT licence.
 
 ## Guidelines
 

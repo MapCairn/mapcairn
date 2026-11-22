@@ -535,7 +535,6 @@ export const size = {
   minTarget: "2.75rem",
   gapBetweenTargets: "0.5rem",
   icon: "24px",
-  iconStroke: "1.75",
 } as const;
 
 /** Focus ring widths. `prefers-contrast: more` raises both. */

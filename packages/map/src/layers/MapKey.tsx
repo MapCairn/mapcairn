@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
 import { DEFAULT_MARKER_RADIUS, isCompactViewport } from "@mapcairn/core";
-import { ChevronDown, ChevronUp } from "lucide-react";
+import { CaretDown, CaretUp } from "@phosphor-icons/react";
 import { useEffect, useId, useRef, useState } from "react";
 import { useChromeLayout } from "../chrome/layoutContext";
 import { useFormatMessage, useMessages } from "../services";
@@ -129,7 +129,7 @@ export function MapKey({ layers, defaultMinimised }: MapKeyProps) {
               </span>
             </>
           ) : null}
-          <Icon icon={minimised ? ChevronUp : ChevronDown} />
+          <Icon icon={minimised ? CaretUp : CaretDown} />
         </button>
       </div>
       {minimised ? null : (

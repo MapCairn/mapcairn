@@ -2,16 +2,16 @@
 // Copyright MapCairn contributors
 import { shouldShowZoomButtons } from "@mapcairn/core";
 import {
-  Layers,
-  LocateFixed,
+  Gear,
+  GpsFix,
   Minus,
-  Navigation2,
-  Pentagon,
+  NavigationArrow,
+  Path,
   Plus,
-  Route,
+  Polygon,
   Ruler,
-  Settings,
-} from "lucide-react";
+  Stack,
+} from "@phosphor-icons/react";
 import { useCallback, useEffect, useRef } from "react";
 import { useMessages, usePreferences, useSettings } from "../../services";
 import { ControlGroup, IconButton, Surface } from "../../ui";
@@ -175,7 +175,7 @@ export function EndStack({
         >
           <IconButton
             label={t("chrome.endStack.resetBearing", {})}
-            icon={Navigation2}
+            icon={NavigationArrow}
             className={styles.compass}
             onClick={onResetBearing}
           />
@@ -188,7 +188,7 @@ export function EndStack({
       >
         <IconButton
           label={t("chrome.endStack.mapOptions", {})}
-          icon={Layers}
+          icon={Stack}
           expanded={mapOptionsOpen}
           controls={mapOptionsControls}
           data-focus-target="map-options"
@@ -204,7 +204,7 @@ export function EndStack({
         {directions ? (
           <IconButton
             label={t("chrome.endStack.directions", {})}
-            icon={Route}
+            icon={Path}
             pressed={directions.active}
             controls={directions.controls}
             data-focus-target="directions"
@@ -214,7 +214,7 @@ export function EndStack({
         {onDraw ? (
           <IconButton
             label={t("chrome.endStack.draw", {})}
-            icon={Pentagon}
+            icon={Polygon}
             pressed={drawing}
             data-focus-target="draw"
             onClick={onDraw}
@@ -222,13 +222,13 @@ export function EndStack({
         ) : null}
         <IconButton
           label={t("chrome.endStack.locate", {})}
-          icon={LocateFixed}
+          icon={GpsFix}
           busy={locating}
           onClick={onLocate}
         />
         <IconButton
           label={t("chrome.endStack.settings", {})}
-          icon={Settings}
+          icon={Gear}
           expanded={settingsOpen}
           controls={settingsControls}
           data-focus-target="settings"

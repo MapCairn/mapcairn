@@ -1229,6 +1229,5 @@ export const made = style({
 /** The heart: drawn in the accent, filled, at the icon size. */
 export const heart = style({
   color: tokens.color.accent,
-  fill: "currentColor",
   flexShrink: 0,
 });

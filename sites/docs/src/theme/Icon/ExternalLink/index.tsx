@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
 import { translate } from "@docusaurus/Translate";
+import { ArrowSquareOut } from "@phosphor-icons/react";
 import type { Props } from "@theme/Icon/ExternalLink";
-import { ExternalLink } from "lucide-react";
 import type { ReactNode } from "react";
-import { EXTERNAL_MARK_SIZE, ICON_STROKE } from "../../../iconMetrics";
+import { EXTERNAL_MARK_SIZE, ICON_WEIGHT } from "../../../iconMetrics";
 
 /**
- * The mark on a link that leaves the site, drawn with Lucide. The framework's
+ * The mark on a link that leaves the site, drawn with Phosphor. The framework's
  * own icon reads a hidden sprite that the build removes, because the sprite's
  * style attribute is not allowed by the Content-Security-Policy.
  */
@@ -16,10 +16,10 @@ export default function IconExternalLink({
   height = EXTERNAL_MARK_SIZE,
 }: Props): ReactNode {
   return (
-    <ExternalLink
+    <ArrowSquareOut
       width={width}
       height={height}
-      strokeWidth={ICON_STROKE}
+      weight={ICON_WEIGHT}
       aria-label={translate({
         id: "theme.IconExternalLink.ariaLabel",
         message: "(opens in new tab)",

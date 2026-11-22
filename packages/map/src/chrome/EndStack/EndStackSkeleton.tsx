@@ -1,15 +1,15 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
 import {
-  Layers,
-  LocateFixed,
+  Gear,
+  GpsFix,
   Minus,
-  Pentagon,
+  Path,
   Plus,
-  Route,
+  Polygon,
   Ruler,
-  Settings,
-} from "lucide-react";
+  Stack,
+} from "@phosphor-icons/react";
 import { ControlGroup, IconButton } from "../../ui";
 import * as styles from "./EndStack.css";
 
@@ -58,16 +58,16 @@ export function EndStackSkeleton({
         className={styles.group}
         data-skeleton="controls"
       >
-        <IconButton label={copy.mapOptions} icon={Layers} tabIndex={-1} />
+        <IconButton label={copy.mapOptions} icon={Stack} tabIndex={-1} />
         <IconButton label={copy.measure} icon={Ruler} tabIndex={-1} />
         {directions ? (
-          <IconButton label={copy.directions} icon={Route} tabIndex={-1} />
+          <IconButton label={copy.directions} icon={Path} tabIndex={-1} />
         ) : null}
         {draw ? (
-          <IconButton label={copy.draw} icon={Pentagon} tabIndex={-1} />
+          <IconButton label={copy.draw} icon={Polygon} tabIndex={-1} />
         ) : null}
-        <IconButton label={copy.locate} icon={LocateFixed} tabIndex={-1} />
-        <IconButton label={copy.settings} icon={Settings} tabIndex={-1} />
+        <IconButton label={copy.locate} icon={GpsFix} tabIndex={-1} />
+        <IconButton label={copy.settings} icon={Gear} tabIndex={-1} />
       </ControlGroup>
       <div className={styles.skeletonZoom}>
         <ControlGroup

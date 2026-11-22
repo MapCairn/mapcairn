@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
 import type { Bounds, SearchResult } from "@mapcairn/core";
-import { ChevronRight, Search, X } from "lucide-react";
+import { CaretRight, MagnifyingGlass, X } from "@phosphor-icons/react";
 import {
   type ChangeEvent,
   type FocusEvent,
@@ -324,7 +324,7 @@ export function SearchPill({
         ) : null}
         <IconButton
           label={t("tools.search.label", {})}
-          icon={Search}
+          icon={MagnifyingGlass}
           size="compact"
           disabled={query.trim().length < MIN_SEARCH_LENGTH}
           busy={state.status === "loading"}
@@ -377,7 +377,7 @@ export function SearchPill({
               </span>
               {index === activeIndex ? (
                 <Icon
-                  icon={ChevronRight}
+                  icon={CaretRight}
                   mirrorInRtl
                   className={styles.chevron}
                 />

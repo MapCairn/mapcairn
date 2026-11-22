@@ -2,7 +2,7 @@
 // Copyright MapCairn contributors
 import type { MessageKey } from "@mapcairn/core";
 import { Button } from "@mapcairn/map";
-import { RotateCw } from "lucide-react";
+import { ArrowClockwise } from "@phosphor-icons/react";
 import { useNavigate } from "react-router";
 import { PLAYGROUND_PATH } from "../constants/siteConfig";
 import * as styles from "./ErrorPage.css";
@@ -67,7 +67,7 @@ export function ErrorPage({ kind }: ErrorPageProps) {
             {t("app.error.notFound.link", {})}
           </a>
         ) : (
-          <Button icon={RotateCw} onClick={reload}>
+          <Button icon={ArrowClockwise} onClick={reload}>
             {t("app.reload", {})}
           </Button>
         )}

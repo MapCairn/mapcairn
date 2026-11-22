@@ -166,7 +166,7 @@ export default defineConfig(async ({ mode, command, isPreview }) => {
               },
               {
                 name: "ui-vendor",
-                test: /node_modules\/(lucide-react|zod)\//,
+                test: /node_modules\/(@phosphor-icons\/react|zod)\//,
               },
               // MapLibre has no group on purpose. The engine adapter imports
               // it (and its stylesheet) dynamically, so it stays an async

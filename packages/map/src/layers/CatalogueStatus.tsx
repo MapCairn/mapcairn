@@ -8,7 +8,7 @@ import {
   describeNoLayers,
   type Message,
 } from "@mapcairn/core";
-import { LoaderCircle, RotateCw, TriangleAlert } from "lucide-react";
+import { ArrowClockwise, CircleNotch, Warning } from "@phosphor-icons/react";
 import { type FocusEvent, useEffect, useRef, useState } from "react";
 import { useFormatMessage, useMessages } from "../services";
 import { Button } from "../ui/Button";
@@ -147,13 +147,13 @@ export function CatalogueStatus({
             <span>{format(describeLayersLoading())}</span>
           ) : (
             <span className={styles.statusError}>
-              <Icon icon={TriangleAlert} />
+              <Icon icon={Warning} />
               {format(failureText(catalogue))}
             </span>
           )}
           <Button
             variant="secondary"
-            icon={RotateCw}
+            icon={ArrowClockwise}
             busy={loading}
             data-testid="catalogue-retry"
             onClick={retry}
@@ -165,7 +165,7 @@ export function CatalogueStatus({
       ) : null}
       {!showsRetry && catalogue.status === "loading" ? (
         <p className={styles.status} data-testid="catalogue-status">
-          <Icon icon={LoaderCircle} spinning />
+          <Icon icon={CircleNotch} spinning />
           {format(describeLayersLoading())}
         </p>
       ) : null}

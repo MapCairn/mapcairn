@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
-import { Check } from "lucide-react";
+import { Check } from "@phosphor-icons/react";
 import type { HTMLAttributes, MouseEventHandler, ReactNode } from "react";
 import { Icon, type IconComponent } from "../Icon";
 import { chip, selectedMark } from "./Chip.css";
@@ -10,7 +10,7 @@ export interface ChipProps
   extends Omit<HTMLAttributes<HTMLElement>, "children" | "onClick"> {
   /** The chip text. */
   readonly children: ReactNode;
-  /** A leading icon, imported by name from `lucide-react`. */
+  /** A leading icon, imported by name from `@phosphor-icons/react`. */
   readonly icon?: IconComponent;
   /**
    * Whether the chip is on. Shown with a check icon in place of the leading

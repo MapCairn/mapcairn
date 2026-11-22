@@ -439,31 +439,31 @@ const cases: readonly Case[] = [
   },
   {
     rule: "icon-sizing",
-    name: "size on a lucide icon",
+    name: "size on a icon",
     file: TSX,
-    bad: `import { Search } from "lucide-react";\nexport const x = <Search size={20} />;`,
-    good: `import { Search } from "lucide-react";\nexport const x = <Icon icon={Search} />;`,
+    bad: `import { MagnifyingGlass } from "@phosphor-icons/react";\nexport const x = <MagnifyingGlass size={20} />;`,
+    good: `import { MagnifyingGlass } from "@phosphor-icons/react";\nexport const x = <Icon icon={MagnifyingGlass} />;`,
   },
   {
     rule: "icon-sizing",
-    name: "strokeWidth on an aliased lucide icon",
+    name: "weight on an aliased icon",
     file: TSX,
-    bad: `import { Search as Magnifier } from "lucide-react";\nexport const x = <Magnifier strokeWidth={1} />;`,
-    good: `import { Search as Magnifier } from "lucide-react";\nexport const x = <Magnifier className={cls} />;`,
+    bad: `import { MagnifyingGlass as Magnifier } from "@phosphor-icons/react";\nexport const x = <Magnifier weight="bold" />;`,
+    good: `import { MagnifyingGlass as Magnifier } from "@phosphor-icons/react";\nexport const x = <Magnifier className={cls} />;`,
   },
   {
     rule: "icon-sizing",
     name: "size on the Icon component",
     file: TSX,
-    bad: `export const x = <Icon icon={Search} size={32} />;`,
-    good: `export const x = <IconButton icon={Search} label="Search" size="compact" />;`,
+    bad: `export const x = <Icon icon={MagnifyingGlass} size={32} />;`,
+    good: `export const x = <IconButton icon={MagnifyingGlass} label="Search" size="compact" />;`,
   },
   {
     rule: "icon-only-button",
     name: "button with only an icon",
     file: TSX,
-    bad: `import { X } from "lucide-react";\nexport const b = <button type="button"><X /></button>;`,
-    good: `import { X } from "lucide-react";\nexport const b = <button type="button" aria-label="Close"><X /></button>;`,
+    bad: `import { X } from "@phosphor-icons/react";\nexport const b = <button type="button"><X /></button>;`,
+    good: `import { X } from "@phosphor-icons/react";\nexport const b = <button type="button" aria-label="Close"><X /></button>;`,
   },
   {
     rule: "icon-only-button",
@@ -616,7 +616,7 @@ describe("harmony rule scoping", () => {
   });
 
   it("allows icon sizing inside the Icon component only", () => {
-    const sized = `import { Search } from "lucide-react";\nexport const x = <Search size={24} strokeWidth={2} />;`;
+    const sized = `import { MagnifyingGlass } from "@phosphor-icons/react";\nexport const x = <MagnifyingGlass size={24} weight="bold" />;`;
     expect(scanSource("packages/map/src/ui/Icon/Icon.tsx", sized)).toEqual([]);
     expect(scanSource("packages/map/src/ui/Chip/Chip.tsx", sized)).not.toEqual(
       [],

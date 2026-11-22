@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
+
+import { DownloadSimple } from "@phosphor-icons/react";
 import { fireEvent, render, screen } from "@testing-library/react";
-import { Download } from "lucide-react";
 import { describe, expect, it, vi } from "vitest";
 import { Button } from "./Button";
 
@@ -42,7 +43,7 @@ describe("Button", () => {
   });
 
   it("shows a hidden leading icon and keeps the text as the name", () => {
-    render(<Button icon={Download}>Download</Button>);
+    render(<Button icon={DownloadSimple}>Download</Button>);
     const button = screen.getByRole("button", { name: "Download" });
     expect(button.querySelector("svg")?.getAttribute("aria-hidden")).toBe(
       "true",
@@ -87,7 +88,7 @@ describe("Button", () => {
   it("swaps the icon for a loader and ignores clicks while busy", () => {
     const onClick = vi.fn();
     render(
-      <Button busy icon={Download} onClick={onClick}>
+      <Button busy icon={DownloadSimple} onClick={onClick}>
         Save
       </Button>,
     );
@@ -110,10 +111,10 @@ describe("Button", () => {
   });
 
   it("passes mirrorInRtl on to its icon", () => {
-    const { rerender } = render(<Button icon={Download}>Save</Button>);
+    const { rerender } = render(<Button icon={DownloadSimple}>Save</Button>);
     const plain = document.querySelector("svg")?.getAttribute("class") ?? "";
     rerender(
-      <Button icon={Download} mirrorInRtl>
+      <Button icon={DownloadSimple} mirrorInRtl>
         Save
       </Button>,
     );

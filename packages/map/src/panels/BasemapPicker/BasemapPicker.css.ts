@@ -148,7 +148,6 @@ export const badgeIcon = style({
   height: "100%",
   padding: tokens.space.xxs,
   boxSizing: "border-box",
-  strokeWidth: tokens.size.iconStroke,
 });
 
 /** The short note under a name, such as "Uses more data" in Save data mode. */

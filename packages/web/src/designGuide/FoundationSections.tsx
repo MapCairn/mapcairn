@@ -2,7 +2,7 @@
 // Copyright MapCairn contributors
 import { Icon } from "@mapcairn/map";
 import { tokenValues } from "@mapcairn/theme";
-import { Check, TriangleAlert } from "lucide-react";
+import { Check, Warning } from "@phosphor-icons/react";
 import { Brand } from "../app/Brand";
 import { APP_ICONS } from "./appIcons";
 import * as styles from "./DesignGuide.css";
@@ -31,7 +31,7 @@ export function Verdict({ result }: { readonly result: PairResult }) {
       <span
         className={`${styles.verdict} ${result.passes ? styles.pass : styles.fail}`}
       >
-        <Icon icon={result.passes ? Check : TriangleAlert} />
+        <Icon icon={result.passes ? Check : Warning} />
         {result.passes ? "Pass" : "Fail"}
       </span>
     </span>
@@ -374,13 +374,13 @@ export function BrandSection() {
   );
 }
 
-/** Every Lucide icon the app imports, drawn through `Icon`. */
+/** Every Phosphor icon the app imports, drawn through `Icon`. */
 export function IconsSection() {
   return (
     <GuideSection
       id="icons"
       title="Icons"
-      intro="Lucide only, imported by name, drawn at 24px with one stroke width through the Icon component. This is every icon the app imports."
+      intro="Phosphor only, imported by name, drawn at 24px in one weight through the Icon component. This is every icon the app imports."
     >
       <ul className={styles.narrowGrid}>
         {Object.entries(APP_ICONS).map(([name, glyph]) => (

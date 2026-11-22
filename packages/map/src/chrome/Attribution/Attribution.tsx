@@ -7,7 +7,7 @@ import {
   type LayerAttribution,
   type ViewState,
 } from "@mapcairn/core";
-import { Info } from "lucide-react";
+import { Info } from "@phosphor-icons/react";
 import {
   type KeyboardEvent,
   type RefObject,

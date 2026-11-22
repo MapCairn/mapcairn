@@ -253,7 +253,6 @@ export const tokens: {
         minTarget: `var(--${string})`;
         gapBetweenTargets: `var(--${string})`;
         icon: `var(--${string})`;
-        iconStroke: `var(--${string})`;
     };
     focus: {
         innerWidth: `var(--${string})`;
