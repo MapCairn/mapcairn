@@ -1,6 +1,12 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
-import { THEME_STORAGE_KEY } from "@mapcairn/core";
+/**
+ * The key the reference site stores the colour choice under, written out in
+ * the script below. `themeBridge.test.ts` keeps it equal to core's
+ * `THEME_STORAGE_KEY`, so the script is plain text and builds nothing from a
+ * value.
+ */
+export const SHARED_THEME_KEY = "mapcairn:theme";
 
 /** The key the framework stores its own colour-mode choice under. */
 export const FRAMEWORK_THEME_KEY = "theme";
@@ -14,4 +20,5 @@ export const FRAMEWORK_THEME_KEY = "theme";
  * value, a blocked store included, changes nothing. The pages hash it in the
  * Content-Security-Policy (`plugins/securityHeadersPlugin.ts`).
  */
-export const THEME_BRIDGE_SCRIPT = `(function(){try{var s=localStorage.getItem(${JSON.stringify(THEME_STORAGE_KEY)});if(s==="light"||s==="dark"){localStorage.setItem(${JSON.stringify(FRAMEWORK_THEME_KEY)},s)}else if(s==="system"){localStorage.removeItem(${JSON.stringify(FRAMEWORK_THEME_KEY)})}}catch(e){}})()`;
+export const THEME_BRIDGE_SCRIPT =
+  '(function(){try{var s=localStorage.getItem("mapcairn:theme");if(s==="light"||s==="dark"){localStorage.setItem("theme",s)}else if(s==="system"){localStorage.removeItem("theme")}}catch(e){}})()';

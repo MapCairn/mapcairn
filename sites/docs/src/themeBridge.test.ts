@@ -2,7 +2,11 @@
 // Copyright MapCairn contributors
 import { THEME_STORAGE_KEY } from "@mapcairn/core";
 import { describe, expect, it } from "vitest";
-import { FRAMEWORK_THEME_KEY, THEME_BRIDGE_SCRIPT } from "./themeBridge";
+import {
+  FRAMEWORK_THEME_KEY,
+  SHARED_THEME_KEY,
+  THEME_BRIDGE_SCRIPT,
+} from "./themeBridge";
 
 /** Runs the script against a fake store and returns what it left in it. */
 function run(initial: Record<string, string>): Record<string, string> {
@@ -21,6 +25,19 @@ function run(initial: Record<string, string>): Record<string, string> {
 }
 
 describe("THEME_BRIDGE_SCRIPT", () => {
+  it("names the keys it reads and writes as the reference site and the framework do", () => {
+    expect(SHARED_THEME_KEY).toBe(THEME_STORAGE_KEY);
+    expect(THEME_BRIDGE_SCRIPT).toContain(
+      `localStorage.getItem("${THEME_STORAGE_KEY}")`,
+    );
+    expect(THEME_BRIDGE_SCRIPT).toContain(
+      `localStorage.setItem("${FRAMEWORK_THEME_KEY}",s)`,
+    );
+    expect(THEME_BRIDGE_SCRIPT).toContain(
+      `localStorage.removeItem("${FRAMEWORK_THEME_KEY}")`,
+    );
+  });
+
   it.each(["light", "dark"])(
     "copies an explicit %s choice to the framework's key",
     (choice) => {
