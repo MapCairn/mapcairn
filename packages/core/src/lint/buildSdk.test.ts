@@ -308,9 +308,9 @@ describe("the root scripts", () => {
     },
   );
 
-  it("builds the SDK packages once, then only the host and the example", () => {
+  it("builds the SDK packages once, then only the host, the example and the documentation site", () => {
     expect(scripts.build).toBe(
-      "npm run build:sdk && npm run build -w @mapcairn/web && npm run build -w @mapcairn/example-embed",
+      "npm run build:sdk && npm run build -w @mapcairn/web && npm run build -w @mapcairn/example-embed && npm run build -w @mapcairn/docs",
     );
     expect(scripts["build:sdk"]).toBe("node scripts/buildSdk.mjs");
   });
@@ -320,7 +320,7 @@ describe("every package script", () => {
   it("avoids environment-variable prefixes and node conditions, which fail in the Windows shell", () => {
     const folders = [
       ".",
-      ...["packages", "examples"].flatMap((parent) =>
+      ...["packages", "examples", "sites"].flatMap((parent) =>
         readdirSync(path.join(REPO, parent)).map((name) =>
           path.join(parent, name),
         ),

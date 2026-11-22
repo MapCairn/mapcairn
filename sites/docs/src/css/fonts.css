@@ -1,0 +1,6 @@
+/*
+ * IBM Plex Sans, self-hosted: the reference site's own declarations (the two
+ * subsets, the weights it uses and the metric-matched fallback), imported so
+ * the two sites cannot drift apart.
+ */
+@import "../../../../packages/web/src/fonts/fonts.css";

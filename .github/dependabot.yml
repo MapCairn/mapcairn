@@ -28,6 +28,10 @@ updates:
           - "@cloudflare/vite-plugin"
           - "vitest"
           - "@vitest/*"
+      # The documentation site's framework and its plugins release together.
+      npm-docusaurus:
+        patterns:
+          - "@docusaurus/*"
       # The API reports change with either of these, so the update that
       # follows them also needs `npm run api:update` (docs/guides/public-api.md).
       npm-api-reports:

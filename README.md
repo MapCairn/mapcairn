@@ -269,7 +269,7 @@ npm install
 npm run dev
 ```
 
-`npm run dev` serves the playground on port 5173. `npm run dev -w @mapcairn/example-embed` runs the example app instead. [`CONTRIBUTING.md`](CONTRIBUTING.md) lists the checks.
+`npm run dev` serves the playground on port 5173. `npm run dev -w @mapcairn/example-embed` runs the example app instead, and `npm run dev -w @mapcairn/docs` serves the documentation site on port 4410. [`CONTRIBUTING.md`](CONTRIBUTING.md) lists the checks.
 
 ## How it is checked
 
@@ -296,6 +296,8 @@ Most apps install only `@mapcairn/sdk`. The packages inside it are published on 
 `packages/web` is the playground, called the reference host in the rest of the documentation.
 
 ## Documentation
+
+The documentation site is built from [`sites/docs`](sites/docs) and served at `/docs/` on the reference site ([plan 0017](docs/plans/0017-documentation-site.md)). It has the Get started page so far; the guides in the table below move into it step by step, and the table says where each one is until it does.
 
 | Document                                                                             | Covers                                                                                                     |
 | ------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------- |

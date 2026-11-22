@@ -60,7 +60,7 @@ import { SDK_PACKAGES } from "./sdkPackages.mjs";
 /** The workspace folders held to the rule, relative to the repository root. */
 export const SDK_PACKAGE_PATHS = SDK_PACKAGES.map((name) => `packages/${name}`);
 /** Workspaces the rule leaves out, named in the output. */
-export const EXEMPT_PATHS = ["packages/web", "examples/embed"];
+export const EXEMPT_PATHS = ["packages/web", "examples/embed", "sites/docs"];
 /** The file a person edits to allow a licence or a package, as written in messages. */
 export const ALLOWLIST_FILE = "scripts/sdkLicences.allowlist.json";
 /** What a package with no usable licence field is reported as. */
@@ -352,7 +352,7 @@ export function describeFailure({ name, version, licence, requiredBy }) {
  */
 export function reportLines(report) {
   const lines = [
-    `sdk licences: not checked, by design: ${EXEMPT_PATHS.join(", ")} (the host and the example may use other licences)`,
+    `sdk licences: not checked, by design: ${EXEMPT_PATHS.join(", ")} (the host, the example and the documentation site may use other licences)`,
   ];
   for (const [label, names] of Object.entries(report.peers)) {
     if (names.length > 0) {

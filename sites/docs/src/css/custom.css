@@ -1,0 +1,434 @@
+/*
+ * The documentation's look, written against the project's tokens. The tokens
+ * come from @mapcairn/theme (loaded below). generated/infima.css maps the
+ * framework's variables onto them and gives each token a stable alias,
+ * --mc-<group>-<name>, which the rules here use. Nothing in this file is a
+ * colour, a length that belongs to the design or a font of its own; the few
+ * literals are layout facts, each with its reason beside it.
+ */
+@import "@mapcairn/theme/tokens.css";
+
+/*
+ * The one place the font families are named. The minifier drops an
+ * @font-face whose family no rule names, and the families are otherwise
+ * reached through a custom property, so this rule keeps them. The stack is
+ * the token's (tokens.type.family), which the body below uses.
+ */
+html {
+  font-family:
+    "IBM Plex Sans Variable", "IBM Plex Sans Fallback", system-ui, sans-serif;
+  --ifm-container-width: 72rem;
+  --ifm-container-width-xl: 72rem;
+  --ifm-navbar-height: calc(
+    var(--mc-size-min-target) +
+    var(--mc-space-xxs) *
+    2
+  );
+  --ifm-navbar-shadow: none;
+  --ifm-navbar-padding-horizontal: 0;
+  --ifm-navbar-padding-vertical: 0;
+  --column-inline: max(var(--mc-space-md), env(safe-area-inset-left, 0px));
+  --ifm-navbar-item-padding-horizontal: var(--mc-space-xs);
+  --ifm-navbar-item-padding-vertical: 0;
+  --ifm-footer-padding-vertical: var(--mc-space-lg);
+  --ifm-footer-padding-horizontal: 0;
+  --ifm-leading: var(--mc-type-large-line-height);
+  --ifm-transition-fast: var(--mc-motion-duration-fast);
+  --ifm-transition-timing-default: var(--mc-motion-easing);
+  --docusaurus-announcement-bar-height: 0px;
+}
+
+/* The product page's column padding: a tablet's width (48 rem) and wider gets the larger step. */
+@media (min-width: 48rem) {
+  html {
+    --column-inline: max(var(--mc-space-xl), env(safe-area-inset-left, 0px));
+  }
+}
+
+body {
+  font-family: var(--mc-type-family);
+  font-size: var(--mc-type-body-size);
+  line-height: var(--mc-type-body-line-height);
+  letter-spacing: var(--mc-type-body-tracking);
+  font-variant-numeric: tabular-nums;
+  color: var(--mc-color-text);
+  background-color: var(--mc-color-page-background);
+}
+
+/* Focus: the project's two-tone ring on every control and link. */
+:is(a, button, summary, [tabindex]):focus-visible {
+  outline: var(--mc-focus-outer-width) solid var(--mc-color-focus-ring);
+  outline-offset: var(--mc-focus-inner-width);
+  box-shadow: 0 0 0 var(--mc-focus-inner-width) var(--mc-color-focus-ring-inner);
+  border-radius: var(--mc-radius-inner);
+}
+
+/* Header: a slim bar on the page's ground with a hairline under it. */
+.navbar {
+  border-block-end: 1px solid var(--mc-color-hairline);
+  font-size: var(--mc-type-body-size);
+}
+
+.navbar__inner {
+  max-width: var(--ifm-container-width);
+  margin-inline: auto;
+  padding-inline: var(--column-inline);
+}
+
+.navbar__brand {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--mc-space-xs);
+  flex-shrink: 0;
+  min-height: var(--mc-size-min-target);
+  margin: 0;
+  color: var(--mc-color-text);
+  text-decoration: none;
+}
+
+.navbar__brand:hover {
+  color: var(--mc-color-text);
+  text-decoration: underline;
+  text-decoration-thickness: 2px;
+  text-underline-offset: 0.25em;
+}
+
+/* The sidebar and the page sit in the same 72 rem column as the header. */
+[class*="docRoot_"] {
+  width: 100%;
+  max-width: var(--ifm-container-width);
+  margin-inline: auto;
+  padding-inline: calc(var(--column-inline) - var(--ifm-spacing-horizontal));
+}
+
+[class*="toggle_"] {
+  display: flex;
+  align-items: center;
+}
+
+.navbar__items {
+  min-width: 0;
+}
+
+.navbar__items--right {
+  align-items: center;
+  gap: var(--mc-space-xxs);
+  flex: 0 1 auto;
+  justify-content: flex-end;
+}
+
+/* The links scroll sideways inside their own row when very large text leaves no room, so the bar stays one row tall. */
+.header-nav {
+  min-width: 0;
+  overflow-x: auto;
+}
+
+.header-nav__list {
+  display: flex;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.navbar__title {
+  overflow: visible;
+  text-overflow: clip;
+  font-weight: var(--mc-type-weight-semibold);
+}
+
+.brand-mark {
+  display: block;
+  flex-shrink: 0;
+  height: var(--mc-space-lg);
+  width: auto;
+  color: var(--mc-color-accent);
+}
+
+.brand-mark-stone {
+  fill: currentColor;
+  stroke: currentColor;
+}
+
+.brand-mark-halo {
+  fill: var(--mc-color-map-halo);
+  stroke: var(--mc-color-map-halo);
+}
+
+.navbar__link {
+  display: inline-flex;
+  padding-inline: 0;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--mc-size-min-target);
+  min-width: var(--mc-size-min-target);
+  border-radius: var(--mc-radius-inner);
+  color: var(--mc-color-accent);
+  font-weight: var(--mc-type-weight-semibold);
+  text-decoration: none;
+}
+
+@media (min-width: 30rem) {
+  .navbar__link {
+    padding-inline: var(--mc-space-xs);
+  }
+}
+
+/* On a phone the brand is the mark alone, which leaves room for the links; the name stays for a screen reader. */
+@media (max-width: 29.99rem) {
+  .navbar__title {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+}
+
+.navbar__link:hover,
+.navbar__link--active {
+  color: var(--mc-color-accent);
+}
+
+.navbar__link:hover {
+  background-color: var(--mc-color-accent-tint);
+  text-decoration: underline;
+  text-decoration-thickness: 2px;
+  text-underline-offset: 0.25em;
+}
+
+.navbar__link--active {
+  text-decoration: underline;
+  text-decoration-thickness: 2px;
+  text-underline-offset: 0.25em;
+}
+
+[class*="toggleButton"] {
+  min-width: var(--mc-size-min-target);
+  min-height: var(--mc-size-min-target);
+  color: var(--mc-color-text);
+  border-radius: var(--mc-radius-inner);
+}
+
+[class*="toggleButton"]:hover {
+  background-color: var(--mc-color-accent-tint);
+}
+
+/* Footer: where the project is made, the licence and the links, as on the product page. */
+.footer {
+  border-block-start: 1px solid var(--mc-color-hairline);
+  font-size: var(--mc-type-small-size);
+  line-height: var(--mc-type-small-line-height);
+  color: var(--mc-color-text-muted);
+}
+
+.footer .container {
+  max-width: var(--ifm-container-width);
+  margin-inline: auto;
+}
+
+.footer > .container {
+  display: flex;
+  flex-direction: column-reverse;
+  gap: var(--mc-space-md);
+  padding-inline: var(--column-inline);
+}
+
+.footer__bottom {
+  text-align: start;
+}
+
+.footer__copyright {
+  color: var(--mc-color-text);
+  font-size: var(--mc-type-body-size);
+  line-height: var(--mc-type-body-line-height);
+}
+
+.footer__links {
+  margin: 0;
+}
+
+.footer__link-item {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--mc-size-min-target);
+  color: var(--mc-color-accent);
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.2em;
+}
+
+.footer__item {
+  margin: 0;
+}
+
+.footer .footer__item + .footer__item {
+  margin-inline-start: var(--mc-space-md);
+}
+
+.footer__col {
+  display: flex;
+  flex-wrap: wrap;
+  padding: 0;
+}
+
+.footer__items {
+  display: flex;
+  flex-wrap: wrap;
+  margin: 0;
+}
+
+/* Reading text: the product page's reading size, headings from the type scale. */
+.markdown {
+  font-size: var(--mc-type-large-size);
+  line-height: var(--mc-type-large-line-height);
+  letter-spacing: var(--mc-type-large-tracking);
+  overflow-wrap: break-word;
+}
+
+.markdown h1 {
+  font-size: var(--mc-type-display-size);
+  line-height: var(--mc-type-display-line-height);
+  letter-spacing: var(--mc-type-display-tracking);
+}
+
+.markdown h2 {
+  font-size: var(--mc-type-title-size);
+  line-height: var(--mc-type-title-line-height);
+  letter-spacing: var(--mc-type-title-tracking);
+}
+
+.markdown h3 {
+  font-size: var(--mc-type-large-size);
+  line-height: var(--mc-type-large-line-height);
+}
+
+.markdown a {
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.2em;
+}
+
+.markdown a:hover {
+  text-decoration-thickness: 2px;
+}
+
+/* Sidebar, contents and breadcrumbs: quiet, on the same ground. */
+.menu__link,
+.table-of-contents__link {
+  color: var(--mc-color-text-muted);
+  border-radius: var(--mc-radius-inner);
+}
+
+.menu__link:hover,
+.table-of-contents__link:hover {
+  color: var(--mc-color-accent);
+  background-color: var(--mc-color-accent-tint);
+}
+
+.menu__link--active,
+.table-of-contents__link--active {
+  color: var(--mc-color-accent);
+  font-weight: var(--mc-type-weight-semibold);
+  background-color: var(--mc-color-accent-tint);
+}
+
+.breadcrumbs__link {
+  color: var(--mc-color-text-muted);
+  background-color: transparent;
+  border-radius: var(--mc-radius-inner);
+}
+
+.breadcrumbs__item--active .breadcrumbs__link {
+  color: var(--mc-color-text);
+  background-color: var(--mc-color-accent-tint);
+}
+
+/* Code: the surface tone, the token classes coloured from the tokens. */
+code {
+  border: 0;
+  border-radius: var(--mc-radius-inner);
+  background-color: var(--mc-color-surface-raised);
+}
+
+.theme-code-block {
+  box-shadow: none;
+  border: 1px solid var(--mc-color-hairline);
+  border-radius: var(--mc-radius-control);
+  background-color: var(--mc-color-surface-raised);
+}
+
+.theme-code-block pre {
+  background-color: transparent;
+  color: var(--mc-color-text);
+  font-size: var(--mc-type-body-size);
+  line-height: var(--mc-type-body-line-height);
+}
+
+.theme-code-block pre code {
+  background-color: transparent;
+}
+
+.token.comment,
+.token.prolog,
+.token.punctuation {
+  color: var(--mc-color-text-muted);
+}
+
+.token.keyword,
+.token.function,
+.token.tag,
+.token.selector,
+.token.builtin,
+.token.class-name {
+  color: var(--mc-color-accent);
+  font-weight: var(--mc-type-weight-semibold);
+}
+
+.token.comment {
+  font-style: italic;
+}
+
+/* Tables and block quotes. */
+table {
+  display: table;
+  width: 100%;
+  border-collapse: collapse;
+}
+
+table th,
+table td {
+  padding: var(--mc-space-xs) var(--mc-space-sm);
+  border: 1px solid var(--mc-color-hairline);
+}
+
+table tr:nth-child(2n) {
+  background-color: transparent;
+}
+
+table th {
+  background-color: var(--mc-color-surface-raised);
+  text-align: start;
+}
+
+blockquote {
+  border-inline-start: 3px solid var(--mc-color-accent);
+  color: var(--mc-color-text-muted);
+}
+
+.pagination-nav__link {
+  border: 1px solid var(--mc-color-hairline);
+  border-radius: var(--mc-radius-control);
+}
+
+.pagination-nav__link:hover {
+  border-color: var(--mc-color-accent);
+}
+
+.pagination-nav__label {
+  color: var(--mc-color-accent);
+}
+
+.pagination-nav__sublabel {
+  color: var(--mc-color-text-muted);
+}
