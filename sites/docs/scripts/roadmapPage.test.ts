@@ -114,6 +114,24 @@ describe("buildRoadmapPage", () => {
     expect(text).toContain("3 of 3 issues closed (100%), 0 open");
   });
 
+  it("floors the percentage, so almost done never reads as done", () => {
+    const text = buildRoadmapPage(ROADMAP, {
+      snapshot: { ...SNAPSHOT, milestones: { "5": { open: 1, closed: 249 } } },
+      source: "github",
+    });
+    expect(text).toContain("249 of 250 issues closed (99%), 1 open");
+  });
+
+  it("says the bar is a rough guide because issues differ in size", () => {
+    expect(page()).toContain(
+      "Issues differ in size, so a bar is a rough guide to how far a milestone has got.",
+    );
+  });
+
+  it("says the Now lane runs in parallel", () => {
+    expect(page()).toContain("Work under way. These run in parallel.");
+  });
+
   it("says so for a milestone with no issues, with no bar, and for one the counts miss", () => {
     const text = page();
     expect(card(text, "Layer controls")).toContain("No issues yet.");
@@ -125,7 +143,7 @@ describe("buildRoadmapPage", () => {
 
   it("links each milestone and its trackers, and shows the first sentence only", () => {
     const text = page();
-    expect(text).toContain(`[View on GitHub](${MILESTONE}/5)`);
+    expect(text).toContain(`[View Selection on GitHub](${MILESTONE}/5)`);
     expect(text).toContain(
       "[#1](https://github.com/MapCairn/mapcairn/issues/1)",
     );

@@ -23,7 +23,7 @@ describe("loadSearch", () => {
     ]);
     expect(first).toBe(second);
     expect(fetchIndex).toHaveBeenCalledTimes(1);
-    expect(first("alpha")).toHaveLength(1);
+    expect(first("alpha").results).toHaveLength(1);
   });
 
   it("forgets a failure so the next call tries again", async () => {

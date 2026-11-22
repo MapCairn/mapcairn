@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
+import { useLocation } from "@docusaurus/router";
 import { MagnifyingGlass } from "@phosphor-icons/react";
 import {
   lazy,
@@ -10,7 +11,7 @@ import {
   useState,
 } from "react";
 import { ICON_SIZE, ICON_WEIGHT } from "../../iconMetrics";
-import { focusIsLost } from "../../search/returnFocus";
+import { focusIsLost, sameDocumentTarget } from "../../search/returnFocus";
 import { isSearchShortcut } from "../../search/shortcut";
 
 /** The dialog and the search engine load the first time search is opened, so no page pays for them before. */
@@ -26,16 +27,46 @@ function isTyping(target: EventTarget | null): boolean {
 }
 
 /**
+ * Moves keyboard focus to the element with an id, giving it a tab index of -1
+ * until focus leaves it when it is not focusable already, as a heading is not.
+ * @returns Whether there was such an element.
+ */
+function focusTarget(id: string): boolean {
+  const target = document.getElementById(id);
+  if (!target) {
+    return false;
+  }
+  if (!target.hasAttribute("tabindex")) {
+    target.setAttribute("tabindex", "-1");
+    target.addEventListener("blur", () => target.removeAttribute("tabindex"), {
+      once: true,
+    });
+  }
+  target.focus();
+  return true;
+}
+
+/**
  * The header's search button, which opens the search dialog. `/` and the
  * command or control key with `K` open it from anywhere on the page.
  */
 export default function SearchButton(): ReactNode {
   const [open, setOpen] = useState(false);
+  const { pathname } = useLocation();
   const button = useRef<HTMLButtonElement>(null);
 
-  /** The dialog gives focus back to where it was; opened with `/` from the bare page that is the body, so the button takes it. */
-  const close = (): void => {
+  /**
+   * The dialog gives focus back to where it was. A result on the page being
+   * read only scrolls, so focus goes to its heading; opened with `/` from the
+   * bare page focus would be the body, so the button takes it.
+   */
+  const close = (chosen: string | null): void => {
     setOpen(false);
+    const id =
+      chosen === null ? null : sameDocumentTarget(chosen, { pathname });
+    if (id !== null && focusTarget(id)) {
+      return;
+    }
     if (focusIsLost(document.activeElement, document)) {
       button.current?.focus();
     }

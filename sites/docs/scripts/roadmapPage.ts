@@ -10,9 +10,13 @@ const REPOSITORY = "https://github.com/MapCairn/mapcairn";
 const ROADMAP_FILE_URL = `${REPOSITORY}/blob/main/ROADMAP.md`;
 const PERCENT = 100;
 
+/** Said once above the lanes: a count of issues is not a measure of effort. */
+const SIZE_NOTE =
+  "Issues differ in size, so a bar is a rough guide to how far a milestone has got.";
+
 /** What each lane means, in one line under its heading. */
 const LANE_NOTES = new Map([
-  ["Now", "Work under way."],
+  ["Now", "Work under way. These run in parallel."],
   ["Next", "Queued behind Now, in this order."],
   ["Later", "Milestones that wait for room in Next."],
 ]);
@@ -66,7 +70,7 @@ function progressLines(counts: MilestoneCounts | undefined): string[] {
   if (total === 0) {
     return ["No issues yet."];
   }
-  const percent = Math.round((counts.closed / total) * PERCENT);
+  const percent = Math.floor((counts.closed / total) * PERCENT);
   return [
     `<progress className="roadmap__bar" value={${counts.closed}} max={${total}} aria-hidden="true"></progress>`,
     "",
@@ -86,7 +90,7 @@ function cardOf(item: RoadmapItem, result: CountsResult): string {
     "",
     ...progressLines(counts),
     "",
-    `${track} · [View on GitHub](${item.milestoneUrl})${trackersOf(item)}`,
+    `${track} · [View ${escapeMdx(item.title)} on GitHub](${item.milestoneUrl})${trackersOf(item)}`,
     "",
     "</article>",
   ].join("\n");
@@ -149,6 +153,8 @@ export function buildRoadmapPage(
     `${PRIORITY_NOT_SCHEDULE} The milestones below are ranked in the order the work is meant to be done. Nothing here has a date or is a promise, and the order can change.`,
     "",
     `This page is built from [\`ROADMAP.md\`](${ROADMAP_FILE_URL}), which is where it is edited.${reviewed} ${freshnessOf(result)} The browser makes no request to GitHub to show it.`,
+    "",
+    SIZE_NOTE,
     "",
     '<div className="roadmap">',
     "",

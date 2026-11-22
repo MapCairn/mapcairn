@@ -59,40 +59,65 @@ describe("createSearch", () => {
   const search = createSearch(RECORDS);
 
   it("returns nothing for an empty or blank query", () => {
-    expect(search("")).toEqual([]);
-    expect(search("   ")).toEqual([]);
+    expect(search("").results).toEqual([]);
+    expect(search("   ").results).toEqual([]);
   });
 
   it("returns nothing when no section matches", () => {
-    expect(search("zzzzqqq")).toEqual([]);
+    expect(search("zzzzqqq").results).toEqual([]);
   });
 
   it("puts an exact name first: the page titled MapView beats prose that mentions it", () => {
-    expect(search("MapView")[0]?.url).toBe("/docs/api/map-view/");
+    expect(search("MapView").results[0]?.url).toBe("/docs/api/map-view/");
   });
 
   it("puts an exact heading ahead of sections that only mention the word", () => {
-    expect(search("props")[0]?.url).toBe("/docs/api/map-view/#props");
+    expect(search("props").results[0]?.url).toBe("/docs/api/map-view/#props");
   });
 
   it("matches a prefix as the person types", () => {
-    expect(search("basem").map((result) => result.url)).toContain(
+    expect(search("basem").results.map((result) => result.url)).toContain(
       "/docs/api/map-view/#props",
     );
   });
 
   it("finds a word in body text", () => {
-    expect(search("system theme").map((result) => result.url)).toContain(
-      "/docs/themes/",
-    );
+    expect(
+      search("system theme").results.map((result) => result.url),
+    ).toContain("/docs/themes/");
   });
 
   it("treats the last term as a prefix while typing", () => {
-    expect(search("install th").map((r) => r.url)).toContain("/docs/#install");
+    expect(search("install th").results.map((r) => r.url)).toContain(
+      "/docs/#install",
+    );
   });
 
   it("caps the number of results", () => {
-    expect(search("the", 2)).toHaveLength(2);
+    expect(search("the", 2).results).toHaveLength(2);
+  });
+
+  it("reports the real total when the cap cut the results", () => {
+    const capped = search("the", 2);
+    expect(capped.results).toHaveLength(2);
+    expect(capped.total).toBeGreaterThan(2);
+    const all = search("the");
+    expect(all.total).toBe(all.results.length);
+  });
+
+  it("is not partial when one section has every word", () => {
+    expect(search("system theme").partial).toBe(false);
+  });
+
+  it("is partial when no section has every word and some have a few", () => {
+    const outcome = search("system zzzzqqq");
+    expect(outcome.partial).toBe(true);
+    expect(outcome.results.length).toBeGreaterThan(0);
+  });
+
+  it("is not partial when nothing matches at all", () => {
+    expect(search("zzzzqqq").partial).toBe(false);
+    expect(search("").partial).toBe(false);
   });
 });
 

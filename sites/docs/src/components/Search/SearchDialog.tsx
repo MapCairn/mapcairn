@@ -13,11 +13,24 @@ import { loadSearch } from "../../search/loadSearch";
 import {
   excerptSegments,
   type Search,
+  type SearchOutcome,
   type SearchResult,
 } from "../../search/searchEngine";
+
+/** What a search shows before it has an index or a query. */
+const NO_OUTCOME: SearchOutcome = { results: [], total: 0, partial: false };
+
+/** The id of the line of keys, which the box points at. */
+const HINT_ID = "search-dialog-hint";
+
 import {
   announcement,
+  capMessage,
+  ERROR_MESSAGE,
+  emptyMessage,
+  HINT_LINE,
   type IndexStatus,
+  PARTIAL_MESSAGE,
   viewFor,
 } from "../../search/searchState";
 
@@ -68,12 +81,12 @@ function ResultItem({
  * Escape closes it. The box searches as you type; the Down arrow moves into
  * the results, which are links, and the Up arrow from the first returns to the
  * box. Enter in the box opens the first result.
- * @param props.onClose - Called when the dialog closes, by Escape, the backdrop or a chosen result.
+ * @param props.onClose - Called when the dialog closes, by Escape, the backdrop or a chosen result, with the chosen result's address or null.
  */
 export default function SearchDialog({
   onClose,
 }: {
-  onClose: () => void;
+  onClose: (chosen: string | null) => void;
 }): ReactNode {
   const dialog = useRef<HTMLDialogElement>(null);
   const input = useRef<HTMLInputElement>(null);
@@ -85,6 +98,8 @@ export default function SearchDialog({
   });
   const [query, setQuery] = useState("");
   const [attempt, setAttempt] = useState(0);
+  /** The address of the result that was chosen, so the page can send focus to it once the dialog has closed. */
+  const chosen = useRef<string | null>(null);
   /** Whether the press that began a click was on the backdrop, so a drag that ends there does not close the dialog. */
   const pressedBackdrop = useRef(false);
 
@@ -92,10 +107,12 @@ export default function SearchDialog({
     dialog.current?.showModal();
   }, []);
 
-  // biome-ignore lint/correctness/useExhaustiveDependencies: a new attempt number is how Try again asks for another fetch
   useEffect(() => {
     let current = true;
-    setLoaded({ status: "loading", search: null });
+    setLoaded({
+      status: attempt === 0 ? "loading" : "retrying",
+      search: null,
+    });
     loadSearch(indexUrl).then(
       (search) => current && setLoaded({ status: "ready", search }),
       () => current && setLoaded({ status: "error", search: null }),
@@ -105,10 +122,16 @@ export default function SearchDialog({
     };
   }, [indexUrl, attempt]);
 
-  const results = useMemo(
-    () => (loaded.search ? loaded.search(query) : []),
+  const outcome = useMemo(
+    () => (loaded.search ? loaded.search(query) : NO_OUTCOME),
     [loaded.search, query],
   );
+  const { results } = outcome;
+  const summary = {
+    shown: results.length,
+    total: outcome.total,
+    partial: outcome.partial,
+  };
   const view = viewFor(loaded.status, query, results.length);
 
   const links = (): HTMLAnchorElement[] =>
@@ -145,7 +168,7 @@ export default function SearchDialog({
       ref={dialog}
       className="search-dialog"
       aria-label="Search the documentation"
-      onClose={onClose}
+      onClose={() => onClose(chosen.current)}
       onMouseDown={(event) => {
         pressedBackdrop.current = event.target === dialog.current;
       }}
@@ -167,6 +190,7 @@ export default function SearchDialog({
             autoCapitalize="off"
             spellCheck={false}
             enterKeyHint="go"
+            aria-describedby={view === "error" ? undefined : HINT_ID}
             autoFocus
             value={query}
             onChange={(event) => setQuery(event.target.value)}
@@ -180,13 +204,18 @@ export default function SearchDialog({
             Close
           </button>
         </div>
+        {view !== "error" && (
+          <p id={HINT_ID} className="search-dialog__hint">
+            {HINT_LINE}
+          </p>
+        )}
         <p className="search-dialog__status" role="status">
-          {announcement(view, query, results.length)}
+          {announcement(view, query, summary)}
         </p>
         {view === "hint" && (
           <p className="search-dialog__message">
             Type a name, a word or a phrase. Names such as <code>MapView</code>{" "}
-            come first. Press Enter to open the first result.
+            come first.
           </p>
         )}
         {view === "loading" && (
@@ -194,21 +223,27 @@ export default function SearchDialog({
         )}
         {view === "error" && (
           <p className="search-dialog__message">
-            Search could not be loaded.{" "}
+            {ERROR_MESSAGE}{" "}
             <button
               type="button"
               className="search-dialog__retry"
-              onClick={() => setAttempt(attempt + 1)}
+              onClick={() => {
+                setAttempt(attempt + 1);
+                input.current?.focus();
+              }}
             >
               Try again
             </button>
           </p>
         )}
         {view === "empty" && (
-          <p className="search-dialog__message">
-            Nothing matches “{query.trim()}”. Try a shorter word, or the name of
-            an export.
-          </p>
+          <p className="search-dialog__message">{emptyMessage(query)}</p>
+        )}
+        {view === "results" && outcome.partial && (
+          <p className="search-dialog__message">{PARTIAL_MESSAGE}</p>
+        )}
+        {view === "results" && outcome.total > results.length && (
+          <p className="search-dialog__message">{capMessage(results.length)}</p>
         )}
         {view === "results" && (
           // biome-ignore lint/a11y/noNoninteractiveElementInteractions: the arrow keys move between the links inside this list
@@ -221,7 +256,10 @@ export default function SearchDialog({
               <ResultItem
                 key={result.id}
                 result={result}
-                onChoose={() => dialog.current?.close()}
+                onChoose={() => {
+                  chosen.current = result.url;
+                  dialog.current?.close();
+                }}
               />
             ))}
           </ul>
