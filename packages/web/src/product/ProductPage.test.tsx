@@ -60,7 +60,7 @@ const LICENCE_GUIDE_PATH = "/docs/guides/licence/";
  * nothing else past the front page.
  */
 const FOOTER_REPOSITORY_PAGES = [
-  ["Documentation", `${REPO}#documentation`],
+  ["Documentation", "/docs/"],
   ["Release notes", `${REPO}/releases`],
   ["Licence guide", LICENCE_GUIDE_PATH],
   ["Security", `${REPO}/blob/main/SECURITY.md`],
@@ -455,7 +455,7 @@ describe("the product page stands on its own", () => {
     ).toEqual([
       ["MapCairn", "/"],
       ["Playground", "/map"],
-      ["Docs", `${REPO}#documentation`],
+      ["Docs", "/docs/"],
       ["GitHub", REPO],
     ]);
   });

@@ -35,6 +35,7 @@ The [repository README's "Embed a map"](https://github.com/MapCairn/mapcairn#emb
 
 ## Next steps
 
+- Read [Get started](https://mapcairn.timothybrits.co.za/docs/get-started/) on the documentation site, which also has a page for each common task and the API reference.
 - [Show a real map](https://mapcairn.timothybrits.co.za/docs/guides/extending/#show-a-real-map): the adapter, the engine's worker file and a basemap.
 - [Theme the interface with your own colours](https://mapcairn.timothybrits.co.za/docs/guides/extending/#theme-the-sdk-with-your-own-colours), checked against WCAG 2.2 AA.
 - [Translate the interface](https://mapcairn.timothybrits.co.za/docs/guides/translate-the-sdk/) or offer a choice of languages.

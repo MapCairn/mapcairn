@@ -114,10 +114,10 @@ const REPOSITORY_BLOB = `${SOURCE_REPOSITORY_URL}/blob/main`;
 /** The guides on the documentation site, which shares this origin, so a path is enough. */
 const GUIDES_PATH = `${DOCS_PATH}guides`;
 
-/** The README's documentation section, the index of the guides, which the header and footer name Docs and Documentation. */
+/** The documentation site's front page, which the header and footer name Docs and Documentation. */
 export const DOCUMENTATION_LINK: InlineLink = {
   text: "Documentation",
-  href: `${SOURCE_REPOSITORY_URL}#documentation`,
+  href: DOCS_PATH,
 };
 
 /** What a GIS application needs and what the SDK has, partly has or lacks: the readiness text links it. */
