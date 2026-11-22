@@ -28,6 +28,12 @@ const TOUR_KEY = "mapcairn:tourSeen";
 const KEY_PREFIX = "mapcairn:";
 
 /** The two hosts the analytics script and its reports use. */
+/** Where the documentation site is served; it shares this origin's storage. */
+const DOCS_PATH = "/docs/";
+
+/** The key the documentation site's own framework keeps the theme under. */
+const DOCS_THEME_KEY = "theme";
+
 const ANALYTICS_SCRIPT_HOST = "static.cloudflareinsights.com";
 const ANALYTICS_BEACON_HOST = "cloudflareinsights.com";
 
@@ -105,6 +111,8 @@ export function PrivacyPage() {
             themeKey: code(THEME_STORAGE_KEY),
             tourKey: code(TOUR_KEY),
             keyPrefix: code(KEY_PREFIX),
+            docsPath: code(DOCS_PATH),
+            docsThemeKey: code(DOCS_THEME_KEY),
           }}
         />
 

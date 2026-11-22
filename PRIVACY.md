@@ -26,7 +26,9 @@ itself sends nothing; a layer you turn on during it loads from its provider as
 described below. These stay on your device and are
 never sent to a server. Where your browser reports a data saver or a very slow
 connection, the page reads that locally to choose the default for Save data.
-Nothing about it is sent anywhere.
+Nothing about it is sent anywhere. The documentation pages under `/docs/` read the same
+theme key and also keep your light or dark choice under `theme`, the key their
+framework uses; like the others it stays on your device.
 
 ## Analytics
 
