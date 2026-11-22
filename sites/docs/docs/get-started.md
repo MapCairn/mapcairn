@@ -178,6 +178,7 @@ If the page is blank, check that `src/page.css` is imported and that the project
 - [Embed a map](guides/embed-a-map.md) says what each part does and how another bundler serves the worker file.
 - [Extending MapCairn](guides/extending.md) lists what an app provides around the SDK and how to add a basemap, a data layer, a search or routing provider, or an adapter of your own.
 - The [API reference](api/index.md) lists every export of the six packages.
+- [Troubleshooting](troubleshooting.md) lists the error messages the SDK throws, with the cause and the fix of each, and what to check when the map is blank.
 
 ## Status
 
