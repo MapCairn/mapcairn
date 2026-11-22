@@ -5,7 +5,12 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
+import config from "../docusaurus.config";
+import { writeMarkdownFiles } from "../plugins/markdownCopiesPlugin";
+import { BASE_URL, SITE_ORIGIN } from "../src/siteConfig";
 import { inlineScriptHashes } from "./builtSite";
+import { parseDocSource } from "./markdownCopies";
+import { SDK_VERSION } from "./sdkVersion";
 import { buildHeadersFile } from "./securityHeaders";
 import { TARGETED_CLASSES } from "./targetedClasses";
 import { SCRIPT_BUDGET_BYTES, verifyBuild } from "./verifyBuild";
@@ -21,6 +26,15 @@ const ONE = {
   hash: inlineScriptHashes("<script>one()</script>")[0] ?? "",
 };
 
+/** The context the build check reads the site's names and addresses from. */
+const CONTEXT = {
+  origin: SITE_ORIGIN,
+  baseUrl: BASE_URL,
+  version: SDK_VERSION,
+  title: config.title ?? "",
+  tagline: config.tagline ?? "",
+};
+
 /** Writes a small built site: the pages, any files, and the `_headers` its inline scripts need. */
 function builtSite(
   pages: string,
@@ -34,6 +48,8 @@ function builtSite(
     join(root, "search-index.json"),
     JSON.stringify([{ id: "/docs/" }]),
   );
+  writeFileSync(join(root, "sitemap.xml"), "<urlset></urlset>");
+  writeMarkdownFiles(root, [], CONTEXT);
   for (const [path, body] of Object.entries(files)) {
     mkdirSync(join(root, path, ".."), { recursive: true });
     writeFileSync(join(root, path), body);
@@ -52,14 +68,14 @@ describe("verifyBuild", () => {
     const root = builtSite(
       '<a href="/map">m</a><a href="/docs/">home</a><script>one()</script>',
     );
-    expect(verifyBuild(root, [ONE])).toEqual([]);
+    expect(verifyBuild(root, [ONE], [])).toEqual([]);
   });
 
   it("reports a broken link, a style attribute and a resource from another origin", () => {
     const root = builtSite(
       '<a href="/docs/missing/">x</a><p style="color:red">y</p><script src="https://cdn.example/a.js"></script><script>one()</script>',
     );
-    const findings = verifyBuild(root, [ONE]).join("\n");
+    const findings = verifyBuild(root, [ONE], []).join("\n");
     expect(findings).toContain("/docs/missing/");
     expect(findings).toContain("style attribute");
     expect(findings).toContain("https://cdn.example/a.js");
@@ -67,13 +83,13 @@ describe("verifyBuild", () => {
 
   it("fails on an inline script that is not on the committed list, even though the page carries it", () => {
     const root = builtSite("<script>one()</script><script>two()</script>");
-    const findings = verifyBuild(root, [ONE]).join("\n");
+    const findings = verifyBuild(root, [ONE], []).join("\n");
     expect(findings).toContain("not in expectedInlineScripts.ts");
   });
 
   it("fails when an expected inline script is no longer in any page", () => {
     const root = builtSite("<p>none</p>");
-    expect(verifyBuild(root, [ONE]).join("\n")).toContain(
+    expect(verifyBuild(root, [ONE], []).join("\n")).toContain(
       'expected inline script "one"',
     );
   });
@@ -81,7 +97,7 @@ describe("verifyBuild", () => {
   it("fails when a framework class the stylesheet targets is gone", () => {
     const root = builtSite("<script>one()</script>");
     writeFileSync(join(root, "index.html"), "<script>one()</script>");
-    expect(verifyBuild(root, [ONE]).join("\n")).toContain(
+    expect(verifyBuild(root, [ONE], []).join("\n")).toContain(
       `framework class "${TARGETED_CLASSES[0]}"`,
     );
   });
@@ -89,13 +105,26 @@ describe("verifyBuild", () => {
   it("fails when the search index is missing or holds nothing", () => {
     const missing = builtSite("<script>one()</script>");
     rmSync(join(missing, "search-index.json"));
-    expect(verifyBuild(missing, [ONE]).join("\n")).toContain(
+    expect(verifyBuild(missing, [ONE], []).join("\n")).toContain(
       "search-index.json",
     );
     const empty = builtSite("<script>one()</script>", {
       "search-index.json": "[]",
     });
-    expect(verifyBuild(empty, [ONE]).join("\n")).toContain("search-index.json");
+    expect(verifyBuild(empty, [ONE], []).join("\n")).toContain(
+      "search-index.json",
+    );
+  });
+
+  it("reports a page that has no Markdown copy", () => {
+    const root = builtSite("<script>one()</script>");
+    const page = parseDocSource(
+      "extra",
+      "---\ntitle: Extra\ndescription: More.\n---\n# Extra\n",
+    );
+    expect(verifyBuild(root, [ONE], [page]).join("\n")).toContain(
+      'The page "extra" has no Markdown copy',
+    );
   });
 
   it("reports a front page that loads more script than the budget", () => {
@@ -106,6 +135,8 @@ describe("verifyBuild", () => {
         "assets/js/main.js": heavy,
       },
     );
-    expect(verifyBuild(root, [ONE]).join("\n")).toContain("over the budget");
+    expect(verifyBuild(root, [ONE], []).join("\n")).toContain(
+      "over the budget",
+    );
   });
 });

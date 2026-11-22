@@ -3,9 +3,11 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
+import config from "../docusaurus.config";
+import { readDocPages } from "../plugins/markdownCopiesPlugin";
 import { SEARCH_INDEX_FILE } from "../plugins/searchIndexPlugin";
 import { sidebar } from "../sidebars";
-import { BASE_URL, HOST_PATHS } from "../src/siteConfig";
+import { BASE_URL, HOST_PATHS, SITE_ORIGIN } from "../src/siteConfig";
 import {
   brokenInternalLinks,
   externalResources,
@@ -19,6 +21,9 @@ import {
   EXPECTED_INLINE_SCRIPTS,
   type ExpectedInlineScript,
 } from "./expectedInlineScripts";
+import { markdownFindings } from "./markdownChecks";
+import type { DocPage } from "./markdownCopies";
+import { SDK_VERSION } from "./sdkVersion";
 import { TARGETED_CLASSES } from "./targetedClasses";
 
 const SITE = fileURLToPath(new URL("..", import.meta.url));
@@ -57,12 +62,16 @@ function searchIndexSize(build: string): number {
  * resource from another origin, a framework class the stylesheet targets that
  * the pages no longer carry, a missing or empty search index, and a page over
  * the script budget.
+ * the pages no longer carry, a page without its Markdown copy or a place in
+ * the llms files (`markdownChecks.ts`), and a page over the script budget.
  * @param build - The build folder.
  * @param expected - The inline scripts the pages may carry.
+ * @param pages - The pages that must have a Markdown copy.
  */
 export function verifyBuild(
   build: string,
   expected: readonly ExpectedInlineScript[] = EXPECTED_INLINE_SCRIPTS,
+  pages: readonly DocPage[] = readDocPages(join(SITE, "docs")),
 ): Finding[] {
   const findings: Finding[] = [];
   const allowed = new Set(expected.map(({ hash }) => hash));
@@ -121,6 +130,15 @@ export function verifyBuild(
   if (searchIndexSize(build) === 0) {
     findings.push("search-index.json is missing or holds no sections.");
   }
+  findings.push(
+    ...markdownFindings(build, pages, {
+      origin: SITE_ORIGIN,
+      baseUrl: BASE_URL,
+      version: SDK_VERSION,
+      title: config.title ?? "",
+      tagline: config.tagline ?? "",
+    }),
+  );
   const bytes = scriptBytesFor(build, BASE_URL, BUDGET_PAGE);
   if (bytes > SCRIPT_BUDGET_BYTES) {
     findings.push(
