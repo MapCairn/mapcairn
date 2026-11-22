@@ -99,10 +99,10 @@ describe("the CLA text", () => {
     expect(claText).toContain(`Version ${CLA_VERSION}`);
   });
 
-  it("is version 1.3, which still names the project MapCairn and has no section for a package with its own licence", () => {
-    expect(CLA_VERSION).toBe("1.3");
+  it("is version 1.4, which still names the project MapCairn and has no section for a package with its own licence", () => {
+    expect(CLA_VERSION).toBe("1.4");
     expect(claText).not.toContain("## 7.");
-    expect(claText).toContain("- **1.3:**");
+    expect(claText).toContain("- **1.4:**");
     expect(AGREEMENT_SENTENCE.endsWith("contributions to MapCairn.")).toBe(
       true,
     );

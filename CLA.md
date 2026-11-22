@@ -54,6 +54,7 @@ A pull request is not merged until the comment is there. The `CLA` check on the 
 
 ## Changes
 
+- **1.4:** reworded the introduction, section 1 and section 5. The agreement sentence and the terms of the grants are unchanged. People who agreed to an earlier version have agreed to these terms and do not need to comment again. The signatures file records the version each person agreed to, and those entries are kept as they are.
 - **1.3:** removed a section that no longer applies to the Project. Sections 1 to 6 and the agreement sentence are unchanged. People who agreed to an earlier version have agreed to these terms and do not need to comment again. The signatures file records the version each person agreed to, and those entries are kept as they are.
 - **1.1:** the agreement sentence now names MapCairn. The terms are unchanged. People who agreed to version 1.0 have agreed to these terms for the same Project and do not need to comment again. The signatures file records the version each person agreed to, and those entries are kept as they are.
 - **1.0:** the first version.

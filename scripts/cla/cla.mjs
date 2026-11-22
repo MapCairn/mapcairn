@@ -22,10 +22,11 @@ export const AGREEMENT_SENTENCE =
  * The version of `CLA.md` that new signatures record. A signature recorded for
  * an earlier version stays valid and is never rewritten, because accounts are
  * matched by id whatever version they signed. Versions after 1.0 only changed
- * the project name in the agreement sentence and added or removed one section;
- * sections 1 to 6 never changed.
+ * the project name in the agreement sentence, added or removed one section and,
+ * in 1.4, reworded the introduction, section 1 and section 5;
+ * the agreement sentence and the grants never changed.
  */
-export const CLA_VERSION = "1.3";
+export const CLA_VERSION = "1.4";
 
 /** Hidden marker that identifies the one explanatory comment the check owns. */
 export const COMMENT_MARKER = "<!-- cla-bot -->";
