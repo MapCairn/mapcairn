@@ -110,10 +110,6 @@ const ALLOWED_PAGES: ReadonlyArray<readonly [string, string]> = [
     "the documentation: the README's index of the guides",
   ],
   [
-    "https://github.com/MapCairn/mapcairn/blob/main/docs/guides/capability-matrix.md",
-    "the capability matrix: what the SDK has and lacks, which the production answer links",
-  ],
-  [
     "https://github.com/MapCairn/mapcairn/releases",
     "the release notes: what changed and what to change on upgrade",
   ],

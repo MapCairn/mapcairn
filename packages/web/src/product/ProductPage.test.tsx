@@ -67,7 +67,7 @@ const FOOTER_REPOSITORY_PAGES = [
 ] as const;
 
 /** The capability matrix, which the production answer links for what the SDK has and lacks. */
-const CAPABILITY_MATRIX = `${REPO}/blob/main/docs/guides/capability-matrix.md`;
+const CAPABILITY_MATRIX = "/docs/guides/capability-matrix/";
 
 /** The example app, which the answer on how to use the SDK links. */
 const EXAMPLE_APP = `${REPO}/tree/main/examples/embed`;
@@ -1063,12 +1063,7 @@ describe("the embedding example", () => {
         /\]\(https:\/\/mapcairn\.timothybrits\.co\.za\/docs\/guides\/([\w-]+)\/(#[^)]*)?\)/g,
         (_link, name: string, hash = "") => `](${name}.md${hash})`,
       )
-      .replaceAll("](docs/guides/", `](${REPO}/blob/main/docs/guides/`)
-      .replaceAll("](examples/", `](${REPO}/blob/main/examples/`)
-      .replaceAll(
-        "[`docs/guides/content-security-policy.md`]",
-        "[`content-security-policy.md`]",
-      );
+      .replaceAll("](examples/", `](${REPO}/blob/main/examples/`);
     expect(README.indexOf(start)).toBeGreaterThan(0);
     expect(EMBED_GUIDE).toContain(fromReadme);
   });

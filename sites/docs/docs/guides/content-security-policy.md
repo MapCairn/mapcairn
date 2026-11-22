@@ -1,8 +1,17 @@
+---
+
+title: Content Security Policy
+sidebar_label: Content Security Policy
+description: The Content-Security-Policy a page that hosts the SDK needs, directive by directive.
+---
+
 # A content security policy for a host
 
-What a page that embeds the SDK must allow in its Content Security Policy, and why. The map engine, MapLibre GL JS, loads styles, tiles and images from the origins its definitions name, fetches its label glyphs like other data, and runs a worker; a host's own adapters fetch from the providers its definitions name. A strict policy must allow every one of those origins and still let the engine work.
+This page is for a developer who hosts a page that embeds the SDK under a strict Content Security Policy. By the end you will have a policy that allows what the map needs, and know why each directive is there. The map engine, MapLibre GL JS, loads styles, tiles and images from the origins its definitions name, fetches its label glyphs like other data, and runs a worker; a host's own adapters fetch from the providers its definitions name. A strict policy must allow every one of those origins and still let the engine work.
 
-The reference host is the worked example. Its policy is `packages/web/public/_headers` for responses served straight from static assets, and `packages/web/src/constants/securityHeaders.ts` for everything else; a test keeps the two in step. The architecture behind the adapter is in [`ARCHITECTURE.md`](../../ARCHITECTURE.md) ("The map adapter"), and adding the basemaps, layers and adapters a policy names is in [`extending.md`](https://mapcairn.timothybrits.co.za/docs/guides/extending/).
+Checked against `@mapcairn/sdk` %sdkVersion%, the version in this repository.
+
+The reference host is the worked example. Its policy is `packages/web/public/_headers` for responses served straight from static assets, and `packages/web/src/constants/securityHeaders.ts` for everything else; a test keeps the two in step. The architecture behind the adapter is in [`ARCHITECTURE.md`](https://github.com/MapCairn/mapcairn/blob/main/ARCHITECTURE.md) ("The map adapter"), and adding the basemaps, layers and adapters a policy names is in [Extending MapCairn](extending.md).
 
 ## The shape of the policy
 
@@ -32,7 +41,7 @@ In development the policy is relaxed in `style-src` and `connect-src` by the `de
 
 Without `'unsafe-inline'`, two things a host might otherwise reach for are blocked: a `<style>` element and a `style=""` attribute written into markup. Styling through the CSS object model still works. The adapter sizes the hidden container it builds an image-export map in by assigning to `element.style`, which the production policy allows, unlike a `style` attribute (`imageExport.ts`).
 
-A host theme is a file too: `createThemeStylesheet` in `@mapcairn/theme` makes a stylesheet for the host to serve from its own origin, so `style-src 'self'` allows it with no nonce (see [Theme the SDK with your own colours](https://mapcairn.timothybrits.co.za/docs/guides/extending/#theme-the-sdk-with-your-own-colours)). The browser test `theme-override.spec.ts` loads one under the reference policy and records no violation.
+A host theme is a file too: `createThemeStylesheet` in `@mapcairn/theme` makes a stylesheet for the host to serve from its own origin, so `style-src 'self'` allows it with no nonce (see [Theme the SDK with your own colours](extending.md#theme-the-sdk-with-your-own-colours)). The browser test `theme-override.spec.ts` loads one under the reference policy and records no violation.
 
 The SDK keeps style attributes out of server-rendered markup for this reason, and its tests require it: the map host, the chrome, the sheet, the readout and the served pages are each asserted to render none (`MapView.tsx`, `MapChrome.test.tsx`, `Sheet.test.tsx`, `MapReadout.test.tsx` and `ChromeSkeleton.test.tsx` in `packages/map`; `root.test.tsx`, `home.test.tsx` and the e2e `design.spec.ts` in `packages/web`). The one React style prop in the SDK, the fill custom property of the slider track (`Slider.tsx`), reaches the page only in the browser: the sections that hold it are not server-rendered, and the server sends a decorative skeleton in their place (`home.test.tsx`). How React applies a style prop in the browser was not checked.
 
@@ -64,11 +73,11 @@ The reference host's list also includes the content delivery network one of its 
 
 ## worker-src
 
-`'self' blob:`, for the engine's worker. MapLibre runs its work in a web worker. The reference host's build emits the worker as a self-contained same-origin asset, so `'self'` covers it, including on iOS. The host gives the adapter that file's URL through its `loadWorkerUrl` option (`workerUrl.ts`), and the adapter tells the engine before any map exists, because without that the engine finds no worker inside a bundle and the map stays blank (`engineLoader.ts`). The `blob:` entry is kept because the engine can also start a worker from a blob URL, for example when the worker file is not on the page's origin; this path is in the engine's source and was not checked in a running browser. The same-origin case is checked: the consumer check's browser leg (`docs/guides/public-api.md`) serves a page that names only `@mapcairn/sdk` under a policy with `worker-src 'self' blob:`, and the engine's worker, fetched from the page's origin, runs with no violation reported.
+`'self' blob:`, for the engine's worker. MapLibre runs its work in a web worker. The reference host's build emits the worker as a self-contained same-origin asset, so `'self'` covers it, including on iOS. The host gives the adapter that file's URL through its `loadWorkerUrl` option (`workerUrl.ts`), and the adapter tells the engine before any map exists, because without that the engine finds no worker inside a bundle and the map stays blank (`engineLoader.ts`). The `blob:` entry is kept because the engine can also start a worker from a blob URL, for example when the worker file is not on the page's origin; this path is in the engine's source and was not checked in a running browser. The same-origin case is checked: the consumer check's browser leg ([Public API](public-api.md)) serves a page that names only `@mapcairn/sdk` under a policy with `worker-src 'self' blob:`, and the engine's worker, fetched from the page's origin, runs with no violation reported.
 
 The subtle part is caching. A worker script takes its policy from its own response, and the worker file is cached as immutable, so a copy fetched before the policy changed would keep enforcing the old one for as long as it is cached. The reference host adds a short cache key, derived from the policy, to the worker URL, so every policy change is a new address and no device is left on a stale policy (`workerUrl.ts` and `workerCacheKey.ts`). The adapter does not add a key itself: a host that caches the worker for a long time puts one in the URL its `loadWorkerUrl` resolves to, and keeps the worker same-origin.
 
-A host that installs the packaged adapter writes this directive the same way: `'self'` when `loadWorkerUrl` resolves to a file on the page's own origin, which is what a Vite `?worker&url` import gives (the setup is in [`extending.md`](https://mapcairn.timothybrits.co.za/docs/guides/extending/#show-a-real-map)). `blob:` is needed only if you serve the worker from another origin and the engine falls back to a blob URL, which was not tried here.
+A host that installs the packaged adapter writes this directive the same way: `'self'` when `loadWorkerUrl` resolves to a file on the page's own origin, which is what a Vite `?worker&url` import gives (the setup is in [Extending MapCairn](extending.md#show-a-real-map)). `blob:` is needed only if you serve the worker from another origin and the engine falls back to a blob URL, which was not tried here.
 
 Leave `worker-src` out and the engine's worker never loads, which the adapter treats as fatal, so the map stays blank (`MapLibreMapAdapter.ts`). Reasoned from the adapter's code. The browser leg was also run once with `worker-src 'none'` while it was written: the browser refused the worker, the console and the leg's violation report said so, and the map stayed in its error state. That run is not a standing test.
 
@@ -91,16 +100,16 @@ What the function adds, by definition:
 
 A definition names only the first host a request goes to, and a host's adapters are not definitions at all, so two kinds of origin are yours to pass in `connectOrigins`. Each must be a bare `https` origin (no path, wildcard or trailing slash), and the function throws on anything else, on a definition URL that is not `https` or has a placeholder in its host, and on a script source holding a semicolon, comma or space:
 
-- The hosts a vector style requests for its sprites, glyphs and tile sets. Read the style and its tile sets for them, as [`extending.md`](https://mapcairn.timothybrits.co.za/docs/guides/extending/) says.
+- The hosts a vector style requests for its sprites, glyphs and tile sets. Read the style and its tile sets for them, as [Extending MapCairn](extending.md) says.
 - The origin of each adapter: place search, suggestions and routing. In the reference host these are written in the adapters' own code (`NominatimSearchProvider.ts`, `PhotonSuggestionProvider.ts`, `ValhallaRoutingProvider.ts`), not in a definition.
 
 The rest is fixed in the function, as the sections above describe it: `default-src 'self'`, `'self'` in every list, no inline style, the worker from `'self' blob:` and the closing set. Whatever inline scripts your page runs go in `scriptSources` as a hash or a nonce, and the function adds no analytics or other third-party origin on its own.
 
 Offer only what the page uses: the policy follows the list you pass. The SDK's `BASEMAPS` includes a basemap served from `tiles.versatiles.org`, and the reference host's policy leaves that origin out because the host does not offer that basemap (`securityHeaders.test.ts`).
 
-Two limits. If the policy is served from more than one place, as the reference host's is (`_headers` and the Worker), keep the copies in step with a test, as it does (`securityHeaders.test.ts`). And the function takes the definitions as they are at the time it is called, so a catalogue that loads layers at runtime ([`serving-layers.md`](serving-layers.md)) needs the policy built after the layers are known, or the layers' origins listed ahead of time.
+Two limits. If the policy is served from more than one place, as the reference host's is (`_headers` and the Worker), keep the copies in step with a test, as it does (`securityHeaders.test.ts`). And the function takes the definitions as they are at the time it is called, so a catalogue that loads layers at runtime ([`serving-layers.md`](https://github.com/MapCairn/mapcairn/blob/main/docs/guides/serving-layers.md)) needs the policy built after the layers are known, or the layers' origins listed ahead of time.
 
-Then test it. The reference host's loop test checks its own definitions against its own policy (`layers.test.ts`); a host needs its own test that its policy lists the origins its definitions request ([`serving-layers.md`](serving-layers.md)), and building the policy from the same definitions, as above, is one way to make that test hold by construction. Last, load the page with the browser console open: a policy that misses an origin says so there, with the directive to add it to.
+Then test it. The reference host's loop test checks its own definitions against its own policy (`layers.test.ts`); a host needs its own test that its policy lists the origins its definitions request ([`serving-layers.md`](https://github.com/MapCairn/mapcairn/blob/main/docs/guides/serving-layers.md)), and building the policy from the same definitions, as above, is one way to make that test hold by construction. Last, load the page with the browser console open: a policy that misses an origin says so there, with the directive to add it to.
 
 ## What this guide does not say
 

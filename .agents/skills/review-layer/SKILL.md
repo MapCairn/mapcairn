@@ -34,7 +34,7 @@ For each new or changed layer, list its source kind (`feed`, `query`, `tiles` or
 
 **Content-Security-Policy**
 
-Run `review-security` for anything beyond the layer's own origins. Layer-specific: each origin is in `packages/web/public/_headers` and `packages/web/src/constants/securityHeaders.ts`, as a full `https` origin with no wildcard. A feed, detail or identify origin needs `connect-src`; a tile origin needs `connect-src` and `img-src` (`docs/guides/content-security-policy.md`). A layer adds an origin, never a hash. Name an origin broader than the layer needs (a whole content delivery network) as a risk.
+Run `review-security` for anything beyond the layer's own origins. Layer-specific: each origin is in `packages/web/public/_headers` and `packages/web/src/constants/securityHeaders.ts`, as a full `https` origin with no wildcard. A feed, detail or identify origin needs `connect-src`; a tile origin needs `connect-src` and `img-src` (`sites/docs/docs/guides/content-security-policy.md`). A layer adds an origin, never a hash. Name an origin broader than the layer needs (a whole content delivery network) as a risk.
 
 **Failure, limits and cost**
 
@@ -47,7 +47,7 @@ Run `review-security` for anything beyond the layer's own origins. Layer-specifi
 
 - Every word a person reads is a `MessageKey`, a host `{ key, text }` or a plain string (`sites/docs/docs/guides/extending.md`), with Afrikaans in `packages/web/src/i18n/af.ts` or `afDefinitionTexts.ts`. Each new key is also added to `EXPECTED_PLACEHOLDERS` in `packages/core/src/lint/messages.test.ts` (same paragraph of `extending.md`). Typecheck holds `af.ts` complete and `messages.test.ts` finds an Afrikaans value left in English; do not approve Afrikaans wording or mark it reviewed.
 - A new layer is a new file picked up by `import.meta.glob`. A `switch` or `if` on a layer id, provider or response shape in code is a finding. A feed has a recorded fixture with a `manifest.json` count and nothing personal in it. A new provider kind rather than a new definition is a port change: `ARCHITECTURE.md` ("Adding an adapter") and `design-solution`.
-- Documents: `ATTRIBUTIONS.md`, `PRIVACY.md` with `PrivacyPage.tsx`, the guides and `docs/guides/capability-matrix.md` where a row is now true or false. Check each statement with `review-docs`.
+- Documents: `ATTRIBUTIONS.md`, `PRIVACY.md` with `PrivacyPage.tsx`, the guides and `sites/docs/docs/guides/capability-matrix.md` where a row is now true or false. Check each statement with `review-docs`.
 
 ## 3. Choose who runs it
 

@@ -1,6 +1,6 @@
 # Serving the SDK from IIS and server-rendered pages
 
-How to put a MapCairn map in a page that a Windows web server serves, including a page a server renders for each request, such as a Razor page. It is for a developer at a company that runs IIS, and possibly ASP.NET Core or classic ASP.NET MVC, with no Node on the server. The architecture behind the SDK is in [`ARCHITECTURE.md`](../../ARCHITECTURE.md), the policy a page needs is in [`content-security-policy.md`](content-security-policy.md), and the app side of embedding is in [`extending.md`](https://mapcairn.timothybrits.co.za/docs/guides/extending/#embed-the-sdk-in-an-app-of-your-own).
+How to put a MapCairn map in a page that a Windows web server serves, including a page a server renders for each request, such as a Razor page. It is for a developer at a company that runs IIS, and possibly ASP.NET Core or classic ASP.NET MVC, with no Node on the server. The architecture behind the SDK is in [`ARCHITECTURE.md`](../../ARCHITECTURE.md), the policy a page needs is in [`content-security-policy.md`](https://mapcairn.timothybrits.co.za/docs/guides/content-security-policy/), and the app side of embedding is in [`extending.md`](https://mapcairn.timothybrits.co.za/docs/guides/extending/#embed-the-sdk-in-an-app-of-your-own).
 
 **What was checked.** This guide was written on 2026-11-20 on a machine with no Windows, IIS or ASP.NET. Every IIS and ASP.NET claim was checked against the Microsoft Learn page linked beside it, and none was run. The `web.config` and Razor samples are taken from those pages' shapes and were not loaded by a server. The build claims were checked by running the build, as "What was tested" says. A claim without a link and without a file named beside it is a recommendation, not a finding.
 
@@ -119,7 +119,7 @@ This guide does not say which ASP.NET Core version your project needs, or whethe
 
 ## Content security policy
 
-[`content-security-policy.md`](content-security-policy.md) is the reference: which directives the map needs and why, and `buildContentSecurityPolicy` in `examples/embed/src/contentSecurityPolicy.ts` builds the header from the basemaps and layers your page offers. This guide does not repeat the origin lists. Send the result with `customHeaders`:
+[`content-security-policy.md`](https://mapcairn.timothybrits.co.za/docs/guides/content-security-policy/) is the reference: which directives the map needs and why, and `buildContentSecurityPolicy` in `examples/embed/src/contentSecurityPolicy.ts` builds the header from the basemaps and layers your page offers. This guide does not repeat the origin lists. Send the result with `customHeaders`:
 
 ```xml
 <system.webServer>
@@ -205,7 +205,7 @@ An existing site stylesheet is a risk. The SDK's primitives sit in a cascade lay
 
 ### Language and direction
 
-Set `lang` and `dir` on `<html>` in the Razor layout from the page's language, for example `<html lang="en-GB" dir="ltr">`, as the [translation guide](translate-the-sdk.md) says (the reference host renders its default on the server and keeps both in step on the client). `data-fixed-language` on `<html>` matters only if the theme bootstrap script is given a list of offered languages (`buildThemeBootstrapScript(offeredLanguages)`): that script then sets `lang` and `dir` from a stored choice unless the attribute is present. The call shown above passes none, so its script never touches `lang` or `dir` and the attribute changes nothing (`packages/core/src/theme/themeBootstrap.ts`).
+Set `lang` and `dir` on `<html>` in the Razor layout from the page's language, for example `<html lang="en-GB" dir="ltr">`, as the [translation guide](https://mapcairn.timothybrits.co.za/docs/guides/translate-the-sdk/) says (the reference host renders its default on the server and keeps both in step on the client). `data-fixed-language` on `<html>` matters only if the theme bootstrap script is given a list of offered languages (`buildThemeBootstrapScript(offeredLanguages)`): that script then sets `lang` and `dir` from a stored choice unless the attribute is present. The call shown above passes none, so its script never touches `lang` or `dir` and the attribute changes nothing (`packages/core/src/theme/themeBootstrap.ts`).
 
 ### Layers, login and what stays on the server
 

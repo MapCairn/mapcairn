@@ -1,6 +1,15 @@
+---
+
+title: Performance
+sidebar_label: Performance
+description: What the SDK loads and costs, measured, and how to keep a host fast.
+---
+
 # Performance and Lighthouse
 
-What was measured on 2026-11-11, what was tried and what was left alone, so the same experiments are not repeated. Tracked in [#8](https://github.com/MapCairn/mapcairn/issues/8), then [#329](https://github.com/MapCairn/mapcairn/issues/329) for the product page and [#385](https://github.com/MapCairn/mapcairn/issues/385) for the map page.
+This page is for a contributor who wants to improve the speed of the product page or the map without repeating an experiment. By the end you will know what was measured on 2026-11-11, what was tried and what was left alone. It is tracked in [#8](https://github.com/MapCairn/mapcairn/issues/8), then [#329](https://github.com/MapCairn/mapcairn/issues/329) for the product page and [#385](https://github.com/MapCairn/mapcairn/issues/385) for the map page.
+
+Checked against `@mapcairn/sdk` %sdkVersion%, the version in this repository.
 
 ## Ground rules
 

@@ -37,4 +37,4 @@ The example supplies a search provider and a suggestion provider of its own, so 
 
 ## Content Security Policy
 
-`src/contentSecurityPolicy.ts` builds a strict Content-Security-Policy header from the basemaps and layers a host offers, reading each origin from the definitions with `@mapcairn/core`. The example page does not send it, because the example requests nothing. [`docs/guides/content-security-policy.md`](../../docs/guides/content-security-policy.md) says what it adds and what a host passes in itself.
+`src/contentSecurityPolicy.ts` builds a strict Content-Security-Policy header from the basemaps and layers a host offers, reading each origin from the definitions with `@mapcairn/core`. The example page does not send it, because the example requests nothing. [Content Security Policy](https://mapcairn.timothybrits.co.za/docs/guides/content-security-policy/) says what it adds and what a host passes in itself.

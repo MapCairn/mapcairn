@@ -6,7 +6,7 @@ Most apps should install [`@mapcairn/sdk`](https://github.com/MapCairn/mapcairn/
 
 It never imports a map engine, an adapter or a browser service. Everything it needs comes from the `Services` bundle that `ServicesProvider` supplies, so the same components run against real adapters in an app and against fakes in a test. It is built on [`@mapcairn/core`](https://github.com/MapCairn/mapcairn/tree/main/packages/core), [`@mapcairn/react`](https://github.com/MapCairn/mapcairn/tree/main/packages/react) and [`@mapcairn/theme`](https://github.com/MapCairn/mapcairn/tree/main/packages/theme).
 
-**Status:** pre-1.0. While the version starts with `0.`, a minor release (the middle number) can contain a breaking change to the public API and a patch release (the last number) is not meant to, so a `^0.1.0` range takes patch releases but not the next minor release. The [changelog](https://github.com/MapCairn/mapcairn/blob/main/CHANGELOG.md) names each breaking change the release finds, and [what counts as the public API](https://github.com/MapCairn/mapcairn/blob/main/docs/guides/public-api.md) says what is covered.
+**Status:** pre-1.0. While the version starts with `0.`, a minor release (the middle number) can contain a breaking change to the public API and a patch release (the last number) is not meant to, so a `^0.1.0` range takes patch releases but not the next minor release. The [changelog](https://github.com/MapCairn/mapcairn/blob/main/CHANGELOG.md) names each breaking change the release finds, and [what counts as the public API](https://mapcairn.timothybrits.co.za/docs/guides/public-api/) says what is covered.
 
 ## Install
 

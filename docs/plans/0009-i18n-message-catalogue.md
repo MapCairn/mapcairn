@@ -97,7 +97,7 @@ Each step is one pull request and leaves `main` building and shippable.
 6. **The language setting and switcher.** `Settings.language`, `resolveLanguage`, `LanguageCatalogue`, `useMessages()`'s lazy load, the `lang` attribute in the bootstrap script, and the switcher control in the Settings panel. Lands once enough of steps 1–5 are in that switching language visibly changes most of the interface.
 7. **The Afrikaans catalogue**, written as a draft, wired as the reference host's second `LanguageCatalogue` entry and lazy-loaded, then reviewed by the maintainer.
 8. **Right-to-left readiness.** The harmony scanner rule, the logical-properties pass over existing vanilla-extract files, and the mirrored-layout Playwright project.
-9. **The guide for hosts.** `docs/guides/translate-the-sdk.md`: how to add a language, how to wire a host's own message-format library behind the port, how definition text carries translations.
+9. **The guide for hosts.** `sites/docs/docs/guides/translate-the-sdk.md`: how to add a language, how to wire a host's own message-format library behind the port, how definition text carries translations.
 
 Splitting these into GitHub issues is the `split-plan` skill's job, once this plan is merged.
 
@@ -108,7 +108,7 @@ Splitting these into GitHub issues is the `split-plan` skill's job, once this pl
 - `DESIGN.md`: a components-and-accessibility note that a name or announcement is now a key, and the logical-properties rule. Steps 1, 8.
 - `README.md` and the package READMEs (`core`, `react`, `map`): the SDK offers any language, not English only. Step 1 or 6.
 - `sites/docs/docs/guides/extending.md`: a "Translate the SDK" section, or the new guide linked from it. Step 9.
-- `docs/guides/performance.md`: a note on the on-demand language weight. Step 6 or 7.
+- `sites/docs/docs/guides/performance.md`: a note on the on-demand language weight. Step 6 or 7.
 - `ATTRIBUTIONS.md`: translator credit for the Afrikaans catalogue. Step 7.
 - `CONTRIBUTING.md`: how to add a language (a catalogue file and the checks step 1 and 7 add). Step 7 or 9.
 - `PRIVACY.md`: only if a provider adapter starts sending the visitor's language, which this plan does not do; out of scope, flagged above.

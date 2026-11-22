@@ -61,7 +61,7 @@ Three limits hold for all three:
 
 - **Coordinate systems.** The engine asks tile layers in Web Mercator (EPSG:3857) only, and a query layer asks in WGS 84 longitude and latitude. A service that can serve nothing but another system, such as a national grid, is not supported.
 - **Cross-origin access.** The standards do not ask a server to send `Access-Control-Allow-Origin`, so check that the service does, on errors as well as answers (see "What the server should do" below).
-- **Content Security Policy.** The host page must allow each origin: a tile service in `img-src` and `connect-src`, and a feature or identify service in `connect-src`. See the [Content Security Policy guide](content-security-policy.md).
+- **Content Security Policy.** The host page must allow each origin: a tile service in `img-src` and `connect-src`, and a feature or identify service in `connect-src`. See the [Content Security Policy guide](https://mapcairn.timothybrits.co.za/docs/guides/content-security-policy/).
 
 ### OGC API Features
 

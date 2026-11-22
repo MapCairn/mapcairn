@@ -13,7 +13,7 @@ import { SDK_PACKAGES } from "../sdkPackages.mjs";
  * @typedef {object} ApiChange
  * @property {"added" | "removed" | "changed" | "union-member-added" | "union-member-removed" | "enum-member-added" | "gained-internal" | "gained-beta" | "required-member-added"} kind
  * @property {string} name
- * @property {boolean} likelyBreaking Whether `docs/guides/public-api.md` calls this a likely breaking change.
+ * @property {boolean} likelyBreaking Whether `sites/docs/docs/guides/public-api.md` calls this a likely breaking change.
  * @property {string} detail One sentence about what changed.
  */
 

@@ -45,7 +45,7 @@ Each step is one pull request with the build green.
 
 ## Documents to update
 
-The guide `docs/guides/translate-the-sdk.md`: direction in step 2, plurals in step 3, numbering and the font override in step 4, translator checks in step 6. `ARCHITECTURE.md` ("The message catalogue", "The language setting"): steps 2 and 3. `DESIGN.md` ("Tokens", "Components and accessibility contracts"): step 4. The README and the product page: step 6. `PRIVACY.md` is unchanged.
+The guide `sites/docs/docs/guides/translate-the-sdk.md`: direction in step 2, plurals in step 3, numbering and the font override in step 4, translator checks in step 6. `ARCHITECTURE.md` ("The message catalogue", "The language setting"): steps 2 and 3. `DESIGN.md` ("Tokens", "Components and accessibility contracts"): step 4. The README and the product page: step 6. `PRIVACY.md` is unchanged.
 
 ## Risks
 

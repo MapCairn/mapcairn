@@ -17,7 +17,7 @@ const FOLDER = path.join(
  * Layer definitions a host may already have written, one JSON file for each
  * kind, frozen. This folder only grows: a validator change that rejects one
  * of them breaks every host that wrote a definition like it, so it is a
- * breaking change to the public API (`docs/guides/public-api.md`), even when
+ * breaking change to the public API (`sites/docs/docs/guides/public-api.md`), even when
  * no type changes. Add a file when a kind or a new accepted field ships;
  * remove one only in a release that says so.
  */

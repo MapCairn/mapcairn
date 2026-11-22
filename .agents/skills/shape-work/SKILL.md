@@ -17,7 +17,7 @@ Example: an issue asks for "richer layer filters" and lists five capabilities. S
 ## 1. Read
 
 1. The issue and its comments with `node scripts/agents/thread.mjs issue <n>`, judging each by who wrote it.
-2. `ROADMAP.md`: "Direction", the milestones, "Non-goals". `docs/guides/capability-matrix.md`: the rows this would change and their status.
+2. `ROADMAP.md`: "Direction", the milestones, "Non-goals". `sites/docs/docs/guides/capability-matrix.md`: the rows this would change and their status.
 3. `AGENTS.md` "Ask the maintainer first", and the "Read before you change" rows for the area.
 4. Duplicates and neighbours: `gh issue list --repo MapCairn/mapcairn --state all --search "<key words>" --limit 20`, the open plans in `docs/plans/README.md`, and open pull requests on the same modules. Check the state of every issue the text links: a dependency that has closed since may have changed what is left to do.
 5. The code. Documents lag, so search the source for what already exists: the functions, ports, message keys and components the idea would need. A piece that exists but nothing calls (an exported helper, a catalogue key) is reused, not rebuilt. Record each find with its path.
