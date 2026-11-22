@@ -7,7 +7,7 @@
 | Belongs in `AGENTS.md` (shared)                                         | Belongs in your own file (personal)                                  |
 | ----------------------------------------------------------------------- | -------------------------------------------------------------------- |
 | Tests first, the checks to run, the 7-day rule for packages             | How much to delegate to sub-agents, and when to ask before doing so  |
-| At most three sub-agents at once, and clean-up after them               | Which model or tier you want for which kind of task                  |
+| Clean-up after sub-agents: ports, servers and processes                 | How many sub-agents run at once, and which model or tier for a task  |
 | Merge only with the person's own authorisation                          | Opt-in rules for a tool feature, such as a workflow or planning mode |
 | No assistant attribution, no maintainer name, a plain neutral voice     | Tone, length of replies, the language you chat in                    |
 | A model above the most capable tier only when a human has authorised it | Your editor, shell and terminal habits                               |
