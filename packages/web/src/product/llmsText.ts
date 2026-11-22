@@ -8,9 +8,11 @@ import {
   SOURCE_REPOSITORY_URL,
 } from "../constants/siteConfig";
 import {
+  CAIRN_LINE,
   DISCUSSIONS_LINK,
   EXAMPLE_APP_LINK,
   INSTALL_OPTIONS,
+  lineToText,
   NPM_ACTION,
   RELEASE_NOTES_LINK,
   SECURITY_LINK,
@@ -164,6 +166,8 @@ export function llmsText(): string {
   return `# MapCairn
 
 > ${SUMMARY}
+
+${lineToText(CAIRN_LINE)}
 
 ${DETAILS}
 

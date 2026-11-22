@@ -5,6 +5,7 @@ import { SITE_URL } from "../constants/siteConfig";
 import {
   BADGES,
   type Block,
+  CAIRN_LINE,
   DEMO_PLATES,
   GITHUB_ACTION,
   HEADLINE,
@@ -121,6 +122,7 @@ export function productMarkdown(): string {
   return `${[
     `# ${HEADLINE}`,
     lineToMarkdown(LEDE),
+    lineToMarkdown(CAIRN_LINE),
     linkList([PLAYGROUND_ACTION]),
     INSTALL_BLOCK,
     lineToMarkdown(INSTALL_REQUIREMENTS),

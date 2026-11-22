@@ -8,6 +8,8 @@ slug: /
 
 # Get started
 
+A cairn is a pile of stones that walkers add to, marking the way for whoever comes next.
+
 This page is for a developer who wants a map on a page of their own. By the end you will have a Vite and React app, three files, that draws a map with the SDK's interface around it and a search box at the top, running on your machine.
 
 Checked against `@mapcairn/sdk` %sdkVersion%, the version in this repository. The code on this page is compiled in CI against the built packages. It uses [`MapView`](api/map/MapView.md), [`MapChrome`](api/map/MapChrome.md), [`SearchPill`](api/map/SearchPill.md), [`ServicesProvider`](api/map/ServicesProvider.md), [`createFakeServices`](api/core/createFakeServices.md) and [`createMapLibreMapAdapter`](api/adapter-maplibre/createMapLibreMapAdapter.md).

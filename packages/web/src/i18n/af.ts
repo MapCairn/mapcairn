@@ -893,7 +893,7 @@ export const AF_CATALOGUE: Record<MessageKey, string> = {
   "privacy.back": "Terug na die kaart",
   "host.about.heading": "Oor",
   "host.about.text":
-    "Hierdie webwerf is oopbronsagteware wat onder die AGPL-3.0-lisensie vrygestel word.",
+    "Hierdie webwerf is oopbronsagteware wat onder die AGPL-3.0-lisensie vrygestel word. 'n Steenhoop (cairn) is 'n hoop klippe waarby stappers klippe voeg om die pad te wys vir wie ook al volgende kom. Mense bou dit al duisende jare: die Cairn van Barnenez in Bretagne is in die vyfde millennium vC begin, en die woord kom van die Gaeliese càrn.",
   "host.about.link": "Kyk na die bronkode en lisensie op GitHub",
   "host.about.product": "Oor MapCairn, die SDK agter hierdie kaart",
   "host.map.noScript":

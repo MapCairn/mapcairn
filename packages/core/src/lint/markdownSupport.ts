@@ -17,9 +17,16 @@ export interface NamedImport {
   readonly typeOnly: boolean;
 }
 
-/** The code inside every fenced block of the given language. */
+/**
+ * The code inside every fenced block of the given language. Words after the
+ * language on the fence line, such as the docs site's `check` marker, are
+ * ignored.
+ */
 export function fencedBlocks(markdown: string, language: string): string[] {
-  const fence = new RegExp(`^\`\`\`${language}\\n([\\s\\S]*?)^\`\`\`$`, "gm");
+  const fence = new RegExp(
+    `^\`\`\`${language}(?: [^\\n]*)?\\n([\\s\\S]*?)^\`\`\`$`,
+    "gm",
+  );
   return [...markdown.matchAll(fence)].map((match) => match[1] ?? "");
 }
 
