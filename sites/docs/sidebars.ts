@@ -22,6 +22,23 @@ function apiSidebar(): SidebarEntry {
   return JSON.parse(readFileSync(API_SIDEBAR_FILE, "utf8")) as SidebarEntry;
 }
 
+/** The sidebar entry for the changelog, which `scripts/generateChangelog.ts` writes. */
+const CHANGELOG_SIDEBAR_FILE = fileURLToPath(
+  new URL("./docs/changelog/_sidebar.json", import.meta.url),
+);
+
+/** Reads the changelog's sidebar entry. A missing file stops the build with the command that writes it. */
+function changelogSidebar(): SidebarEntry {
+  if (!existsSync(CHANGELOG_SIDEBAR_FILE)) {
+    throw new Error(
+      'docs/changelog/_sidebar.json is missing. Run "npm run generate -w @mapcairn/docs" to write the changelog.',
+    );
+  }
+  return JSON.parse(
+    readFileSync(CHANGELOG_SIDEBAR_FILE, "utf8"),
+  ) as SidebarEntry;
+}
+
 /**
  * The documentation's one sidebar. Every page in `docs/` must be listed
  * here: `scripts/verifyBuild.ts` and `scripts/docChecks.test.ts` fail the
@@ -47,6 +64,7 @@ export const sidebar: SidebarEntry[] = [
       "guides/public-api",
       "guides/capability-matrix",
       "guides/performance",
+      "troubleshooting",
     ],
   },
   apiSidebar(),
@@ -55,6 +73,7 @@ export const sidebar: SidebarEntry[] = [
     label: "About the project",
     items: ["guides/using-the-reference-site", "guides/licence", "roadmap"],
   },
+  changelogSidebar(),
 ];
 
 /** The sidebars Docusaurus reads. */

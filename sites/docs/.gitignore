@@ -4,3 +4,5 @@ src/css/generated
 docs/roadmap.md
 # The API reference, written by scripts/generateApi.ts.
 docs/api
+# The changelog pages, written by scripts/generateChangelog.ts from CHANGELOG.md.
+docs/changelog
