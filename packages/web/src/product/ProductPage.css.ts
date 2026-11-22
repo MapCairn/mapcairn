@@ -19,6 +19,9 @@ import { captureSubject } from "./captureSubjects";
 /** From here the picture is the wide capture at the column's width, and the hero's actions share rows. */
 const TABLET = "screen and (min-width: 48rem)";
 
+/** Phones about 320 px wide, where the header trims its side padding so three targets a step apart fit. */
+const NARROW = "screen and (max-width: 22.5rem)";
+
 /** From here the button, the install command and the links sit side by side where they fit. */
 const ROOMY = "screen and (min-width: 30rem)";
 
@@ -171,8 +174,14 @@ export const headerBar = style([
     display: "flex",
     alignItems: "center",
     justifyContent: "space-between",
-    columnGap: tokens.space.sm,
+    columnGap: tokens.space.xs,
     minHeight: HEADER_HEIGHT,
+    "@media": {
+      [NARROW]: {
+        paddingInlineStart: `max(${tokens.space.sm}, env(safe-area-inset-left, 0px))`,
+        paddingInlineEnd: `max(${tokens.space.sm}, env(safe-area-inset-right, 0px))`,
+      },
+    },
   },
 ]);
 
@@ -214,12 +223,10 @@ export const navBox = style({
   overflowX: "auto",
 });
 
-/** The header's links, in one row. */
+/** The header's links, in one row, a step apart so a tap lands on one. */
 export const nav = style({
   display: "flex",
-  "@media": {
-    [ROOMY]: { columnGap: tokens.space.xxs },
-  },
+  columnGap: tokens.space.xs,
   margin: 0,
   padding: 0,
   listStyle: "none",
