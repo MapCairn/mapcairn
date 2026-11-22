@@ -17,7 +17,7 @@ Detail behind [`AGENTS.md`](../../AGENTS.md): what each command does, the browse
 
 ## Continuous integration
 
-CI runs these workflows: `CI` (lint, typecheck, coverage, build, and the `SDK packages` check of the packed tarballs), `Playwright E2E` (the browser tests, split across four jobs), `Lighthouse CI`, `CodeQL`, `CLA`, `Scorecard`, `Dependency review`, `Workflow security lint` (zizmor), `Secret scan` (TruffleHog) and a weekly `Repeatable build` check. A pull request needs these checks to pass before it merges: `build`, `e2e`, `SDK packages`, `Dependency review`, `TruffleHog (pull request)` and `CLA` (ruleset `main-pull-requests`); the others are advisory.
+CI runs these workflows: `CI` (lint, typecheck, coverage, build, and the `SDK packages` check of the packed tarballs), `Playwright E2E` (the browser tests, split across four jobs, plus an advisory `docs browser checks` job for the documentation site), `Lighthouse CI` (the host, and an advisory `lighthouse docs` job), `CodeQL`, `CLA`, `Scorecard`, `Dependency review`, `Workflow security lint` (zizmor), `Secret scan` (TruffleHog) and a weekly `Repeatable build` check. A pull request needs these checks to pass before it merges: `build`, `e2e`, `SDK packages`, `Dependency review`, `TruffleHog (pull request)` and `CLA` (ruleset `main-pull-requests`); the others are advisory.
 
 ## Browser tests
 

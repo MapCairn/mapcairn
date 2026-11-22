@@ -64,3 +64,44 @@ jobs:
         env:
           RESULTS_PATH: ${{ steps.lighthouse.outputs.resultsPath }}
         run: node packages/web/scripts/print-lighthouse-summary.mjs "$RESULTS_PATH"
+
+  # The documentation site, on a guide page and an API page, served from its
+  # build by sites/docs/scripts/serve.ts. Advisory: it is not in the required
+  # checks. Performance only warns, as above; accessibility and best practices
+  # fail it below 0.95.
+  lighthouse-docs:
+    name: lighthouse docs
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version-file: .node-version
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Install dependencies
+        run: |
+          npm ci
+
+      - name: Build the documentation site
+        run: npm run build -w @mapcairn/docs
+
+      - name: Run Lighthouse CI
+        id: lighthouse
+        uses: treosh/lighthouse-ci-action@3e7e23fb74242897f95c0ba9cabad3d0227b9b18 # v12
+        with:
+          configPath: ./sites/docs/lighthouserc.json
+          uploadArtifacts: true
+          temporaryPublicStorage: true
+
+      - name: Print Lighthouse report
+        if: always()
+        env:
+          RESULTS_PATH: ${{ steps.lighthouse.outputs.resultsPath }}
+        run: node packages/web/scripts/print-lighthouse-summary.mjs "$RESULTS_PATH"

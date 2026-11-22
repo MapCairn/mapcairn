@@ -15,6 +15,7 @@ coverage
 *.tsbuildinfo
 lighthouse-report*.json
 test-results/
+.lighthouseci/
 playwright-report/
 blob-report/
 playwright/.cache/

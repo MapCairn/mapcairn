@@ -16,7 +16,7 @@ export default function HeaderLinks({
   className: string;
 }): ReactNode {
   return (
-    <nav aria-label="Main" className={className}>
+    <nav aria-label="Site links" className={className}>
       <ul className="header-links__list">
         {HEADER_LINKS.map(({ text, href, current }) => (
           <li key={href}>
