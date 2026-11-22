@@ -313,6 +313,28 @@ body {
   text-decoration-thickness: 2px;
 }
 
+/* Every target is at least the project's minimum, 44 px. */
+.menu__link,
+.table-of-contents__link,
+.breadcrumbs__link,
+.theme-doc-footer-edit-meta-row a,
+.navbar__toggle,
+[class*="tocCollapsibleButton"] {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--mc-size-min-target);
+}
+
+.menu__link,
+.table-of-contents__link {
+  display: flex;
+}
+
+.navbar__toggle {
+  justify-content: center;
+  min-width: var(--mc-size-min-target);
+}
+
 /* Sidebar, contents and breadcrumbs: quiet, on the same ground. */
 .menu__link,
 .table-of-contents__link {
