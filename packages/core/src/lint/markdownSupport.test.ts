@@ -2,6 +2,7 @@
 // Copyright MapCairn contributors
 import { describe, expect, it } from "vitest";
 import {
+  fencedBlocks,
   headingAnchors,
   isUsedByExample,
   type NamedImport,
@@ -76,5 +77,18 @@ describe("headingAnchors", () => {
 
   it("ignores a hash that is not followed by a space", () => {
     expect(headingAnchors("#tag\n####### seven")).toEqual([]);
+  });
+});
+
+describe("fencedBlocks", () => {
+  const text =
+    "```tsx\none\n```\n\n```tsx check\ntwo\n```\n\n```ts\nthree\n```\n";
+
+  it("reads a block whether or not its fence line carries marker words", () => {
+    expect(fencedBlocks(text, "tsx")).toEqual(["one\n", "two\n"]);
+  });
+
+  it("does not read a longer language name as the one asked for", () => {
+    expect(fencedBlocks("```tsxx\nno\n```\n", "tsx")).toEqual([]);
   });
 });

@@ -83,6 +83,16 @@ describe("renderRepositoryDoc", () => {
     );
   });
 
+  it("marks a ts block no-check, because it is repository documentation and not a site snippet", () => {
+    const marked = renderRepositoryDoc(
+      "# A\n\n```ts\nconst a = 1;\n```\n\n```tsx check\nconst b = 2;\n```\n\n```bash\nls\n```\n",
+      DOC,
+    );
+    expect(marked).toContain("```ts no-check\nconst a = 1;");
+    expect(marked).toContain("```tsx check\nconst b = 2;");
+    expect(marked).toContain("```bash\nls");
+  });
+
   it("relinks the body", () => {
     expect(output).toContain("Body [a](design.md).");
   });
