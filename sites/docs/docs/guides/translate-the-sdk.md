@@ -53,7 +53,7 @@ Not covered:
 
 A host that speaks one language, other than English, gives `ServicesProvider` its own `messages`:
 
-```ts
+```ts no-check
 import { createMessageCatalogue, EN_GB_CATALOGUE } from "@mapcairn/core";
 
 const messages = createMessageCatalogue("fr", FR_CATALOGUE, EN_GB_CATALOGUE);
@@ -65,7 +65,7 @@ const messages = createMessageCatalogue("fr", FR_CATALOGUE, EN_GB_CATALOGUE);
 
 A host that offers a choice builds a `LanguageCatalogue` and passes it as `Services.languages`:
 
-```ts
+```ts no-check
 import { createLanguageCatalogue } from "@mapcairn/core";
 
 const languages = createLanguageCatalogue(
@@ -91,7 +91,7 @@ The reference site's language options are in `packages/web/src/i18n/offeredLangu
 
 `checkMessageCatalogue(language, catalogue, english, options)` from `@mapcairn/core` checks a catalogue against the English one and returns a list of problems, each a `key` and a `problem`; an empty list means it passes. Run it in your own tests:
 
-```ts
+```ts no-check
 import { checkMessageCatalogue, EN_GB_CATALOGUE } from "@mapcairn/core";
 
 const SAME_AS_ENGLISH = { "basemap.bright.name": "A map style's name." };
@@ -122,7 +122,7 @@ To see what is left to translate, run `npm run catalogue:check -- <language> <fi
 
 A basemap or layer definition's reader-facing text (a name, a description, a control label, an empty-state text) is a `DefinitionText`: a shipped `MessageKey`, a `HostText` or a plain string. Only shipped `MessageKey` values are looked up in the typed catalogue, where the definition is shown. Any other string, including a name of your own or a string that looks like a key, is shown as written and is not a catalogue key, so existing definitions keep working. To translate a field of your own, write a `HostText`: an object with your own `key` and the source `text`, which is also the fallback.
 
-```ts
+```ts no-check
 const layer = {
   // ...
   name: { key: "host.rivers.name", text: "Rivers" },
@@ -141,7 +141,7 @@ const afrikaans = createMessageCatalogue("af", AF_CATALOGUE, EN_GB_CATALOGUE, {
 
 A missing entry is silent, so check your own keys before you ship. `checkDefinitionTexts(definitions, definitionTexts)` from `@mapcairn/core` lists the `HostText` keys in the definitions you pass (layers, basemaps, keyboard help lines, or any mix) and returns a problem for each key the language's `definitionTexts` lacks or holds blank. Each problem is a `key` and a `problem`, as with `checkMessageCatalogue`, and an empty list means every key is translated. Run it in your own tests, once for each language you offer:
 
-```ts
+```ts no-check
 import { checkDefinitionTexts } from "@mapcairn/core";
 
 const problems = checkDefinitionTexts(
@@ -164,7 +164,7 @@ Moving to this version: `DefinitionText` is wider than before, so code of your o
 
 Card titles and lines, list secondary lines, feed polygon and line labels, and range and interval units can use a host-defined key without adding it to `MessageKey`. Use a `LayerTemplate` object with the key and its source text:
 
-```ts
+```ts no-check
 const cardTitle = {
   key: "events.magnitude",
   text: "Magnitude {magnitude|number} at {place}",
@@ -173,7 +173,7 @@ const cardTitle = {
 
 Pass the host's separate layer-template table when building the catalogue:
 
-```ts
+```ts no-check
 const messages = createMessageCatalogue(
   "fr",
   FR_MESSAGES,
@@ -190,7 +190,7 @@ The `unit` fields on `ShapeIntervalColour` and `RangeControlDefinition` now acce
 
 `MessageCatalogue` is an interface with `language`, `t`, `plural` and `list`. The default, `createMessageCatalogue`, needs no library, but a host that already uses a message-format library can implement the same three methods on top of it and pass that as `Services.messages` (or return it from `load`). The library lives in the host. An SDK package never depends on one, and a library you adapt has to allow commercial use. Its `plural` must also handle a value with no plural forms, just as `t` does.
 
-```ts
+```ts no-check
 const messages: MessageCatalogue = {
   language: "fr",
   t: (key, params) => intl.formatMessage({ id: key }, params),

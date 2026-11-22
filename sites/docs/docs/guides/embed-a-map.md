@@ -53,7 +53,7 @@ body,
 
 `src/main.tsx`:
 
-```tsx
+```tsx check
 /// <reference types="vite/client" />
 import "@mapcairn/sdk/styles.css";
 import "./page.css";

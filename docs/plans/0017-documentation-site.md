@@ -92,6 +92,15 @@ Built in step 3, by `plugins/markdownCopiesPlugin.ts` from `postBuild`, with the
 - Content is not hidden in tabs: a copy that holds a `Tabs` or `TabItem` tag fails the build.
 - A request that sends `Accept: text/markdown` for a page cannot be answered by an assets-only Worker, which serves a file by its path. See the open question below.
 
+### Tested snippets
+
+Built in step 5, by `scripts/snippets.ts`, run by `scripts/snippets.test.ts` (so by `npm test` and CI):
+
+- Every `ts` or `tsx` fenced block in a page outside `docs/api/` must say on its fence line whether it is compiled: ` ```tsx check ` compiles it, ` ```ts no-check ` leaves it out. A block with neither word fails the check, so a snippet cannot go untested by being forgotten. Use `no-check` for an outline or a fragment that names things the reader writes (a catalogue of their own, a test double), and say so in the prose around it.
+- Each `check` block is written to a scratch folder as its own module (`export {}` is appended, so a block with no import is a module too) and compiled with `tsc --noEmit`, `strict`, `moduleResolution: Bundler` and no `@mapcairn/source` condition, so `@mapcairn/sdk` and its subpaths resolve through their `exports` to the built `dist`, as in an app outside the repository. The scratch folder's `node_modules` is the repository's. A block that needs Vite's types brings `/// <reference types="vite/client" />`, as a user's file does.
+- An error is reported as the page and the line in the page's own source (front matter counted), then the compiler's message.
+- Blocks in other languages (`bash`, `html`, `css`, `text`) are not compiled. A block that draws a map is checked by the compiler only; the Get started app was also built with Vite and loaded in Chromium once, when it was written.
+
 ### Roadmap page
 
 `/docs/roadmap` shows the ranked list of `ROADMAP.md` (#670). `npm run generate` writes it as `docs/roadmap.md` before every build and dev start (`scripts/generateRoadmap.ts`; the file is git-ignored, because `ROADMAP.md` is the source). It reads the list with `parseRoadmap` in `scripts/roadmap-check.mjs`, the parser behind `npm run roadmap:check`, and fails the build on what that check fails without the network. The page is an ordinary docs page, so it has a search entry, a Markdown copy and an `llms-full.txt` entry; its layout is a few plain elements (`section`, `article`, `progress`) that the copy drops, keeping the lanes, milestone names, one-line summaries and counts as text. The lanes stack on a phone and sit side by side where the column is 44 rem wide (a container query); each card carries a bar and, as text, the closed count, the total and the percentage, so colour is never the only cue.
@@ -138,7 +147,7 @@ Written first, run to fail for the intended reason (the modules did not exist), 
 2. **Search.** Own issue (done). The index, the dialog, its styling, the empty state and the 404 search box, the budget restated, and a build check that the index exists and is not empty (the existing checks already cover the policy).
 3. **Markdown copies and the agent files** (done, #684). The copies, `llms.txt`, `llms-full.txt`, the head link, the host's `llms.txt` and `robots.txt` lines, and a build check that every page has a copy.
 4. **Move the guides.** One issue, in pull requests of a few guides each, `extending.md` and the embed guide first because the README and the product page point at them. Each pull request deletes the guide from `docs/guides/`, rewrites every link to it (`AGENTS.md`, `README.md`, the package READMEs, the skills and agents) and adds the lint check that fails on a link to a moved guide.
-5. **Tested snippets and task pages.** Each guide's code compiles or runs in CI against the built packages; a page per common task; the error page; the changelog.
+5. **Tested snippets and task pages** (#686). Each guide's code compiles or runs in CI against the built packages; a page per common task; the error page; the changelog.
 6. **API reference** from #1 and #434 (generated pages, one per export, in the pull request that follows the decision record above), and **Storybook** from #174, each its own issue.
 7. **Browser checks and Lighthouse for the site.** A Playwright project in `sites/docs` with axe in both themes, and a Lighthouse run with the first scores; the budget lowered.
 8. **Point the product page at the site.** The documentation links the product page and the README take today (`DOCUMENTATION_LINK`) change to `/docs/`.
