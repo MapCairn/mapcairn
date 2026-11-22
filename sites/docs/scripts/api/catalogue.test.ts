@@ -42,6 +42,13 @@ function labels(entry: SidebarEntry): string[] {
   return [entry.label, ...entry.items.flatMap(labels)];
 }
 
+/** The entries inside a sidebar category; none for anything else. */
+function itemsOf(entry: SidebarEntry): readonly SidebarEntry[] {
+  return typeof entry !== "string" && entry.type === "category"
+    ? entry.items
+    : [];
+}
+
 const CORE = aPackage("core", [
   aModule(
     "@fixture/core",
@@ -127,7 +134,7 @@ describe("buildCatalogue", () => {
       "Components",
       "Hooks",
     ]);
-    const core = (catalogue.sidebar as { items: SidebarEntry[] }).items[0];
+    const core = itemsOf(catalogue.sidebar)[0];
     expect(core).toMatchObject({
       link: { type: "doc", id: "api/core/index" },
       items: [
@@ -140,8 +147,10 @@ describe("buildCatalogue", () => {
   });
 
   it("lists a package that holds no code of its own as a plain page", () => {
-    const items = (catalogue.sidebar as { items: SidebarEntry[] }).items;
-    expect(items.at(-1)).toEqual({ type: "doc", id: "api/umbrella/index" });
+    expect(itemsOf(catalogue.sidebar).at(-1)).toEqual({
+      type: "doc",
+      id: "api/umbrella/index",
+    });
   });
 
   it("links an export to the page it names, and writes plain code when no page has the name", () => {
