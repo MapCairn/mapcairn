@@ -174,9 +174,11 @@ If the page is blank, check that `src/page.css` is imported and that the project
 
 ## Where to go next
 
+- Each task has a page that builds on this app: [choose a basemap](tasks/choose-a-basemap.md), [add a data layer](tasks/add-a-layer.md), [draw and edit shapes](tasks/draw-shapes.md), [theme the interface](tasks/theme-the-interface.md), [translate the interface](tasks/translate-the-interface.md) and [host the map on a server-rendered page](tasks/host-on-a-server-rendered-page.md).
 - [Embed a map](guides/embed-a-map.md) says what each part does and how another bundler serves the worker file.
 - [Extending MapCairn](guides/extending.md) lists what an app provides around the SDK and how to add a basemap, a data layer, a search or routing provider, or an adapter of your own.
 - The [API reference](api/index.md) lists every export of the six packages.
+- [Troubleshooting](troubleshooting.md) lists the error messages the SDK throws, with the cause and the fix of each, and what to check when the map is blank.
 
 ## Status
 
