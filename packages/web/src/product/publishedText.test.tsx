@@ -103,16 +103,12 @@ function normalised(link: string): string {
 
 /**
  * The pages of the repository the page may link, each for the reason an adopter
- * needs it next. The footer lists the first four; the example app is named in
+ * needs it next. The footer lists the first three; the example app is named in
  * the answer on how to use the SDK. The guides are pages of the documentation
  * site on this origin, so they are not in the set. Nothing else past the front page: no issue,
  * pull request, milestone, README section or contributing page.
  */
 const ALLOWED_PAGES: ReadonlyArray<readonly [string, string]> = [
-  [
-    "https://github.com/MapCairn/mapcairn#documentation",
-    "the documentation: the README's index of the guides",
-  ],
   [
     "https://github.com/MapCairn/mapcairn/releases",
     "the release notes: what changed and what to change on upgrade",

@@ -264,11 +264,8 @@ test.describe("the product page", () => {
       "href",
       "https://github.com/MapCairn/mapcairn",
     );
-    await expect(product.headerDocs).toHaveAttribute(
-      "href",
-      "https://github.com/MapCairn/mapcairn#documentation",
-    );
-    await expect(product.header.locator('a[href^="https://"]')).toHaveCount(2);
+    await expect(product.headerDocs).toHaveAttribute("href", "/docs/");
+    await expect(product.header.locator('a[href^="https://"]')).toHaveCount(1);
     await expect(
       product.footer.getByRole("link", { name: "Source code" }),
     ).toHaveAttribute("href", "https://github.com/MapCairn/mapcairn");
@@ -280,7 +277,6 @@ test.describe("the product page", () => {
     const product = new ProductPage(page);
     await product.goto();
     for (const [name, href] of [
-      ["Documentation", "#documentation"],
       ["Release notes", "/releases"],
       ["Security", "/blob/main/SECURITY.md"],
       ["Discussions", "/discussions"],
@@ -292,6 +288,13 @@ test.describe("the product page", () => {
       );
       expect((await link.boundingBox())?.height).toBeGreaterThanOrEqual(44);
     }
+    const documentation = product.footer.getByRole("link", {
+      name: "Documentation",
+    });
+    await expect(documentation).toHaveAttribute("href", "/docs/");
+    expect((await documentation.boundingBox())?.height).toBeGreaterThanOrEqual(
+      44,
+    );
     const licence = product.footer.getByRole("link", { name: "Licence guide" });
     await expect(licence).toHaveAttribute("href", "/docs/guides/licence/");
     expect((await licence.boundingBox())?.height).toBeGreaterThanOrEqual(44);

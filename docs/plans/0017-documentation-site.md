@@ -1,6 +1,6 @@
 # 0017: A documentation site served at /docs/
 
-Status: in progress: step 1 is built in the pull request that adds this plan. Tracking issue: [#199](https://github.com/MapCairn/mapcairn/issues/199).
+Status: built and deployed at `/docs/`, except Storybook, the browser checks and Lighthouse run for the site (step 7) and the MCP server, which are separate issues. Steps 1 to 6 (apart from Storybook) and 8 are built. Tracking issue: [#199](https://github.com/MapCairn/mapcairn/issues/199).
 
 ## Goal
 
@@ -173,20 +173,22 @@ Written first, run to fail for the intended reason (the modules did not exist), 
 ## Order of work
 
 1. **This pull request.** The plan; `sites/docs` with Docusaurus, the generated theme, the shell (header, footer, brand, toggle), the Get started page, the security headers, the sidebar and link checks, the script budget, `cloudflare.config.ts`, the root `workspaces` and `vitest` project, a CI step for the build, Dependabot's group, the `overrides`, the exempt-path entry in the licence report, and the documents below. After it merges, the maintainer runs the first deploy and connects the Workers Builds project (see "Decided and open" and "First deploy").
-2. **Search.** Own issue (done). The index, the dialog, its styling, the empty state and the 404 search box, the budget restated, and a build check that the index exists and is not empty (the existing checks already cover the policy).
+2. **Search** (done, #683). The index, the dialog, its styling, the empty state and the 404 search box, the budget restated, and a build check that the index exists and is not empty (the existing checks already cover the policy).
 3. **Markdown copies and the agent files** (done, #684). The copies, `llms.txt`, `llms-full.txt`, the head link, the host's `llms.txt` and `robots.txt` lines, and a build check that every page has a copy.
 4. **Move the guides** (built in three pull requests under #685: the embed, extending, reference site and licence guides with the lint check `npm run guides:check`; then translation, public API, Content Security Policy, capability matrix and performance; then the two serving guides, with `ARCHITECTURE.md` and `DESIGN.md` rendered as site pages at build time by `scripts/generateRepositoryDocs.ts`, output git-ignored, so those two files stay in the repository where lint rules and skills read them by path). The process guides that agents and contributors read by path stay in `docs/guides/`: `working-with-agents.md`, `personal-preferences.md`, `repository-reference.md`, `product-captures.md` and `releasing.md`. `.md` pages are read as CommonMark (`markdown.format: "detect"`), so a guide holds `{` and `<` as it does on GitHub. One issue, in pull requests of a few guides each, `extending.md` and the embed guide first because the README and the product page point at them. Each pull request deletes the guide from `docs/guides/`, rewrites every link to it (`AGENTS.md`, `README.md`, the package READMEs, the skills and agents) and adds the lint check that fails on a link to a moved guide.
-5. **Tested snippets and task pages** (#686). Each guide's code compiles or runs in CI against the built packages; a page per common task; the error page; the changelog.
-6. **API reference** from #1 and #434 (generated pages, one per export, in the pull request that follows the decision record above), and **Storybook** from #174, each its own issue.
-7. **Browser checks and Lighthouse for the site.** A Playwright project in `sites/docs` (`npm run test:e2e -w @mapcairn/docs`, the `docs browser checks` job in the Playwright E2E workflow, advisory) with axe in both themes at three widths on six pages and the open search dialog, the search keyboard path and the header layout from 320 to 1280 px, and a Lighthouse run with the first scores (see "Lighthouse" above). Still to do from this step: lower the script budget, and add the two jobs to the required checks, which is the maintainer's decision.
-8. **Point the product page at the site.** The documentation links the product page and the README take today (`DOCUMENTATION_LINK`) change to `/docs/`.
+5. **Tested snippets and task pages** (done, #686: snippets compiled in CI, six task pages, the troubleshooting page and a changelog page for each release). Each guide's code compiles or runs in CI against the built packages; a page per common task; the error page; the changelog.
+6. **API reference** from #1 and #434 (done, #434: generated pages, one per export, from the packages' API models), and **Storybook** from #174 (not built; its own issue).
+7. **Browser checks and Lighthouse for the site** (built, #721). A Playwright project in `sites/docs` (`npm run test:e2e -w @mapcairn/docs`, the `docs browser checks` job in the Playwright E2E workflow, advisory) with axe in both themes at three widths on six pages and the open search dialog, the search keyboard path and the header layout from 320 to 1280 px, and a Lighthouse run with the first scores (see "Lighthouse" above). Still to do from this step: lower the script budget, and add the two jobs to the required checks, which is the maintainer's decision. The pages were also read in a visual review whose findings are tracked in #718.
+8. **Point the product page at the site** (done). `DOCUMENTATION_LINK`, which the product page's header and footer use, is `/docs/`. The README's documentation section names the site first and keeps listing the repository's own documents, and the host's `llms.txt` links the site's `llms.txt`, `llms-full.txt`, `pages.json` and `api.json`. The host's `sitemap.xml` lists only the host's three pages: the site's own sitemap is `/docs/sitemap.xml`, which `robots.txt` names.
 
 Later steps, after the eight above, each its own issue when it is picked up and not built here:
 
-- A roadmap page generated from `ROADMAP.md` (#670).
-- A documentation MCP server, so an agent reaches the same index as search and the Markdown copies (#665). Its data files and decision record are built (#716, "Machine-readable data and the MCP decision record"); the server is not.
+- A roadmap page generated from `ROADMAP.md` (built, #670).
+- A documentation MCP server, so an agent reaches the same index as search and the Markdown copies (#665). Its data files and decision record are built (#716, "Machine-readable data and the MCP decision record"); the server is not built, and the docs Worker still serves static assets only.
 
 ## First deploy
+
+Done on 2026-11-22: the Worker `mapcairn-docs` and its routes are live at `/docs/`, as #199 records. What follows is the procedure as planned, kept for a redeploy and a rollback.
 
 The commands, run by the maintainer: `npm run build -w @mapcairn/docs`, then `npm run deploy -w @mapcairn/docs` from the repository root at `main`. The deploy creates the Worker `mapcairn-docs` and its two routes.
 
@@ -199,7 +201,7 @@ The commands, run by the maintainer: `npm run build -w @mapcairn/docs`, then `np
 ## Documents to update
 
 - Step 1: `README.md` (the documentation section names the site and the `sites/docs` workspace), `CONTRIBUTING.md` (how to run and build the site), `AGENTS.md` (Commands: the docs scripts, port 4410 for `dev`; Documentation: the site; the SDK licence rule's exempt list), `ROADMAP.md` (the site is noted), `DESIGN.md` ("Exempt surfaces" and the lint table: the site is outside the harmony scan and what holds its values to the tokens), `docs/plans/README.md` (this plan in the list).
-- Later steps: the guides move out of `docs/guides/`, `ARCHITECTURE.md` and `DESIGN.md` move last, and the skills and agents change their links in the step that moves each guide. `PRIVACY.md` and `packages/web/src/app/PrivacyPage.tsx` need one sentence for the site's `theme` key, which is the maintainer's to add (see "Public surface"). `docs/guides/working-with-agents.md` is not updated in step 1, although the issue lists it: nothing in it describes the site yet, and step 4 updates it when the guides move.
+- Later steps: the guides move out of `docs/guides/`, `ARCHITECTURE.md` and `DESIGN.md` move last, and the skills and agents change their links in the step that moves each guide. `PRIVACY.md` and `packages/web/src/app/PrivacyPage.tsx` carry the sentence for the site's `theme` key (added in #669; see "Public surface"). `docs/guides/working-with-agents.md` is not updated in step 1, although the issue lists it: nothing in it describes the site yet, and step 4 updates it when the guides move.
 
 ## Risks
 
@@ -224,6 +226,8 @@ Decided:
 - 2026-11-22, step 6: the script budget gains an allowance of 100 bytes of gzip for each generated API page (measured at about 95), instead of a higher flat figure.
 
 - 2026-11-22, #716: the documentation publishes `pages.json` and `api.json` beside `search-index.json`, and the MCP server (#665) is specified in "Machine-readable data and the MCP decision record": four read-only tools, hosted in the docs Worker at `/docs/mcp`, reading only its own static files, storing and logging no query.
+
+- 2026-11-22, step 8: the product page, the README and the host's `llms.txt` point at `/docs/`; nothing else about the site's address changed.
 
 Open, each with a recommendation:
 
