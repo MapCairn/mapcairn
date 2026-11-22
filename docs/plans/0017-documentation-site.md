@@ -107,6 +107,7 @@ The API reference (step 6, #434) is generated at build time as Markdown pages un
 ### Budgets, stated before the content grows
 
 - JavaScript: `SCRIPT_BUDGET_BYTES` in `scripts/verifyBuild.ts` is 160,000 bytes of gzip for the scripts the front page loads, and the build fails above it. The first measure, a page with no search, is 151,074 bytes, almost all of it the framework's client runtime and theme; the budget is 6 percent above that, so ordinary changes pass and a plugin that doubles the script does not. Step 2 measures search against it and states the new figure here before it lands. The target is to lower it: step 7 looks at what the framework ships that this site does not use.
+  The generated API reference (step 6) raised the measure to 269,204 bytes with 1171 generated pages, because the framework lists every page's route, content chunk and metadata in the script every page loads: about 95 bytes of gzip a page, whatever the page holds. `API_PAGE_ALLOWANCE_BYTES` (100) adds that much to the budget for each page under `api/` in the build, so the base of 160,000 still guards the shell and a plugin that doubles the script still fails, while the reference may grow. The cost is real: the script is 269 KB for the reader of any page, and the lever that would lower it is fewer pages, which is a decision for the maintainer (see "Decided and open").
 - Lighthouse: performance at least 0.95 on a guide page and on the API reference, as the issue says. Not measured yet and not enforced in step 1: the Lighthouse workflow keeps running only what it runs today. Step 7 adds a run for the site and records the first scores here.
 - Fonts: the same files and fallback metrics as the reference site, no layout shift from the swap.
 
@@ -132,7 +133,7 @@ Written first, run to fail for the intended reason (the modules did not exist), 
 3. **Markdown copies and the agent files** (done, #684). The copies, `llms.txt`, `llms-full.txt`, the head link, the host's `llms.txt` and `robots.txt` lines, and a build check that every page has a copy.
 4. **Move the guides.** One issue, in pull requests of a few guides each, `extending.md` and the embed guide first because the README and the product page point at them. Each pull request deletes the guide from `docs/guides/`, rewrites every link to it (`AGENTS.md`, `README.md`, the package READMEs, the skills and agents) and adds the lint check that fails on a link to a moved guide.
 5. **Tested snippets and task pages.** Each guide's code compiles or runs in CI against the built packages; a page per common task; the error page; the changelog.
-6. **API reference** from #1 and #434, and **Storybook** from #174, each its own issue.
+6. **API reference** from #1 and #434 (generated pages, one per export, in the pull request that follows the decision record above), and **Storybook** from #174, each its own issue.
 7. **Browser checks and Lighthouse for the site.** A Playwright project in `sites/docs` with axe in both themes, and a Lighthouse run with the first scores; the budget lowered.
 8. **Point the product page at the site.** The documentation links the product page and the README take today (`DOCUMENTATION_LINK`) change to `/docs/`.
 

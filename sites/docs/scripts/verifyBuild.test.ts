@@ -13,7 +13,12 @@ import { parseDocSource } from "./markdownCopies";
 import { SDK_VERSION } from "./sdkVersion";
 import { buildHeadersFile } from "./securityHeaders";
 import { TARGETED_CLASSES } from "./targetedClasses";
-import { SCRIPT_BUDGET_BYTES, verifyBuild } from "./verifyBuild";
+import {
+  API_PAGE_ALLOWANCE_BYTES,
+  SCRIPT_BUDGET_BYTES,
+  scriptBudgetFor,
+  verifyBuild,
+} from "./verifyBuild";
 
 const roots: string[] = [];
 
@@ -125,6 +130,39 @@ describe("verifyBuild", () => {
     expect(verifyBuild(root, [ONE], [page]).join("\n")).toContain(
       'The page "extra" has no Markdown copy',
     );
+  });
+
+  it("reports a package whose API reference section was not built", () => {
+    const root = builtSite("<script>one()</script>", {
+      "api/core/index.html": "<p>core</p>",
+    });
+    const findings = verifyBuild(root, [ONE], ["core", "react"]).join("\n");
+    expect(findings).toContain(
+      "The API reference has no section for packages/react",
+    );
+    expect(findings).not.toContain("packages/core");
+  });
+
+  it("allows each generated API page a little more script than the base budget", () => {
+    const script = randomBytes(SCRIPT_BUDGET_BYTES + 5_000);
+    const pages = Object.fromEntries(
+      Array.from({ length: 100 }, (_, index) => [
+        `api/core/page${index}/index.html`,
+        "<p>page</p>",
+      ]),
+    );
+    const tag =
+      '<script src="/docs/assets/js/main.js" defer></script><script>one()</script>';
+    expect(scriptBudgetFor(100)).toBe(
+      SCRIPT_BUDGET_BYTES + 100 * API_PAGE_ALLOWANCE_BYTES,
+    );
+    const without = builtSite(tag, { "assets/js/main.js": script });
+    expect(verifyBuild(without, [ONE]).join("\n")).toContain("over the budget");
+    const withPages = builtSite(tag, {
+      "assets/js/main.js": script,
+      ...pages,
+    });
+    expect(verifyBuild(withPages, [ONE])).toEqual([]);
   });
 
   it("reports a front page that loads more script than the budget", () => {

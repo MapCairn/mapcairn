@@ -39,5 +39,10 @@ export {
   tokens,
 } from "./tokens.css";
 export type { ThemeName, ZLayerName } from "./tokenValues";
+/**
+ * Every design-token value as plain typed data: the oklch colours, spacing,
+ * sizes and type scale that `tokens` turns into CSS custom properties. Read it
+ * where the value itself is needed, such as in a contrast calculation.
+ */
 export * as tokenValues from "./tokenValues";
 export { zLayer } from "./zLayer";
