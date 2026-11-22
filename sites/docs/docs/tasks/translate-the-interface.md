@@ -193,3 +193,16 @@ The person's choice is `Settings.language`, a tag or `null` for "follow the brow
 ## Check your catalogue
 
 `checkMessageCatalogue(language, catalogue, EN_GB_CATALOGUE, options)` compares a catalogue with the English one and returns each problem as a key and a kind, such as a key that is missing or unknown, a blank form, placeholders that differ from English, plural forms that differ, or a value copied from English. Run it in your own tests. [Translate the SDK](../guides/translate-the-sdk.md) has the full guide: the list of keys, plurals, the pseudo-locales, layer and basemap text, and right-to-left checks.
+
+## When it goes wrong
+
+- **A key your translation leaves out.** The English value is shown, and the console logs one warning for each missing key. This is how a partial translation works, and [Troubleshooting](../troubleshooting.md) quotes the warning.
+- **A language that fails to load.** If `load` rejects, for example because a chunk is missing after a deploy, the previous language stays on screen and `load` is called again the next time the setting or the browser's languages change.
+- **A tag nobody offers.** `resolveLanguage` falls back to the default language when neither the person's choice nor any of the browser's languages is offered.
+- **A catalogue built wrong.** `createLanguageCatalogue` throws at start-up for an empty list, a repeated tag or a default tag that is not in the list.
+
+## Next steps
+
+- [Translate the SDK](../guides/translate-the-sdk.md) has the full guide: the keys, plurals, layer text and right-to-left checks.
+- [Troubleshooting](../troubleshooting.md) explains the catalogue errors and warnings.
+- [Host the map on a server-rendered page](host-on-a-server-rendered-page.md) covers setting `lang` and `dir` on the server.

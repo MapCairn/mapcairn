@@ -170,6 +170,8 @@ Open the address Vite prints. You should see a map of Cape Town, in the light or
 
 This app shows no credits for the map data. The basemap's providers ask for them, so before you publish, add [`Attribution`](api/map/Attribution.md) to the `bottomEnd` slot of `MapChrome`, with the basemap you passed `MapView`.
 
+If the map stays blank, or the browser has no WebGL 2 context, [Troubleshooting](troubleshooting.md) lists the messages and the fix for each.
+
 If the page is blank, check that `src/page.css` is imported and that the project has no other style that sets the height of `#root`. [Embed a map](guides/embed-a-map.md) explains each part of `main.tsx` and gives a Content Security Policy to start from.
 
 ## Where to go next

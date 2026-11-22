@@ -21,7 +21,17 @@ Each file is a static file at a fixed address, written when the site is built fr
 | `/docs/api.json`          | Every export of the SDK packages, one entry each                        |
 | `/docs/search-index.json` | The sections of every page, which the site's search box reads           |
 
-The plain-text files are described elsewhere: `llms.txt` lists the pages with a link to each Markdown copy, and `llms-full.txt` holds all of their text.
+The plain-text files sit beside them: [`/docs/llms.txt`](https://mapcairn.timothybrits.co.za/docs/llms.txt) lists the pages with a link to each Markdown copy, and [`/docs/llms-full.txt`](https://mapcairn.timothybrits.co.za/docs/llms-full.txt) holds all of their text. Every page also has a Markdown copy at its own address with `.md` on the end, such as `/docs/tasks/choose-a-basemap.md`.
+
+To read the page manifest from a shell:
+
+```bash
+curl -s https://mapcairn.timothybrits.co.za/docs/pages.json
+```
+
+### Reading the files from a browser
+
+The files are served with the site's security headers and no `Access-Control-Allow-Origin` header, and with `Cross-Origin-Resource-Policy: same-origin`. A script on another origin therefore cannot read them with `fetch`; a script on the documentation site's own origin, a command-line tool and a server-side program can. Nothing here promises that this will change.
 
 ## Stability
 
@@ -40,15 +50,42 @@ An object with these fields.
 - `packages`: the SDK packages in this build, each as `{ name, version }`.
 - `pages`: every page of the sidebar, in its order.
 
-Each page has these fields.
+Each page has these fields. The origin in every field that has one is the site's address when it was built.
 
 - `title`: the page's title.
 - `description`: its one-line description.
-- `path`: its address on the origin, such as `/docs/guides/extending/`.
-- `url`: the same address with the origin.
-- `markdownUrl`: the address of the page's Markdown copy.
+- `path`: its address on the origin, an absolute path that starts with `/docs/`, such as `/docs/guides/extending/`.
+- `url`: the same address with the origin, such as `https://mapcairn.timothybrits.co.za/docs/guides/extending/`. It is not a path.
+- `markdownUrl`: the address of the page's Markdown copy, also with the origin and ending in `.md`.
 - `checkedAgainst`: the SDK version the page was checked against.
 - `headings`: the `h2` and `h3` headings that have an anchor, in order. Each has `level` (2 or 3), `text` (plain text), `anchor` (the `id` to use after a `#`) and `url` (the page's address with the anchor).
+
+One page, with its headings cut to two (the file lists every heading):
+
+```json
+{
+  "title": "Choose a basemap",
+  "description": "Let people pick a basemap, show its credits, and offer only the basemaps you want.",
+  "path": "/docs/tasks/choose-a-basemap/",
+  "url": "https://mapcairn.timothybrits.co.za/docs/tasks/choose-a-basemap/",
+  "markdownUrl": "https://mapcairn.timothybrits.co.za/docs/tasks/choose-a-basemap.md",
+  "checkedAgainst": "0.1.0",
+  "headings": [
+    {
+      "level": 2,
+      "text": "What a basemap is",
+      "anchor": "what-a-basemap-is",
+      "url": "https://mapcairn.timothybrits.co.za/docs/tasks/choose-a-basemap/#what-a-basemap-is"
+    },
+    {
+      "level": 2,
+      "text": "Add a picker and the credits",
+      "anchor": "add-a-picker-and-the-credits",
+      "url": "https://mapcairn.timothybrits.co.za/docs/tasks/choose-a-basemap/#add-a-picker-and-the-credits"
+    }
+  ]
+}
+```
 
 A last-modified date is not published: the build has no cheap, reliable source for one.
 
@@ -71,9 +108,27 @@ Each entry is built from the model the API reference pages are written from, so 
 - `summary`: the first sentence of the description, as plain text.
 - `since`: the version it was added in, or an empty string.
 - `deprecated`: the deprecation notice, or an empty string.
-- `pageUrl`: the address of the export's page.
+- `pageUrl`: the address of the export's page, with the origin.
 - `sourceUrl`: where it is declared in the repository, or `null` when that is not known.
+
+One entry:
+
+```json
+{
+  "package": "@mapcairn/core",
+  "entryPoint": "@mapcairn/core",
+  "name": "BASEMAPS",
+  "kind": "variable",
+  "group": "constants",
+  "signature": "BASEMAPS: readonly BasemapDefinition[]",
+  "summary": "Every built-in basemap, in the order the picker shows them, the default first.",
+  "since": "",
+  "deprecated": "",
+  "sourceUrl": "https://github.com/MapCairn/mapcairn/blob/main/packages/core/src/basemaps/basemaps.ts#L174",
+  "pageUrl": "https://mapcairn.timothybrits.co.za/docs/api/core/BASEMAPS/"
+}
+```
 
 ## search-index.json
 
-A list of records, one for each page introduction and each `h1` to `h3` section. A record has `id` (unique in the list), `url` (the section's address, with its anchor, from the site root), `page` (the page's title), `heading` (empty for a page's introduction) and `text` (the section's plain text).
+A list of records, one for each page introduction and each `h1` to `h3` section. A record has `id` (unique in the list), `url` (the section's address, with its anchor, as an absolute path that starts with `/docs/`), `page` (the page's title), `heading` (empty for a page's introduction) and `text` (the section's plain text).

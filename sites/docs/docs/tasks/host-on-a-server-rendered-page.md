@@ -160,3 +160,15 @@ Build the services separately for each request on the server, and once in the br
 ## What is not covered
 
 Rendering the map itself on the server, or producing a map image where no one is looking at the map, is not offered; the [capability matrix](../guides/capability-matrix.md) lists it as missing. There is no prebuilt script with a mount function for pages without React either, so a host that does not use React needs a small React island of its own.
+
+## When it goes wrong
+
+- **The map cannot start after hydration.** The placeholder is replaced by `MapView`, so if the engine then fails (no WebGL 2, a worker the policy blocks) the map region stays empty. `MapView` marks it `data-state="error"`, `useMap().error` holds the `MapEngineError`, and `onEngineError` is called. The chrome still shows, so tell the person: the English catalogue has "The map could not start. Reload the page to try again." as `app.banner.engineFailed`. [Troubleshooting](../troubleshooting.md#the-map-does-not-start) lists each message and fix.
+- **The page's script never runs.** The server's placeholder stays, with `aria-busy="true"`. Put a `<noscript>` note beside it that says the map needs script.
+- **A hydration mismatch.** React reports it in the console when the server's markup and the first client render differ. Keep browser-only code, such as stored settings or `window`, inside what `ClientOnly` renders after hydration.
+
+## Next steps
+
+- [Content Security Policy](../guides/content-security-policy.md) has the policy and the nonce a streaming server needs.
+- [Troubleshooting](../troubleshooting.md) covers a blank map and the engine's messages.
+- [Translate the interface](translate-the-interface.md) sets the language and direction the server renders.

@@ -148,3 +148,16 @@ export function brandStylesheet(): string {
 ```
 
 Link the file after the SDK's own stylesheets, and put the class from `scope` on an element around the map. It is a plain stylesheet, so a policy with `style-src 'self'` allows it. The result of a refused theme lists every pair of colours it checked and says which failed. [Extending MapCairn](../guides/extending.md#theme-the-sdk-with-your-own-colours) has the full list of colour roles and the rules about scope, high-contrast modes and tooltips.
+
+## When it goes wrong
+
+- **A theme below WCAG 2.2 AA.** `createThemeStylesheet` does not throw. It returns `ok: false` with every pair of colours it checked, the ones that fail marked `passes: false`, and what it could not use. There is no stylesheet to serve, so the interface keeps the SDK's own colours. The code above turns that into an error at build time, which is the right moment to find it.
+- **A scope that is not allowed.** The scope must be `:root`, `#id` or `.class` with an ASCII name. Anything else is refused and reported in the result.
+- **No `matchMedia`.** The `PageThemeSource` above reads `window`, so build it only in the browser. On a server, give the services a source that reports `light` and applies nothing, and set `data-theme` from a script before the first paint.
+- **Contrast modes.** In high-contrast and forced-colours modes the SDK keeps its own values and skips your theme.
+
+## Next steps
+
+- [Extending MapCairn](../guides/extending.md#theme-the-sdk-with-your-own-colours) lists the colour roles and the rules about scope.
+- [Troubleshooting](../troubleshooting.md) covers a blank or unstyled map.
+- [Translate the interface](translate-the-interface.md) is the other setting people choose.
