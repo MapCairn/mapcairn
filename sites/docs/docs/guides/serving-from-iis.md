@@ -33,7 +33,7 @@ Any bundler that follows the `exports` map and handles a CSS import works; `exam
 
 The entry file below follows `examples/embed/src/main.tsx` in its imports and differs from it in where it mounts: into an element the Razor page provides, not `#root`. It leaves out the example's `page.css`, its `StrictMode` wrapper and the code that sets the body's font and colours from `tokens`; [Extending MapCairn](extending.md#embed-the-sdk-in-an-app-of-your-own) lists the base styles a page sets itself.
 
-```tsx
+```tsx no-check
 import "@fontsource-variable/ibm-plex-sans/wght.css";
 import "@mapcairn/theme/tokens.css";
 import "@mapcairn/map/styles.css";

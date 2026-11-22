@@ -79,11 +79,15 @@ const README = readFileSync(
   "utf8",
 );
 
-/** The embedding walkthrough the page links, which holds the whole app. */
+/**
+ * The embedding walkthrough the page links, which holds the whole app. The
+ * docs site's `check` marker on a code fence is dropped, so the blocks read as
+ * the README writes them.
+ */
 const EMBED_GUIDE = readFileSync(
   path.resolve(__dirname, "../../../../sites/docs/docs/guides/embed-a-map.md"),
   "utf8",
-);
+).replaceAll(/^```(tsx?) (?:no-)?check$/gm, "```$1");
 
 /** The walkthrough's path on the documentation site, which the page links. */
 const EMBED_GUIDE_URL = "/docs/guides/embed-a-map/";

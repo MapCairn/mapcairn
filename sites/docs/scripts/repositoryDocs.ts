@@ -57,6 +57,7 @@ const SITE_GUIDE =
 const OTHER_DOCUMENT = /^(ARCHITECTURE|DESIGN)\.md(#.*)?$/;
 const SCHEME_OR_ANCHOR = /^(?:[a-z][a-z0-9+.-]*:|#)/i;
 const FENCE = /^\s*(?:```|~~~)/;
+const UNMARKED_CODE_FENCE = /^(\s*(?:```|~~~)(?:ts|tsx))\s*$/;
 const CODE_SPAN = /(`[^`\n]*`)/;
 
 /** One link target, rewritten for a page in the generated folder. */
@@ -112,6 +113,25 @@ export function relinkRepositoryDoc(text: string): string {
 }
 
 /**
+ * Marks each `ts` or `tsx` block that has no marker `no-check`: the code in a
+ * repository document is not a snippet of the site, so the snippet check does
+ * not compile it.
+ */
+function markCodeNotChecked(text: string): string {
+  let inFence = false;
+  return text
+    .split("\n")
+    .map((line) => {
+      if (!FENCE.test(line)) {
+        return line;
+      }
+      inFence = !inFence;
+      return inFence ? line.replace(UNMARKED_CODE_FENCE, "$1 no-check") : line;
+    })
+    .join("\n");
+}
+
+/**
  * The page the site builds from a repository document: front matter, the
  * document's own heading, a paragraph that says what the page is for, where it
  * is edited and which version it was checked against, then the body with its
@@ -143,5 +163,5 @@ export function renderRepositoryDoc(text: string, doc: RepositoryDoc): string {
   const body = relinkRepositoryDoc(
     `${text.slice(0, headingEnd)}\n\n${opening}${text.slice(headingEnd)}`,
   );
-  return `${frontMatter}\n${body}`;
+  return `${frontMatter}\n${markCodeNotChecked(body)}`;
 }
