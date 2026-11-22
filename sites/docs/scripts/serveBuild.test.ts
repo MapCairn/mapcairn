@@ -32,11 +32,11 @@ describe("insideFolder", () => {
 const files = new Set([
   "index.html",
   "404.html",
-  "guides/embed-a-map/index.html",
+  "tasks/example-task/index.html",
   "assets/fonts/plex.woff2",
   "llms.txt",
 ]);
-const directories = new Set(["guides", "guides/embed-a-map", "assets"]);
+const directories = new Set(["tasks", "tasks/example-task", "assets"]);
 
 function kindOf(path: string): "file" | "directory" | "none" {
   if (files.has(path)) {
@@ -54,16 +54,16 @@ describe("resolveTarget", () => {
   });
 
   it("serves the index of a folder given with a trailing slash", () => {
-    expect(resolveTarget("/docs/guides/embed-a-map/", kindOf)).toEqual({
+    expect(resolveTarget("/docs/tasks/example-task/", kindOf)).toEqual({
       kind: "file",
-      path: "guides/embed-a-map/index.html",
+      path: "tasks/example-task/index.html",
     });
   });
 
   it("redirects a folder given without its trailing slash", () => {
-    expect(resolveTarget("/docs/guides/embed-a-map", kindOf)).toEqual({
+    expect(resolveTarget("/docs/tasks/example-task", kindOf)).toEqual({
       kind: "redirect",
-      location: "/docs/guides/embed-a-map/",
+      location: "/docs/tasks/example-task/",
     });
   });
 
