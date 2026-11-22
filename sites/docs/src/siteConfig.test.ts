@@ -26,6 +26,23 @@ describe("siteConfig", () => {
   });
 });
 
+const HOST_WORKER_CONFIG = readFileSync(
+  new URL("../../../packages/web/cloudflare.config.ts", import.meta.url),
+  "utf8",
+);
+
+describe("the host's Worker configuration", () => {
+  it("is on the same compatibility date, and serves the hostname this site's route names", () => {
+    const { worker } = cloudflareConfig as {
+      worker: { compatibilityDate: string };
+    };
+    expect(HOST_WORKER_CONFIG).toContain(
+      `compatibilityDate = "${worker.compatibilityDate}"`,
+    );
+    expect(HOST_WORKER_CONFIG).toContain(`"${new URL(SITE_ORIGIN).hostname}"`);
+  });
+});
+
 describe("the Worker's configuration", () => {
   const { worker } = cloudflareConfig as {
     worker: {

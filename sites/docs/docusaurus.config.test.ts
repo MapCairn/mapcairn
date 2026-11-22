@@ -29,6 +29,18 @@ describe("docusaurus.config", () => {
     expect((options.docs as { routeBasePath: string }).routeBasePath).toBe("/");
   });
 
+  it("keeps the framework's storage key un-namespaced, as the theme bridge expects", () => {
+    expect(config.storage).toEqual({ type: "localStorage", namespace: false });
+  });
+
+  it("holds no third-party plugin, theme, script or client module of its own", () => {
+    expect(config.plugins).toHaveLength(1);
+    expect(config.themes).toBeUndefined();
+    expect(config.scripts).toBeUndefined();
+    expect(config.clientModules).toBeUndefined();
+    expect(config.stylesheets).toBeUndefined();
+  });
+
   it("loads no analytics, search service or other third-party plugin", () => {
     const [, options] = (config.presets ?? [])[0] as [
       string,

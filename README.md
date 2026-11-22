@@ -300,7 +300,7 @@ Most apps install only `@mapcairn/sdk`. The packages inside it are published on 
 
 ## Documentation
 
-The documentation site is built from [`sites/docs`](sites/docs) and served at `/docs/` on the reference site ([plan 0017](docs/plans/0017-documentation-site.md)). It has the Get started page so far; the guides in the table below move into it step by step, and the table says where each one is until it does.
+The documentation site is built from [`sites/docs`](sites/docs) and, once it is deployed, served at `/docs/` on the reference site ([plan 0017](docs/plans/0017-documentation-site.md)). It has the Get started page so far; the guides in the table below move into it step by step, and the table says where each one is until it does.
 
 | Document                                                                             | Covers                                                                                                     |
 | ------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------- |

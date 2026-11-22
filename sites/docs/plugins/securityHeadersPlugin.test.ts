@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
-import { createHash } from "node:crypto";
 import {
   mkdirSync,
   mkdtempSync,
@@ -11,6 +10,7 @@ import {
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, expect, it } from "vitest";
+import { EXPECTED_INLINE_SCRIPTS } from "../scripts/expectedInlineScripts";
 import { writeHeaders } from "./securityHeadersPlugin";
 
 let root = "";
@@ -19,19 +19,21 @@ afterEach(() => {
   rmSync(root, { recursive: true, force: true });
 });
 
-it("allows each inline script of every built page once, by hash", () => {
+it("allows the committed inline scripts and no other, whatever the pages carry", () => {
   root = mkdtempSync(join(tmpdir(), "mapcairn-headers-"));
   mkdirSync(join(root, "guide"));
-  writeFileSync(join(root, "index.html"), "<script>one()</script>");
+  writeFileSync(join(root, "index.html"), "<script>unexpected()</script>");
   writeFileSync(
     join(root, "guide", "index.html"),
-    "<script>one()</script><script>two()</script>",
+    '<svg style="display: none;"><defs><symbol id="a"></symbol></defs></svg><p>x</p>',
   );
   writeHeaders(root);
   const text = readFileSync(join(root, "_headers"), "utf8");
-  const hash = (code: string) =>
-    `'sha256-${createHash("sha256").update(code).digest("base64")}'`;
-  expect(text).toContain(hash("one()"));
-  expect(text).toContain(hash("two()"));
-  expect(text.split(hash("one()")).length - 1).toBe(1);
+  for (const { hash } of EXPECTED_INLINE_SCRIPTS) {
+    expect(text).toContain(`'${hash}'`);
+  }
+  expect(text.match(/'sha256-/g)?.length).toBe(EXPECTED_INLINE_SCRIPTS.length);
+  expect(readFileSync(join(root, "guide", "index.html"), "utf8")).not.toContain(
+    "display: none",
+  );
 });

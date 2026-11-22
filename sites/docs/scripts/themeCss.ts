@@ -67,7 +67,7 @@ function leaves(node: unknown, path: readonly string[] = []): Reference[] {
   );
 }
 
-/** \`colour.surfaceRaised\` becomes \`--mc-colour-surface-raised\`. */
+/** `color.surfaceRaised` becomes `--mc-color-surface-raised`. */
 function aliasName(path: readonly string[]): string {
   const words = path.map((word) =>
     word.replace(/[A-Z]/g, (letter) => `-${letter.toLowerCase()}`),
@@ -77,8 +77,8 @@ function aliasName(path: readonly string[]): string {
 
 /**
  * The selector the variables are written under. The framework sets its dark
- * values on \`html[data-theme="dark"]\`, so a plain \`:root\` rule would lose to it
- * in the dark theme; \`html[data-theme]\` ties with it and this file comes later.
+ * values on `html[data-theme="dark"]`, so a plain `:root` rule would lose to it
+ * in the dark theme; `html[data-theme]` ties with it and this file comes later.
  */
 const SELECTOR = "html, html[data-theme]";
 

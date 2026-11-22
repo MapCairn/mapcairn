@@ -42,6 +42,9 @@ const config: Config = {
   baseUrl: BASE_URL,
   trailingSlash: true,
   baseUrlIssueBanner: false,
+  // No namespace suffix on storage keys, so the framework's choice is stored
+  // under the plain `theme` key that `src/themeBridge.ts` writes to.
+  storage: { type: "localStorage", namespace: false },
   onBrokenLinks: "throw",
   onBrokenAnchors: "throw",
   onDuplicateRoutes: "throw",

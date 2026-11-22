@@ -7,9 +7,19 @@ import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import { inlineScriptHashes } from "./builtSite";
 import { buildHeadersFile } from "./securityHeaders";
+import { TARGETED_CLASSES } from "./targetedClasses";
 import { SCRIPT_BUDGET_BYTES, verifyBuild } from "./verifyBuild";
 
 const roots: string[] = [];
+
+/** Markup that carries every framework class the stylesheet targets. */
+const TARGETS = `<div class="${TARGETED_CLASSES.join(" ")}"></div>`;
+
+/** What the fixtures treat as the expected inline scripts. */
+const ONE = {
+  name: "one",
+  hash: inlineScriptHashes("<script>one()</script>")[0] ?? "",
+};
 
 /** Writes a small built site: the pages, any files, and the `_headers` its inline scripts need. */
 function builtSite(
@@ -18,11 +28,8 @@ function builtSite(
 ): string {
   const root = mkdtempSync(join(tmpdir(), "mapcairn-verify-"));
   roots.push(root);
-  writeFileSync(join(root, "index.html"), pages);
-  writeFileSync(
-    join(root, "_headers"),
-    buildHeadersFile(inlineScriptHashes(pages)),
-  );
+  writeFileSync(join(root, "index.html"), `${TARGETS}${pages}`);
+  writeFileSync(join(root, "_headers"), buildHeadersFile([ONE.hash]));
   for (const [path, body] of Object.entries(files)) {
     mkdirSync(join(root, path, ".."), { recursive: true });
     writeFileSync(join(root, path), body);
@@ -41,19 +48,38 @@ describe("verifyBuild", () => {
     const root = builtSite(
       '<a href="/map">m</a><a href="/docs/">home</a><script>one()</script>',
     );
-    expect(verifyBuild(root)).toEqual([]);
+    expect(verifyBuild(root, [ONE])).toEqual([]);
   });
 
-  it("reports a broken link, a style attribute, a resource from another origin and an inline script that _headers does not allow", () => {
+  it("reports a broken link, a style attribute and a resource from another origin", () => {
     const root = builtSite(
       '<a href="/docs/missing/">x</a><p style="color:red">y</p><script src="https://cdn.example/a.js"></script><script>one()</script>',
     );
-    writeFileSync(join(root, "_headers"), buildHeadersFile([]));
-    const findings = verifyBuild(root).join("\n");
+    const findings = verifyBuild(root, [ONE]).join("\n");
     expect(findings).toContain("/docs/missing/");
     expect(findings).toContain("style attribute");
     expect(findings).toContain("https://cdn.example/a.js");
-    expect(findings).toContain("inline script");
+  });
+
+  it("fails on an inline script that is not on the committed list, even though the page carries it", () => {
+    const root = builtSite("<script>one()</script><script>two()</script>");
+    const findings = verifyBuild(root, [ONE]).join("\n");
+    expect(findings).toContain("not in expectedInlineScripts.ts");
+  });
+
+  it("fails when an expected inline script is no longer in any page", () => {
+    const root = builtSite("<p>none</p>");
+    expect(verifyBuild(root, [ONE]).join("\n")).toContain(
+      'expected inline script "one"',
+    );
+  });
+
+  it("fails when a framework class the stylesheet targets is gone", () => {
+    const root = builtSite("<script>one()</script>");
+    writeFileSync(join(root, "index.html"), "<script>one()</script>");
+    expect(verifyBuild(root, [ONE]).join("\n")).toContain(
+      `framework class "${TARGETED_CLASSES[0]}"`,
+    );
   });
 
   it("reports a front page that loads more script than the budget", () => {
@@ -64,6 +90,6 @@ describe("verifyBuild", () => {
         "assets/js/main.js": heavy,
       },
     );
-    expect(verifyBuild(root).join("\n")).toContain("over the budget");
+    expect(verifyBuild(root, [ONE]).join("\n")).toContain("over the budget");
   });
 });

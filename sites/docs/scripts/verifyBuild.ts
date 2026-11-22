@@ -14,6 +14,11 @@ import {
   scriptBytesFor,
 } from "./builtSite";
 import { docsMissingFromSidebar, sidebarDocIds } from "./docChecks";
+import {
+  EXPECTED_INLINE_SCRIPTS,
+  type ExpectedInlineScript,
+} from "./expectedInlineScripts";
+import { TARGETED_CLASSES } from "./targetedClasses";
 
 const SITE = fileURLToPath(new URL("..", import.meta.url));
 const BUILD = join(SITE, "build");
@@ -35,12 +40,20 @@ type Finding = string;
 /**
  * Checks a finished build and returns what is wrong with it: a page missing
  * from the sidebar, a link that goes nowhere, a style attribute or an inline
- * script the policy would block, a resource from another origin, and a page
- * over the script budget.
+ * script that is not on the committed list (or one on it that is gone), a
+ * resource from another origin, a framework class the stylesheet targets that
+ * the pages no longer carry, and a page over the script budget.
  * @param build - The build folder.
+ * @param expected - The inline scripts the pages may carry.
  */
-export function verifyBuild(build: string): Finding[] {
+export function verifyBuild(
+  build: string,
+  expected: readonly ExpectedInlineScript[] = EXPECTED_INLINE_SCRIPTS,
+): Finding[] {
   const findings: Finding[] = [];
+  const allowed = new Set(expected.map(({ hash }) => hash));
+  const seen = new Set<string>();
+  const markup: string[] = [];
   for (const id of docsMissingFromSidebar(
     join(SITE, "docs"),
     sidebarDocIds(sidebar),
@@ -57,6 +70,7 @@ export function verifyBuild(build: string): Finding[] {
   const headers = readFileSync(join(build, "_headers"), "utf8");
   for (const page of htmlFiles(build)) {
     const html = readFileSync(join(build, page), "utf8");
+    markup.push(html);
     if (inlineStyleAttributes(html) > 0) {
       findings.push(`${page} has a style attribute, which the policy blocks.`);
     }
@@ -64,11 +78,30 @@ export function verifyBuild(build: string): Finding[] {
       findings.push(`${page} loads ${url} from another origin.`);
     }
     for (const hash of inlineScriptHashes(html)) {
-      if (!headers.includes(`'${hash}'`)) {
+      seen.add(hash);
+      if (!allowed.has(hash)) {
         findings.push(
-          `${page} has an inline script that _headers does not allow.`,
+          `${page} has an inline script (${hash}) that is not in expectedInlineScripts.ts.`,
         );
       }
+    }
+  }
+  for (const { name, hash } of expected) {
+    if (!seen.has(hash)) {
+      findings.push(
+        `The expected inline script "${name}" (${hash}) is in no page.`,
+      );
+    }
+    if (!headers.includes(`'${hash}'`)) {
+      findings.push(`_headers does not allow the inline script "${name}".`);
+    }
+  }
+  const text = markup.join("\n");
+  for (const name of TARGETED_CLASSES) {
+    if (!text.includes(name)) {
+      findings.push(
+        `The stylesheet targets the framework class "${name}", which no page carries.`,
+      );
     }
   }
   const bytes = scriptBytesFor(build, BASE_URL, BUDGET_PAGE);

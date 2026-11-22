@@ -15,8 +15,8 @@ import { defineConfig, triggers } from "cf/config";
  * wherever they apply to a Worker with no code.
  *
  * The hostname, zone and base path are written here and not imported, because
- * \`cf\` loads this file as a bare ES module, which resolves no extensionless
- * import. \`cloudflareConfig.test.ts\` keeps them equal to \`src/siteConfig.ts\`.
+ * `cf` loads this file as a bare ES module, which resolves no extensionless
+ * import. `siteConfig.test.ts` keeps them equal to `src/siteConfig.ts`.
  */
 const compatibilityDate = "2026-09-08";
 const hostname = "mapcairn.timothybrits.co.za";

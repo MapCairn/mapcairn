@@ -5,6 +5,7 @@ import { THEME_STORAGE_KEY } from "@mapcairn/core";
 import type { Props } from "@theme/ColorModeToggle";
 import ColorModeToggle from "@theme-original/ColorModeToggle";
 import type { ReactNode } from "react";
+import { sharedChoiceFor } from "../../sharedChoice";
 
 const sharedChoice = createStorageSlot(THEME_STORAGE_KEY);
 
@@ -21,7 +22,7 @@ export default function ColorModeToggleWithSharedChoice(
       {...props}
       onChange={(mode: ColorMode | null) => {
         props.onChange(mode);
-        sharedChoice.set(mode ?? "system");
+        sharedChoice.set(sharedChoiceFor(mode));
       }}
     />
   );

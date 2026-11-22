@@ -4,6 +4,7 @@ import { translate } from "@docusaurus/Translate";
 import type { Props } from "@theme/Icon/ExternalLink";
 import { ExternalLink } from "lucide-react";
 import type { ReactNode } from "react";
+import { EXTERNAL_MARK_SIZE, ICON_STROKE } from "../../../iconMetrics";
 
 /**
  * The mark on a link that leaves the site, drawn with Lucide. The framework's
@@ -11,14 +12,14 @@ import type { ReactNode } from "react";
  * style attribute is not allowed by the Content-Security-Policy.
  */
 export default function IconExternalLink({
-  width = 14,
-  height = 14,
+  width = EXTERNAL_MARK_SIZE,
+  height = EXTERNAL_MARK_SIZE,
 }: Props): ReactNode {
   return (
     <ExternalLink
       width={width}
       height={height}
-      strokeWidth={1.75}
+      strokeWidth={ICON_STROKE}
       aria-label={translate({
         id: "theme.IconExternalLink.ariaLabel",
         message: "(opens in new tab)",

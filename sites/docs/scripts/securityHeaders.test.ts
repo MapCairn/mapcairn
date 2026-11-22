@@ -77,6 +77,23 @@ describe("buildHeadersFile", () => {
     }
   });
 
+  it("denies every permission the reference site denies, and geolocation too", () => {
+    const line = (text: string) =>
+      text
+        .split("\n")
+        .find((row) => row.trim().startsWith("Permissions-Policy:")) ?? "";
+    for (const denied of [
+      "camera=()",
+      "microphone=()",
+      "interest-cohort=()",
+      "browsing-topics=()",
+    ]) {
+      expect(line(HOST_HEADERS)).toContain(denied);
+      expect(line(file)).toContain(denied);
+    }
+    expect(line(file)).toContain("geolocation=()");
+  });
+
   it("caches the hashed build assets for a year and leaves pages to revalidate", () => {
     expect(file).toContain(
       "/docs/assets/*\n  Cache-Control: public, max-age=31536000, immutable",
