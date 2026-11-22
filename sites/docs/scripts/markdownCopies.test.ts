@@ -44,6 +44,41 @@ const GUIDE = parseDocSource(
   "---\ntitle: The guide\ndescription: A guide.\n---\n\n# The guide\n\nBody.\n",
 );
 
+describe("copyText layout tags", () => {
+  it("drops lines that hold only HTML tags and the blank lines after them, and keeps tags in code", () => {
+    const page = parseDocSource(
+      "cards",
+      [
+        "---",
+        "title: Cards",
+        "description: Cards.",
+        "---",
+        "",
+        "Intro.",
+        "",
+        '<div className="wrap">',
+        "",
+        "## Lane",
+        "",
+        '<progress value={1} max={2} aria-hidden="true"></progress>',
+        "",
+        "Text with <b>inline</b> tag.",
+        "",
+        "```html",
+        "<div>kept</div>",
+        "",
+        "```",
+        "",
+        "</div>",
+        "",
+      ].join("\n"),
+    );
+    expect(copyText(page, [page], CONTEXT)).toBe(
+      "Intro.\n\n## Lane\n\nText with <b>inline</b> tag.\n\n```html\n<div>kept</div>\n\n```\n",
+    );
+  });
+});
+
 describe("parseDocSource", () => {
   it("reads the title, description and permalink, and the body without front matter", () => {
     expect(HOME).toMatchObject({

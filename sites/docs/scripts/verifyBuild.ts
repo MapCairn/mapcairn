@@ -23,6 +23,7 @@ import {
 } from "./expectedInlineScripts";
 import { markdownFindings } from "./markdownChecks";
 import type { DocPage } from "./markdownCopies";
+import { roadmapFindings } from "./roadmapChecks";
 import { SDK_VERSION } from "./sdkVersion";
 import { TARGETED_CLASSES } from "./targetedClasses";
 
@@ -63,7 +64,8 @@ function searchIndexSize(build: string): number {
  * the pages no longer carry, a missing or empty search index, and a page over
  * the script budget.
  * the pages no longer carry, a page without its Markdown copy or a place in
- * the llms files (`markdownChecks.ts`), and a page over the script budget.
+ * the llms files (`markdownChecks.ts`), a roadmap page that is missing or
+ * incomplete (`roadmapChecks.ts`), and a page over the script budget.
  * @param build - The build folder.
  * @param expected - The inline scripts the pages may carry.
  * @param pages - The pages that must have a Markdown copy.
@@ -139,6 +141,7 @@ export function verifyBuild(
       tagline: config.tagline ?? "",
     }),
   );
+  findings.push(...roadmapFindings(build));
   const bytes = scriptBytesFor(build, BASE_URL, BUDGET_PAGE);
   if (bytes > SCRIPT_BUDGET_BYTES) {
     findings.push(

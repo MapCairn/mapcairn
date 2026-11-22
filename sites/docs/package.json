@@ -5,7 +5,7 @@
   "license": "AGPL-3.0-only",
   "private": true,
   "scripts": {
-    "generate": "node --import tsx scripts/generateTheme.ts",
+    "generate": "node --import tsx scripts/generateTheme.ts && node --import tsx scripts/generateRoadmap.ts",
     "deploy": "cf deploy ./build",
     "dev": "npm run generate && docusaurus start --port 4410",
     "build": "npm --prefix ../.. run build:sdk && npm run generate && docusaurus build && node --import tsx scripts/verifyBuild.ts",

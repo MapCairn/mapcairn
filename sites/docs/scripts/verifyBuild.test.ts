@@ -10,6 +10,7 @@ import { writeMarkdownFiles } from "../plugins/markdownCopiesPlugin";
 import { BASE_URL, SITE_ORIGIN } from "../src/siteConfig";
 import { inlineScriptHashes } from "./builtSite";
 import { parseDocSource } from "./markdownCopies";
+import { PRIORITY_NOT_SCHEDULE } from "./roadmapPage";
 import { SDK_VERSION } from "./sdkVersion";
 import { buildHeadersFile } from "./securityHeaders";
 import { TARGETED_CLASSES } from "./targetedClasses";
@@ -50,6 +51,15 @@ function builtSite(
   );
   writeFileSync(join(root, "sitemap.xml"), "<urlset></urlset>");
   writeMarkdownFiles(root, [], CONTEXT);
+  mkdirSync(join(root, "roadmap"));
+  writeFileSync(
+    join(root, "roadmap", "index.html"),
+    `${PRIORITY_NOT_SCHEDULE}${'<section class="roadmap__lane"></section>'.repeat(3)}`,
+  );
+  writeFileSync(
+    join(root, "roadmap.md"),
+    `${PRIORITY_NOT_SCHEDULE}\n## Now\n## Next\n## Later\n`,
+  );
   for (const [path, body] of Object.entries(files)) {
     mkdirSync(join(root, path, ".."), { recursive: true });
     writeFileSync(join(root, path), body);
@@ -113,6 +123,14 @@ describe("verifyBuild", () => {
     });
     expect(verifyBuild(empty, [ONE], []).join("\n")).toContain(
       "search-index.json",
+    );
+  });
+
+  it("reports a roadmap page that was not built", () => {
+    const root = builtSite("<script>one()</script>");
+    rmSync(join(root, "roadmap"), { recursive: true });
+    expect(verifyBuild(root, [ONE], []).join("\n")).toContain(
+      "roadmap page was not built",
     );
   });
 

@@ -92,6 +92,12 @@ Built in step 3, by `plugins/markdownCopiesPlugin.ts` from `postBuild`, with the
 - Content is not hidden in tabs: a copy that holds a `Tabs` or `TabItem` tag fails the build.
 - A request that sends `Accept: text/markdown` for a page cannot be answered by an assets-only Worker, which serves a file by its path. See the open question below.
 
+### Roadmap page
+
+`/docs/roadmap` shows the ranked list of `ROADMAP.md` (#670). `npm run generate` writes it as `docs/roadmap.md` before every build and dev start (`scripts/generateRoadmap.ts`; the file is git-ignored, because `ROADMAP.md` is the source). It reads the list with `parseRoadmap` in `scripts/roadmap-check.mjs`, the parser behind `npm run roadmap:check`, and fails the build on what that check fails without the network. The page is an ordinary docs page, so it has a search entry, a Markdown copy and an `llms-full.txt` entry; its layout is a few plain elements (`section`, `article`, `progress`) that the copy drops, keeping the lanes, milestone names, one-line summaries and counts as text. The lanes stack on a phone and sit side by side where the column is 44 rem wide (a container query); each card carries a bar and, as text, the closed count, the total and the percentage, so colour is never the only cue.
+
+The issue counts come from the public milestones endpoint of GitHub at build time, with no token and no request from the browser (`scripts/roadmapCounts.ts`). A failed call, a rate limit or an unusable answer never fails the build: the last good counts in `roadmap-counts.json` (committed, and rewritten by any build that reads fresh ones) are used instead, and the page says when it was read and that GitHub could not be reached. With neither, the cards say the counts are not available. `scripts/roadmapChecks.ts` makes the build check that the page exists with its three lanes and the sentence "A priority, not a schedule.", and that its copy carries them.
+
 ### Budgets, stated before the content grows
 
 - JavaScript: `SCRIPT_BUDGET_BYTES` in `scripts/verifyBuild.ts` is 160,000 bytes of gzip for the scripts the front page loads, and the build fails above it. The first measure, a page with no search, is 151,074 bytes, almost all of it the framework's client runtime and theme; the budget is 6 percent above that, so ordinary changes pass and a plugin that doubles the script does not. Step 2 measures search against it and states the new figure here before it lands. The target is to lower it: step 7 looks at what the framework ships that this site does not use.
