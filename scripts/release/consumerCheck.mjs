@@ -72,8 +72,8 @@ import {
   yarnSettings,
   yarnSkipped,
 } from "./consumerLegs.mjs";
-import { isolatedEnvironment, parsePackListing, runNpm } from "./npm.mjs";
-import { findTarballs, PACKAGES } from "./packCheck.mjs";
+import { isolatedEnvironment, runNpm } from "./npm.mjs";
+import { findTarballs, packTarballs } from "./packCheck.mjs";
 import { readmeQuickstart } from "./quickstartLeg.mjs";
 import { SDK_NAMES } from "./workspaces.mjs";
 
@@ -628,23 +628,6 @@ function runNode(label, args, cwd, timeout) {
     throw new Error(`${label} failed:\n${result.stdout}\n${result.stderr}`);
   }
   return result.stdout;
-}
-
-/** Packs the SDK packages into `destination` and names each tarball. */
-function packTarballs(destination) {
-  /** @type {Record<string, string>} */
-  const tarballs = {};
-  for (const name of PACKAGES) {
-    const result = runNpm(
-      ["pack", "--ignore-scripts", "--json", "--pack-destination", destination],
-      { cwd: path.join(REPO, "packages", name) },
-    );
-    if (result.status !== 0) {
-      throw new Error(`npm pack failed for ${name}:\n${result.stderr}`);
-    }
-    tarballs[name] = parsePackListing(result.stdout).filename;
-  }
-  return tarballs;
 }
 
 /**
