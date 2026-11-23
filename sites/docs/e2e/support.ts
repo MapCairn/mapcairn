@@ -32,8 +32,9 @@ export interface AuditedPage {
 
 /**
  * The pages audited: Get started, a task page, an API page for a function and
- * one for a type, the roadmap, the Architecture page (many tables) and the 404 page (which the static server
- * answers for an unknown address).
+ * one for a type, the roadmap, the Architecture page (many tables and
+ * diagrams), the extending guide (a diagram) and the 404 page (which the
+ * static server answers for an unknown address).
  */
 export const AUDITED_PAGES: readonly AuditedPage[] = [
   { name: "Get started", path: "/docs/" },
@@ -42,6 +43,7 @@ export const AUDITED_PAGES: readonly AuditedPage[] = [
   { name: "API type", path: "/docs/api/core/ClipboardPort/" },
   { name: "roadmap", path: "/docs/roadmap/" },
   { name: "Architecture", path: "/docs/architecture/" },
+  { name: "Extend the SDK", path: "/docs/guides/extending/" },
   { name: "404", path: "/docs/this-page-does-not-exist/" },
 ];
 

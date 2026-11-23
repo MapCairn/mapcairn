@@ -499,7 +499,34 @@ Every `SearchResult` has these fields (`packages/core/src/ports/search.ts`):
 | `centre`         | `{ lat, lng }`, in degrees. Required.                                                                                                              |
 | `bounds`         | Optional `{ south, west, north, east }`. When present, a host that follows the reference site fits the map to it instead of centring on the point. |
 
-Moving the map is the host's job, not the provider's or the pill's: the pill calls its `onSelect` prop with the picked result. The reference host fits `bounds` when there are some and otherwise centres at a fixed zoom (`flyTo` in `packages/web/src/app/useMapApp.ts`), and the example does the same in `src/showResult.ts`. A host that only reads `centre` still works, but frames a glen or a lake as a point.
+Moving the map is the host's job, not the provider's or the pill's: the pill calls its `onSelect` prop with the picked result. Here is a suggestion in the reference host, from typing to the map moving. Arrows follow the order in time.
+
+```mermaid
+flowchart TD
+  subgraph typing["1. Typing"]
+    pill["SearchPill, useSuggestions<br/>in packages/map"]
+    port["SuggestionProvider.suggest<br/>port, in packages/core"]
+    photon["PhotonSuggestionProvider<br/>in packages/web"]
+  end
+  subgraph picking["2. Picking a suggestion"]
+    pick["SearchPill onSelect<br/>called with the SearchResult"]
+    fly["flyTo in useMapApp<br/>in packages/web"]
+    move["MapAdapter.fitBounds or setView<br/>port, in packages/core"]
+    camera["Camera<br/>in packages/adapter-maplibre"]
+    engine["MapLibre fitBounds, easeTo<br/>or jumpTo"]
+    save["onViewChange, UrlState.write<br/>the address follows the map"]
+  end
+  pill --> port
+  port --> photon
+  photon --> pick
+  pick --> fly
+  fly --> move
+  move --> camera
+  camera --> engine
+  engine --> save
+```
+
+`flyTo` (`packages/web/src/app/useMapApp.ts`) fits `bounds` when there are some and otherwise centres at a fixed zoom, and the example does the same in `src/showResult.ts`. A host that only reads `centre` still works, but frames a glen or a lake as a point.
 
 ### What the pill and the provider each do
 
