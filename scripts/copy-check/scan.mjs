@@ -382,7 +382,9 @@ export function findHardcodedCopy(source) {
 /**
  * The files that make up the interface: every `.tsx` file under
  * `packages/map/src` and `packages/web/src`, without tests and stories. The
- * browser specs (`packages/web/e2e`) and `examples/` lie outside those folders.
+ * browser specs (`packages/web/e2e`), `examples/` and `sites/docs` lie outside
+ * those folders: the docs site is written in English only and has no message
+ * catalogue to look text up in.
  * @param {string} [root]
  * @returns {string[]} Repository relative paths with forward slashes.
  */
