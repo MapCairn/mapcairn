@@ -593,8 +593,6 @@ export interface LayerDefinitionBase {
   readonly description: DefinitionText;
   /** A heading the layer is listed under, such as `Hazards`. */
   readonly group: DefinitionText;
-  /** Roughly how much data turning the layer on costs, such as `about 30 KB`. */
-  readonly dataCost: DefinitionText;
   /** The credits that are shown while the layer is on. */
   readonly attribution: readonly LayerAttribution[];
   /** Shown on every card, for example that alerts are automatic estimates. */

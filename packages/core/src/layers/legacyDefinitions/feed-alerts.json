@@ -3,7 +3,6 @@
   "name": "Sample alerts",
   "description": "Alerts from a sample feed.",
   "group": "Samples",
-  "dataCost": "about 130 KB",
   "attribution": [
     {
       "text": "Sample alerts provider"

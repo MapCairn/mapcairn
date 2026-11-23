@@ -3,7 +3,6 @@
   "name": "Sample districts",
   "description": "Areas, roads and events from sample vector tiles.",
   "group": "Samples",
-  "dataCost": "about 100 KB per screen",
   "attribution": [
     {
       "text": "Sample tiles provider"

@@ -15,7 +15,6 @@ const earthAtNight: TileLayerDefinition = {
     text: "The lights of cities, roads and ships seen from space, as a cloud-free picture from 2016. Detail stops at about 500 m.",
   },
   group: "layer.group.imagery",
-  dataCost: "layer.earth-at-night.dataCost",
   attribution: [
     {
       text: "We acknowledge the use of imagery provided by services from NASA's Global Imagery Browse Services (GIBS), part of NASA's Earth Science Data and Information System (ESDIS).",

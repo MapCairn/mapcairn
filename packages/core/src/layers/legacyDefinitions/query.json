@@ -3,7 +3,6 @@
   "name": "Sample query",
   "description": "Points requested for the part of the map in view.",
   "group": "Samples",
-  "dataCost": "a few KB per screen",
   "attribution": [
     {
       "text": "Sample query provider"

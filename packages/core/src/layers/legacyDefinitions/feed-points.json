@@ -3,7 +3,6 @@
   "name": "Sample points",
   "description": "Points from a sample feed.",
   "group": "Samples",
-  "dataCost": "about 30 KB",
   "attribution": [
     {
       "text": "Sample provider",

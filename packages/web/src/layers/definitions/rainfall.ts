@@ -20,7 +20,6 @@ const rainfall: TileLayerDefinition = {
   name: "layer.rainfall.name",
   description: "layer.rainfall.description",
   group: "layer.group.floodsStormsAndDroughts",
-  dataCost: "layer.rainfall.dataCost",
   attribution: [
     {
       text: "We acknowledge the use of imagery provided by services from NASA's Global Imagery Browse Services (GIBS), part of NASA's Earth Science Data and Information System (ESDIS).",

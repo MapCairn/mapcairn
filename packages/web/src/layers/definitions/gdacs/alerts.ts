@@ -14,7 +14,6 @@ type OwnParts = "id" | "name" | "description" | "group" | "emptyText";
  * only when someone asks for it.
  */
 export const GDACS_ALERTS: Omit<FeedLayerDefinition, OwnParts> = {
-  dataCost: "layer.gdacs.dataCost",
   attribution: [
     {
       text: "Global Disaster Alert and Coordination System, GDACS",

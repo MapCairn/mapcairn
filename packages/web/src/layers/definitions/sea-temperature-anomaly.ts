@@ -15,7 +15,6 @@ const seaTemperatureAnomaly: TileLayerDefinition = {
   name: "layer.sea-temperature-anomaly.name",
   description: "layer.sea-temperature-anomaly.description",
   group: "layer.group.oceans",
-  dataCost: "layer.sea-temperature-anomaly.dataCost",
   attribution: [
     {
       text: "We acknowledge the use of imagery provided by services from NASA's Global Imagery Browse Services (GIBS), part of NASA's Earth Science Data and Information System (ESDIS).",

@@ -46,7 +46,6 @@ describe("validateLayerDefinition", () => {
     definition.name = { key: "sample.name", text: "Sample points" };
     definition.description = { key: "sample.description", text: "Points." };
     definition.group = { key: "sample.group", text: "Samples" };
-    definition.dataCost = { key: "sample.cost", text: "about 30 KB" };
     definition.emptyText = { key: "sample.empty", text: "None." };
     (definition.card as Json).link = {
       field: "title",
@@ -72,7 +71,6 @@ describe("validateLayerDefinition", () => {
     definition.name = { key: "", text: "Sample points" };
     definition.group = { key: "sample.group", text: " " };
     definition.description = { text: "Points." };
-    definition.dataCost = { key: "sample.cost", text: 3 };
     const shape =
       "must be non-empty text, or an object with a non-empty key and text";
     expect(problems(definition)).toEqual(
@@ -80,9 +78,14 @@ describe("validateLayerDefinition", () => {
         `name: ${shape}`,
         `group: ${shape}`,
         `description: ${shape}`,
-        `dataCost: ${shape}`,
       ]),
     );
+  });
+
+  it("accepts a definition that carries no layer-level data cost", () => {
+    const definition = copy(SAMPLE_FEED_LAYER);
+    delete definition.dataCost;
+    expect(problems(definition)).toEqual([]);
   });
 
   it("ignores extra properties on a host-keyed text", () => {
@@ -185,14 +188,6 @@ describe("validateLayerDefinition", () => {
         d.group = 3;
       },
       "group:",
-    ],
-    [
-      "a missing data cost",
-      SAMPLE_FEED_LAYER,
-      (d) => {
-        d.dataCost = "";
-      },
-      "dataCost:",
     ],
     [
       "no attribution",
@@ -1285,11 +1280,11 @@ describe("assertValidDefinitions", () => {
       assertValidDefinitions(
         [
           { ...SAMPLE_FEED_LAYER, name: "" },
-          { ...SAMPLE_TILE_LAYER, dataCost: "" },
+          { ...SAMPLE_TILE_LAYER, group: "" },
         ],
         options,
       ),
-    ).toThrow(/sample-points: name:.*\n.*sample-imagery: dataCost:/s);
+    ).toThrow(/sample-points: name:.*\n.*sample-imagery: group:/s);
   });
 
   it("throws on two layers with the same id", () => {

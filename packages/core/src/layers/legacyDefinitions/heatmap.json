@@ -3,7 +3,6 @@
   "name": "Sample density",
   "description": "How dense the points of a sample feed are.",
   "group": "Samples",
-  "dataCost": "about 40 KB",
   "attribution": [
     {
       "text": "Sample density provider"

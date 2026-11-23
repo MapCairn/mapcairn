@@ -3,7 +3,6 @@
   "name": "Sample flood depth",
   "description": "Modelled sample flood depth.",
   "group": "Imagery",
-  "dataCost": "about 200 KB per screen",
   "attribution": [
     {
       "text": "Sample flood provider"

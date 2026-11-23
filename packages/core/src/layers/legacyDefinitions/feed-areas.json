@@ -3,7 +3,6 @@
   "name": "Sample areas",
   "description": "Polygons from a sample feed, shaded by density.",
   "group": "Samples",
-  "dataCost": "about 20 KB",
   "attribution": [
     {
       "text": "Sample areas provider"
