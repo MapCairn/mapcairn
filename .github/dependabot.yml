@@ -9,7 +9,11 @@ updates:
       time: "06:00"
       timezone: "Africa/Johannesburg"
     open-pull-requests-limit: 2
-    # Raises the lower bound of a caret range to the version CI tested.
+    # Raises the lower bound of a caret range to the version CI tested. It does so for
+    # peerDependencies too, and no option separates them (the strategy is not per
+    # dependency type, and `increase-if-necessary` or `widen` would also stop raising
+    # the development and host ranges). A peer range is the oldest version a package
+    # supports, so restore it by hand in a pull request that raises one (AGENTS.md).
     versioning-strategy: "increase"
     cooldown:
       default-days: 3
