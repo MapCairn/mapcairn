@@ -179,7 +179,7 @@ jobs:
         run: |
           cat > /tmp/probe.mjs <<'EOF'
           import { firefox } from "@playwright/test";
-          const browser = await firefox.launch();
+          const browser = await firefox.launch({ firefoxUserPrefs: { "webgl.disabled": false, "webgl.force-enabled": true, "webgl.enable-webgl2": true, "webgl.out-of-process": false, "gfx.webrender.software": true } });
           const page = await browser.newPage();
           page.on("console", (m) => console.log("console:", m.text()));
           await page.goto("about:blank");

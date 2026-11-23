@@ -32,6 +32,18 @@ const WEBKIT_SPECS =
 // more specs shows it is worth the time.
 const FIREFOX_SPECS = /(app-shell|basemap|keyboard|sheet|product)\.spec\.ts$/;
 
+// A CI runner has no GPU, and Firefox then blocks WebGL ("AllowWebgl2:false
+// restricts context creation", FEATURE_FAILURE_WEBGL_EXHAUSTED_DRIVERS), so
+// MapLibre cannot start. These preferences let it use software rendering, the
+// way Chromium does with SwiftShader.
+const FIREFOX_SOFTWARE_WEBGL = {
+  "webgl.disabled": false,
+  "webgl.force-enabled": true,
+  "webgl.enable-webgl2": true,
+  "webgl.out-of-process": false,
+  "gfx.webrender.software": true,
+};
+
 // The Firefox project is opt-in: it runs where MAPCAIRN_E2E_FIREFOX is set,
 // which is the advisory `firefox` job in .github/workflows/playwright.yml and
 // a local `MAPCAIRN_E2E_FIREFOX=1 npm run test:e2e -- --project=firefox`.
@@ -40,7 +52,10 @@ const firefoxProjects = process.env.MAPCAIRN_E2E_FIREFOX
       {
         name: "firefox",
         testMatch: FIREFOX_SPECS,
-        use: { ...devices["Desktop Firefox"] },
+        use: {
+          ...devices["Desktop Firefox"],
+          launchOptions: { firefoxUserPrefs: FIREFOX_SOFTWARE_WEBGL },
+        },
       },
     ]
   : [];
