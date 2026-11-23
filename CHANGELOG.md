@@ -4,6 +4,112 @@ What changed in each release of the SDK packages: `@mapcairn/core`, `@mapcairn/m
 
 Each entry says what you can now do and what to change when you upgrade, grouped by what it means for someone using the SDK. The same text is the body of the GitHub Release. The style guide is in `docs/guides/releasing.md`.
 
+## 0.2.0 (2026-11-23)
+
+This release removes the data saver setting and makes the default basemap follow the theme. Both change the public API, so read "What to change when you upgrade" first.
+
+### What is new
+
+**The default basemap follows the theme.** Until a visitor chooses one, the map is Bright in the light theme and Fiord in the dark theme, so a first visit in dark mode no longer shows dark controls over a bright map. Once someone picks a basemap it stays. `createBasemapCatalogue` takes the pair as data, and `defaultBasemapFor` and `resolveBasemapFor` read it. ([#649](https://github.com/MapCairn/mapcairn/pull/649))
+
+**Image export across the antimeridian.** `toImage` accepts a box such as a Fiji-sized view (`west: 178.44`, `east: 180.1`) instead of refusing it as invalid. ([#742](https://github.com/MapCairn/mapcairn/pull/742))
+
+**One place, one Enter.** In the search box, Enter on a single match moves the map there and says "Showing Cape Town on the map." `useSearch` takes an optional `onPick` to change that. ([#647](https://github.com/MapCairn/mapcairn/pull/647))
+
+**An About link in the credits.** `Attribution` takes `aboutLink`, and `introHeld` keeps the first showing of the credits back while a tour card is on screen. ([#647](https://github.com/MapCairn/mapcairn/pull/647))
+
+**Phosphor icons.** The interface now draws Phosphor icons. `Icon` has a `filled` prop and `IconComponent` takes `weight`. ([#692](https://github.com/MapCairn/mapcairn/pull/692))
+
+**Every API member has a description.** The API reference now describes each exported member of `@mapcairn/core` and `@mapcairn/map`, and the docs site builds it from the packages. ([#731](https://github.com/MapCairn/mapcairn/pull/731), [#733](https://github.com/MapCairn/mapcairn/pull/733))
+
+### What got better
+
+- The map works with `maplibre-gl` 6.19: the globe no longer fails to hide places on the far side. ([#765](https://github.com/MapCairn/mapcairn/pull/765))
+- Data layer tile requests send no referrer. ([#666](https://github.com/MapCairn/mapcairn/pull/666))
+- A data layer removed while the basemap is changing no longer leaves its tiles registered. ([#698](https://github.com/MapCairn/mapcairn/pull/698))
+- The surface colour behind panels is more opaque, so place names no longer show through panel text. ([#647](https://github.com/MapCairn/mapcairn/pull/647))
+- The package READMEs show the npm version and GitHub Release badges. ([#752](https://github.com/MapCairn/mapcairn/pull/752))
+
+- Translators: `announce.searchPicked`, `host.credits.about` and `host.map.noScript` are new message keys. The three data saver keys are removed (below).
+
+### What to change when you upgrade
+
+**The data saver setting is gone.** The data saver and slow-connection check had no other use, so the setting, the check and everything built on them are removed. The SDK now behaves as it did with data saver off: basemap thumbnails always show and no basemap leaves layers out. A `saveData` value that an earlier visit stored is ignored. Removed: `DevicePreferencesValue.saveData`, `Settings.saveData`, `BasemapDefinition.saveDataOmitLayers`, `MapMountOptions.saveData`, `MapBasemapOptions`, `omittedLayers`, `usesMoreData`, `useSaveData`, and the message keys `settings.saveData.label`, `settings.saveData.description` and `panels.basemap.usesMoreData`. ([#747](https://github.com/MapCairn/mapcairn/pull/747))
+
+Before:
+
+```ts
+await adapter.setBasemap(basemap, { saveData: true });
+mount(host, { saveData: settings.saveData });
+```
+
+After:
+
+```ts
+await adapter.setBasemap(basemap);
+mount(host);
+```
+
+**`Settings.basemapId` can be `null`.** `null` means the visitor never chose, so the theme's default basemap applies. A custom `SettingsStore` must hold `null` and start with it, which `runSettingsStoreContract` now checks. ([#649](https://github.com/MapCairn/mapcairn/pull/649))
+
+Before:
+
+```ts
+const id: string = settings.basemapId;
+```
+
+After:
+
+```ts
+const basemap = resolveBasemapFor(catalogue, settings.basemapId, theme);
+```
+
+**`BackdropName` has a new member, `defaultDarkBasemap`.** A `switch` over it that names every case stops compiling until you add it. ([#649](https://github.com/MapCairn/mapcairn/pull/649))
+
+Before:
+
+```ts
+case "defaultBasemap":
+  return lightLand;
+```
+
+After:
+
+```ts
+case "defaultBasemap":
+  return lightLand;
+case "defaultDarkBasemap":
+  return DEFAULT_DARK_BASEMAP_BACKGROUND;
+```
+
+**`BasemapPicker` calls `onChange` for the basemap already shown.** Pressing the current tile counts as choosing it, so a visitor on the dark default can keep Fiord. Ignore a call for the current id if you treat each call as a change. ([#649](https://github.com/MapCairn/mapcairn/pull/649))
+
+Before:
+
+```tsx
+<BasemapPicker onChange={(id) => save(id)} />
+```
+
+After:
+
+```tsx
+<BasemapPicker onChange={(id) => id !== current && save(id)} />
+```
+
+**Icons take `weight`, not `strokeWidth`.** The `size.iconStroke` token is removed too. ([#692](https://github.com/MapCairn/mapcairn/pull/692))
+
+Before:
+
+```tsx
+<Icon icon={MyIcon} strokeWidth={1.5} />
+```
+
+After:
+
+```tsx
+<Icon icon={MyIcon} />
+```
+
 ## 0.1.0 (2026-11-21)
 
 This is MapCairn's first release. MapCairn is an open-source SDK for maps that serve the public: open data maps, hazard maps and the other maps a council, a research group or a community puts in front of people. It gives you the whole interface around a map, on MapLibre GL JS, React and a set of typed design tokens, so your team can spend its time on the data instead. The repository also holds the playground, a reference site built from these same packages.
