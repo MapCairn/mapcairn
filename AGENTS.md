@@ -123,7 +123,7 @@ The Worker is declared in `packages/web/cloudflare.config.ts` and run with `cf` 
 
 ## Design system
 
-`DESIGN.md` is the source of truth: tokens only, IBM Plex Sans, Phosphor icons through the `Icon` component, one accent, and layout slots owned by `MapChrome`. Token values live in `packages/theme/src/tokens.css.ts` and `tokenValues.ts`. Components use vanilla-extract beside their implementations and may only use tokens. Use `tabular-nums` for figures. Do not introduce a second palette or arbitrary values. Do not add a Shadow DOM component library such as `@material/web`: its custom elements fail under Workers SSR.
+`DESIGN.md` is the source of truth: tokens only, IBM Plex Sans, Phosphor icons through the `Icon` component, one accent, and layout slots owned by `MapChrome`. Token values live in `packages/theme/src/tokens.css.ts` and `tokenValues.ts`. Components use vanilla-extract beside their implementations and may only use tokens. Use `tabular-nums` for figures. Do not introduce a second palette or arbitrary values, except the documented syntax palette for code samples on the documentation site. Do not add a Shadow DOM component library such as `@material/web`: its custom elements fail under Workers SSR.
 
 An outside app needs no vanilla-extract plugin: `@mapcairn/theme` ships `tokens.css` and `@mapcairn/map` ships `styles.css`, and the app imports both. This repository's own host resolves the packages' source (the `@mapcairn/source` condition) and so registers `vanillaExtractPlugin()` itself; `@mapcairn/theme` is side-effect free there, so its token stylesheet reaches the page only through an import that is used, as `packages/web/src/global.css.ts` does.
 
