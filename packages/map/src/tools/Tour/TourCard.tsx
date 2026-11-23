@@ -20,12 +20,15 @@ import type { UseTour } from "./useTour";
 
 /** The words of a card that is not a step. */
 export interface TourCardCopy {
+  /** The card's heading. */
   readonly heading: DefinitionText;
+  /** The card's body text. */
   readonly text: DefinitionText;
 }
 
 /** Props for {@link TourCard}. */
 export interface TourCardProps {
+  /** The tour state and actions from `useTour`. */
   readonly tour: UseTour;
   /** The welcome card, offered on a first visit. */
   readonly welcome: TourCardCopy & {

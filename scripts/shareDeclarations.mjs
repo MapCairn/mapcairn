@@ -30,16 +30,16 @@ function declarationFilesOf(folder) {
 /**
  * Maps each symbol the main entry exports to the name it exports it under.
  *
- * @param {import("typescript")} ts
- * @param {import("typescript").Program} program
+ * @param {any} ts
+ * @param {any} program
  * @param {string} mainFile The main entry's declaration file.
- * @returns {Map<import("typescript").Symbol, string>}
+ * @returns {Map<any, string>}
  */
 function mainExports(ts, program, mainFile) {
   const checker = program.getTypeChecker();
   const source = program.getSourceFile(mainFile);
   const moduleSymbol = source && checker.getSymbolAtLocation(source);
-  /** @type {Map<import("typescript").Symbol, string>} */
+  /** @type {Map<any, string>} */
   const exported = new Map();
   for (const symbol of moduleSymbol
     ? checker.getExportsOfModule(moduleSymbol)
@@ -57,10 +57,10 @@ function mainExports(ts, program, mainFile) {
  * The text that replaces one import declaration: the names the main entry
  * exports now come from the package, and the rest stay as they were.
  *
- * @param {import("typescript")} ts
- * @param {import("typescript").ImportDeclaration} declaration
- * @param {import("typescript").TypeChecker} checker
- * @param {Map<import("typescript").Symbol, string>} exported
+ * @param {any} ts
+ * @param {any} declaration
+ * @param {any} checker
+ * @param {Map<any, string>} exported
  * @returns {string | undefined} `undefined` when no name is shared.
  */
 function rewriteImport(ts, declaration, checker, exported) {

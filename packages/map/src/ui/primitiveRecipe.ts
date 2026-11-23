@@ -20,7 +20,7 @@ function layered(rule: Rule): Rule {
  * however the selectors compare. Use it for a primitive that takes a
  * `className`; DESIGN.md, "Overriding a primitive", has the rule.
  *
- * @param options The same options `recipe` takes, with rules written as
+ * @param options - The same options `recipe` takes, with rules written as
  *   objects.
  * @returns The same runtime function `recipe` returns.
  */

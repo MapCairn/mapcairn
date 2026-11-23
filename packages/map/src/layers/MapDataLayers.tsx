@@ -47,6 +47,7 @@ export const VIEW_SETTLE_MS = 400;
 
 /** Props for {@link MapDataLayers}. */
 export interface MapDataLayersProps {
+  /** The layers state whose enabled layers are drawn on the map. */
   readonly layers: DataLayers;
   /** Called after a tap on a point has selected it, so the app can open its card. */
   readonly onFeatureTap?: (tap: MapFeatureTap) => void;
@@ -404,6 +405,7 @@ function outlinePath(
 
 /** Props for {@link SelectionMarker}. */
 export interface SelectionMarkerProps {
+  /** The layers state, which says which feature is selected. */
   readonly layers: DataLayers;
 }
 

@@ -35,10 +35,15 @@ function detailButtonLabel(
 
 /** Props for {@link FeatureCard}. */
 export interface FeatureCardProps {
+  /** The layers state the card reads and acts on, such as showing the affected area. */
   readonly layers: DataLayers;
+  /** The feature to show, with its layer. */
   readonly selected: SelectedFeature;
+  /** The formatters the layer's card template may name. */
   readonly formatters: FormatterRegistry;
+  /** The level of the card's heading, below the heading of the section that holds it. */
   readonly headingLevel: 3 | 4 | 5 | 6;
+  /** Receives the card's heading element. */
   readonly headingRef?: Ref<HTMLHeadingElement>;
   /** Centres the map on the feature. */
   readonly onShowOnMap: () => void;

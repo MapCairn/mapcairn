@@ -100,7 +100,7 @@ function runOutsideWidestGap(merged: readonly [number, number][]): {
  * and every edge between neighbouring vertices of one path, each edge taken
  * the short way round the globe (the way a path is drawn and measured). Used
  * to fit the map to a polygon, a line or a feature with several parts.
- * @param paths The rings and lines of a shape. A ring repeats its first
+ * @param paths - The rings and lines of a shape. A ring repeats its first
  *   vertex at the end, as GeoJSON does; no edge joins two paths.
  * @returns `undefined` when no point has finite coordinates.
  * @remarks Longitude is a circle, so the box is the circle less its widest

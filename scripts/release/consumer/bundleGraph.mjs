@@ -31,6 +31,7 @@ function graphOf(name, result) {
 }
 
 const control = path.resolve("src/realMap.ts");
+/** @type {{ logLevel: "error" }} */
 const quiet = { logLevel: "error" };
 const builds = [
   graphOf(

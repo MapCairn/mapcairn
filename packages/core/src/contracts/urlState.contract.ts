@@ -27,7 +27,7 @@ const VIEW = {
 };
 
 /**
- * Runs the shared behavioural suite for a {@link UrlState}. Every test calls
+ * Runs the shared behavioural suite for a `UrlState`. Every test calls
  * `create` for a fresh subject. Positions are compared to two decimals
  * because a real adapter may round what it puts in the address.
  */

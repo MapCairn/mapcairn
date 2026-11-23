@@ -4,12 +4,13 @@ import type { CatalogueRefresh, CatalogueState } from "@mapcairn/core";
 
 /** What the Layers section needs to know about the catalogue besides its layers. */
 export interface CatalogueView {
+  /** Whether the catalogue is loading, ready or failed. */
   readonly status: CatalogueState["status"];
   /** How many definitions the host supplied that were left out. Zero unless `ready`. */
   readonly skipped: number;
   /** Where a refresh of the list has got to. `idle` unless `ready`. */
   readonly refresh: CatalogueRefresh;
-  /** Whether the last attempt to load failed (see {@link loadFailed}), so Try again has something to do. */
+  /** Whether the last attempt to load failed (see `loadFailed`), so Try again has something to do. */
   readonly failed: boolean;
   /**
    * True when the catalogue was not ready at mount, so its list arrived or

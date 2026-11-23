@@ -396,7 +396,7 @@ function reviewSource(number) {
  *
  * @param {{ path: string, jq: string }} request
  * @param {Deps} deps
- * @returns {object[] | null} The rows, or null when the call failed or its answer was not one JSON object per line (so a failure is never read as an empty list).
+ * @returns {any[] | null} The rows, or null when the call failed or its answer was not one JSON object per line (so a failure is never read as an empty list).
  */
 function readRows(request, deps) {
   const result = deps.runGh([
@@ -420,7 +420,7 @@ function readRows(request, deps) {
 }
 
 /**
- * @param {unknown} row
+ * @param {any} row
  * @returns {boolean} Whether the row has a label and named string parts.
  */
 function isItem(row) {

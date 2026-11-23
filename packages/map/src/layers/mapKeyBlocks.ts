@@ -13,14 +13,17 @@ import type { DataLayerState } from "./useDataLayers";
 
 /** What the map key shows for one layer that is on. */
 export interface MapKeyBlock {
+  /** The layer's id. */
   readonly id: string;
+  /** The layer's name, as the key's heading. */
   readonly name: string;
+  /** The layer's definition, which draws the glyphs. */
   readonly definition: LayerDefinition;
   /** The key's rows, in the order the layer's style lists them. Never empty. */
   readonly entries: readonly [LegendEntry, ...LegendEntry[]];
   /**
-   * The day or time the layer is set to, in words such as `13:00 UTC on 11
-   * November 2026`, or null when it has no date or time control.
+   * The day or time the layer is set to, in words such as
+   * `13:00 UTC on 11 November 2026`, or null when it has no date or time control.
    */
   readonly chosenTime: Message | null;
 }

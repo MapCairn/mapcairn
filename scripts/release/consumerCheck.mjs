@@ -188,7 +188,7 @@ export function lockedVersion(lock, name) {
  *   `direct` names the packages the app lists as dependencies, by folder name;
  *   without it every package with a tarball is listed. Every package is
  *   overridden either way.
- * @returns {Record<string, unknown>}
+ * @returns {Record<string, any>}
  */
 export function consumerManifest({ tarballs, versions, direct }) {
   /** @type {Record<string, string>} */
@@ -256,7 +256,7 @@ export function installFlags({ published, extra = [] }) {
  *
  * @param {{ version: string, versions: Record<string, string>, direct?: string[] }} input
  *   `direct` names the packages the app lists, by folder name; without it every SDK package.
- * @returns {Record<string, unknown>}
+ * @returns {Record<string, any>}
  */
 export function publishedManifest({ version, versions, direct }) {
   const manifest = consumerManifest({ tarballs: {}, versions });
@@ -898,7 +898,10 @@ function checkBun(app) {
     encoding: "utf8",
     timeout: INSTALL_TIMEOUT,
   });
-  if (version.error?.code === "ENOENT") {
+  if (
+    /** @type {NodeJS.ErrnoException | undefined} */ (version.error)?.code ===
+    "ENOENT"
+  ) {
     return bunSkipped();
   }
   if (version.error !== undefined || version.status !== 0) {

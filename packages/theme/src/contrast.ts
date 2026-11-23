@@ -9,9 +9,13 @@
 
 /** A colour in gamma-encoded sRGB. Channels are 0 to 255, alpha is 0 to 1. */
 export interface Rgba {
+  /** Red, 0 to 255, gamma-encoded. */
   r: number;
+  /** Green, 0 to 255, gamma-encoded. */
   g: number;
+  /** Blue, 0 to 255, gamma-encoded. */
   b: number;
+  /** Opacity, 0 (clear) to 1 (opaque). A translucent colour is composited over a backdrop before its contrast is measured. */
   a: number;
 }
 
@@ -243,7 +247,7 @@ export function isInSrgbGamut(colour: string): boolean {
  * number or percentage, the argument count must be right, and an `oklch()`
  * hue may be plain or in degrees (other angle units are refused). Components
  * outside their range are clamped as CSS does. OKLCH colours that fall outside the gamut are clipped per channel; use
- * {@link isInSrgbGamut} to keep tokens from relying on that.
+ * `isInSrgbGamut` to keep tokens from relying on that.
  * @throws When the string is not in a supported syntax.
  */
 export function parseColour(colour: string): Rgba {

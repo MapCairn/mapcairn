@@ -271,7 +271,7 @@ function findingsFor(
  * failure means. Only the default colour set is checked: the opaque and
  * `prefers-contrast: more` sets are not overridable.
  *
- * @param override The proposed colours for light and dark.
+ * @param override - The proposed colours for light and dark.
  * @returns A finding for every checked pair and backdrop, in both themes.
  */
 export function checkThemeContrast(

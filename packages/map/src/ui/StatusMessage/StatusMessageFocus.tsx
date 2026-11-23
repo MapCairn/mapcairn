@@ -16,6 +16,7 @@ export interface StatusMessageFocusProviderProps {
    * element focus came from cannot take focus. The latest function is used.
    */
   readonly fallback: () => void;
+  /** The components whose status messages may take focus back. */
   readonly children: ReactNode;
 }
 

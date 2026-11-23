@@ -326,9 +326,13 @@ function FeatureList({ layer, layers, formatters, onShow }: ListProps) {
 
 /** Props for {@link LayerItem}. */
 export interface LayerItemProps {
+  /** The layer to show, with its state. */
   readonly layer: DataLayerState;
+  /** The layers state, for the actions the item offers (turn on, sort, retry). */
   readonly layers: DataLayers;
+  /** The formatters the layer's list and card templates may name. */
   readonly formatters: FormatterRegistry;
+  /** Called with a feature when the person chooses Show on map for it. */
   readonly onShow: (layerId: string, feature: LayerFeature) => void;
 }
 

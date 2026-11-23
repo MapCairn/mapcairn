@@ -20,7 +20,7 @@ export interface SettingsStoreSubject {
 }
 
 /**
- * Runs the shared behavioural suite for a {@link SettingsStore}. Every test
+ * Runs the shared behavioural suite for a `SettingsStore`. Every test
  * calls `create` for a fresh subject.
  */
 export function runSettingsStoreContract(

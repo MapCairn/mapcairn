@@ -77,6 +77,40 @@ export interface Catalogue {
   readonly sidebar: SidebarEntry;
   /** An export with no description, as `name (specifier)`. */
   readonly undocumented: readonly string[];
+  /** A member of an export with no description. */
+  readonly undocumentedMembers: readonly UndocumentedMember[];
+}
+
+/** A member with no description, and the package it belongs to. */
+export interface UndocumentedMember {
+  /** The package name, such as `@mapcairn/core`. */
+  readonly package: string;
+  /** The member as `Export.member (specifier)`. */
+  readonly label: string;
+}
+
+/**
+ * Stops the build, naming each member, when a member of an export in one of the
+ * given packages has no description: its page would show the signature alone.
+ * Packages are listed one at a time, as each is cleared, so the gate can grow
+ * without blocking the build on the rest.
+ * @param catalogue - The built catalogue.
+ * @param packages - The names of the packages that must describe every member.
+ */
+export function requireMemberDescriptions(
+  catalogue: Catalogue,
+  packages: readonly string[],
+): void {
+  const missing = catalogue.undocumentedMembers.filter((member) =>
+    packages.includes(member.package),
+  );
+  if (missing.length === 0) {
+    return;
+  }
+  const names = missing.map((member) => `  ${member.label}`).join("\n");
+  throw new Error(
+    `These members have no description. Add a TSDoc summary above each:\n${names}`,
+  );
 }
 
 /**
@@ -93,6 +127,18 @@ export function requireDescriptions(catalogue: Catalogue): void {
   throw new Error(
     `These exports have no description. Add a TSDoc summary above each:\n${names}`,
   );
+}
+
+function undocumentedMembersOf(
+  item: ApiExport,
+  specifier: string,
+): UndocumentedMember[] {
+  return item.members
+    .filter((member) => member.summary === "")
+    .map((member) => ({
+      package: item.packageName,
+      label: `${item.name}.${member.name} (${specifier})`,
+    }));
 }
 
 interface PlacedExport {
@@ -283,6 +329,7 @@ export function buildCatalogue(
     }
   }
   const undocumented: string[] = [];
+  const undocumentedMembers: UndocumentedMember[] = [];
   const entries: ApiEntry[] = [];
 
   for (const { pkg, module, placed } of modules) {
@@ -290,6 +337,9 @@ export function buildCatalogue(
       if (entry.summary === "") {
         undocumented.push(`${entry.item.name} (${module.specifier})`);
       }
+      undocumentedMembers.push(
+        ...undocumentedMembersOf(entry.item, module.specifier),
+      );
       const related = [...entry.item.bases, ...entry.item.references]
         .filter(
           (ref, index, all) =>
@@ -435,5 +485,6 @@ export function buildCatalogue(
       items: sidebarPackages,
     },
     undocumented,
+    undocumentedMembers,
   };
 }

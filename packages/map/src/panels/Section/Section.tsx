@@ -27,6 +27,7 @@ export interface SectionProps
    * (`tabIndex` -1), so the sheet can move focus to a section it opens on.
    */
   readonly headingRef?: Ref<HTMLHeadingElement>;
+  /** The section's content, below the heading. */
   readonly children?: ReactNode;
 }
 
@@ -67,6 +68,7 @@ export function Section({
 export interface SubheadingProps {
   /** The level of the heading, normally one below its section's. */
   readonly level: HeadingLevel;
+  /** The heading's text. */
   readonly children: ReactNode;
 }
 

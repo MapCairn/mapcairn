@@ -48,6 +48,14 @@ describe("coversBounds", () => {
     expect(coversBounds(shown(18 + hair, -34, 19 - hair, -33), BOX)).toBe(true);
   });
 
+  it("compares a box across the antimeridian with the unwrapped bounds the engine reports", () => {
+    // What MapLibre's getBounds() gave for a fit to this box in a real
+    // browser: the same longitudes, east past 180, not wrapped.
+    const fiji = { south: -18.2, west: 178.44, north: -16.7, east: 180.1 };
+    expect(coversBounds(shown(178.22, -18.2, 180.32, -16.7), fiji)).toBe(true);
+    expect(coversBounds(shown(178.5, -18.2, 180.32, -16.7), fiji)).toBe(false);
+  });
+
   it("refuses a view that crops the box on any side", () => {
     const more = FIT_TOLERANCE_DEGREES * 2;
     expect(coversBounds(shown(18 + more, -34, 19, -33), BOX)).toBe(false);

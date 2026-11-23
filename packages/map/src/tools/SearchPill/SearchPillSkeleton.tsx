@@ -15,6 +15,7 @@ export interface SearchPillSkeletonCopy {
 
 /** Props for {@link SearchPillSkeleton}. */
 export interface SearchPillSkeletonProps {
+  /** The pill's placeholder words, read before the page has loaded its messages. */
   readonly copy: SearchPillSkeletonCopy;
 }
 

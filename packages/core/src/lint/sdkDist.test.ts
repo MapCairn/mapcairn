@@ -6,6 +6,10 @@ import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { describe, expect, it } from "vitest";
 import {
+  hashBuildScripts,
+  // @ts-expect-error The scripts are dependency-free JavaScript with JSDoc types.
+} from "../../../../scripts/buildInputs.mjs";
+import {
   BUILT_SDK_PACKAGES,
   // @ts-expect-error The scripts are dependency-free JavaScript with JSDoc types.
 } from "../../../../scripts/sdkPackages.mjs";
@@ -17,6 +21,17 @@ const REPO = path.resolve(
 
 /** The packages that build to `dist`: the release set and the private ones that have not joined it. */
 const BUILT_PACKAGES: readonly string[] = BUILT_SDK_PACKAGES;
+
+/**
+ * How long a case may take to load a built entry point in a fresh Node
+ * process. It takes well under a second alone, but a full run starts the
+ * process while many test files compete for the processors, and Node must
+ * read the whole module graph (the React packages and the engine adapter are
+ * the largest) from cold. A runner that is slow for that reason took 5.2 s
+ * against the default 5 s, so the case gets the same allowance as the other
+ * cases here that start a process.
+ */
+const LOAD_ENTRY_TIMEOUT_MS = 30_000;
 
 interface Manifest {
   readonly dependencies?: Readonly<Record<string, string>>;
@@ -145,10 +160,12 @@ describe.each(BUILT_PACKAGES)("@mapcairn/%s dist", (name) => {
     );
   });
 
-  it("has an empty build stamp that starts no later than the build output", () => {
+  it("has a build stamp that holds the build scripts' hash and starts no later than the build output", () => {
     const dist = path.join(folderOf(name), "dist");
     const stamp = statSync(path.join(dist, ".built"));
-    expect(stamp.size).toBe(0);
+    expect(readFileSync(path.join(dist, ".built"), "utf8")).toBe(
+      hashBuildScripts(),
+    );
     expect(stamp.mtimeMs).toBeLessThanOrEqual(
       statSync(path.join(dist, "index.js")).mtimeMs,
     );
@@ -169,22 +186,28 @@ describe.each(BUILT_PACKAGES)("@mapcairn/%s dist", (name) => {
       (target): target is Record<string, string> =>
         typeof target === "object" && Reflect.has(target, "@mapcairn/source"),
     ),
-  )("loads its entry point in Node, with no export condition", (target) => {
-    // A separate process, so Vitest's own resolve conditions (which pick the
-    // source of the other SDK packages) do not decide what loads.
-    const entry = pathToFileURL(path.join(folderOf(name), target.default)).href;
-    const result = spawnSync(
-      process.execPath,
-      [
-        "--input-type=module",
-        "--eval",
-        `const loaded = await import(${JSON.stringify(entry)});
+  )(
+    "loads its entry point in Node, with no export condition",
+    { timeout: LOAD_ENTRY_TIMEOUT_MS },
+    (target) => {
+      // A separate process, so Vitest's own resolve conditions (which pick the
+      // source of the other SDK packages) do not decide what loads.
+      const entry = pathToFileURL(
+        path.join(folderOf(name), target.default),
+      ).href;
+      const result = spawnSync(
+        process.execPath,
+        [
+          "--input-type=module",
+          "--eval",
+          `const loaded = await import(${JSON.stringify(entry)});
          if (Object.keys(loaded).length === 0) { throw new Error("no exports"); }`,
-      ],
-      { cwd: REPO, encoding: "utf8" },
-    );
-    expect(result.status, result.stderr).toBe(0);
-  });
+        ],
+        { cwd: REPO, encoding: "utf8", timeout: LOAD_ENTRY_TIMEOUT_MS },
+      );
+      expect(result.status, result.stderr).toBe(0);
+    },
+  );
 });
 
 describe("@mapcairn/theme dist", () => {

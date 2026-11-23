@@ -64,11 +64,13 @@ export function isolatedEnvironment(env = process.env) {
  * @returns {import("node:child_process").SpawnSyncReturns<string>}
  */
 export function runNpm(args, options = {}) {
-  return spawnSync(process.execPath, [npmCliPath(), ...args], {
-    encoding: "utf8",
-    env: isolatedEnvironment(),
-    ...options,
-  });
+  return /** @type {import("node:child_process").SpawnSyncReturns<string>} */ (
+    spawnSync(process.execPath, [npmCliPath(), ...args], {
+      encoding: "utf8",
+      env: isolatedEnvironment(),
+      ...options,
+    })
+  );
 }
 
 /**
