@@ -628,7 +628,16 @@ describe("the browser leg's app", () => {
 
   it("runs inside the umbrella app, in packed and published mode alike", () => {
     expect(check).toMatch(
-      /\.\.\.checkEngineFreeRoot\(app, prefix\),\s*\.\.\.checkRealMap\(app, prefix\)/,
+      /\.\.\.checkEngineFreeRoot\(app, prefix\),\s*\.\.\.checkRealMap\(app, prefix\),\s*\.\.\.checkQuickstart\(app, prefix\)/,
     );
+  });
+
+  it("builds the README's own files, not a copy of them, and runs them under the README's policy line", () => {
+    const start = check.indexOf("function checkQuickstart(");
+    const body = check.slice(start, check.indexOf("\n}\n", start));
+    expect(body).toContain("readmeQuickstart(");
+    expect(body).toContain('"README.md"');
+    expect(body).toContain("quickstart.policy");
+    expect(body).toContain("quickstartRun.mjs");
   });
 });

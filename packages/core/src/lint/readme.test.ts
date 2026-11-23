@@ -221,7 +221,7 @@ describe("README.md", () => {
     expect(section).toContain("docs/guides/content-security-policy/");
     expect(section).toContain("docs/guides/extending/#show-a-real-map");
     expect(section).toMatch(/makes no request until/);
-    expect(section).toContain("a similar app, not from this file");
+    expect(section).toContain("builds this page's blocks as written");
     expect(section).not.toContain("not yet shipped");
   });
 
