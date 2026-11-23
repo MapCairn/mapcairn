@@ -6,7 +6,11 @@ import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import { writeMarkdownFiles } from "../plugins/markdownCopiesPlugin";
 import { markdownFindings } from "./markdownChecks";
-import { type CopyContext, parseDocSource } from "./markdownCopies";
+import {
+  type CopyContext,
+  LLMS_FULL_CEILING,
+  parseDocSource,
+} from "./markdownCopies";
 
 const CONTEXT: CopyContext = {
   origin: "https://example.test",
@@ -55,15 +59,15 @@ afterEach(() => {
 });
 
 describe("markdownFindings", () => {
-  it("passes a build whose pages each have a copy, a head link and a place in llms-full.txt", () => {
+  it("passes a build whose pages each have a copy, a head link and a place in an llms-full file", () => {
     expect(markdownFindings(built(), PAGES, CONTEXT)).toEqual([]);
   });
 
   it("names a page with no Markdown copy, no head link and no place in the llms files", () => {
     const findings = markdownFindings(built(false), PAGES, CONTEXT).join("\n");
     expect(findings).toContain('"guides/two" has no Markdown copy');
-    expect(findings).toContain("llms-full.txt");
-    expect(findings).toContain("llms.txt");
+    expect(findings).toContain("llms-full-guides.txt was not built");
+    expect(findings).toContain("llms.txt was not built");
     expect(findings).toContain("alternate");
     expect(findings).toContain("robots.txt");
   });
@@ -78,6 +82,28 @@ describe("markdownFindings", () => {
     expect(findings).toContain("code fence with no language");
     expect(findings).toContain("relative link");
     expect(findings).toContain("tabs");
+  });
+
+  it("names an llms file that is not what the pages give", () => {
+    const root = built();
+    writeFileSync(join(root, "llms-full-guides.txt"), "stale");
+    expect(markdownFindings(root, PAGES, CONTEXT)).toEqual([
+      "llms-full-guides.txt is not what the pages give, in sidebar order.",
+    ]);
+  });
+
+  it("names an llms.txt over the size ceiling", () => {
+    const root = mkdtempSync(join(tmpdir(), "mapcairn-md-"));
+    roots.push(root);
+    const pages = Array.from({ length: 800 }, (_, index) =>
+      parseDocSource(
+        `guides/p${index}`,
+        `---\ntitle: P${index}\ndescription: ${"d".repeat(200)}\n---\n# P\n`,
+      ),
+    );
+    expect(markdownFindings(root, pages, CONTEXT)).toContain(
+      `llms.txt is over ${LLMS_FULL_CEILING} bytes.`,
+    );
   });
 
   it("names a robots.txt that blocks a crawler", () => {

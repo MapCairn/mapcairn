@@ -182,33 +182,178 @@ function header(context: CopyContext): string {
 }
 
 /**
- * `llms.txt`: the llmstxt.org layout, one line for each page in the order
- * given, with its description and a link to its Markdown copy.
+ * The most bytes an `llms-full-<area>` file may hold, so a model with a small
+ * context can read one file whole. A file that holds a single page may be
+ * larger, because a page is never cut.
+ */
+export const LLMS_FULL_CEILING = 150_000;
+
+const PAGE_SEPARATOR = "\n\n---\n\n";
+
+const textEncoder = new TextEncoder();
+
+/** The size of a text in bytes, as a file or a download counts it. */
+function byteLength(text: string): number {
+  return textEncoder.encode(text).length;
+}
+
+/**
+ * The area a page belongs to: the package for an API reference page, the
+ * name of a page generated from `ARCHITECTURE.md` or `DESIGN.md`,
+ * `changelog`, and `guides` for every other page.
+ * @param id - The page's path under `docs/` without the extension.
+ */
+export function areaOf(id: string): string {
+  const [first, second = ""] = id.split("/");
+  const depth = id.split("/").length;
+  if (first === "api" && depth > 2) {
+    return second;
+  }
+  if (first === "generated" && depth === 2) {
+    return second;
+  }
+  return first === "changelog" ? "changelog" : "guides";
+}
+
+/**
+ * Whether `llms.txt` lists the page. The API reference has a page for every
+ * export, which would make the index larger than the files it points to, so
+ * it lists the reference's front page and each package's page, and each
+ * package's page lists its members.
+ * @param id - The page's path under `docs/` without the extension.
+ */
+export function isListedInIndex(id: string): boolean {
+  const segments = id.split("/");
+  if (segments[0] !== "api") {
+    return true;
+  }
+  return (
+    segments.length === 2 || (segments.length === 3 && segments[2] === "index")
+  );
+}
+
+/** One `llms-full-<area>` file: the copies of some pages of one area. */
+export interface LlmsFullFile {
+  /** The file's name in the build folder. */
+  readonly name: string;
+  readonly area: string;
+  /** This file's place among the area's files, from 1. */
+  readonly part: number;
+  /** How many files the area has. */
+  readonly parts: number;
+  readonly pages: readonly DocPage[];
+  readonly text: string;
+  /** The size of `text` in bytes. */
+  readonly bytes: number;
+}
+
+interface PageCopy {
+  readonly page: DocPage;
+  readonly text: string;
+}
+
+/** The start of an area's file. */
+function fileHead(area: string, context: CopyContext): string {
+  return `${header(context)}\nThe ${area} pages of the documentation. Every file and the size of each is listed in ${context.origin}${context.baseUrl}llms.txt.\n\n`;
+}
+
+/** Splits an area's copies into runs that fit the ceiling; a run of one page may exceed it. */
+function packCopies(
+  copies: readonly PageCopy[],
+  headBytes: number,
+  ceiling: number,
+): PageCopy[][] {
+  const runs: PageCopy[][] = [];
+  let run: PageCopy[] = [];
+  let size = 0;
+  for (const copy of copies) {
+    const added = byteLength(copy.text) + byteLength(PAGE_SEPARATOR);
+    if (run.length > 0 && headBytes + size + added > ceiling) {
+      runs.push(run);
+      run = [];
+      size = 0;
+    }
+    run.push(copy);
+    size += added;
+  }
+  if (run.length > 0) {
+    runs.push(run);
+  }
+  return runs;
+}
+
+/**
+ * The `llms-full` files: the whole copy of every page, grouped by area
+ * ({@link areaOf}, in the order the areas first appear) and split so no file
+ * exceeds `ceiling` unless it is a single page. A lone file is
+ * `llms-full-<area>.txt`; an area split in several is `llms-full-<area>-<n>.txt`.
  * @param pages - The pages, in sidebar order.
- * @param context - The site's origin, base path and names.
+ * @param context - The site's origin, base path, version and names.
+ * @param ceiling - The most bytes a file holds, {@link LLMS_FULL_CEILING} by default.
+ */
+export function llmsFullFiles(
+  pages: readonly DocPage[],
+  context: CopyContext,
+  ceiling: number = LLMS_FULL_CEILING,
+): LlmsFullFile[] {
+  const byArea = new Map<string, PageCopy[]>();
+  for (const page of pages) {
+    const copies = byArea.get(areaOf(page.id)) ?? [];
+    copies.push({ page, text: copyText(page, pages, context).trimEnd() });
+    byArea.set(areaOf(page.id), copies);
+  }
+  const files: LlmsFullFile[] = [];
+  for (const [area, copies] of byArea) {
+    const head = fileHead(area, context);
+    const runs = packCopies(copies, byteLength(head), ceiling);
+    runs.forEach((run, index) => {
+      const text = `${head}${run.map((copy) => copy.text).join(PAGE_SEPARATOR)}\n`;
+      files.push({
+        name: `llms-full-${area}${runs.length === 1 ? "" : `-${index + 1}`}.txt`,
+        area,
+        part: index + 1,
+        parts: runs.length,
+        pages: run.map((copy) => copy.page),
+        text,
+        bytes: byteLength(text),
+      });
+    });
+  }
+  return files;
+}
+
+/** One line of the full-text list: what the file holds and how big it is. */
+function fullFileLine(file: LlmsFullFile, context: CopyContext): string {
+  const first = file.pages[0]?.title ?? "";
+  const last = file.pages[file.pages.length - 1]?.title ?? "";
+  const part = file.parts === 1 ? "" : `, part ${file.part} of ${file.parts}`;
+  const range = file.pages.length === 1 ? first : `${first} to ${last}`;
+  return `- [${file.name}](${context.origin}${context.baseUrl}${file.name}): ${file.area}${part} (${range}), ${file.pages.length} ${file.pages.length === 1 ? "page" : "pages"}, ${file.bytes} bytes`;
+}
+
+/**
+ * `llms.txt`: the llmstxt.org layout. It lists the `llms-full` files with
+ * their sizes and one line for each page {@link isListedInIndex} names, in the
+ * order given, with its description, a link to its Markdown copy and the size
+ * of that copy.
+ * @param pages - The pages, in sidebar order.
+ * @param context - The site's origin, base path, version and names.
  */
 export function llmsTxt(
   pages: readonly DocPage[],
   context: CopyContext,
 ): string {
-  const lines = pages.map(
-    (page) =>
-      `- [${page.title}](${copyUrl(page, context)}): ${page.description}`,
+  const base = `${context.origin}${context.baseUrl}`;
+  const files = llmsFullFiles(pages, context).map((file) =>
+    fullFileLine(file, context),
   );
-  return `${header(context)}\nEvery page is also a plain Markdown file, linked below. The whole text is in ${context.origin}${context.baseUrl}llms-full.txt. The pages and the API reference are also data, in ${context.origin}${context.baseUrl}pages.json and ${context.origin}${context.baseUrl}api.json; the Machine-readable data page describes them.\n\n## Pages\n\n${lines.join("\n")}\n`;
-}
-
-/**
- * `llms-full.txt`: the whole copy of every page, in the order given.
- * @param pages - The pages, in sidebar order.
- * @param context - The site's origin, base path, version and names.
- */
-export function llmsFullTxt(
-  pages: readonly DocPage[],
-  context: CopyContext,
-): string {
-  const copies = pages.map((page) => copyText(page, pages, context).trimEnd());
-  return `${header(context)}\n${copies.join("\n\n---\n\n")}\n`;
+  const lines = pages
+    .filter((page) => isListedInIndex(page.id))
+    .map(
+      (page) =>
+        `- [${page.title}](${copyUrl(page, context)}): ${page.description} (${byteLength(copyText(page, pages, context))} bytes)`,
+    );
+  return `${header(context)}\nEvery page is also a plain Markdown file, linked below with its size. The full text is split by area into the files listed first, none larger than ${LLMS_FULL_CEILING} bytes unless it is a single page: read this index, then fetch only the file or page you need. The API reference has a page for every export, so only its front page and each package's page are listed here; a package's page links its members, and their text is in that package's files. The pages and the API reference are also data, in ${base}pages.json and ${base}api.json; the Machine-readable data page describes them.\n\n## Full text by area\n\n${files.join("\n")}\n\n## Pages\n\n${lines.join("\n")}\n`;
 }
 
 /**

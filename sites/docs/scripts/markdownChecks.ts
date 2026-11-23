@@ -4,9 +4,10 @@ import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import {
   type CopyContext,
-  copyUrl,
   type DocPage,
-  llmsFullTxt,
+  LLMS_FULL_CEILING,
+  llmsFullFiles,
+  llmsTxt,
 } from "./markdownCopies";
 
 const BARE_FENCE = /^\s*(?:```|~~~)\s*$/;
@@ -88,8 +89,6 @@ function pageFindings(
   build: string,
   page: DocPage,
   context: CopyContext,
-  llms: string | null,
-  full: string | null,
 ): string[] {
   const findings: string[] = [];
   const copy = readIfExists(join(build, page.copyPath));
@@ -97,12 +96,6 @@ function pageFindings(
     findings.push(`The page "${page.id}" has no Markdown copy.`);
   } else {
     findings.push(...copyFindings(page, copy));
-    if (full !== null && !full.includes(copy.trimEnd())) {
-      findings.push(`${page.copyPath} is not in llms-full.txt.`);
-    }
-  }
-  if (llms !== null && !llms.includes(`(${copyUrl(page, context)})`)) {
-    findings.push(`The page "${page.id}" is not in llms.txt.`);
   }
   const html = readIfExists(join(build, page.permalink.slice(1), "index.html"));
   const link = `rel="alternate" type="text/markdown" href="${context.baseUrl}${page.copyPath}"`;
@@ -114,11 +107,38 @@ function pageFindings(
   return findings;
 }
 
+/** What is wrong with `llms.txt` and the `llms-full` files: one missing, not what the pages give, or (for `llms.txt`) over the ceiling. */
+function llmsFindings(
+  build: string,
+  pages: readonly DocPage[],
+  context: CopyContext,
+): string[] {
+  const findings: string[] = [];
+  const index = llmsTxt(pages, context);
+  if (Buffer.byteLength(index) > LLMS_FULL_CEILING) {
+    findings.push(`llms.txt is over ${LLMS_FULL_CEILING} bytes.`);
+  }
+  const expected = [
+    { name: "llms.txt", text: index },
+    ...llmsFullFiles(pages, context).map(({ name, text }) => ({ name, text })),
+  ];
+  for (const { name, text } of expected) {
+    const written = readIfExists(join(build, name));
+    if (written === null) {
+      findings.push(`${name} was not built.`);
+    } else if (written !== text) {
+      findings.push(`${name} is not what the pages give, in sidebar order.`);
+    }
+  }
+  return findings;
+}
+
 /**
  * What is wrong with the Markdown copies and agent files in a finished build:
- * a page with no copy, no head link, or no place in `llms.txt` and
- * `llms-full.txt`; a copy with a code fence that has no language, a relative
- * link or tabs; a `robots.txt` that blocks a crawler or omits the sitemap.
+ * a page with no copy or no head link; `llms.txt` or an `llms-full` file that
+ * is missing, differs from what the pages give, or an `llms.txt` over the size ceiling; a
+ * copy with a code fence that has no language, a relative link or tabs; a
+ * `robots.txt` that blocks a crawler or omits the sitemap.
  * @param build - The build folder.
  * @param pages - Every page, in sidebar order.
  * @param context - The site's origin, base path and names.
@@ -128,21 +148,9 @@ export function markdownFindings(
   pages: readonly DocPage[],
   context: CopyContext,
 ): string[] {
-  const findings: string[] = [];
-  const llms = readIfExists(join(build, "llms.txt"));
-  const full = readIfExists(join(build, "llms-full.txt"));
-  if (llms === null) {
-    findings.push("llms.txt was not built.");
-  }
-  if (full === null) {
-    findings.push("llms-full.txt was not built.");
-  } else if (full !== llmsFullTxt(pages, context)) {
-    findings.push(
-      "llms-full.txt is not the copies of the pages in sidebar order.",
-    );
-  }
+  const findings = llmsFindings(build, pages, context);
   for (const page of pages) {
-    findings.push(...pageFindings(build, page, context, llms, full));
+    findings.push(...pageFindings(build, page, context));
   }
   findings.push(...crawlerFindings(build, context));
   return findings;
