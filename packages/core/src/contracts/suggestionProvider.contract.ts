@@ -31,7 +31,9 @@ export interface SuggestionProviderControls {
 
 /** One suggestion provider under test, with its controls. */
 export interface SuggestionProviderSubject {
+  /** The suggestion provider under test. */
   readonly provider: SuggestionProvider;
+  /** How the contract scripts it. */
   readonly controls: SuggestionProviderControls;
 }
 

@@ -35,6 +35,7 @@ export interface MemorySettingsStoreOptions {
  * patch whose value is `undefined` are ignored.
  */
 export class MemorySettingsStore implements SettingsStore {
+  /** Whether changes would survive a reload, as the constructor option set it. */
   readonly persistent: boolean;
 
   #settings: Settings;
@@ -48,10 +49,12 @@ export class MemorySettingsStore implements SettingsStore {
     });
   }
 
+  /** The current settings, a frozen object that stays the same until a `set` changes a value. */
   get(): Settings {
     return this.#settings;
   }
 
+  /** Merges the patch, ignoring properties whose value is `undefined`. It notifies only when a value changed. */
   set(patch: Partial<Settings>): void {
     let next: Settings = this.#settings;
     for (const key of Object.keys(patch) as (keyof Settings)[]) {
@@ -69,6 +72,7 @@ export class MemorySettingsStore implements SettingsStore {
     }
   }
 
+  /** Calls the listener with the new settings after a change. Returns the function that unsubscribes. */
   subscribe(listener: (settings: Settings) => void): () => void {
     this.#listeners.add(listener);
     return () => {

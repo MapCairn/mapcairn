@@ -27,7 +27,9 @@ export interface LocationProviderControls {
 
 /** One location provider under test, with its controls. */
 export interface LocationProviderSubject {
+  /** The location provider under test. */
   readonly provider: LocationProvider;
+  /** How the contract scripts it. */
   readonly controls: LocationProviderControls;
 }
 

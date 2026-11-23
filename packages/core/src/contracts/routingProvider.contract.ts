@@ -40,7 +40,9 @@ export interface RoutingProviderControls {
 
 /** One routing provider under test, with its controls. */
 export interface RoutingProviderSubject {
+  /** The routing provider under test. */
   readonly provider: RoutingProvider;
+  /** How the contract scripts it. */
   readonly controls: RoutingProviderControls;
 }
 

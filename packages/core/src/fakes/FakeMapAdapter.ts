@@ -63,17 +63,22 @@ export interface FakeMapAdapterOptions {
 
 /** A host element double of a fixed size, recording focus calls. */
 export class FakeMapHost implements MapHostElement {
+  /** The options of every `focus` call, in order. */
   readonly focusCalls: ({ preventScroll?: boolean } | undefined)[] = [];
 
   constructor(
+    /** The width in pixels that `getBoundingClientRect` reports. */
     readonly width = 800,
+    /** The height in pixels that `getBoundingClientRect` reports. */
     readonly height = 600,
   ) {}
 
+  /** Records the call in `focusCalls`. */
   focus(options?: { preventScroll?: boolean }): void {
     this.focusCalls.push(options);
   }
 
+  /** The fixed width and height, with `left` and `top` of 0. */
   getBoundingClientRect(): {
     readonly width: number;
     readonly height: number;
@@ -188,9 +193,13 @@ function wrapBearing(degrees: number): number {
  * immediate. `project` ignores the bearing.
  */
 export class FakeMapAdapter implements MapAdapter {
+  /** How many times `mount` has succeeded. */
   mountCount = 0;
+  /** How many times `focus` has been called. */
   focusCount = 0;
+  /** Whether animation is on. It starts on and follows `mount`'s `reducedMotion` and `setAnimationEnabled`; the fake itself never animates. */
   animationEnabled = true;
+  /** Whether the engine's own key handling is on, as `setKeyboardEnabled` last set it. */
   keyboardEnabled = true;
   /** The shape the map was last asked to draw. */
   projection: MapProjection = "flat";
@@ -229,6 +238,7 @@ export class FakeMapAdapter implements MapAdapter {
     return this.#destroyed;
   }
 
+  /** Records the host and its size and emits `load`. It rejects with a `MapEngineError` when `failMount` was given. */
   async mount(host: MapHostElement, options: MapMountOptions): Promise<void> {
     if (this.#failMount !== undefined) {
       throw new MapEngineError(this.#failMount);
@@ -245,28 +255,34 @@ export class FakeMapAdapter implements MapAdapter {
     this.#emit("load", undefined);
   }
 
+  /** Marks the adapter destroyed and drops every listener. Safe to call twice. */
   destroy(): void {
     this.#destroyed = true;
     this.#host = null;
     this.#listeners.clear();
   }
 
+  /** The current view. */
   getView(): ViewState {
     return this.#view;
   }
 
+  /** Applies the given parts of the view at once and emits `move`, `zoom`, `rotate` and `moveEnd` for what changed. Nothing is emitted when nothing changed. */
   setView(view: Partial<ViewState>): void {
     this.#applyView({ ...this.#view, ...view });
   }
 
+  /** Raises the zoom by one, through `setView`. */
   zoomIn(): void {
     this.setView({ zoom: this.#view.zoom + 1 });
   }
 
+  /** Lowers the zoom by one, through `setView`. */
   zoomOut(): void {
     this.setView({ zoom: this.#view.zoom - 1 });
   }
 
+  /** Moves the centre by screen pixels, keeping it on the world, through `setView`. */
   panBy(dx: number, dy: number): void {
     if (dx === 0 && dy === 0) {
       return;
@@ -285,14 +301,17 @@ export class FakeMapAdapter implements MapAdapter {
     });
   }
 
+  /** Adds the degrees to the bearing, through `setView`. */
   rotateBy(degrees: number): void {
     this.setView({ bearing: this.#view.bearing + degrees });
   }
 
+  /** Sets the bearing to zero, through `setView`. */
   resetBearing(): void {
     this.setView({ bearing: 0 });
   }
 
+  /** Sets the view to the box's centre and the zoom that fits it inside the padding and the host's size, not past `maxZoom`. */
   fitBounds(bounds: Bounds, options: MapFitOptions = {}): void {
     const { top = 0, right = 0, bottom = 0, left = 0 } = options.padding ?? {};
     const southWest = mercatorProject(
@@ -320,14 +339,17 @@ export class FakeMapAdapter implements MapAdapter {
     });
   }
 
+  /** The mounted basemap's `minZoom`, or 0 before one is set. */
   getMinZoom(): number {
     return this.#basemap?.minZoom ?? 0;
   }
 
+  /** The mounted basemap's `maxZoom`, or 18 before one is set. */
   getMaxZoom(): number {
     return this.#basemap?.maxZoom ?? 18;
   }
 
+  /** The pixel of a position in the host's size, centred on the view. It ignores the bearing. */
   project(latlng: LatLng): PixelPoint {
     const { center, zoom } = this.#view;
     const world = mercatorProject(latlng, zoom);
@@ -347,10 +369,12 @@ export class FakeMapAdapter implements MapAdapter {
     );
   }
 
+  /** Records the shape the map is asked to draw. It changes `isVisible` and `metresPerPixel`. */
   setProjection(projection: MapProjection): void {
     this.projection = projection;
   }
 
+  /** The position under a pixel, with its longitude wrapped, the inverse of `project`. */
   unproject(point: PixelPoint): LatLng {
     const { center, zoom } = this.#view;
     const origin = mercatorProject(center, zoom);
@@ -364,11 +388,13 @@ export class FakeMapAdapter implements MapAdapter {
     return { lat: position.lat, lng: wrapLongitude(position.lng) };
   }
 
+  /** The ground resolution at a latitude, for the flat or globe shape the map was last given. */
   metresPerPixel(lat: number = this.#view.center.lat): number {
     const { center, zoom } = this.#view;
     return mapMetresPerPixel(this.projection, lat, center.lat, zoom);
   }
 
+  /** Swaps the basemap and emits `load`. It rejects with a `MapEngineError` when `failNextBasemap` or a deferred swap says so, and the old basemap stays. */
   async setBasemap(basemap: BasemapDefinition): Promise<void> {
     if (this.#failNextBasemap) {
       this.#failNextBasemap = false;
@@ -428,19 +454,23 @@ export class FakeMapAdapter implements MapAdapter {
     return { resolve, reject };
   }
 
+  /** Records whether animation is on in `animationEnabled`. */
   setAnimationEnabled(enabled: boolean): void {
     this.animationEnabled = enabled;
   }
 
+  /** Records whether the engine's own key handling is on in `keyboardEnabled`. */
   setKeyboardEnabled(enabled: boolean): void {
     this.keyboardEnabled = enabled;
   }
 
+  /** Counts the call and focuses the mounted host without scrolling. */
   focus(): void {
     this.focusCount += 1;
     this.#host?.focus({ preventScroll: true });
   }
 
+  /** Subscribes to an event. Returns the function that unsubscribes. */
   on<K extends keyof MapEvents>(
     event: K,
     handler: (payload: MapEvents[K]) => void,
@@ -453,11 +483,13 @@ export class FakeMapAdapter implements MapAdapter {
     };
   }
 
+  /** Stores the layer under the id, replacing and restacking whatever was there. `drawnLayers` reports it. */
   setFeatureLayer(id: string, features: readonly MapFeature[]): void {
     this.#dataLayers.delete(id);
     this.#dataLayers.set(id, { kind: "features", features: [...features] });
   }
 
+  /** Stores the overlay under the id. A new `tiles` template forgets any slow or unavailable report for the layer. */
   setTileLayer(id: string, overlay: MapTileOverlay): void {
     if (this.#reportedTiles.get(id) !== overlay.tiles) {
       this.#reportedTiles.delete(id);
@@ -466,26 +498,31 @@ export class FakeMapAdapter implements MapAdapter {
     this.#dataLayers.set(id, { kind: "tiles", overlay });
   }
 
+  /** Stores the shapes under the id, replacing and restacking whatever was there. */
   setShapeLayer(id: string, shapes: MapShapes): void {
     this.#dataLayers.delete(id);
     this.#dataLayers.set(id, { kind: "shapes", shapes });
   }
 
+  /** Stores the styled shapes under the id, replacing and restacking whatever was there. */
   setStyledShapes(id: string, layer: MapStyledShapes): void {
     this.#dataLayers.delete(id);
     this.#dataLayers.set(id, { kind: "styled", layer });
   }
 
+  /** Stores the vector layer under the id, replacing and restacking whatever was there. */
   setVectorLayer(id: string, layer: MapVectorTiles): void {
     this.#dataLayers.delete(id);
     this.#dataLayers.set(id, { kind: "vector", layer });
   }
 
+  /** Stores the heatmap under the id, replacing and restacking whatever was there. */
   setHeatmapLayer(id: string, heatmap: MapHeatmap): void {
     this.#dataLayers.delete(id);
     this.#dataLayers.set(id, { kind: "heatmap", heatmap });
   }
 
+  /** Forgets the layer under the id. Does nothing for an unknown id. */
   removeLayer(id: string): void {
     this.#reportedTiles.delete(id);
     this.#dataLayers.delete(id);
@@ -501,6 +538,7 @@ export class FakeMapAdapter implements MapAdapter {
     return this.#hitsAtPointer.filter((hit) => this.#hasFeature(hit));
   }
 
+  /** The box covering the host's four corners, unprojected. */
   getBounds(): Bounds {
     const { width, height } = this.#hostSize;
     const corners = [
@@ -519,6 +557,7 @@ export class FakeMapAdapter implements MapAdapter {
     };
   }
 
+  /** Resolves with a PNG header of the requested size, enough to read the size back. It rejects as `export-failed` while a basemap swap is loading, or when `failNextImage` or `stallNextImageTiles` says so. */
   async toImage(options?: MapImageOptions): Promise<Blob> {
     this.imageRequests.push(options);
     if (this.#failNextImage) {
@@ -588,6 +627,7 @@ export class FakeMapAdapter implements MapAdapter {
     this.#stallImageTiles = true;
   }
 
+  /** Replaces the handles, and ends a hover on a handle that is no longer there. */
   setEditHandles(handles: readonly MapEditHandle[]): void {
     this.#handles = [...handles];
     if (this.#hovered !== null && !this.#hasHandle(this.#hovered)) {

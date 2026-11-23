@@ -38,7 +38,9 @@ export type MessageCatalogueProblemKind =
 
 /** One problem {@link checkMessageCatalogue} found, and the key it is in. */
 export interface MessageCatalogueProblem {
+  /** The key that has the problem. */
   readonly key: string;
+  /** What is wrong with it. */
   readonly problem: MessageCatalogueProblemKind;
 }
 

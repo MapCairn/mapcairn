@@ -742,7 +742,9 @@ export type MessageKey =
  * a {@link MessageKey}; it is looked up in {@link MessageCatalogue.definitionTexts}.
  */
 export interface HostText {
+  /** The key the text is looked up by. */
   readonly key: string;
+  /** The text itself, as the host wrote it. */
   readonly text: string;
 }
 

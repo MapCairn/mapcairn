@@ -131,7 +131,9 @@ export interface MapAdapterControls {
 
 /** One map adapter under test, with its controls. */
 export interface MapAdapterSubject {
+  /** The map adapter under test. */
   readonly adapter: MapAdapter;
+  /** How the contract scripts it. */
   readonly controls: MapAdapterControls;
 }
 
@@ -1287,6 +1289,22 @@ export function runMapAdapterContract(
               { width: 1280, height: 960 },
             ],
             [{ view: { bounds: BOX } }, { width, height }],
+            // A Fiji-sized box across the antimeridian, in the short form
+            // with its east past 180.
+            [
+              {
+                size: { width: 400, height: 300 },
+                view: {
+                  bounds: {
+                    south: -18.2,
+                    west: 178.44,
+                    north: -16.7,
+                    east: 180.1,
+                  },
+                },
+              },
+              { width: 400, height: 300 },
+            ],
             [
               {
                 pixelRatio: 2,
@@ -1354,7 +1372,8 @@ export function runMapAdapterContract(
             { pixelRatio: -1 },
             { view: { center: CENTRE, zoom: Number.NaN } },
             { view: { bounds: { south: 1, west: 0, north: 0, east: 1 } } },
-            // A box across the antimeridian is not drawn yet.
+            // The long form of a box across the antimeridian (west past east)
+            // is not drawn; the short form, with east past 180, is.
             { view: { bounds: { south: 0, west: 170, north: 1, east: -170 } } },
             // Nor is a view beyond what the flat map can show.
             { view: { center: { lat: 89, lng: 0 }, zoom: 3 } },

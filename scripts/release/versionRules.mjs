@@ -127,7 +127,13 @@ function withPre(base, pre, counter) {
  */
 export function nextVersion({ last, commits, apiBreaking, pre }) {
   if (last === null) {
-    const first = { major: 0, minor: 1, patch: 0 };
+    const first = {
+      major: 0,
+      minor: 1,
+      patch: 0,
+      preId: null,
+      preNumber: null,
+    };
     return {
       version: withPre(first, pre, 1),
       bump: "first",

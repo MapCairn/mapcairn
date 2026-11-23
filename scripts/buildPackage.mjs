@@ -217,7 +217,7 @@ function emitDeclarations(folder) {
  * @param {string} packageJsonFullPath The manifest path.
  */
 async function rollUpDeclarations(folder, name, source, packageJsonFullPath) {
-  const { Extractor, ExtractorConfig } = await import(
+  const { Extractor, ExtractorConfig, ExtractorLogLevel } = await import(
     "@microsoft/api-extractor"
   );
   const entry = path
@@ -242,12 +242,16 @@ async function rollUpDeclarations(folder, name, source, packageJsonFullPath) {
         untrimmedFilePath: path.join("<projectFolder>", "dist", `${name}.d.ts`),
       },
       messages: {
-        compilerMessageReporting: { default: { logLevel: "warning" } },
-        extractorMessageReporting: {
-          default: { logLevel: "none" },
-          "ae-wrong-input-file-type": { logLevel: "error" },
+        compilerMessageReporting: {
+          default: { logLevel: ExtractorLogLevel.Warning },
         },
-        tsdocMessageReporting: { default: { logLevel: "none" } },
+        extractorMessageReporting: {
+          default: { logLevel: ExtractorLogLevel.None },
+          "ae-wrong-input-file-type": { logLevel: ExtractorLogLevel.Error },
+        },
+        tsdocMessageReporting: {
+          default: { logLevel: ExtractorLogLevel.None },
+        },
       },
     },
   });

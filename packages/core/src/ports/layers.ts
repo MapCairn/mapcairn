@@ -37,7 +37,9 @@ export type LayerGeometry =
 export interface LayerFeature {
   /** Unique inside one load of one layer. */
   readonly id: string;
+  /** Where the feature is and what shape it has. */
   readonly geometry: LayerGeometry;
+  /** The decoded values the layer's definition maps, by field name. */
   readonly fields: Readonly<Record<string, FieldValue>>;
 }
 
@@ -71,6 +73,7 @@ export interface LayerLoadRequest {
   readonly controls: ControlValues;
   /** Today, as epoch milliseconds, for relative dates. */
   readonly now: number;
+  /** Cancels the request. It then rejects with an `aborted` error. */
   readonly signal?: AbortSignal;
 }
 
@@ -84,14 +87,17 @@ export interface LayerIdentifyRequest {
   readonly now: number;
   /** Where the tap landed. */
   readonly at: IdentifyTarget;
+  /** Cancels the request. It then rejects with an `aborted` error. */
   readonly signal?: AbortSignal;
 }
 
 /** What {@link LayerSource.loadDetail} needs. */
 export interface LayerDetailRequest {
+  /** The layer whose detail is wanted. */
   readonly definition: LayerDefinition;
   /** The feature whose detail (such as an affected area) is wanted. */
   readonly feature: LayerFeature;
+  /** Cancels the request. It then rejects with an `aborted` error. */
   readonly signal?: AbortSignal;
 }
 
@@ -122,8 +128,11 @@ export interface LayerDetailRequest {
  *   `invalid`, so a provider cannot make the page hold an unbounded body.
  */
 export interface LayerSource {
+  /** Loads a feed, query or heatmap layer's features. */
   load(request: LayerLoadRequest): Promise<readonly LayerFeature[]>;
+  /** Loads the detail shapes of one feature, such as an affected area. */
   loadDetail(request: LayerDetailRequest): Promise<readonly LayerFeature[]>;
+  /** Asks a tile layer's service what is at a tapped place. It resolves to an empty list, not an error, when nothing is there. */
   identify(request: LayerIdentifyRequest): Promise<readonly LayerFeature[]>;
 }
 
@@ -173,6 +182,7 @@ export type CatalogueState =
  *   on without the catalogue.
  */
 export interface LayerCatalogue {
+  /** The catalogue's state now: loading, ready with its layers, or failed. It returns the same object until the state changes. */
   getState(): CatalogueState;
   /** Calls `listener` after each change. Returns the function that stops it. */
   subscribe(listener: () => void): () => void;

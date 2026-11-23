@@ -4,7 +4,9 @@ import type { SearchResult } from "./search";
 
 /** Options for one suggestion request. */
 export interface SuggestOptions {
+  /** The most suggestions to return. */
   readonly limit?: number;
+  /** Cancels the request. It then rejects with a `PortAbortError`. */
   readonly signal?: AbortSignal;
 }
 
@@ -23,6 +25,7 @@ export interface SuggestOptions {
  * limits belong to its implementation, since every caller shares them.
  */
 export interface SuggestionProvider {
+  /** Offers places that match the text typed so far. A blank query resolves to an empty list. */
   suggest(
     query: string,
     options?: SuggestOptions,

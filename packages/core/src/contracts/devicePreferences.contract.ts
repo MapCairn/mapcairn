@@ -17,7 +17,9 @@ export interface DevicePreferencesControls {
 
 /** One preferences implementation under test, with its controls. */
 export interface DevicePreferencesSubject {
+  /** The device preferences under test. */
   readonly preferences: DevicePreferences;
+  /** How the contract scripts them. */
   readonly controls: DevicePreferencesControls;
 }
 

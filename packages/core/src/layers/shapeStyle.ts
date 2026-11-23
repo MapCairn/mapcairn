@@ -26,11 +26,15 @@ export const DEFAULT_FILL_OPACITY = 0.55;
 
 /** How one polygon or line is drawn, worked out from its definition's style, without its words. */
 export interface ShapeAppearance {
+  /** The palette slot the shape is drawn in. */
   readonly colour: PaletteSlot;
+  /** The hatching over a polygon, or `none`. */
   readonly pattern: FillPattern;
+  /** The dashing of the outline or line. */
   readonly dash: LineDash;
   /** The outline or line width in pixels. */
   readonly width: number;
+  /** How opaque a polygon's fill is, 0 to 1. */
   readonly fillOpacity: number;
 }
 

@@ -10,5 +10,6 @@ export type ClipboardResult =
 
 /** Copies text. Never throws. */
 export interface ClipboardPort {
+  /** Copies text to the clipboard. It resolves to a result and never rejects; a failure carries its reason. */
   writeText(text: string): Promise<ClipboardResult>;
 }

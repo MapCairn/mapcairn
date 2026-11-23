@@ -1094,7 +1094,7 @@ function stringsIn(value) {
  * under a key that holds a command, with the `args` list beside it joined on
  * (`{ "command": "npm", "args": ["publish"] }`).
  *
- * @param {unknown} value
+ * @param {any} value
  * @returns {string[]}
  */
 function commandsIn(value) {

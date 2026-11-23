@@ -66,9 +66,11 @@ const DEFAULT_FORMATTERS = createFormatterRegistry();
 
 /** Props for {@link LayersSection}. */
 export interface LayersSectionProps {
+  /** The layers state the section lists and changes. */
   readonly layers: DataLayers;
   /** The heading level. Defaults to 3, below the sheet's h2 title. */
   readonly headingLevel?: HeadingLevel;
+  /** Receives the heading element, so the sheet can move focus to the section it opens on. */
   readonly headingRef?: Ref<HTMLHeadingElement>;
   /** The formatters card and list templates may name. Defaults to the built-ins. */
   readonly formatters?: FormatterRegistry;

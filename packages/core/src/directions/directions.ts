@@ -17,6 +17,7 @@ import { boundsOfPoints } from "../spatial/boundsOfPoints";
 export interface DirectionStop {
   /** Stable for the life of the stop, so a list keeps its rows when stops move. */
   readonly id: string;
+  /** Where the stop is. */
   readonly position: LatLng;
   /** A name for the place, such as a search result's label. Without it the coordinates are shown. */
   readonly label?: string;

@@ -35,6 +35,7 @@ export interface TourStep {
 
 /** Options for {@link useTour}. */
 export interface UseTourOptions {
+  /** The steps to take, in order. */
   readonly steps: readonly TourStep[];
   /** The host's tour version, stored in `Settings.tourSeen` once answered. */
   readonly version: number;
@@ -46,7 +47,9 @@ export interface UseTourOptions {
 
 /** What {@link useTour} returns. */
 export interface UseTour {
+  /** Where the tour is: `off`, `welcome`, `running` or `ended`. */
   readonly state: TourState;
+  /** The tour's steps, as the host gave them. */
   readonly steps: readonly TourStep[];
   /** The current step while running, else null. */
   readonly step: TourStep | null;

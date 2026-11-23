@@ -16,9 +16,13 @@ import { nearestLongitude, unwrapLongitudes } from "./longitude";
  * `project` and `isVisible`.
  */
 export interface MapPlacement {
+  /** Whether the map is flat or a globe. */
   readonly projection: MapProjection;
+  /** The centre and zoom the positions are placed against. */
   readonly view: Pick<ViewState, "center" | "zoom">;
+  /** The pixel of a position, as the adapter's `project` gives it. */
   project(position: LatLng): PixelPoint;
+  /** Whether a position is on the side of the map the person can see. */
   isVisible(position: LatLng): boolean;
 }
 

@@ -11,14 +11,19 @@ export type TravelMode = "drive" | "walk" | "cycle";
  * with the GeoJSON types, and the geometry helpers in core accept it.
  */
 export interface RouteLineGeometry {
+  /** Always `LineString`. */
   readonly type: "LineString";
+  /** The line's `[longitude, latitude]` positions, in order. */
   readonly coordinates: number[][];
 }
 
 /** One stretch of a route, between two consecutive stops. */
 export interface RouteLeg {
+  /** Always `Feature`, as GeoJSON writes it. */
   readonly type: "Feature";
+  /** The line the leg follows. */
   readonly geometry: RouteLineGeometry;
+  /** The leg's length and travel time. */
   readonly properties: {
     /** Length of this leg, in metres. */
     readonly distance: number;
@@ -31,7 +36,9 @@ export interface RouteLeg {
 export interface RouteRequest {
   /** At least two positions: where to start, any stops between, and where to end. */
   readonly stops: readonly LatLng[];
+  /** How the traveller moves. */
   readonly mode: TravelMode;
+  /** Cancels the request. It then rejects with an `aborted` error. */
   readonly signal?: AbortSignal;
 }
 
@@ -56,8 +63,11 @@ export type AreaGeometry =
 
 /** One area that can be reached within a time. */
 export interface ReachableAreaFeature {
+  /** Always `Feature`, as GeoJSON writes it. */
   readonly type: "Feature";
+  /** The outline of the area. */
   readonly geometry: AreaGeometry;
+  /** What the feature says about itself. */
   readonly properties: {
     /** The travel time this area is reachable within, in minutes. */
     readonly minutes: number;
@@ -66,15 +76,19 @@ export interface ReachableAreaFeature {
 
 /** A request for the area reachable from a place within a time. */
 export interface ReachableAreaRequest {
+  /** Where the travel starts. */
   readonly origin: LatLng;
   /** The travel time, in minutes. Greater than zero. */
   readonly minutes: number;
+  /** How the traveller moves. */
   readonly mode: TravelMode;
+  /** Cancels the request. It then rejects with an `aborted` error. */
   readonly signal?: AbortSignal;
 }
 
 /** The areas reachable from an origin: usually one, and more when the network is split. */
 export interface ReachableAreaResult {
+  /** The areas reachable, usually one. */
   readonly features: readonly ReachableAreaFeature[];
 }
 

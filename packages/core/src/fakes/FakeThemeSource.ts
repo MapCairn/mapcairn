@@ -13,6 +13,7 @@ import type { ThemeSource } from "../ports/theme";
  * and every call in `applyCalls`.
  */
 export class FakeThemeSource implements ThemeSource {
+  /** Every theme passed to `apply`, in order. */
   readonly applyCalls: ResolvedTheme[] = [];
 
   #systemTheme: ResolvedTheme;
@@ -38,10 +39,12 @@ export class FakeThemeSource implements ThemeSource {
     }
   }
 
+  /** The system theme as scripted, light until `setSystemTheme` changes it. */
   getSystemTheme(): ResolvedTheme {
     return this.#systemTheme;
   }
 
+  /** Calls the listener when `setSystemTheme` changes the theme. Returns the function that unsubscribes. */
   subscribe(listener: (theme: ResolvedTheme) => void): () => void {
     this.#listeners.add(listener);
     return () => {
@@ -49,6 +52,7 @@ export class FakeThemeSource implements ThemeSource {
     };
   }
 
+  /** Records the theme in `appliedTheme` and `applyCalls`. It notifies nobody. */
   apply(theme: ResolvedTheme): void {
     this.applyCalls.push(theme);
   }

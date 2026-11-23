@@ -21,6 +21,7 @@ export type FileSaveResult =
  * throws.
  */
 export interface FileSaver {
+  /** Offers the file as a download. It resolves to a result and never rejects. */
   save(file: SavedFile): Promise<FileSaveResult>;
 }
 
@@ -56,5 +57,6 @@ export interface OpenedFile {
  *   A second `open` while one is waiting settles the first as `cancelled`.
  */
 export interface FileOpener {
+  /** Shows a file picker and resolves with the file the person chose. It rejects with a `FileOpenError` when none is read. */
   open(options: FileOpenOptions): Promise<OpenedFile>;
 }

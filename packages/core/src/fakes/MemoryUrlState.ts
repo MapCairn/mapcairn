@@ -14,6 +14,7 @@ const MEMORY_URL_BASE = "https://mapcairn.example/";
  * `writes` records every value written, in order. Nothing is debounced.
  */
 export class MemoryUrlState implements UrlState {
+  /** Every value passed to `write`, in order. */
   readonly writes: UrlStateValue[] = [];
 
   #value: UrlStateValue;
@@ -22,15 +23,18 @@ export class MemoryUrlState implements UrlState {
     this.#value = initial;
   }
 
+  /** The value last written, or the one it started with. */
   read(): UrlStateValue {
     return this.#value;
   }
 
+  /** Replaces the whole value and records it in `writes`. It does not merge or debounce. */
   write(value: UrlStateValue): void {
     this.writes.push(value);
     this.#value = value;
   }
 
+  /** The memory address base followed by the hash `value` makes. It has no side effect. */
   link(value: UrlStateValue): string {
     return `${MEMORY_URL_BASE}${serialiseUrlHash(value)}`;
   }

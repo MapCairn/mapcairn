@@ -27,9 +27,13 @@ export function formatLatLng(position: LatLng): string {
 
 /** The letters that name the four hemispheres, as a language writes them. */
 export interface Hemispheres {
+  /** The letter for north. */
   readonly north: string;
+  /** The letter for south. */
   readonly south: string;
+  /** The letter for east. */
   readonly east: string;
+  /** The letter for west. */
   readonly west: string;
 }
 
@@ -52,12 +56,19 @@ export function hemispheresFor(catalogue: MessageCatalogue): Hemispheres {
  * by white space, for example "graad grade", so a singular and a plural both read.
  */
 export interface CoordinateWords {
+  /** The word for north. */
   readonly north: string;
+  /** The word for south. */
   readonly south: string;
+  /** The word for east. */
   readonly east: string;
+  /** The word for west. */
   readonly west: string;
+  /** The word for a degree. */
   readonly degree: string;
+  /** The word for a minute of arc. */
   readonly minute: string;
+  /** The word for a second of arc. */
   readonly second: string;
 }
 

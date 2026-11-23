@@ -24,21 +24,37 @@ import { MemoryUrlState } from "./MemoryUrlState";
 
 /** The fakes behind a {@link FakeServices}, for scripting and inspection. */
 export interface FakeServiceHandles {
+  /** The search provider the services use. */
   readonly search: FakeSearchProvider;
+  /** The suggestion provider the services use. */
   readonly suggestions: FakeSuggestionProvider;
+  /** The location provider the services use. */
   readonly location: FakeLocationProvider;
+  /** The settings store the services use. */
   readonly settings: MemorySettingsStore;
+  /** The clipboard the services use. */
   readonly clipboard: FakeClipboard;
+  /** The file saver the services use. */
   readonly fileSaver: FakeFileSaver;
+  /** The file opener the services use. */
   readonly fileOpener: FakeFileOpener;
+  /** The address state the services use. */
   readonly url: MemoryUrlState;
+  /** The theme source the services use. */
   readonly theme: FakeThemeSource;
+  /** The message catalogue the services use. */
   readonly messages: FakeMessageCatalogue;
+  /** The device preferences the services use. */
   readonly preferences: FakeDevicePreferences;
+  /** The layer catalogue the services use. */
   readonly layers: FakeLayerCatalogue;
+  /** The layer source the services use. */
   readonly layerSource: FakeLayerSource;
+  /** The routing provider the services use. */
   readonly routing: FakeRoutingProvider;
+  /** The feature selection the services use. */
   readonly selection: MemoryFeatureSelection;
+  /** The feature query the services use. */
   readonly featureQuery: FakeFeatureQuery;
   /** Every adapter `createMapAdapter` has built, oldest first. */
   readonly maps: FakeMapAdapter[];
@@ -46,6 +62,7 @@ export interface FakeServiceHandles {
 
 /** A complete {@link Services} built from fakes, plus handles to script them. */
 export interface FakeServices extends Services {
+  /** The fakes behind the services, typed as themselves so a test can script them. */
   readonly fakes: FakeServiceHandles;
 }
 

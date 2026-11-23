@@ -868,7 +868,7 @@ describe("the picture of the playground", () => {
       const alt = plateAlt(id);
       expect(alt.startsWith("Screenshot: ")).toBe(true);
       expect(alt).toContain(PLATES[id].description);
-      expect(alt).toContain("3.42 km");
+      expect(alt).toContain("3.37 km");
       expect(alt).not.toMatch(/theme|basemap/i);
     }
   });

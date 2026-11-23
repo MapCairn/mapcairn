@@ -44,8 +44,11 @@ export interface FakeLocationProviderOptions {
  * - `locateCalls` records the options and `watcherCount` the live watchers.
  */
 export class FakeLocationProvider implements LocationProvider {
+  /** Whether `watch` exists, as the constructor option set it. */
   readonly supportsWatch: boolean;
+  /** Registers handlers that `emitFix` and `emitError` push to, until the signal aborts. It is `undefined` when `supportsWatch` is false. */
   readonly watch?: LocationProvider["watch"];
+  /** The options of every `locate` call, in order. */
   readonly locateCalls: (LocateOptions | undefined)[] = [];
 
   #fix: LocationFix;
@@ -104,6 +107,7 @@ export class FakeLocationProvider implements LocationProvider {
     }
   }
 
+  /** Resolves with the scripted fix, rejects with the scripted failure, or waits for a hold. It rejects with `PortAbortError` when the signal fires. */
   locate(options?: LocateOptions): Promise<LocationFix> {
     this.locateCalls.push(options);
     return abortable(() => {
