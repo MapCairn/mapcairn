@@ -6,7 +6,9 @@
  * `without` return new registries, so a shared one is never changed.
  */
 export interface NamedRegistry<T> {
+  /** The item registered under the name, or `undefined`. */
   get(name: string): T | undefined;
+  /** Whether an item is registered under the name. */
   has(name: string): boolean;
   /** Every registered name, in the order added. */
   names(): readonly string[];

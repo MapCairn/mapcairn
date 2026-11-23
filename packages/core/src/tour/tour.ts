@@ -20,7 +20,9 @@ export type TourAdvance =
 export interface TourSnapshot {
   /** How many data layers are on. */
   readonly layersOn: number;
+  /** Whether the map is flat or a globe. */
   readonly projection: MapProjection;
+  /** Which surface is open. */
   readonly surface: SurfaceKind;
 }
 

@@ -23,9 +23,11 @@ export const HANDLE_CLICK_TOLERANCE_PX: Readonly<
 
 /** A press on an edit handle that has not been released. */
 export interface HandleGesture {
+  /** The id of the handle that was pressed. */
   readonly id: string;
   /** Where the pointer went down. */
   readonly origin: PixelPoint;
+  /** Whether the press is a mouse or a finger. */
   readonly pointer: HandlePointer;
   /** True once the pointer has left the click tolerance, for good. */
   readonly moved: boolean;

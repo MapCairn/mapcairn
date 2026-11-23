@@ -14,7 +14,9 @@ export type UnitSystem = "metric" | "imperial";
 
 /** Everything the app remembers between visits. */
 export interface Settings {
+  /** The theme the person chose. */
   readonly theme: ThemeChoice;
+  /** Whether distances are shown in metric or imperial units. */
   readonly units: UnitSystem;
   /**
    * Whether to show zoom buttons. `null` means "use the device default":
@@ -40,6 +42,7 @@ export interface Settings {
    * A shared link's basemap is not stored here.
    */
   readonly basemapId: string | null;
+  /** The view the map had when it was last left, or `null` when there is none. */
   readonly lastView: ViewState | null;
   /**
    * The version of the first-visit tour the person has answered (taken,
@@ -66,6 +69,8 @@ export interface SettingsStore {
   readonly persistent: boolean;
   /** The current settings. The same object is returned until something changes. */
   get(): Settings;
+  /** Merges the patch into the settings. A property whose value is `undefined` is ignored, and a change that alters nothing notifies nobody. */
   set(patch: Partial<Settings>): void;
+  /** Calls the listener after a change. Returns the function that unsubscribes. */
   subscribe(listener: (settings: Settings) => void): () => void;
 }

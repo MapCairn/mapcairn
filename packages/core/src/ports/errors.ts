@@ -17,6 +17,7 @@ export type SearchErrorKind = "offline" | "rate-limited" | "failed";
 
 /** The only error a search provider throws, apart from {@link PortAbortError}. */
 export class SearchError extends Error {
+  /** What went wrong: `offline`, `rate-limited` or `failed`. */
   readonly kind: SearchErrorKind;
 
   constructor(kind: SearchErrorKind, message?: string) {
@@ -31,6 +32,7 @@ export type LocationErrorKind = "denied" | "unavailable" | "timeout";
 
 /** The only error a location provider throws, apart from {@link PortAbortError}. */
 export class LocationError extends Error {
+  /** Why no fix was found: `denied`, `unavailable` or `timeout`. */
   readonly kind: LocationErrorKind;
 
   constructor(kind: LocationErrorKind, message?: string) {
@@ -50,6 +52,7 @@ export type LayerErrorKind = "network" | "invalid" | "empty" | "aborted";
 
 /** The only error a layer source rejects with. */
 export class LayerError extends Error {
+  /** What went wrong: `network`, `invalid`, `empty` or `aborted`. */
   readonly kind: LayerErrorKind;
 
   constructor(kind: LayerErrorKind, message?: string) {
@@ -76,6 +79,7 @@ export type RoutingErrorKind =
 
 /** The only error a routing provider rejects with. */
 export class RoutingError extends Error {
+  /** What went wrong: `network`, `invalid`, `no-route`, `rate-limited`, `unsupported` or `aborted`. */
   readonly kind: RoutingErrorKind;
 
   constructor(kind: RoutingErrorKind, message?: string) {
@@ -100,6 +104,7 @@ export type FeatureQueryErrorKind =
 
 /** The only error a feature query rejects with. */
 export class FeatureQueryError extends Error {
+  /** What went wrong: `network`, `invalid`, `unsupported` or `aborted`. */
   readonly kind: FeatureQueryErrorKind;
 
   constructor(kind: FeatureQueryErrorKind, message?: string) {
@@ -125,6 +130,7 @@ export type MapEngineErrorReason =
  * the payload of its `fatalError` event when the engine stops later.
  */
 export class MapEngineError extends Error {
+  /** Why the engine failed: `webgl-unavailable`, `load-failed`, `stopped` or `export-failed`. */
   readonly reason: MapEngineErrorReason;
 
   constructor(reason: MapEngineErrorReason, message?: string) {
@@ -149,6 +155,7 @@ export type MapImageExportErrorKind = "invalid" | "too-large" | "timed-out";
  * three it was.
  */
 export class MapImageExportError extends MapEngineError {
+  /** Why the image was refused or not drawn: `invalid`, `too-large` or `timed-out`. */
   readonly kind: MapImageExportErrorKind;
 
   constructor(kind: MapImageExportErrorKind, message: string) {
@@ -172,6 +179,7 @@ export type FileOpenErrorKind =
 
 /** The only error a file opener rejects with. */
 export class FileOpenError extends Error {
+  /** Why no file was read: `cancelled`, `too-large`, `unreadable` or `unsupported`. */
   readonly kind: FileOpenErrorKind;
 
   constructor(kind: FileOpenErrorKind, message?: string) {

@@ -128,7 +128,9 @@ export function resolveSlot(
 
 /** One slot a day offers, with its start time as the label, such as `14:30`. */
 export interface DaySlot {
+  /** The slot's value, as a date and time control stores it. */
   readonly value: string;
+  /** The slot's start time as shown. */
   readonly label: string;
 }
 

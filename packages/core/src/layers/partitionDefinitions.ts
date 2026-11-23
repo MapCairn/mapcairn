@@ -7,7 +7,9 @@ import { type ValidationOptions, validateLayerDefinition } from "./validate";
 
 /** The valid definitions in a list, and what was wrong with the others. */
 export interface PartitionedDefinitions {
+  /** The definitions that passed validation, in their original order. */
   readonly layers: readonly LayerDefinition[];
+  /** The definitions that did not, each with what was wrong. */
   readonly skipped: readonly SkippedDefinition[];
 }
 

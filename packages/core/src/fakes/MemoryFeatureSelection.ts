@@ -61,6 +61,7 @@ function sameSequence(
  * listeners after it, and its error leaves the call that changed the set.
  */
 export class MemoryFeatureSelection implements FeatureSelection {
+  /** The most references it holds. An `add` or `replace` that would pass it changes nothing. */
   readonly limit: number;
 
   #refs: readonly FeatureRef[] = Object.freeze([]);
@@ -76,8 +77,10 @@ export class MemoryFeatureSelection implements FeatureSelection {
     this.limit = limit;
   }
 
+  /** The references held, in order. The same array is returned until the set changes. */
   readonly getState = (): readonly FeatureRef[] => this.#refs;
 
+  /** Calls the listener after the set changes. Returns the function that unsubscribes. */
   readonly subscribe = (listener: () => void): (() => void) => {
     const entry = () => listener();
     this.#listeners.add(entry);
@@ -86,6 +89,7 @@ export class MemoryFeatureSelection implements FeatureSelection {
     };
   };
 
+  /** Appends the references it does not already hold. Changes nothing if that would pass the limit. */
   add(refs: readonly FeatureRef[]): void {
     const held = new Set(this.#refs.map(featureRefKey));
     const fresh = uniqueRefs(refs).filter(
@@ -97,11 +101,13 @@ export class MemoryFeatureSelection implements FeatureSelection {
     this.#publish([...this.#refs, ...fresh]);
   }
 
+  /** Drops the references that are held. Others are ignored. */
   remove(refs: readonly FeatureRef[]): void {
     const dropped = new Set(refs.map(featureRefKey));
     this.#publish(this.#refs.filter((ref) => !dropped.has(featureRefKey(ref))));
   }
 
+  /** Makes the set exactly these references, without duplicates. Changes nothing if there are more than the limit. */
   replace(refs: readonly FeatureRef[]): void {
     const next = uniqueRefs(refs);
     if (next.length > this.limit) {
@@ -110,6 +116,7 @@ export class MemoryFeatureSelection implements FeatureSelection {
     this.#publish(next);
   }
 
+  /** Empties the set. */
   clear(): void {
     this.#publish([]);
   }

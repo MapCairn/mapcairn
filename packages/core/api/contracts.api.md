@@ -63,9 +63,7 @@ export interface ClipboardControls {
 
 // @public
 export interface ClipboardSubject {
-    // (undocumented)
     readonly clipboard: ClipboardPort;
-    // (undocumented)
     readonly controls: ClipboardControls;
 }
 
@@ -86,13 +84,9 @@ export const CONTRACT_SELECTION_LIMIT = 3;
 
 // @public
 export interface ContractPoint {
-    // (undocumented)
     readonly id: string;
-    // (undocumented)
     readonly lat: number;
-    // (undocumented)
     readonly lng: number;
-    // (undocumented)
     readonly title: string;
 }
 
@@ -106,9 +100,7 @@ export interface DevicePreferencesControls {
 
 // @public
 export interface DevicePreferencesSubject {
-    // (undocumented)
     readonly controls: DevicePreferencesControls;
-    // (undocumented)
     readonly preferences: DevicePreferences;
 }
 
@@ -121,9 +113,7 @@ export interface FeatureQueryControls {
 
 // @public
 export interface FeatureQuerySubject {
-    // (undocumented)
     readonly controls: FeatureQueryControls;
-    // (undocumented)
     readonly query: FeatureQuery;
 }
 
@@ -134,9 +124,7 @@ export interface FeatureSelectionControls {
 
 // @public
 export interface FeatureSelectionSubject {
-    // (undocumented)
     readonly controls: FeatureSelectionControls;
-    // (undocumented)
     readonly selection: FeatureSelection;
 }
 
@@ -154,9 +142,7 @@ export interface FileOpenerControls {
 
 // @public
 export interface FileOpenerSubject {
-    // (undocumented)
     readonly controls: FileOpenerControls;
-    // (undocumented)
     readonly opener: FileOpener;
 }
 
@@ -174,9 +160,7 @@ export interface FileSaverControls {
 
 // @public
 export interface FileSaverSubject {
-    // (undocumented)
     readonly controls: FileSaverControls;
-    // (undocumented)
     readonly files: FileSaver;
 }
 
@@ -191,9 +175,7 @@ export interface LayerCatalogueControls {
 
 // @public
 export interface LayerCatalogueSubject {
-    // (undocumented)
     readonly catalogue: LayerCatalogue;
-    // (undocumented)
     readonly controls: LayerCatalogueControls;
 }
 
@@ -211,9 +193,7 @@ export interface LayerSourceControls {
 
 // @public
 export interface LayerSourceSubject {
-    // (undocumented)
     readonly controls: LayerSourceControls;
-    // (undocumented)
     readonly source: LayerSource;
 }
 
@@ -228,9 +208,7 @@ export interface LocationProviderControls {
 
 // @public
 export interface LocationProviderSubject {
-    // (undocumented)
     readonly controls: LocationProviderControls;
-    // (undocumented)
     readonly provider: LocationProvider;
 }
 
@@ -269,9 +247,7 @@ export interface MapAdapterControls {
 
 // @public
 export interface MapAdapterSubject {
-    // (undocumented)
     readonly adapter: MapAdapter;
-    // (undocumented)
     readonly controls: MapAdapterControls;
 }
 
@@ -297,39 +273,22 @@ export const PORT_REGISTRY: PortRegistry;
 
 // @public
 export interface PortContractRunners {
-    // (undocumented)
     readonly clipboard: typeof runClipboardContract;
-    // (undocumented)
     readonly createMapAdapter: typeof runMapAdapterContract;
-    // (undocumented)
     readonly featureQuery: typeof runFeatureQueryContract;
-    // (undocumented)
     readonly fileOpener: typeof runFileOpenerContract;
-    // (undocumented)
     readonly fileSaver: typeof runFileSaverContract;
-    // (undocumented)
     readonly layers: typeof runLayerCatalogueContract;
-    // (undocumented)
     readonly layerSource: typeof runLayerSourceContract;
-    // (undocumented)
     readonly location: typeof runLocationProviderContract;
-    // (undocumented)
     readonly messages: typeof runMessageCatalogueContract;
-    // (undocumented)
     readonly preferences: typeof runDevicePreferencesContract;
-    // (undocumented)
     readonly routing: typeof runRoutingProviderContract;
-    // (undocumented)
     readonly search: typeof runSearchProviderContract;
-    // (undocumented)
     readonly selection: typeof runFeatureSelectionContract;
-    // (undocumented)
     readonly settings: typeof runSettingsStoreContract;
-    // (undocumented)
     readonly suggestions: typeof runSuggestionProviderContract;
-    // (undocumented)
     readonly theme: typeof runThemeSourceContract;
-    // (undocumented)
     readonly url: typeof runUrlStateContract;
 }
 
@@ -358,9 +317,7 @@ export interface RoutingProviderControls {
 
 // @public
 export interface RoutingProviderSubject {
-    // (undocumented)
     readonly controls: RoutingProviderControls;
-    // (undocumented)
     readonly provider: RoutingProvider;
 }
 
@@ -431,9 +388,7 @@ export interface SearchProviderControls {
 
 // @public
 export interface SearchProviderSubject {
-    // (undocumented)
     readonly controls: SearchProviderControls;
-    // (undocumented)
     readonly provider: SearchProvider;
 }
 
@@ -444,7 +399,6 @@ export interface SettingsStoreControls {
 
 // @public
 export interface SettingsStoreSubject {
-    // (undocumented)
     readonly controls: SettingsStoreControls;
     readonly store: SettingsStore;
 }
@@ -459,9 +413,7 @@ export interface SuggestionProviderControls {
 
 // @public
 export interface SuggestionProviderSubject {
-    // (undocumented)
     readonly controls: SuggestionProviderControls;
-    // (undocumented)
     readonly provider: SuggestionProvider;
 }
 
@@ -473,9 +425,7 @@ export interface ThemeSourceControls {
 
 // @public
 export interface ThemeSourceSubject {
-    // (undocumented)
     readonly controls: ThemeSourceControls;
-    // (undocumented)
     readonly source: ThemeSource;
 }
 
@@ -486,7 +436,6 @@ export interface UrlStateControls {
 
 // @public
 export interface UrlStateSubject {
-    // (undocumented)
     readonly controls: UrlStateControls;
     readonly url: UrlState;
 }

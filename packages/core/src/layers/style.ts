@@ -25,8 +25,11 @@ export const DEFAULT_MARKER_RADIUS = 6;
 
 /** How one feature is drawn, worked out from its definition's style. */
 export interface MarkerStyle {
+  /** The palette slot the marker is filled with. */
   readonly colour: PaletteSlot;
+  /** The marker's radius in CSS pixels. */
   readonly radius: number;
+  /** The marker's shape. */
   readonly shape: MarkerShape;
   /**
    * The words for the colour, such as `Orange alert`, for the list and card,
@@ -38,9 +41,13 @@ export interface MarkerStyle {
 
 /** One line of a legend. */
 export interface LegendEntry {
+  /** The row's words. */
   readonly label: string;
+  /** The palette slot of the glyph. */
   readonly colour: PaletteSlot;
+  /** The marker shape of the glyph. */
   readonly shape: MarkerShape;
+  /** The glyph's radius in CSS pixels. */
   readonly radius: number;
   /**
    * What the swatch draws. A marker (the default) uses `shape` and `radius`;
@@ -48,13 +55,17 @@ export interface LegendEntry {
    * shows every signal the map does.
    */
   readonly swatch?: "marker" | "area" | "line" | "density";
+  /** The hatching of an area glyph. */
   readonly pattern?: FillPattern;
+  /** The dashing of a line glyph. */
   readonly dash?: LineDash;
+  /** The stroke width of a line glyph, in pixels. */
   readonly width?: number;
 }
 
 /** A layer's legend, derived from its style so the two cannot disagree. */
 export interface Legend {
+  /** The rows of the key, in the order the layer's style lists them. */
   readonly entries: readonly LegendEntry[];
 }
 

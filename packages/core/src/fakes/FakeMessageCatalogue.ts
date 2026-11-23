@@ -10,7 +10,9 @@ import type {
 
 /** One recorded call to {@link FakeMessageCatalogue.t} or `.plural`. */
 export interface MessageCatalogueCall {
+  /** The key that was asked for. */
   readonly key: MessageKey;
+  /** The parameters that were passed with it. */
   readonly params: unknown;
 }
 
@@ -59,10 +61,13 @@ export interface FakeMessageCatalogueOptions {
  * real catalogue, because it needs no catalogue lookup to fake.
  */
 export class FakeMessageCatalogue implements MessageCatalogue {
+  /** Every `t` and `plural` call, in order, with its key and parameters. */
   readonly calls: MessageCatalogueCall[] = [];
 
+  /** The host's layer template translations the fake was given, if any. */
   readonly layerTemplates?: Readonly<Record<string, string>>;
 
+  /** The host's definition text translations the fake was given, if any. */
   readonly definitionTexts?: Readonly<Record<string, string>>;
 
   readonly #inner: MessageCatalogue;
@@ -96,10 +101,12 @@ export class FakeMessageCatalogue implements MessageCatalogue {
     );
   }
 
+  /** The `Intl` numbering system the fake was given, or `undefined`. */
   get numberingSystem(): string | undefined {
     return this.#inner.numberingSystem;
   }
 
+  /** The language tag, `en-GB` unless the options say otherwise. */
   get language(): string {
     return this.#inner.language;
   }
@@ -107,11 +114,13 @@ export class FakeMessageCatalogue implements MessageCatalogue {
   // Arrow properties, not methods: a component that destructures `const {
   // t } = useMessages()` (as it would with the real catalogue's object
   // literal) keeps a callable function with no `this` to lose.
+  /** Records the call, then returns the catalogue text for the key with its parameters filled in. */
   t = <K extends MessageKey>(key: K, params: MessageParams[K]): string => {
     this.calls.push({ key, params });
     return this.#inner.t(key, params);
   };
 
+  /** Records the call, then returns the form of the text that the count selects. */
   plural = <K extends MessageKey>(
     key: K,
     params: MessageParams[K] & { readonly count: number },
@@ -120,6 +129,7 @@ export class FakeMessageCatalogue implements MessageCatalogue {
     return this.#inner.plural(key, params);
   };
 
+  /** Joins the items with `Intl.ListFormat`. It is not recorded or scripted. */
   list = (
     items: readonly string[],
     type?: "conjunction" | "disjunction",

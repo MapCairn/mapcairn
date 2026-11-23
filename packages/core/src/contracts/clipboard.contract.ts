@@ -24,7 +24,9 @@ export interface ClipboardControls {
 
 /** One clipboard port under test, with its controls. */
 export interface ClipboardSubject {
+  /** The clipboard under test. */
   readonly clipboard: ClipboardPort;
+  /** How the contract scripts it. */
   readonly controls: ClipboardControls;
 }
 
