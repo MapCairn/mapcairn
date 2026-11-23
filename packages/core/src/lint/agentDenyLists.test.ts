@@ -83,6 +83,13 @@ const WRAPPED_NPM_LAUNCHERS = [
   "npm x npm",
   "npm --json",
   "npm --prefix=.",
+  "npm -w x",
+  "npm -C dir",
+  "npm explore pkg -- npm",
+  "npm explore pkg npm",
+  "npx npm",
+  "npx -y npm",
+  "npx --yes npm",
 ];
 
 /**
