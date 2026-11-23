@@ -85,7 +85,7 @@ export interface SettingsSectionProps {
 
 /**
  * The settings: theme, units, map shape (flat or globe), language (only when
- * the host offers more than one; see {@link LanguageField}), zoom buttons and
+ * the host offers more than one; see `LanguageField`), zoom buttons and
  * Save data, a note when changes will not be remembered, and a short privacy
  * statement (the host's, or the catalogue's `settings.privacy.default`) with a
  * link to the policy.

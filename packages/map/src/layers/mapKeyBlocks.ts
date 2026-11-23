@@ -19,8 +19,8 @@ export interface MapKeyBlock {
   /** The key's rows, in the order the layer's style lists them. Never empty. */
   readonly entries: readonly [LegendEntry, ...LegendEntry[]];
   /**
-   * The day or time the layer is set to, in words such as `13:00 UTC on 11
-   * November 2026`, or null when it has no date or time control.
+   * The day or time the layer is set to, in words such as
+   * `13:00 UTC on 11 November 2026`, or null when it has no date or time control.
    */
   readonly chosenTime: Message | null;
 }
