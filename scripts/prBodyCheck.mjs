@@ -26,11 +26,28 @@ const RELEASE_TITLE = /^chore\(release\):/;
 const ANNOTATION = "::warning title=Pull request description::";
 
 /**
+ * Removes HTML comments until none is left, because removing one can join the
+ * text around it into another (`<!<!---->-- x -->`).
+ *
+ * @param {string} text
+ * @returns {string}
+ */
+function withoutComments(text) {
+  let current = text;
+  let previous;
+  do {
+    previous = current;
+    current = previous.replace(HTML_COMMENT, "");
+  } while (current !== previous);
+  return current;
+}
+
+/**
  * @param {string | null | undefined} body The pull request description.
  * @returns {string[]} One warning for each thing the description lacks. Comments in the description (the template's hints) do not count.
  */
 export function checkPullRequestBody(body) {
-  const text = (body ?? "").replace(HTML_COMMENT, "");
+  const text = withoutComments(body ?? "");
   const warnings = [];
   if (!ISSUE_LINK.test(text)) {
     warnings.push(

@@ -102,8 +102,9 @@ describe("the SDK packages job in ci.yml", () => {
     );
     // The title check reads the live title and has a concurrency group of its
     // own, so an edit cancelling its older run costs nothing; it is not a
-    // required check that a cancelled run could leave missing.
-    expect(editing).toEqual(["ci.yml", "pr-title.yml"]);
+    // required check that a cancelled run could leave missing. The description
+    // check is the same: it reads the live body, has its own group and only warns.
+    expect(editing).toEqual(["ci.yml", "pr-body-check.yml", "pr-title.yml"]);
   });
 
   describe("the step that decides whether to run", () => {

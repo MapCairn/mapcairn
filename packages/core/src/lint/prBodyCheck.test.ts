@@ -71,6 +71,14 @@ describe("checkPullRequestBody", () => {
     expect(warnings[0]).toContain("Fixes #");
   });
 
+  it("strips a comment that removing another comment puts together", () => {
+    const warnings = checkPullRequestBody(
+      "<!<!---->-- Fixes #12 -->\n## Checks\n",
+    );
+    expect(warnings).toHaveLength(1);
+    expect(warnings[0]).toContain("Fixes #");
+  });
+
   it("does not count a bare issue reference as a link", () => {
     expect(checkPullRequestBody("See #12\n## Checks\n")).toHaveLength(1);
   });
