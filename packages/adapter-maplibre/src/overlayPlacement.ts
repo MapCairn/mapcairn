@@ -10,6 +10,7 @@ import {
 import type { Map as MapLibreMap } from "maplibre-gl";
 import { pixelOf } from "./camera";
 import type { MapLibreModule } from "./engineLoader";
+import { type HorizonCamera, isBeyondHorizon } from "./globeHorizon";
 
 /** What {@link OverlayPlacement} needs from the adapter that owns the maps. */
 export interface OverlayPlacementHost {
@@ -51,7 +52,7 @@ export class OverlayPlacement {
   }
 
   /**
-   * The engine's own horizon test, which hides a place when the planet lies
+   * The engine's own horizon test (see {@link isBeyondHorizon}), which hides a place when the planet lies
    * between the camera and it, on any map the adapter made. A flat map hides
    * nothing.
    */
@@ -60,11 +61,10 @@ export class OverlayPlacement {
     if (!map || !LngLat || this.shape === "flat") {
       return true;
     }
-    // `_camera.transform` is what MapLibre's own `Marker` asks. The public
-    // `map.transform` is gone from the 6.x typings, and no public call tests
-    // the horizon. The adapter contract suite covers it against the stand-in.
-    return !map._camera.transform.isLocationOccluded(
-      new LngLat(latlng.lng, latlng.lat),
+    return !isBeyondHorizon(
+      map._camera as unknown as HorizonCamera,
+      latlng,
+      LngLat,
     );
   }
 
