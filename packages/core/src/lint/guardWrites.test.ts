@@ -353,7 +353,9 @@ describe("Edit, Write and NotebookEdit path check", () => {
   });
 
   it("follows a real symbolic link on this system", () => {
-    const base = realpathSync(mkdtempSync(path.join(tmpdir(), "guard-")));
+    const base = realpathSync.native(
+      mkdtempSync(path.join(tmpdir(), "guard-")),
+    );
     try {
       const inside = path.join(base, ".claude", "worktrees", "review-12");
       mkdirSync(inside, { recursive: true });

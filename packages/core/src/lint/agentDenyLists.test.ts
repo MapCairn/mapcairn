@@ -65,6 +65,17 @@ function pinnedNpx(name: string): string[] {
   ];
 }
 
+/** The ways to start npm itself that a deny list for Claude Code has to cover. */
+const NPM_LAUNCHERS = [
+  "npm",
+  "npm -w packages/core",
+  "npx npm",
+  "npx -y npm",
+  "npx npm@11",
+  "npx --yes npm@latest",
+  "corepack npm",
+];
+
 /** Publishes started through another launcher, a workspace runner or a pinned npx. */
 const LAUNCHED_PUBLISH = [
   ...pinnedNpx("publish"),
@@ -129,8 +140,9 @@ const RELEASE_GATE_COMMANDS = [
 
 /**
  * Whether a wildcard pattern matches a whole command. `*` matches any text.
- * With `bareEnds`, a lone trailing ` *` also matches the command without
- * arguments, as Claude Code's permission page says it does.
+ * With `bareEnds`, a trailing ` *` also matches the command without
+ * arguments, but only when it is the pattern's only `*` (`npm publish *`, not
+ * `npm * publish *`), as https://code.claude.com/docs/en/permissions says.
  */
 function wildcardMatches(
   pattern: string,
@@ -272,6 +284,24 @@ describe("Claude Code, .claude/settings.json", () => {
         expect(listDenies(bash, command, true), command).toBe(true);
       }
     }
+  });
+
+  it("denies every command through every npm launcher in both shells, bare or with arguments", () => {
+    const missing: string[] = [];
+    for (const shell of ["Bash", "PowerShell"]) {
+      const patterns = innerPatterns(rules, shell);
+      for (const name of NAMES) {
+        for (const launcher of NPM_LAUNCHERS) {
+          for (const tail of ["", " @mapcairn/core --tag next"]) {
+            const command = `${launcher} ${name}${tail}`;
+            if (!listDenies(patterns, command, true)) {
+              missing.push(`${shell}(${command})`);
+            }
+          }
+        }
+      }
+    }
+    expect(missing).toEqual([]);
   });
 
   it("leaves the release skill's commands and the checks alone", () => {
