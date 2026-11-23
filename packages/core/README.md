@@ -1,5 +1,8 @@
 # `@mapcairn/core`
 
+[![npm version](https://img.shields.io/npm/v/@mapcairn/core)](https://www.npmjs.com/package/@mapcairn/core)
+[![GitHub Release](https://img.shields.io/github/v/release/MapCairn/mapcairn)](https://github.com/MapCairn/mapcairn/releases)
+
 The ports, pure logic and basemap definitions of MapCairn. Use it when you want MapCairn's logic without its interface: to write an adapter for a map engine or a service, to test an app against in-memory fakes, or to use its measurement, formatting and link-parsing helpers. For the interface, install [`@mapcairn/map`](https://github.com/MapCairn/mapcairn/tree/main/packages/map), which builds on it.
 
 Most apps should install [`@mapcairn/sdk`](https://github.com/MapCairn/mapcairn/tree/main/packages/sdk) instead: one install, one import and one stylesheet for the whole SDK, which re-exports this package. Install `@mapcairn/core` on its own as the advanced option, for a host that wants fewer dependencies.
