@@ -24,7 +24,9 @@ export interface FileOpenerControls {
 
 /** One file opener under test, with its controls. */
 export interface FileOpenerSubject {
+  /** The file opener under test. */
   readonly opener: FileOpener;
+  /** How the contract scripts it. */
   readonly controls: FileOpenerControls;
 }
 
@@ -49,7 +51,7 @@ async function rejection(promise: Promise<unknown>): Promise<unknown> {
 }
 
 /**
- * Runs the shared behavioural suite for a {@link FileOpener}. Every test
+ * Runs the shared behavioural suite for a `FileOpener`. Every test
  * calls `create` for a fresh subject.
  */
 export function runFileOpenerContract(

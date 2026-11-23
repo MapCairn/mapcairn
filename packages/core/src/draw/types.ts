@@ -13,9 +13,11 @@ export type DrawKind = "point" | "line" | "polygon" | "circle";
 export interface DrawShape {
   /** Stable for the life of the shape, for example `shape-3`. */
   readonly id: string;
+  /** Whether the shape is a point, line, polygon or circle. */
   readonly kind: DrawKind;
   /** A name for lists and announcements, for example "Polygon 2". */
   readonly label: string;
+  /** The shape's positions, in order. */
   readonly vertices: readonly LatLng[];
   /** A circle's radius in metres. Absent until the second tap of a circle. */
   readonly radiusMetres?: number;
@@ -33,6 +35,7 @@ export type DrawIssue =
 
 /** What the current selection points at: a shape, and optionally one of its vertices. */
 export interface DrawSelection {
+  /** The id of the selected shape. */
   readonly shapeId: string;
   /** The selected vertex, or null when the shape as a whole is selected. */
   readonly vertex: number | null;

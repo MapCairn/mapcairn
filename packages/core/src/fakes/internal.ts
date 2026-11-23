@@ -15,6 +15,7 @@ export interface HeldCall<T> {
 
 /** A {@link HeldCall} plus the promise a fake awaits. */
 export interface Deferred<T> extends HeldCall<T> {
+  /** The promise that settles when `resolve` or `reject` is called. */
   readonly promise: Promise<T>;
 }
 

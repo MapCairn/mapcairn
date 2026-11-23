@@ -15,3 +15,12 @@ export interface ScrollBox {
 export function scrolls(box: ScrollBox): boolean {
   return box.scrollWidth > box.clientWidth;
 }
+
+/**
+ * The accessible name of a table's scrolling region. Each table on a page gets
+ * its own number, because landmarks that share a name cannot be told apart.
+ * @param index - The table's zero-based position among the tables on the page.
+ */
+export function tableLabel(index: number): string {
+  return `Table ${index + 1}, scrolls sideways`;
+}

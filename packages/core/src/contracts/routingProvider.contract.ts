@@ -40,7 +40,9 @@ export interface RoutingProviderControls {
 
 /** One routing provider under test, with its controls. */
 export interface RoutingProviderSubject {
+  /** The routing provider under test. */
   readonly provider: RoutingProvider;
+  /** How the contract scripts it. */
   readonly controls: RoutingProviderControls;
 }
 
@@ -128,7 +130,7 @@ async function failureKind(promise: Promise<unknown>): Promise<string> {
 }
 
 /**
- * Runs the shared behavioural suite for a {@link RoutingProvider}. Every test
+ * Runs the shared behavioural suite for a `RoutingProvider`. Every test
  * calls `create` for a fresh subject.
  */
 export function runRoutingProviderContract(

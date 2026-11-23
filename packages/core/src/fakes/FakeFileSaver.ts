@@ -17,7 +17,9 @@ export type FileSaveFailureReason = Extract<
  * offered. It never rejects.
  */
 export class FakeFileSaver implements FileSaver {
+  /** The files that were saved, in order. */
   readonly saved: SavedFile[] = [];
+  /** Every file offered, in order, whether it was saved or not. */
   readonly attempts: SavedFile[] = [];
 
   #failure: FileSaveFailureReason | null = null;
@@ -32,6 +34,7 @@ export class FakeFileSaver implements FileSaver {
     this.#failure = null;
   }
 
+  /** Records the file in `attempts`, and in `saved` too unless a failure is scripted. It resolves to a result and never rejects. */
   save(file: SavedFile): Promise<FileSaveResult> {
     this.attempts.push(file);
     if (this.#failure !== null) {

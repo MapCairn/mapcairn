@@ -16,13 +16,17 @@ import {
 
 /** A recorded call to {@link FakeSearchProvider.search}. */
 export interface RecordedSearchCall {
+  /** The query as it was passed, before trimming. */
   readonly query: string;
+  /** The options that were passed, if any. */
   readonly options: SearchOptions | undefined;
 }
 
 /** A recorded call to {@link FakeSearchProvider.reverse}. */
 export interface RecordedReverseCall {
+  /** The position that was asked about. */
   readonly position: LatLng;
+  /** The options that were passed, if any. */
   readonly options: Pick<SearchOptions, "signal"> | undefined;
 }
 
@@ -50,7 +54,9 @@ export type HeldSearchCall = HeldCall<readonly SearchResult[]>;
  * - `searchCalls` and `reverseCalls` record what the ui asked.
  */
 export class FakeSearchProvider implements SearchProvider {
+  /** Every `search` call, in order, with its query and options. */
   readonly searchCalls: RecordedSearchCall[] = [];
+  /** Every `reverse` call, in order, with its position and options. */
   readonly reverseCalls: RecordedReverseCall[] = [];
 
   readonly #byQuery = new Map<string, readonly SearchResult[]>();
@@ -91,6 +97,7 @@ export class FakeSearchProvider implements SearchProvider {
     return deferred;
   }
 
+  /** Answers with the results scripted for the trimmed query, or the default results. A blank query resolves to an empty list without using any script. */
   search(
     query: string,
     options?: SearchOptions,
@@ -105,6 +112,7 @@ export class FakeSearchProvider implements SearchProvider {
     }, options?.signal);
   }
 
+  /** Answers with the scripted reverse result, or `null`. */
   reverse(
     position: LatLng,
     options?: Pick<SearchOptions, "signal">,

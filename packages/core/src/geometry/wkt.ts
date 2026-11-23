@@ -845,7 +845,7 @@ class Reader {
  * Positions are read as longitude then latitude; pass `axisOrder: "lat-lng"`
  * for text that writes latitude first. The result is always GeoJSON order.
  *
- * @throws {GeometryError} `invalid` for text that is not WKT or whose shape
+ * @throws `GeometryError` of kind `invalid` for text that is not WKT or whose shape
  *   is wrong (a message names the position), `unsupported` for a valid WKT
  *   feature this reader leaves out.
  */
@@ -867,7 +867,7 @@ export function parseWkt(
  * written. It is for a caller that applies its own rules to each shape, such
  * as the draw tool's import; use `parseWkt` where a valid geometry is needed.
  *
- * @throws {GeometryError} `invalid` for text that is not WKT, and
+ * @throws `GeometryError` of kind `invalid` for text that is not WKT, and
  *   `unsupported` for a valid WKT feature this reader leaves out. Nothing is
  *   returned for text that fails part of the way.
  */
@@ -903,7 +903,7 @@ export function readWktSequence(
  *
  * The text always gives at least one reading: an error for empty text.
  *
- * @throws {GeometryError} `invalid` when the text is not a string.
+ * @throws `GeometryError` of kind `invalid` when the text is not a string.
  */
 export function readWktRecovering(
   text: string,
@@ -999,7 +999,7 @@ function writeGeometry(
  * The geometry is checked for shape but not for the range of its coordinates,
  * so projected coordinates can be written too.
  *
- * @throws {GeometryError} `invalid` for a malformed geometry or a bad
+ * @throws `GeometryError` of kind `invalid` for a malformed geometry or a bad
  *   `precision`, `empty` for a feature with no geometry.
  */
 export function formatWkt(

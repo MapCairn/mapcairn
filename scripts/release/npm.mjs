@@ -64,15 +64,17 @@ export function isolatedEnvironment(env = process.env) {
  * @returns {import("node:child_process").SpawnSyncReturns<string>}
  */
 export function runNpm(args, options = {}) {
-  return spawnSync(process.execPath, [npmCliPath(), ...args], {
-    encoding: "utf8",
-    env: isolatedEnvironment(),
-    ...options,
-  });
+  return /** @type {import("node:child_process").SpawnSyncReturns<string>} */ (
+    spawnSync(process.execPath, [npmCliPath(), ...args], {
+      encoding: "utf8",
+      env: isolatedEnvironment(),
+      ...options,
+    })
+  );
 }
 
 /**
- * Option for reading the registry: the repository's seven-day minimum release
+ * Option for reading the registry: the repository's three-day minimum release
  * age hides a version published a moment ago from `npm view`, which a release
  * check must see. A read installs nothing, so the rule for installs is intact.
  */

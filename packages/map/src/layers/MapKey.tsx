@@ -20,6 +20,7 @@ const STRIP_LIMIT = 3;
 
 /** Props for {@link MapKey}. */
 export interface MapKeyProps {
+  /** The layers state, whose enabled layers the key lists. */
   readonly layers: DataLayers;
   /**
    * Whether the key starts minimised. Left out, a phone in either orientation

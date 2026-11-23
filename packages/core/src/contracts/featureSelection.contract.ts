@@ -3,7 +3,7 @@
 import { describe, expect, it, vi } from "vitest";
 import type { FeatureRef, FeatureSelection } from "../ports/selection";
 
-/** The limit the contract asks {@link FeatureSelectionSubject} factories for. */
+/** The limit the contract asks `FeatureSelectionSubject` factories for. */
 export const CONTRACT_SELECTION_LIMIT = 3;
 
 /** What the feature selection contract needs besides the store itself. */
@@ -19,7 +19,9 @@ export interface FeatureSelectionControls {
 
 /** One feature selection under test, with its controls. */
 export interface FeatureSelectionSubject {
+  /** The feature selection under test. */
   readonly selection: FeatureSelection;
+  /** How the contract scripts it. */
   readonly controls: FeatureSelectionControls;
 }
 
@@ -48,7 +50,7 @@ function counter(selection: FeatureSelection): () => number {
 }
 
 /**
- * Runs the shared behavioural suite for a {@link FeatureSelection}. Every test
+ * Runs the shared behavioural suite for a `FeatureSelection`. Every test
  * calls `create` for a fresh, empty subject with a limit of
  * {@link CONTRACT_SELECTION_LIMIT}.
  */

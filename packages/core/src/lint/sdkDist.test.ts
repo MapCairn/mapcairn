@@ -6,6 +6,10 @@ import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { describe, expect, it } from "vitest";
 import {
+  hashBuildScripts,
+  // @ts-expect-error The scripts are dependency-free JavaScript with JSDoc types.
+} from "../../../../scripts/buildInputs.mjs";
+import {
   BUILT_SDK_PACKAGES,
   // @ts-expect-error The scripts are dependency-free JavaScript with JSDoc types.
 } from "../../../../scripts/sdkPackages.mjs";
@@ -156,10 +160,12 @@ describe.each(BUILT_PACKAGES)("@mapcairn/%s dist", (name) => {
     );
   });
 
-  it("has an empty build stamp that starts no later than the build output", () => {
+  it("has a build stamp that holds the build scripts' hash and starts no later than the build output", () => {
     const dist = path.join(folderOf(name), "dist");
     const stamp = statSync(path.join(dist, ".built"));
-    expect(stamp.size).toBe(0);
+    expect(readFileSync(path.join(dist, ".built"), "utf8")).toBe(
+      hashBuildScripts(),
+    );
     expect(stamp.mtimeMs).toBeLessThanOrEqual(
       statSync(path.join(dist, "index.js")).mtimeMs,
     );

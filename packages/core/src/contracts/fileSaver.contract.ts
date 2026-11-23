@@ -24,7 +24,9 @@ export interface FileSaverControls {
 
 /** One file saver under test, with its controls. */
 export interface FileSaverSubject {
+  /** The file saver under test. */
   readonly files: FileSaver;
+  /** How the contract scripts it. */
   readonly controls: FileSaverControls;
 }
 
@@ -37,7 +39,7 @@ const FILE: SavedFile = {
 };
 
 /**
- * Runs the shared behavioural suite for a {@link FileSaver}. Every test calls
+ * Runs the shared behavioural suite for a `FileSaver`. Every test calls
  * `create` for a fresh subject.
  */
 export function runFileSaverContract(

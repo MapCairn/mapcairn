@@ -40,7 +40,7 @@ const [PLURAL_ONE, PLURAL_OTHER] =
   EN_GB_CATALOGUE["common.itemCount"].split("|");
 
 /**
- * Runs the shared behavioural suite for a {@link MessageCatalogue}. Proves a
+ * Runs the shared behavioural suite for a `MessageCatalogue`. Proves a
  * key resolves with its parameters substituted, a missing key falls back to
  * the English value and warns exactly once per instance, `plural` picks the
  * right English form for 0, 1 and many, and `list` matches what

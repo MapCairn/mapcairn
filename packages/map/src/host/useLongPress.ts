@@ -19,6 +19,7 @@ export const LONG_PRESS_TOLERANCE_PX = 10;
 
 /** Where a long-press (or right-click) happened. */
 export interface MapLongPressEvent {
+  /** The map position under the press. */
   readonly latlng: LatLng;
   /** Pixels from the top-left corner of the map host. */
   readonly point: PixelPoint;
@@ -36,6 +37,7 @@ export interface UseLongPressOptions {
 
 /** The pointer handlers to spread on the host, plus hooks for the map engine. */
 export interface UseLongPress {
+  /** The pointer and context-menu handlers to spread on the map host element. */
   readonly handlers: {
     readonly onPointerDown: (event: ReactPointerEvent) => void;
     readonly onPointerMove: (event: ReactPointerEvent) => void;

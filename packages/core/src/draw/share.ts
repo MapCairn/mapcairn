@@ -119,8 +119,8 @@ export function unsharableShapes(
  * the kind (`p` point, `l` line, `g` polygon, `c` circle) and then the
  * positions as whole units of 0.00001 degrees (about a metre), the first
  * absolute and each later one as the step from the one before, every number
- * zigzagged and packed five bits to a character in the alphabet `A-Z a-z 0-9
- * - _`. Shapes are separated by a full stop. Only link-safe characters are
+ * zigzagged and packed five bits to a character in the alphabet
+ * `A-Z a-z 0-9 - _`. Shapes are separated by a full stop. Only link-safe characters are
  * used, so nothing needs escaping. A circle's radius is in whole metres.
  *
  * A shape the link cannot carry (see {@link unsharableShapes}) is left out,

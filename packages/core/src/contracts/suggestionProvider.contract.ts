@@ -31,7 +31,9 @@ export interface SuggestionProviderControls {
 
 /** One suggestion provider under test, with its controls. */
 export interface SuggestionProviderSubject {
+  /** The suggestion provider under test. */
   readonly provider: SuggestionProvider;
+  /** How the contract scripts it. */
   readonly controls: SuggestionProviderControls;
 }
 
@@ -56,7 +58,7 @@ const ERROR_KINDS: readonly SearchErrorKind[] = [
 ];
 
 /**
- * Runs the shared behavioural suite for a {@link SuggestionProvider}. Every
+ * Runs the shared behavioural suite for a `SuggestionProvider`. Every
  * test calls `create` for a fresh subject.
  */
 export function runSuggestionProviderContract(

@@ -1,5 +1,8 @@
 # `@mapcairn/react`
 
+[![npm version](https://img.shields.io/npm/v/@mapcairn/react)](https://www.npmjs.com/package/@mapcairn/react)
+[![GitHub Release](https://img.shields.io/github/v/release/MapCairn/mapcairn)](https://github.com/MapCairn/mapcairn/releases)
+
 Generic React hooks for MapCairn apps. Use it when you want these hooks without the map interface; `@mapcairn/map` uses them too. It has no map engine, domain-data or theme dependency and imports no other MapCairn package.
 
 Most apps should install [`@mapcairn/sdk`](https://github.com/MapCairn/mapcairn/tree/main/packages/sdk) instead: one install, one import and one stylesheet for the whole SDK, which re-exports this package. Install `@mapcairn/react` on its own as the advanced option, for a host that wants fewer dependencies.

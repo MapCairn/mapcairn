@@ -17,12 +17,14 @@ export interface DevicePreferencesControls {
 
 /** One preferences implementation under test, with its controls. */
 export interface DevicePreferencesSubject {
+  /** The device preferences under test. */
   readonly preferences: DevicePreferences;
+  /** How the contract scripts them. */
   readonly controls: DevicePreferencesControls;
 }
 
 /**
- * Runs the shared behavioural suite for {@link DevicePreferences}. Every test
+ * Runs the shared behavioural suite for `DevicePreferences`. Every test
  * calls `create` for a fresh subject.
  */
 export function runDevicePreferencesContract(

@@ -94,7 +94,9 @@ export function editHandlesFor(
 
 /** What a handle id names. */
 export interface ParsedHandleId {
+  /** The id of the shape the handle belongs to. */
   readonly shapeId: string;
+  /** What the handle stands for: a vertex, a midpoint or a radius. */
   readonly kind: MapEditHandleKind;
   /** The vertex index, the index a midpoint inserts at, or 0 for a radius handle. */
   readonly index: number;

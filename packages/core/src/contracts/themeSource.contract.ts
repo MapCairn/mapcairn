@@ -17,12 +17,14 @@ export interface ThemeSourceControls {
 
 /** One theme source under test, with its controls. */
 export interface ThemeSourceSubject {
+  /** The theme source under test. */
   readonly source: ThemeSource;
+  /** How the contract scripts it. */
   readonly controls: ThemeSourceControls;
 }
 
 /**
- * Runs the shared behavioural suite for a {@link ThemeSource}. Every test
+ * Runs the shared behavioural suite for a `ThemeSource`. Every test
  * calls `create` for a fresh subject.
  */
 export function runThemeSourceContract(

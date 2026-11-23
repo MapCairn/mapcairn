@@ -11,6 +11,7 @@ const ServicesContext = createContext<Services | null>(null);
 export interface ServicesProviderProps {
   /** Built once by the composition root, or by `createFakeServices` in tests. */
   readonly services: Services;
+  /** The app, whose components read the services through the hooks. */
   readonly children: ReactNode;
 }
 

@@ -26,6 +26,7 @@ export const MEASURE_ANNOUNCE_DELAY_MS = 800;
 
 /** What {@link useMeasure} returns. */
 export interface UseMeasure {
+  /** Whether the points make an open line (`distance`) or a closed area (`area`). */
   readonly mode: MeasureMode;
   /** The vertices, in the order they were added. */
   readonly points: readonly LatLng[];

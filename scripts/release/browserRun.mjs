@@ -50,9 +50,9 @@ const DRAW_TIMEOUT = 30 * 1000;
 
 /** Records what the page reports about itself, from before its first script. */
 const COLLECT_VIOLATIONS = `
-  window.__violations = [];
+  /** @type {any} */ (window).__violations = [];
   document.addEventListener("securitypolicyviolation", (event) => {
-    window.__violations.push({
+    /** @type {any} */ (window).__violations.push({
       violatedDirective: event.violatedDirective,
       blockedURI: event.blockedURI,
     });
@@ -63,10 +63,10 @@ const COLLECT_VIOLATIONS = `
  * Starts a static server for a folder, with the policy on every response.
  *
  * @param {string} root
+ * @param {string} [policy] The Content-Security-Policy to send; the leg's own by default.
  * @returns {Promise<import("node:http").Server>} Listening on a free port.
  */
-function serve(root) {
-  const policy = browserPolicy();
+export function serve(root, policy = browserPolicy()) {
   const server = createServer(async (request, response) => {
     const file = staticFile(root, request.url ?? "/");
     try {
@@ -98,7 +98,7 @@ function serve(root) {
  * @param {import("node:http").Server} server
  * @returns {Promise<void>}
  */
-function closeServer(server) {
+export function closeServer(server) {
   return new Promise((resolve) => {
     server.close(() => resolve());
     server.closeAllConnections();
@@ -225,7 +225,9 @@ export async function drawRealMap(folder, executablePath) {
         { timeout: DRAW_TIMEOUT },
       );
     } catch (error) {
-      const reported = await page.evaluate(() => window.__violations);
+      const reported = await page.evaluate(
+        () => /** @type {any} */ (window).__violations,
+      );
       throw new Error(
         [
           `the map neither loaded nor reported an error within ${DRAW_TIMEOUT / 1000} s`,
@@ -261,7 +263,7 @@ export async function drawRealMap(folder, executablePath) {
         container: container && getComputedStyle(container).backgroundColor,
         probe: probe && getComputedStyle(probe).backgroundColor,
         controls: controls && getComputedStyle(controls).display,
-        violations: window.__violations,
+        violations: /** @type {any} */ (window).__violations,
       };
     });
     if (!failed) {

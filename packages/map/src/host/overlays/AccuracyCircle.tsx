@@ -14,9 +14,11 @@ export const MIN_ACCURACY_RADIUS_PX = 8;
 
 /** Props for {@link AccuracyCircle}. */
 export interface AccuracyCircleProps {
+  /** The fix's position, where the circle is centred. */
   readonly center: LatLng;
   /** The location's accuracy radius on the ground. */
   readonly accuracyMetres: number;
+  /** Sets `data-testid` on the circle. */
   readonly testId?: string;
 }
 

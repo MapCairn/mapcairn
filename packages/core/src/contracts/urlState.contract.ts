@@ -17,6 +17,7 @@ export interface UrlStateControls {
 export interface UrlStateSubject {
   /** A url state over an address with no shareable state. */
   readonly url: UrlState;
+  /** How the contract scripts the address, such as settling a debounced write. */
   readonly controls: UrlStateControls;
 }
 
@@ -27,7 +28,7 @@ const VIEW = {
 };
 
 /**
- * Runs the shared behavioural suite for a {@link UrlState}. Every test calls
+ * Runs the shared behavioural suite for a `UrlState`. Every test calls
  * `create` for a fresh subject. Positions are compared to two decimals
  * because a real adapter may round what it puts in the address.
  */

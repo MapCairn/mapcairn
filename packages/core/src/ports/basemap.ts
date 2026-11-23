@@ -4,6 +4,7 @@ import type { DefinitionText } from "./messages";
 
 /** One credit line a tile provider requires. */
 export interface BasemapAttributionEntry {
+  /** The credit as it is shown, such as the provider's name. */
   readonly text: string;
   /** Link target, when the provider requires the credit to link somewhere. */
   readonly href?: string;
@@ -64,6 +65,7 @@ export type BasemapSource =
  * an attribution string.
  */
 export interface BasemapDefinition {
+  /** Unique among the basemaps a host offers. It is the value kept in settings and the address as `basemapId`. */
   readonly id: string;
   /**
    * What the picker calls the basemap: a `MessageKey` the active catalogue
@@ -71,12 +73,14 @@ export interface BasemapDefinition {
    * or a plain string shown as written, as a host's own basemap may use.
    */
   readonly name: DefinitionText;
+  /** Where the basemap's tiles or style come from. */
   readonly source: BasemapSource;
   /**
    * Normalised zoom limits (256 px tile convention). For a raster source,
    * `maxZoom` is also the deepest tile level the provider serves.
    */
   readonly minZoom: number;
+  /** The deepest normalised zoom the basemap allows. For a raster source it is also the deepest tile level the provider serves. */
   readonly maxZoom: number;
   /**
    * Root-relative path of a preview image that the host serves. The SDK ships

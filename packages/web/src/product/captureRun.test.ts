@@ -106,12 +106,12 @@ describe("checkReadout", () => {
   const hero = captureSubject("hero");
 
   it("passes when the picture reads the length its words state", () => {
-    expect(() => checkReadout(hero, "3.42 km")).not.toThrow();
+    expect(() => checkReadout(hero, "3.37 km")).not.toThrow();
   });
 
   it("fails, naming both lengths, when it reads another", () => {
     expect(() => checkReadout(hero, "3.1 km")).toThrow(
-      "The hero picture measures 3.1 km, but its text says 3.42 km",
+      "The hero picture measures 3.1 km, but its text says 3.37 km",
     );
     expect(() => checkReadout(hero, undefined)).toThrow(/measures undefined/);
   });
@@ -119,7 +119,7 @@ describe("checkReadout", () => {
 
 describe("checkView", () => {
   const hero = captureSubject("hero");
-  const agreeing = { zoom: 13, lat: -33.9365, lng: 18.407 };
+  const agreeing = { zoom: 13, lat: -33.97, lng: 18.48 };
 
   it("passes when the map reports the view the collar is drawn from", () => {
     for (const subject of CAPTURE_SUBJECTS) {
@@ -137,7 +137,7 @@ describe("checkView", () => {
     expect(() => checkView(hero, { ...agreeing, lat: -33.9366 })).toThrow(
       /words would be wrong/,
     );
-    expect(() => checkView(hero, { ...agreeing, lng: 18.4075 })).toThrow(
+    expect(() => checkView(hero, { ...agreeing, lng: 18.4805 })).toThrow(
       /words would be wrong/,
     );
     expect(() => checkView(hero, { ...agreeing, zoom: 13.5 })).toThrow(

@@ -31,7 +31,12 @@ const root = path.resolve(
 );
 const check = process.argv.includes("--check");
 
-/** Prints the reason and exits 1. */
+/**
+ * Prints the reason and exits 1.
+ *
+ * @param {string} message
+ * @returns {never}
+ */
 function fail(message) {
   console.error(`agents: ${message}`);
   process.exit(1);

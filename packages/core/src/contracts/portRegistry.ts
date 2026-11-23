@@ -38,7 +38,7 @@ import { runUrlStateContract } from "./urlState.contract";
 
 /**
  * Every key of `Services`, kept by hand. The `satisfies` clause rejects a
- * name that is not a service, and {@link PortsAreExhaustive} rejects a service
+ * name that is not a service, and `PortsAreExhaustive` rejects a service
  * missing from this list, so adding a service without updating the list is a
  * type error.
  */
@@ -113,22 +113,39 @@ type PortsAreExhaustive = AssertNever<
 
 /** The contract runner for each port, with its exact subject type. */
 export interface PortContractRunners {
+  /** The contract suite for the map adapter. */
   readonly createMapAdapter: typeof runMapAdapterContract;
+  /** The contract suite for the search provider. */
   readonly search: typeof runSearchProviderContract;
+  /** The contract suite for the suggestion provider. */
   readonly suggestions: typeof runSuggestionProviderContract;
+  /** The contract suite for the location provider. */
   readonly location: typeof runLocationProviderContract;
+  /** The contract suite for the settings store. */
   readonly settings: typeof runSettingsStoreContract;
+  /** The contract suite for the clipboard. */
   readonly clipboard: typeof runClipboardContract;
+  /** The contract suite for the file saver. */
   readonly fileSaver: typeof runFileSaverContract;
+  /** The contract suite for the file opener. */
   readonly fileOpener: typeof runFileOpenerContract;
+  /** The contract suite for the address state. */
   readonly url: typeof runUrlStateContract;
+  /** The contract suite for the theme source. */
   readonly theme: typeof runThemeSourceContract;
+  /** The contract suite for the message catalogue. */
   readonly messages: typeof runMessageCatalogueContract;
+  /** The contract suite for the device preferences. */
   readonly preferences: typeof runDevicePreferencesContract;
+  /** The contract suite for the layer catalogue. */
   readonly layers: typeof runLayerCatalogueContract;
+  /** The contract suite for the layer source. */
   readonly layerSource: typeof runLayerSourceContract;
+  /** The contract suite for the routing provider. */
   readonly routing: typeof runRoutingProviderContract;
+  /** The contract suite for the feature selection. */
   readonly selection: typeof runFeatureSelectionContract;
+  /** The contract suite for the feature query. */
   readonly featureQuery: typeof runFeatureQueryContract;
 }
 
@@ -140,7 +157,7 @@ export interface PortEntry<K extends PortName> {
   readonly runContract: PortContractRunners[K];
 }
 
-/** One {@link PortEntry} for every port. A missing port is a type error. */
+/** One `PortEntry` for every port. A missing port is a type error. */
 export type PortRegistry = { readonly [K in PortName]: PortEntry<K> };
 
 /**

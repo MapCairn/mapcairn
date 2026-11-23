@@ -11,7 +11,6 @@ export function isModelContextSupported(): boolean;
 
 // @public
 export interface ModelContextProvider {
-    // (undocumented)
     registerTool: (tool: {
         name: string;
         description: string;
@@ -24,27 +23,20 @@ export interface ModelContextProvider {
 
 // @public
 export interface ModelContextToolContentBlock {
-    // (undocumented)
     text: string;
-    // (undocumented)
     type: "text";
 }
 
 // @public
 export interface ModelContextToolDefinition<TInput = unknown> {
-    // (undocumented)
     description: string;
-    // (undocumented)
     execute: (input: TInput) => Promise<ModelContextToolResult> | ModelContextToolResult;
-    // (undocumented)
     inputSchema: Record<string, unknown>;
-    // (undocumented)
     name: string;
 }
 
 // @public
 export interface ModelContextToolResult {
-    // (undocumented)
     content: ModelContextToolContentBlock[];
 }
 

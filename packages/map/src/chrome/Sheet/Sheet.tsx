@@ -54,6 +54,7 @@ const TABBABLE = [
 export interface SheetProps {
   /** The element id, for `aria-controls` on the control that opens it. */
   readonly id: string;
+  /** Whether the sheet is shown. */
   readonly open: boolean;
   /** The heading text, which also names the dialog or region. */
   readonly title: string;
@@ -61,6 +62,7 @@ export interface SheetProps {
   readonly onClose: () => void;
   /** The current detent. Used only in the sheet layout. */
   readonly detent: SheetDetent;
+  /** Called when the person moves the sheet to another detent. The app keeps it and passes it back as `detent`. */
   readonly onDetentChange: (detent: SheetDetent) => void;
   /**
    * Called with true while the sheet is modal (open at the full detent in the
@@ -79,6 +81,7 @@ export interface SheetProps {
    * detent, where there is no room for it.
    */
   readonly brand?: ReactNode;
+  /** The sheet's content, below its title. */
   readonly children: ReactNode;
 }
 

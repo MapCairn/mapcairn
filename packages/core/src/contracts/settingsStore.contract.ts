@@ -16,11 +16,12 @@ export interface SettingsStoreControls {
 export interface SettingsStoreSubject {
   /** A store over fresh, empty storage. */
   readonly store: SettingsStore;
+  /** How the contract scripts the store, such as making storage unavailable. */
   readonly controls: SettingsStoreControls;
 }
 
 /**
- * Runs the shared behavioural suite for a {@link SettingsStore}. Every test
+ * Runs the shared behavioural suite for a `SettingsStore`. Every test
  * calls `create` for a fresh subject.
  */
 export function runSettingsStoreContract(

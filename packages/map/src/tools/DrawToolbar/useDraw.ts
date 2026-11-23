@@ -107,7 +107,9 @@ const LINK_LIMIT_NOTE = message("tools.draw.linkLimitNote", {
 
 /** The outcome of an export or a copy, shown beside the buttons and announced. */
 export interface DrawFeedback {
+  /** Whether the outcome is a success or an error. */
   readonly kind: "success" | "error";
+  /** The message shown beside the buttons and announced. */
   readonly text: string;
   /**
    * Set on an import that read nothing because the file fits only this
@@ -129,9 +131,13 @@ export interface UseDrawOptions {
 
 /** What {@link useDraw} returns. */
 export interface UseDraw {
+  /** The draw state as the reducer holds it: the shapes, the mode, the selection and the undo history. */
   readonly state: DrawState;
+  /** Every shape, in the order drawn. The last may be unfinished. */
   readonly shapes: readonly DrawShape[];
+  /** The kind of shape the next tap starts: point, line, polygon or circle. */
   readonly mode: DrawKind;
+  /** The selected shape and, when there is one, its selected vertex, or null. */
   readonly selection: DrawSelection | null;
   /** The shape being drawn, or null. */
   readonly draft: DrawShape | null;
@@ -145,7 +151,9 @@ export interface UseDraw {
   readonly issue: DrawIssue | null;
   /** What to do about {@link UseDraw.issue}, or an empty string. */
   readonly issueMessage: string;
+  /** Whether there is a change to revert. */
   readonly canUndo: boolean;
+  /** Whether there is an undone change to reapply. */
   readonly canRedo: boolean;
   /** The handles to give the map adapter: those of the selected shape while the tool is open. */
   readonly handles: readonly MapEditHandle[];
@@ -156,6 +164,7 @@ export interface UseDraw {
   /** What the last import added or why it added nothing, until the shapes change again. */
   readonly importFeedback: DrawFeedback | null;
 
+  /** Chooses the kind of shape the next tap starts. */
   readonly setMode: (kind: DrawKind) => void;
   /** Adds a point, or starts a shape, at a position. */
   readonly addPoint: (at: LatLng) => void;
@@ -165,9 +174,13 @@ export interface UseDraw {
   readonly moveSelectedTo: (at: LatLng) => void;
   /** Moves the selected vertex by screen pixels (positive x is right, positive y is down). */
   readonly nudge: (dx: number, dy: number) => void;
+  /** Reverts the last change to the shapes. Does nothing when `canUndo` is false. */
   readonly undo: () => void;
+  /** Reapplies the last undone change. Does nothing when `canRedo` is false. */
   readonly redo: () => void;
+  /** Ends the shape being drawn. */
   readonly finish: () => void;
+  /** Drops the shape being drawn. */
   readonly cancel: () => void;
   /** Removes the shape being drawn without a word, when Done closes the tool. */
   readonly discardDraft: () => void;
@@ -177,14 +190,19 @@ export interface UseDraw {
    * and Move to map centre work on it; any other shape selects as a whole.
    */
   readonly select: (shapeId: string, vertex?: number | null) => void;
+  /** Clears the selected shape and vertex. */
   readonly deselect: () => void;
+  /** Moves the selection to the next (`1`) or previous (`-1`) vertex of the selected shape. */
   readonly stepVertex: (delta: 1 | -1) => void;
   /** Removes the selected vertex. */
   readonly removeVertex: () => void;
   /** Adds a vertex at the map centre after the selected one. */
   readonly insertAtCentre: () => void;
+  /** Removes the selected shape. */
   readonly deleteSelected: () => void;
+  /** Removes the shape with this id, whether it is selected or not. */
   readonly deleteShape: (shapeId: string) => void;
+  /** Removes every shape. */
   readonly clear: () => void;
   /** Sets the selected circle's radius to its distance from the map centre. */
   readonly setRadiusToCentre: () => void;
@@ -194,11 +212,15 @@ export interface UseDraw {
   readonly onMapClick: (event: Pick<MapClickEvent, "latlng" | "point">) => void;
   /** A step of a press on an edit handle, from the adapter. */
   readonly onHandleDrag: (drag: MapHandleDrag) => void;
+  /** Records the edit handle a mouse is over, or null when it leaves, so it can be drawn larger. */
   readonly onHandleHover: (id: string | null) => void;
   /** Runs a key press as a draw command. Returns true when it was one, so the caller can stop the key. */
   readonly keyCommand: (event: DrawKeyEvent) => boolean;
+  /** Saves the shapes as a GeoJSON file through the file saver, and sets `feedback` to say how it went. */
   readonly exportGeoJson: () => Promise<void>;
+  /** Saves the shapes as a CSV file through the file saver, and sets `feedback` to say how it went. */
   readonly exportCsv: () => Promise<void>;
+  /** Saves the shapes as a WKT file through the file saver, and sets `feedback` to say how it went. */
   readonly exportWkt: () => Promise<void>;
   /** Copies a link with the shapes in it, built from the current address. */
   readonly copyLink: () => Promise<void>;

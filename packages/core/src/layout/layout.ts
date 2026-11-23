@@ -58,14 +58,15 @@ export interface BottomSlotLayout {
  * Where the bottom slots sit relative to their resting place, which is
  * `inset` above the bottom edge and `inset` in from the side.
  *
- * @param input.layout - `"none"` when no sheet or panel is shown (the measure
- *   toolbar may still be).
- * @param input.sheetTopEdge - Distance from the top of the viewport to the
- *   sheet's top edge. Used only in the `"sheet"` layout.
- * @param input.panelRightEdge - Distance from the left of the viewport to the
- *   panel's right edge. Used only in the `"panel"` layout.
- * @param input.measureToolbarTop - Distance from the top of the viewport to
- *   the measure toolbar, when it is showing.
+ * @param input - The fields, by name:
+ *   - `layout`: `"none"` when no sheet or panel is shown (the measure
+ *     toolbar may still be).
+ *   - `sheetTopEdge`: Distance from the top of the viewport to the
+ *     sheet's top edge. Used only in the `"sheet"` layout.
+ *   - `panelRightEdge`: Distance from the left of the viewport to the
+ *     panel's right edge. Used only in the `"panel"` layout.
+ *   - `measureToolbarTop`: Distance from the top of the viewport to
+ *     the measure toolbar, when it is showing.
  * @remarks Both bottom slots ride `inset` above the highest of the sheet's
  *   top edge and the toolbar's top. A side panel moves only bottom-start,
  *   sideways. The result never lifts further than the viewport is tall.
@@ -126,11 +127,12 @@ export function computeBottomSlotLayout(input: {
 
 /**
  * The tallest the end stack may be before it scrolls.
- * @param input.topOffset - Distance from the top of the viewport to the
- *   stack's first control.
- * @param input.bottomReserved - Space below the stack that must stay clear,
- *   such as the bottom slots.
- * @param input.inset - Gap kept to the bottom edge.
+ * @param input - The fields, by name:
+ *   - `topOffset`: Distance from the top of the viewport to the
+ *     stack's first control.
+ *   - `bottomReserved`: Space below the stack that must stay clear,
+ *     such as the bottom slots.
+ *   - `inset`: Gap kept to the bottom edge.
  */
 export function computeEndStackMaxHeight(input: {
   viewportHeight: number;
@@ -144,6 +146,7 @@ export function computeEndStackMaxHeight(input: {
 
 /** Whether to show the zoom buttons, and whether height alone hid them. */
 export interface ZoomButtonVisibility {
+  /** Whether the zoom buttons are shown. */
   readonly show: boolean;
   /** True when the device default would show them but the stack is too short. */
   readonly yieldedToHeight: boolean;
@@ -151,10 +154,11 @@ export interface ZoomButtonVisibility {
 
 /**
  * Decides whether to show the zoom buttons.
- * @param input.setting - The user's setting. An explicit `true` always shows
- *   them (the stack scrolls instead of hiding them) and an explicit `false`
- *   never does. `null` uses the device default: shown for a fine pointer
- *   unless there is less than `minHeightForZoom` available.
+ * @param input - The fields, by name:
+ *   - `setting`: The user's setting. An explicit `true` always shows
+ *     them (the stack scrolls instead of hiding them) and an explicit `false`
+ *     never does. `null` uses the device default: shown for a fine pointer
+ *     unless there is less than `minHeightForZoom` available.
  */
 export function shouldShowZoomButtons(input: {
   setting: boolean | null;

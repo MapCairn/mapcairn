@@ -12,7 +12,9 @@ import {
 
 /** What validation checks names against. */
 export interface ValidationOptions {
+  /** The decoders a definition may name. */
   readonly decoders: DecoderRegistry;
+  /** The formatters a definition's templates may name. */
   readonly formatters: FormatterRegistry;
 }
 

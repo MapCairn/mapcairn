@@ -34,7 +34,9 @@ export interface FeatureQueryControls {
 
 /** One feature query under test, with its controls. */
 export interface FeatureQuerySubject {
+  /** The feature query under test. */
   readonly query: FeatureQuery;
+  /** How the contract scripts it. */
   readonly controls: FeatureQueryControls;
 }
 
@@ -172,7 +174,7 @@ function keys(hits: readonly SelectionHit[]): string[] {
 }
 
 /**
- * Runs the shared behavioural suite for a {@link FeatureQuery}. Every test
+ * Runs the shared behavioural suite for a `FeatureQuery`. Every test
  * calls `create` for a fresh subject.
  */
 export function runFeatureQueryContract(

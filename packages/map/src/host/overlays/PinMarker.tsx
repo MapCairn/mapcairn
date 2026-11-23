@@ -24,6 +24,7 @@ function PinGlyph() {
 export interface PinMarkerProps {
   /** Where the pin's tip points. */
   readonly position: LatLng;
+  /** Sets `data-testid` on the pin. */
   readonly testId?: string;
 }
 

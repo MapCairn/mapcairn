@@ -11,6 +11,7 @@ const SelectionContext = createContext<FeatureSelectionState | undefined>(
 export interface SelectionProviderProps {
   /** What {@link useFeatureSelection} returned: null when the host has no store. */
   readonly selection: FeatureSelectionState | null;
+  /** The components that read the selection. */
   readonly children?: ReactNode;
 }
 

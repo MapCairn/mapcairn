@@ -51,6 +51,7 @@ const MODEL_SUFFIX = ".api.json";
  *   not export. The report keeps this one, so it shows in the diff.
  * - `ae-unresolved-link`: a `{@link}` that points at nothing.
  */
+/** @type {Record<string, any>} */
 const REPORTED_MESSAGES = {
   "ae-undocumented": { logLevel: "warning", addToApiReportFile: false },
   "ae-forgotten-export": { logLevel: "warning", addToApiReportFile: true },
@@ -84,7 +85,7 @@ function normalised(text) {
  *   reads) for each entry point name, and the messages.
  */
 export async function generateReports(folder) {
-  const { Extractor, ExtractorConfig } = await import(
+  const { Extractor, ExtractorConfig, ExtractorLogLevel } = await import(
     "@microsoft/api-extractor"
   );
   const manifestPath = path.join(folder, "package.json");
@@ -154,13 +155,18 @@ export async function generateReports(folder) {
           dtsRollup: { enabled: false },
           tsdocMetadata: { enabled: false },
           messages: {
-            compilerMessageReporting: { default: { logLevel: "warning" } },
+            compilerMessageReporting: {
+              default: { logLevel: ExtractorLogLevel.Warning },
+            },
             extractorMessageReporting: {
-              default: { logLevel: "none" },
+              default: { logLevel: ExtractorLogLevel.None },
               ...REPORTED_MESSAGES,
             },
             tsdocMessageReporting: {
-              default: { logLevel: "warning", addToApiReportFile: false },
+              default: {
+                logLevel: ExtractorLogLevel.Warning,
+                addToApiReportFile: false,
+              },
             },
           },
         },

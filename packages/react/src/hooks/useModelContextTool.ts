@@ -5,12 +5,15 @@ import { useLatestRef } from "./useLatestRef";
 
 /** A single content block in a WebMCP tool's result, as consumed by the calling agent. */
 export interface ModelContextToolContentBlock {
+  /** The block's kind. Only plain text is supported. */
   type: "text";
+  /** What the calling agent reads. */
   text: string;
 }
 
 /** The value a WebMCP tool's `execute` function resolves to. */
 export interface ModelContextToolResult {
+  /** The blocks the agent receives, in order. */
   content: ModelContextToolContentBlock[];
 }
 
@@ -21,9 +24,13 @@ export interface ModelContextToolResult {
  *   for a tool that takes no input.
  */
 export interface ModelContextToolDefinition<TInput = unknown> {
+  /** The name an agent calls the tool by. Changing it re-registers the tool. */
   name: string;
+  /** What the tool does and when to use it, written for the calling agent. Read once, when the tool is registered. */
   description: string;
+  /** A JSON Schema object for the one argument `execute` receives. Read once, when the tool is registered. */
   inputSchema: Record<string, unknown>;
+  /** Runs the tool. The latest closure passed in is always the one called, so it may read current component state. */
   execute: (
     input: TInput,
   ) => Promise<ModelContextToolResult> | ModelContextToolResult;
@@ -37,6 +44,11 @@ export interface ModelContextToolDefinition<TInput = unknown> {
  *   Type a stub or a read with this interface instead.
  */
 export interface ModelContextProvider {
+  /**
+   * Registers a tool with the browser. It rejects, or throws, when the page's
+   * Permissions-Policy denies tools or the schema is invalid. `options.signal`
+   * removes the tool again when aborted.
+   */
   registerTool: (
     tool: {
       name: string;

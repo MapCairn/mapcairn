@@ -17,7 +17,9 @@ export type ClipboardFailureReason = Extract<
  * the text of every call. It never rejects.
  */
 export class FakeClipboard implements ClipboardPort {
+  /** The text of every copy that succeeded, in order. */
   readonly written: string[] = [];
+  /** The text of every call, whether it succeeded or not, in order. */
   readonly attempts: string[] = [];
 
   #failure: ClipboardFailureReason | null = null;
@@ -32,6 +34,7 @@ export class FakeClipboard implements ClipboardPort {
     this.#failure = null;
   }
 
+  /** Records the text in `attempts`, and in `written` too unless a failure is scripted. It resolves to a result and never rejects. */
   writeText(text: string): Promise<ClipboardResult> {
     this.attempts.push(text);
     if (this.#failure !== null) {

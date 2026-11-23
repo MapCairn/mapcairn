@@ -25,6 +25,7 @@ export interface ExportSectionProps {
   readonly drawing?: MapImageDrawing;
   /** The heading level. Defaults to 3, below the sheet's h2 title. */
   readonly headingLevel?: HeadingLevel;
+  /** Receives the heading element, so the sheet can move focus to the section it opens on. */
   readonly headingRef?: Ref<HTMLHeadingElement>;
 }
 

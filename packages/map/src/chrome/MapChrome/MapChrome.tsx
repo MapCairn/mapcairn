@@ -486,7 +486,7 @@ function keyTourBottom(
  * - A `ResizeObserver` measures the container (which already reflects the
  *   visual viewport) and the slots. From that it chooses the layout, gives
  *   `ChromeLayoutProvider` the viewport and the pointer preference, and sets
- *   the {@link chromeVars} on the root with CSSOM: never a `style` attribute,
+ *   the `chromeVars` on the root with CSSOM: never a `style` attribute,
  *   because production CSP is `style-src 'self'`.
  * - The sheet publishes its top edge (`publishSheetTop`) and detent, and the
  *   side panel its right edge. Whatever is shown in bottom-centre, a toolbar

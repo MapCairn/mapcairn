@@ -745,7 +745,9 @@ export type MessageKey =
  * a {@link MessageKey}; it is looked up in {@link MessageCatalogue.definitionTexts}.
  */
 export interface HostText {
+  /** The key the text is looked up by. */
   readonly key: string;
+  /** The text itself, as the host wrote it. */
   readonly text: string;
 }
 
@@ -1202,7 +1204,7 @@ export type MessageValue = string | number | Date | readonly string[];
 /**
  * The parameters a {@link Message} carries: those of the key, except that a
  * text placeholder may also hold another message, which is formatted first
- * (a distance inside "Total distance {distance}"), and a list of strings
+ * (a distance inside `"Total distance {distance}"`), and a list of strings
  * may hold messages among its items. A key with no other placeholders can
  * still take an optional count.
  */
@@ -1268,7 +1270,7 @@ export interface MessageCatalogue {
    */
   t<K extends MessageKey>(key: K, params: MessageParams[K]): string;
   /**
-   * As {@link t}, but first picks a form with `Intl.PluralRules` when the
+   * As `t`, but first picks a form with `Intl.PluralRules` when the
    * selected value has plural forms, using that value's language. A plain
    * value is formatted as with `t`. `params` carries `count` plus the key's
    * other parameters.

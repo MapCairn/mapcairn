@@ -1,5 +1,8 @@
 # `@mapcairn/theme`
 
+[![npm version](https://img.shields.io/npm/v/@mapcairn/theme)](https://www.npmjs.com/package/@mapcairn/theme)
+[![GitHub Release](https://img.shields.io/github/v/release/MapCairn/mapcairn)](https://github.com/MapCairn/mapcairn/releases)
+
 MapCairn's design tokens: typed references to CSS custom properties for colour, space, type, radius, shadow, motion and layering, with a light and a dark theme. Use it to style your own components so they match MapCairn's interface, or to check the contrast of a theme of your own. It is built with [vanilla-extract](https://vanilla-extract.style/) and has no dependency on another MapCairn package, a map engine or React.
 
 Most apps should install [`@mapcairn/sdk`](https://github.com/MapCairn/mapcairn/tree/main/packages/sdk) instead: one install, one import and one stylesheet for the whole SDK, which re-exports this package. Install `@mapcairn/theme` on its own as the advanced option, for a host that wants fewer dependencies.

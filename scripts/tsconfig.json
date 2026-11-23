@@ -1,0 +1,18 @@
+{
+  // Type-checks the scripts from their JSDoc (`npm run typecheck`). The checks
+  // are the lenient ones for now: `strict` is off because the scripts are not
+  // yet written for `strictNullChecks` (#608).
+  "extends": "../tsconfig.base.json",
+  "compilerOptions": {
+    "allowJs": true,
+    "checkJs": true,
+    "noEmit": true,
+    "target": "ES2023",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "customConditions": [],
+    "types": ["node"],
+    "strict": false
+  },
+  "include": ["./**/*.mjs", "./**/*.cjs"]
+}

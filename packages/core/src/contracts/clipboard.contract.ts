@@ -24,7 +24,9 @@ export interface ClipboardControls {
 
 /** One clipboard port under test, with its controls. */
 export interface ClipboardSubject {
+  /** The clipboard under test. */
   readonly clipboard: ClipboardPort;
+  /** How the contract scripts it. */
   readonly controls: ClipboardControls;
 }
 
@@ -35,7 +37,7 @@ const FAILURES: readonly ClipboardContractFailure[] = [
 ];
 
 /**
- * Runs the shared behavioural suite for a {@link ClipboardPort}. Every test
+ * Runs the shared behavioural suite for a `ClipboardPort`. Every test
  * calls `create` for a fresh subject.
  */
 export function runClipboardContract(

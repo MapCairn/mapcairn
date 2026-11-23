@@ -18,7 +18,9 @@ export interface LayerCatalogueControls {
 
 /** One layer catalogue under test, with its controls. */
 export interface LayerCatalogueSubject {
+  /** The layer catalogue under test. */
   readonly catalogue: LayerCatalogue;
+  /** How the contract scripts it. */
   readonly controls: LayerCatalogueControls;
 }
 
@@ -33,7 +35,7 @@ function ready(catalogue: LayerCatalogue): ReadyState {
 }
 
 /**
- * Runs the shared behavioural suite for a {@link LayerCatalogue}. Every test
+ * Runs the shared behavioural suite for a `LayerCatalogue`. Every test
  * calls `create` for a fresh subject. Run it for a catalogue with no layers
  * and for one with several.
  */

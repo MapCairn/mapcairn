@@ -357,12 +357,12 @@ export interface PlateText {
  */
 export const PLATES: Readonly<Record<CaptureSubjectId, PlateText>> = {
   hero: {
-    description: `The MapCairn playground over Cape Town with the Measure tool open: a line of ${measuredReadout("hero")} measured from the slopes of Lion's Head to the city centre, with its length and the Distance and Area choices in the toolbar.`,
+    description: `The MapCairn playground over Cape Town with the Measure tool open: a line of ${measuredReadout("hero")} measured from Newlands to Sybrand Park, with its length and the Distance and Area choices in the toolbar.`,
     caption:
       "Screenshot of the playground, measuring across Cape Town. The Try the playground button above opens the real thing.",
   },
   heroWide: {
-    description: `The MapCairn playground over Cape Town on a wide screen with the Measure tool open: a line of ${measuredReadout("heroWide")} measured from the slopes of Lion's Head to the city centre, with its length and the Distance and Area choices in the toolbar.`,
+    description: `The MapCairn playground over Cape Town on a wide screen with the Measure tool open: a line of ${measuredReadout("heroWide")} measured from Newlands to Sybrand Park, with its length and the Distance and Area choices in the toolbar.`,
     caption:
       "Screenshot of the playground, measuring across Cape Town. The Try the playground button above opens the real thing.",
   },

@@ -63,10 +63,10 @@ export interface CaptureSubject {
 }
 
 /**
- * Cape Town between the city bowl and the summit of Lion's Head, the view of
- * both pictures.
+ * Cape Town's Southern Suburbs around Rondebosch, the view of both pictures. It
+ * keeps the sea out of view, because Fiord draws marine protected areas over it.
  */
-const CAPE_TOWN_VIEW = { latitude: -33.9365, longitude: 18.407, zoom: 13 };
+const CAPE_TOWN_VIEW = { latitude: -33.97, longitude: 18.48, zoom: 13 };
 
 /** The basemap of each theme: Bright by day, and Fiord, OpenFreeMap's blue dark style, by night. */
 const BY_THEME: Readonly<Record<CaptureTheme, CaptureBasemapId>> = {
@@ -74,14 +74,14 @@ const BY_THEME: Readonly<Record<CaptureTheme, CaptureBasemapId>> = {
   dark: "fiord",
 };
 
-/** The line both pictures measure, from the slopes of Lion's Head to the city centre, and what it reads. */
-const LION_HEAD_LINE: CaptureArrangement = {
-  // Tapped from the summit first: the first tap puts a panel over the lower left, where the summit lies.
+/** The line both pictures measure, from Newlands to Sybrand Park, and what it reads. */
+const NEWLANDS_LINE: CaptureArrangement = {
+  // Tapped from Newlands first: the first tap puts a panel over the lower left, where Newlands lies.
   line: [
-    { latitude: -33.9355, longitude: 18.3893 },
-    { latitude: -33.9249, longitude: 18.4241 },
+    { latitude: -33.9686, longitude: 18.4628 },
+    { latitude: -33.9586, longitude: 18.4972 },
   ],
-  readout: "3.42 km",
+  readout: "3.37 km",
 };
 
 /**
@@ -97,7 +97,7 @@ export const CAPTURE_SUBJECTS: readonly CaptureSubject[] = [
     width: 400,
     height: 520,
     basemaps: BY_THEME,
-    arrangement: LION_HEAD_LINE,
+    arrangement: NEWLANDS_LINE,
     budgetBytes: 60 * 1024,
   },
   {
@@ -106,7 +106,7 @@ export const CAPTURE_SUBJECTS: readonly CaptureSubject[] = [
     width: 1152,
     height: 640,
     basemaps: BY_THEME,
-    arrangement: LION_HEAD_LINE,
+    arrangement: NEWLANDS_LINE,
     budgetBytes: 180 * 1024,
   },
 ];

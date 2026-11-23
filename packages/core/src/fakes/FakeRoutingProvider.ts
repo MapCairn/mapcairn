@@ -72,7 +72,9 @@ function isOnGlobe(position: LatLng): boolean {
  * - `routeCalls` and `reachableAreaCalls` record what the ui asked.
  */
 export class FakeRoutingProvider implements RoutingProvider {
+  /** Every `route` request, in order, including ones that were refused. */
   readonly routeCalls: RouteRequest[] = [];
+  /** Every `reachableArea` request, in order, including ones that were refused. */
   readonly reachableAreaCalls: ReachableAreaRequest[] = [];
 
   #route: RouteResult | null = null;
@@ -121,6 +123,7 @@ export class FakeRoutingProvider implements RoutingProvider {
     return deferred;
   }
 
+  /** Checks the request, then answers with the scripted result, a straight-line route with a time from a speed for the mode, a held or failed request, or an `aborted` error. */
   route(request: RouteRequest): Promise<RouteResult> {
     this.routeCalls.push(request);
     return abortable(
@@ -143,6 +146,7 @@ export class FakeRoutingProvider implements RoutingProvider {
     );
   }
 
+  /** Checks the request, then answers with the scripted result, a ring around the origin, a held or failed request, or an `aborted` error. */
   reachableArea(request: ReachableAreaRequest): Promise<ReachableAreaResult> {
     this.reachableAreaCalls.push(request);
     return abortable(

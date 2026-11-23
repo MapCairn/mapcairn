@@ -89,6 +89,19 @@ describe("planRequestedImage", () => {
     });
   });
 
+  it("accepts a Fiji-sized box across the antimeridian in the short form, with its east past 180", () => {
+    const fiji = { south: -18.2, west: 178.44, north: -16.7, east: 180.1 };
+    expect(
+      planRequestedImage({ view: { bounds: fiji } }, VISIBLE),
+    ).toMatchObject({ view: { bounds: fiji } });
+    expect(
+      planRequestedImage(
+        { view: { bounds: { ...fiji, west: -180, east: 180 } } },
+        VISIBLE,
+      ),
+    ).toBeDefined();
+  });
+
   it("rounds a fractional size to whole CSS pixels, as the engine sizes a canvas, and plans from the rounded size", () => {
     const plan = planRequestedImage(
       { size: { width: 390.4, height: 700.6 }, pixelRatio: 2 },
@@ -224,11 +237,19 @@ describe("planRequestedImage", () => {
       { view: { bounds: { south: -90, west: 0, north: 0, east: 1 } } },
     ],
     [
-      "a box beyond 180 degrees of longitude",
-      { view: { bounds: { south: 0, west: 170, north: 1, east: 190 } } },
+      "a box with its west beyond 180 degrees of longitude",
+      { view: { bounds: { south: 0, west: 181, north: 1, east: 183 } } },
     ],
     [
-      "a box with its west beyond its east, as one across the antimeridian is",
+      "a box with its west before -180 degrees of longitude",
+      { view: { bounds: { south: 0, west: -181, north: 1, east: -179 } } },
+    ],
+    [
+      "a box wider than the world",
+      { view: { bounds: { south: 0, west: -170, north: 1, east: 191 } } },
+    ],
+    [
+      "a box with its west beyond its east, the long form of one across the antimeridian",
       { view: { bounds: { south: 0, west: 170, north: 1, east: -170 } } },
     ],
     [
@@ -239,6 +260,23 @@ describe("planRequestedImage", () => {
     [
       "a box with its south above its north",
       { view: { bounds: { south: 5, west: 0, north: 4, east: 1 } } },
+    ],
+    [
+      "a box whose east is infinite",
+      {
+        view: {
+          bounds: {
+            south: 0,
+            west: 0,
+            north: 1,
+            east: Number.POSITIVE_INFINITY,
+          },
+        },
+      },
+    ],
+    [
+      "a box whose east is not a number",
+      { view: { bounds: { south: 0, west: 0, north: 1, east: Number.NaN } } },
     ],
     [
       "a box with a coordinate that is not a number",
