@@ -26,9 +26,6 @@ export const MEMBER_DESCRIPTION_PACKAGES: readonly string[] = [
   "@mapcairn/react",
   "@mapcairn/sdk",
   "@mapcairn/theme",
-  "@mapcairn/react",
-  "@mapcairn/sdk",
-  "@mapcairn/theme",
 ];
 
 /** Where the generated pages go. It is git-ignored and rebuilt by `npm run generate`. */
