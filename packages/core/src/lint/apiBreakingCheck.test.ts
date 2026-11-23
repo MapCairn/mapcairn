@@ -1,13 +1,18 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
-import { readFileSync } from "node:fs";
+import { execFileSync } from "node:child_process";
+import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import {
   breakingApiChanges,
+  escapeAnnotation,
   isMarkedBreaking,
+  readReports,
   runApiBreakingCheck,
+  runFromEnvironment,
   SEVERITY,
   // @ts-expect-error The scripts are dependency-free JavaScript with JSDoc types.
 } from "../../../../scripts/apiBreakingCheck.mjs";
@@ -283,5 +288,92 @@ describe("the step in ci.yml", () => {
     expect(step.match(/\$\{\{/g)?.length).toBe(
       step.match(/^\s+(?:PR_\w+|BASE_REF): \$\{\{/gm)?.length ?? 0,
     );
+  });
+});
+
+describe("escapeAnnotation", () => {
+  it("escapes the characters a workflow command reads as its own syntax", () => {
+    expect(escapeAnnotation("100% a\r\nb")).toBe("100%25 a%0D%0Ab");
+  });
+
+  it("keeps report text from adding a line to the log", () => {
+    const before = sourceOf({
+      [CORE]: report(
+        '// @public\nexport interface Fill {\n    readonly pct: "50%";\n    readonly b: string;\n}',
+      ),
+    });
+    const after = sourceOf({
+      [CORE]: report(
+        "// @public\nexport interface Fill {\n    readonly b: string;\n}",
+      ),
+    });
+    const lines: string[] = [];
+    runApiBreakingCheck({
+      author: "a",
+      labels: [],
+      title: "fix: x",
+      body: "",
+      before,
+      after,
+      log: (line: string) => lines.push(line),
+      summarise: () => undefined,
+    });
+    expect(lines.join("\n")).toContain("50%25");
+    expect(lines.join("\n")).not.toContain('"50%"');
+  });
+});
+
+describe("readReports", () => {
+  function repository(): string {
+    const root = mkdtempSync(path.join(tmpdir(), "api-breaking-"));
+    const git = (...args: string[]) => execFileSync("git", args, { cwd: root });
+    git("init", "-q", "-b", "main");
+    git("config", "user.email", "a@example.com");
+    git("config", "user.name", "A");
+    mkdirSync(path.join(root, "packages/core/api"), { recursive: true });
+    writeFileSync(path.join(root, CORE), report(layerBaseBlock(true)));
+    git("add", ".");
+    git("commit", "-q", "-m", "base");
+    git("update-ref", "refs/remotes/origin/main", "HEAD");
+    return root;
+  }
+
+  it("reads the base and head reports, and sees a package absent in the base", () => {
+    const root = repository();
+    mkdirSync(path.join(root, "packages/theme/api"), { recursive: true });
+    writeFileSync(path.join(root, THEME), report(NAMESPACE_AFTER));
+    execFileSync("git", ["add", "."], { cwd: root });
+    execFileSync("git", ["commit", "-q", "-m", "theme"], { cwd: root });
+    const reports = readReports("main", root);
+    expect(reports.before.read(CORE)).toContain("LayerDefinitionBase");
+    expect(reports.before.read(THEME)).toBeNull();
+    expect(reports.after.read(THEME)).toContain("tokenValues");
+  });
+
+  it("returns null when the base branch is missing", () => {
+    expect(readReports("no-such-branch", repository())).toBeNull();
+  });
+
+  it("returns null when the base shares no history with HEAD", () => {
+    const root = repository();
+    execFileSync("git", ["checkout", "-q", "--orphan", "other"], { cwd: root });
+    execFileSync("git", ["commit", "-q", "--allow-empty", "-m", "x"], {
+      cwd: root,
+    });
+    expect(readReports("main", root)).toBeNull();
+  });
+});
+
+describe("runFromEnvironment", () => {
+  it("skips with a warning, and passes, when the base branch cannot be read", () => {
+    const lines: string[] = [];
+    const code = runFromEnvironment(
+      { BASE_REF: "no-such-branch", PR_TITLE: "fix: x" },
+      (line: string) => lines.push(line),
+      () => undefined,
+    );
+    expect(code).toBe(0);
+    expect(lines).toHaveLength(1);
+    expect(lines[0]).toContain("::warning title=Breaking API check skipped::");
   });
 });

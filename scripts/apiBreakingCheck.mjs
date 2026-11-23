@@ -10,8 +10,8 @@
  *   PR_TITLE=... PR_BODY=... PR_AUTHOR=... PR_LABELS=... BASE_REF=main \
  *     node scripts/apiBreakingCheck.mjs
  *
- * It compares the reports at the merge base with the base branch against those at
- * `HEAD`, using the classifier the release plan uses (`apiChanges.mjs`) and the
+ * It compares the reports where `HEAD` leaves the base branch (the base tip, in a
+ * pull request run) against those at `HEAD`, using the classifier the release plan uses (`apiChanges.mjs`) and the
  * commit reader the release plan uses (`versionRules.mjs`). The text arrives
  * through the environment, so it is data and never part of a shell command.
  */
@@ -120,7 +120,7 @@ export function runApiBreakingCheck({
   }
   const lines = findings(title, changes);
   for (const line of lines) {
-    log(`::${severity} title=Breaking API change::${line}`);
+    log(`::${severity} title=Breaking API change::${escapeAnnotation(line)}`);
   }
   summarise(
     `### Breaking API change\n\n${lines.map((line) => `- ${line}`).join("\n")}\n`,
@@ -129,35 +129,77 @@ export function runApiBreakingCheck({
 }
 
 /**
- * The revision where the pull request left the base branch.
+ * Escapes text for a workflow command, where `%`, a carriage return and a line
+ * feed would otherwise end or change the annotation.
  *
- * @param {string} baseRef The base branch name.
+ * @param {string} text
  * @returns {string}
  */
-function mergeBase(baseRef) {
-  const result = git(["merge-base", `origin/${baseRef}`, "HEAD"], ".");
-  if (!result.ok) {
-    throw new Error(`No merge base with origin/${baseRef}: ${result.stderr}`);
+export function escapeAnnotation(text) {
+  return text.replace(/%/g, "%25").replace(/\r/g, "%0D").replace(/\n/g, "%0A");
+}
+
+/**
+ * The API reports at the base branch and at `HEAD`, read from git.
+ *
+ * @param {string} baseRef The base branch name; its remote-tracking ref `origin/<name>` is read.
+ * @param {string} [root] The repository folder.
+ * @returns {{ before: import("./release/apiChanges.mjs").ReportSource, after: import("./release/apiChanges.mjs").ReportSource } | null} Null when the base tip or the point where `HEAD` left it cannot be found.
+ */
+export function readReports(baseRef, root = ".") {
+  const result = git(["merge-base", `origin/${baseRef}`, "HEAD"], root);
+  if (!result.ok || result.stdout.trim() === "") {
+    return null;
   }
-  return result.stdout.trim();
+  return {
+    before: tagReports(result.stdout.trim(), root),
+    after: tagReports("HEAD", root),
+  };
+}
+
+/**
+ * Runs the check from the environment. A fault in reading the reports is a
+ * skipped check with a warning, never a failed job.
+ *
+ * @param {Record<string, string | undefined>} env
+ * @param {(line: string) => void} log
+ * @param {(text: string) => void} summarise
+ * @returns {number}
+ */
+export function runFromEnvironment(env, log, summarise) {
+  try {
+    const reports = readReports(env.BASE_REF ?? "main");
+    if (reports === null) {
+      log(
+        "::warning title=Breaking API check skipped::The base branch or its history could not be read.",
+      );
+      return 0;
+    }
+    return runApiBreakingCheck({
+      author: env.PR_AUTHOR ?? "",
+      labels: (env.PR_LABELS ?? "").split(",").filter(Boolean),
+      title: env.PR_TITLE ?? "",
+      body: env.PR_BODY ?? "",
+      ...reports,
+      log,
+      summarise,
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    log(
+      `::warning title=Breaking API check skipped::${escapeAnnotation(message)}`,
+    );
+    return 0;
+  }
 }
 
 if (isEntryPoint(import.meta.url)) {
   const summaryFile = process.env.GITHUB_STEP_SUMMARY;
   process.exit(
-    runApiBreakingCheck({
-      author: process.env.PR_AUTHOR ?? "",
-      labels: (process.env.PR_LABELS ?? "").split(",").filter(Boolean),
-      title: process.env.PR_TITLE ?? "",
-      body: process.env.PR_BODY ?? "",
-      before: tagReports(mergeBase(process.env.BASE_REF ?? "main"), "."),
-      after: tagReports("HEAD", "."),
-      log: console.log,
-      summarise: (text) => {
-        if (summaryFile !== undefined) {
-          appendFileSync(summaryFile, text);
-        }
-      },
+    runFromEnvironment(process.env, console.log, (text) => {
+      if (summaryFile !== undefined) {
+        appendFileSync(summaryFile, text);
+      }
     }),
   );
 }

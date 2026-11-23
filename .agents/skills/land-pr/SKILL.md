@@ -93,9 +93,10 @@ If the branch is behind `main` and the ruleset needs it current: `gh pr update-b
 
 ```bash
 gh pr merge <n> --squash --delete-branch --match-head-commit <reviewed-sha> --subject "<Conventional Commit title> (#<n>)" --body "<one or two plain sentences and Fixes #<issue>>"
+# a breaking pull request: the same body with a blank line and a last line, BREAKING CHANGE: <what was removed or changed>
 ```
 
-The squash subject is the pull request title verbatim, with the `(#<n>)` tail, because the release scripts read the subject. A breaking pull request's squash body ends with a `BREAKING CHANGE:` footer that names what was removed or changed on a line of its own after a blank line, so the release notes can name it. The `build` job warns on a pull request whose API reports show a likely breaking change but whose title has no `!` and whose description has no such footer (`scripts/apiBreakingCheck.mjs`); fix the title or the description rather than ignoring it.
+The squash subject is the pull request title verbatim, with the `(#<n>)` tail, because the release scripts read the subject. The template's body is for a pull request that is not breaking; a breaking pull request's squash body ends with a `BREAKING CHANGE:` footer that names what was removed or changed on a line of its own after a blank line, so the release notes can name it. The `build` job warns on a pull request whose API reports show a likely breaking change but whose title has no `!` and whose description has no such footer (`scripts/apiBreakingCheck.mjs`); fix the title or the description rather than ignoring it.
 
   Do not use `--admin` to get past a failing or missing check. If the permission system blocks `gh pr merge` until the maintainer grants permission, do not work around the refusal (no merge through the API, no `--admin`): say what is ready and wait.
 
