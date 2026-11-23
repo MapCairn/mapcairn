@@ -23,7 +23,7 @@ A milestone leaves this list in the pull request that closes its last issue. A n
 
 ### Next
 
-1. **SDK, [First release](https://github.com/MapCairn/mapcairn/milestone/8) ([#1](https://github.com/MapCairn/mapcairn/issues/1)).** All six SDK packages have been on npm since 0.1.0 (2026-11-21), with provenance. What is left is generated API documentation and the OpenSSF Best Practices silver badge ([#4](https://github.com/MapCairn/mapcairn/issues/4)).
+1. **SDK, [First release](https://github.com/MapCairn/mapcairn/milestone/8) ([#1](https://github.com/MapCairn/mapcairn/issues/1)).** All six SDK packages have been on npm since 0.1.0 (2026-11-21), with provenance. The API reference is generated from the packages on the documentation site. What is left is the OpenSSF Best Practices silver badge ([#4](https://github.com/MapCairn/mapcairn/issues/4)).
 2. **Site, [Layer controls](https://github.com/MapCairn/mapcairn/milestone/9).** Visitors can order, filter, cluster and explore layers and their features.
 
 ### Later
