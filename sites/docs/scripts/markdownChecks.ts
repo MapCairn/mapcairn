@@ -10,6 +10,7 @@ import {
   llmsFullIndexTxt,
   llmsTxt,
 } from "./markdownCopies";
+import { PART_CEILING } from "./repositoryDocParts";
 
 const BARE_FENCE = /^\s*(?:```|~~~)\s*$/;
 const FENCE = /^\s*(?:```|~~~)/;
@@ -51,9 +52,25 @@ function readIfExists(path: string): string | null {
   return existsSync(path) ? readFileSync(path, "utf8") : null;
 }
 
+/**
+ * What a copy of a part of a repository document may hold beyond
+ * {@link PART_CEILING}: its title, the line that says where it belongs and its
+ * address, which the part's own size does not count.
+ */
+export const PART_COPY_ALLOWANCE = 2_000;
+
+/** The pages under a repository document's overview: `generated/<document>/<part>`. */
+const PART_PAGE = /^generated\/[^/]+\/[^/]+$/;
+
 /** What is wrong with the text of one copy. */
 function copyFindings(page: DocPage, copy: string): string[] {
   const findings: string[] = [];
+  const largest = PART_CEILING + PART_COPY_ALLOWANCE;
+  if (PART_PAGE.test(page.id) && Buffer.byteLength(copy) > largest) {
+    findings.push(
+      `${page.copyPath} is over ${largest} bytes, the most a part of a repository document holds.`,
+    );
+  }
   if (hasBareOpeningFence(copy)) {
     findings.push(`${page.copyPath} has a code fence with no language.`);
   }

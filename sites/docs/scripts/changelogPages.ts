@@ -1,13 +1,11 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
 import type { SidebarEntry } from "./docChecks";
+import { firstSentenceOf } from "./markdownSummary";
 
 const RELEASE_HEADING = /^## (\S+) \((\d{4}-\d{2}-\d{2})\)\s*$/;
 const FENCE = /^\s*(?:```|~~~)/;
 const HEADING = /^(#{2,6}) /;
-const FIRST_SENTENCE = /^([\s\S]*?[.!?])(?=\s+[A-Z]|$)/;
-const MARKDOWN_LINK = /\[([^\]]+)\]\([^)]*\)/g;
-const MARKDOWN_MARKS = /[`*_]/g;
 
 /** One release in `CHANGELOG.md`. */
 export interface Release {
@@ -64,34 +62,9 @@ function formatDate(iso: string): string {
   }).format(new Date(iso));
 }
 
-/** The first paragraph of prose in a body: not a heading, a list, a code block or a table. */
-function firstParagraph(body: string): string {
-  let inFence = false;
-  const paragraph: string[] = [];
-  for (const line of body.split("\n")) {
-    if (FENCE.test(line)) {
-      inFence = !inFence;
-    } else if (!inFence && line.trim() === "") {
-      if (paragraph.length > 0) {
-        break;
-      }
-    } else if (!inFence && /^(?:#|[-*|] |\d+\. )/.test(line)) {
-      if (paragraph.length > 0) {
-        break;
-      }
-    } else if (!inFence) {
-      paragraph.push(line.trim());
-    }
-  }
-  return paragraph.join(" ");
-}
-
 /** The page's description: the first sentence of the release's first paragraph, as plain text. */
 function descriptionOf(release: Release): string {
-  const plain = firstParagraph(release.body)
-    .replace(MARKDOWN_LINK, "$1")
-    .replace(MARKDOWN_MARKS, "");
-  const sentence = FIRST_SENTENCE.exec(plain)?.[1] ?? plain;
+  const sentence = firstSentenceOf(release.body);
   return sentence === "" ? `What changed in ${release.version}.` : sentence;
 }
 

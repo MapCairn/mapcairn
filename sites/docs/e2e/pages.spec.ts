@@ -52,7 +52,12 @@ for (const width of [390, 1280]) {
 }
 
 for (const width of [320, 390]) {
-  for (const path of ["/docs/architecture/", "/docs/guides/extending/"]) {
+  for (const path of [
+    "/docs/architecture/",
+    "/docs/architecture/data-layers/",
+    "/docs/architecture/adding-an-adapter/",
+    "/docs/guides/extending/",
+  ]) {
     test(`the diagrams on ${path} fit the column at ${width} px, with a text alternative`, async ({
       page,
     }) => {
