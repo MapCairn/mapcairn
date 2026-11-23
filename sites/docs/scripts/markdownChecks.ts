@@ -5,8 +5,9 @@ import { join } from "node:path";
 import {
   type CopyContext,
   type DocPage,
-  LLMS_FULL_CEILING,
+  LLMS_INDEX_CEILING,
   llmsFullFiles,
+  llmsFullIndexTxt,
   llmsTxt,
 } from "./markdownCopies";
 
@@ -115,11 +116,12 @@ function llmsFindings(
 ): string[] {
   const findings: string[] = [];
   const index = llmsTxt(pages, context);
-  if (Buffer.byteLength(index) > LLMS_FULL_CEILING) {
-    findings.push(`llms.txt is over ${LLMS_FULL_CEILING} bytes.`);
+  if (Buffer.byteLength(index) > LLMS_INDEX_CEILING) {
+    findings.push(`llms.txt is over ${LLMS_INDEX_CEILING} bytes.`);
   }
   const expected = [
     { name: "llms.txt", text: index },
+    { name: "llms-full.txt", text: llmsFullIndexTxt(pages, context) },
     ...llmsFullFiles(pages, context).map(({ name, text }) => ({ name, text })),
   ];
   for (const { name, text } of expected) {

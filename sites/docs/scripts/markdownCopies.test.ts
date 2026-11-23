@@ -6,7 +6,9 @@ import {
   copyText,
   isListedInIndex,
   LLMS_FULL_CEILING,
+  LLMS_INDEX_CEILING,
   llmsFullFiles,
+  llmsFullIndexTxt,
   llmsTxt,
   parseDocSource,
   robotsTxt,
@@ -181,12 +183,16 @@ describe("the llms files and robots.txt", () => {
     );
   });
 
-  it("is the same text each time it is built", () => {
+  it("llms-full.txt holds no page content and names each area file with its size", () => {
     const pages = [HOME, GUIDE];
-    expect(llmsTxt(pages, CONTEXT)).toBe(llmsTxt(pages, CONTEXT));
-    expect(llmsFullFiles(pages, CONTEXT)).toEqual(
-      llmsFullFiles(pages, CONTEXT),
+    const [file] = llmsFullFiles(pages, CONTEXT);
+    const text = llmsFullIndexTxt(pages, CONTEXT);
+    expect(text).toContain("https://example.test/docs/llms.txt");
+    expect(text).toContain(
+      `- [llms-full-guides.txt](https://example.test/docs/llms-full-guides.txt): guides (Get started to The guide), 2 pages, ${file?.bytes} bytes`,
     );
+    expect(text).not.toContain("npm install");
+    expect(text).not.toContain("Body.");
   });
 
   it("robots.txt blocks nothing and names the sitemap", () => {
@@ -281,6 +287,60 @@ describe("llmsFullFiles", () => {
     ]);
   });
 
+  it("writes exactly the head, the copies joined by a rule, and one closing newline", () => {
+    const pages = [GUIDE, HOME];
+    const [file] = llmsFullFiles(pages, CONTEXT);
+    const copies = pages.map((page) =>
+      copyText(page, pages, CONTEXT).trimEnd(),
+    );
+    expect(file?.text).toBe(
+      `# Example documentation\n\n> Docs for the example\n\nThe guides pages of the documentation. Every file and the size of each is listed in https://example.test/docs/llms.txt.\n\n${copies[0]}\n\n---\n\n${copies[1]}\n`,
+    );
+    expect(file?.pages.map((page) => page.id)).toEqual([
+      "guides/x",
+      "get-started",
+    ]);
+  });
+
+  it("counts bytes, not characters, for a page with an em dash and Afrikaans letters", () => {
+    const page = parseDocSource(
+      "guides/af",
+      "---\ntitle: Afrikaans\ndescription: Dit werk — ê en ë.\n---\n\nDie môre — ê ë ï.\n",
+    );
+    const [file] = llmsFullFiles([page], CONTEXT);
+    expect(file?.text.length).toBeLessThan(Buffer.byteLength(file?.text ?? ""));
+    expect(file?.bytes).toBe(Buffer.byteLength(file?.text ?? ""));
+    const listed = Buffer.byteLength(copyText(page, [page], CONTEXT));
+    expect(llmsTxt([page], CONTEXT)).toContain(`(${listed} bytes)`);
+  });
+
+  it("keeps a file whose size is exactly the ceiling whole and splits one byte over", () => {
+    const pages = [pageOf("api/core/A", 300), pageOf("api/core/B", 300)];
+    const [whole] = llmsFullFiles(pages, CONTEXT, Number.MAX_SAFE_INTEGER);
+    const size = whole?.bytes ?? 0;
+    expect(llmsFullFiles(pages, CONTEXT, size)).toHaveLength(1);
+    expect(llmsFullFiles(pages, CONTEXT, size - 1)).toHaveLength(2);
+  });
+
+  it("puts every page in exactly one file and no file but a single page over the ceiling", () => {
+    const pages = [
+      ...Array.from({ length: 9 }, (_, index) =>
+        pageOf(`api/core/P${index}`, 250 + index * 40),
+      ),
+      pageOf("api/core/Huge", 4_000),
+      pageOf("get-started", 100),
+    ];
+    const files = llmsFullFiles(pages, CONTEXT, 1_500);
+    const ids = files.flatMap((file) => file.pages.map((page) => page.id));
+    expect([...ids].sort()).toEqual(pages.map((page) => page.id).sort());
+    for (const file of files) {
+      if (file.pages.length > 1) {
+        expect(Buffer.byteLength(file.text)).toBeLessThanOrEqual(1_500);
+      }
+    }
+    expect(files.some((file) => file.pages.length > 1)).toBe(true);
+  });
+
   it("keeps the ceiling at a size a small context can read", () => {
     expect(LLMS_FULL_CEILING).toBe(150_000);
   });
@@ -298,6 +358,6 @@ describe("llms.txt size", () => {
     const text = llmsTxt(pages, CONTEXT);
     expect(text).not.toContain("api/core/E0.md");
     expect(text).toContain("api/core.md");
-    expect(Buffer.byteLength(text)).toBeLessThan(LLMS_FULL_CEILING);
+    expect(Buffer.byteLength(text)).toBeLessThan(LLMS_INDEX_CEILING);
   });
 });

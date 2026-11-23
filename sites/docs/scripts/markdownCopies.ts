@@ -188,6 +188,9 @@ function header(context: CopyContext): string {
  */
 export const LLMS_FULL_CEILING = 150_000;
 
+/** The most bytes `llms.txt` may hold: it is the file a reader opens first, so it must stay small. */
+export const LLMS_INDEX_CEILING = 150_000;
+
 const PAGE_SEPARATOR = "\n\n---\n\n";
 
 const textEncoder = new TextEncoder();
@@ -257,24 +260,33 @@ function fileHead(area: string, context: CopyContext): string {
   return `${header(context)}\nThe ${area} pages of the documentation. Every file and the size of each is listed in ${context.origin}${context.baseUrl}llms.txt.\n\n`;
 }
 
-/** Splits an area's copies into runs that fit the ceiling; a run of one page may exceed it. */
+/** The bytes a file holds after its head: the closing newline of the file. */
+const FILE_END_BYTES = 1;
+
+/**
+ * Splits an area's copies into runs whose files fit the ceiling exactly (head,
+ * the copies, a separator between each two and the closing newline); a run of
+ * one page may exceed it.
+ */
 function packCopies(
   copies: readonly PageCopy[],
   headBytes: number,
   ceiling: number,
 ): PageCopy[][] {
+  const separatorBytes = byteLength(PAGE_SEPARATOR);
   const runs: PageCopy[][] = [];
   let run: PageCopy[] = [];
-  let size = 0;
+  let size = headBytes + FILE_END_BYTES;
+  const addedBy = (copy: PageCopy): number =>
+    byteLength(copy.text) + (run.length > 0 ? separatorBytes : 0);
   for (const copy of copies) {
-    const added = byteLength(copy.text) + byteLength(PAGE_SEPARATOR);
-    if (run.length > 0 && headBytes + size + added > ceiling) {
+    if (run.length > 0 && size + addedBy(copy) > ceiling) {
       runs.push(run);
       run = [];
-      size = 0;
+      size = headBytes + FILE_END_BYTES;
     }
+    size += addedBy(copy);
     run.push(copy);
-    size += added;
   }
   if (run.length > 0) {
     runs.push(run);
@@ -354,6 +366,23 @@ export function llmsTxt(
         `- [${page.title}](${copyUrl(page, context)}): ${page.description} (${byteLength(copyText(page, pages, context))} bytes)`,
     );
   return `${header(context)}\nEvery page is also a plain Markdown file, linked below with its size. The full text is split by area into the files listed first, none larger than ${LLMS_FULL_CEILING} bytes unless it is a single page: read this index, then fetch only the file or page you need. The API reference has a page for every export, so only its front page and each package's page are listed here; a package's page links its members, and their text is in that package's files. The pages and the API reference are also data, in ${base}pages.json and ${base}api.json; the Machine-readable data page describes them.\n\n## Full text by area\n\n${files.join("\n")}\n\n## Pages\n\n${lines.join("\n")}\n`;
+}
+
+/**
+ * `llms-full.txt`: the file this address held when the whole text was one
+ * file. It holds no page content, only where the text is now: the index and
+ * each area file with its size.
+ * @param pages - The pages, in sidebar order.
+ * @param context - The site's origin, base path, version and names.
+ */
+export function llmsFullIndexTxt(
+  pages: readonly DocPage[],
+  context: CopyContext,
+): string {
+  const files = llmsFullFiles(pages, context).map((file) =>
+    fullFileLine(file, context),
+  );
+  return `${header(context)}\nThe full text is no longer one file: it is split by area so a reader can fetch only the part it needs. The index, with every page and its size, is ${context.origin}${context.baseUrl}llms.txt. The files:\n\n${files.join("\n")}\n`;
 }
 
 /**
