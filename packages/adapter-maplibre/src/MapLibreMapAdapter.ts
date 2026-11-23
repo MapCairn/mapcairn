@@ -158,7 +158,7 @@ export class MapLibreMapAdapter implements MapAdapter {
   /** True between a style's `style.load` and the next swap: only then can sources be added. */
   private styleReady = false;
   private readonly globeWarmUp = new GlobeWarmUp(
-    (map) => this.placements.apply(map),
+    () => this.applyProjection(),
     () => this.updateLoading(),
   );
 
@@ -499,6 +499,8 @@ export class MapLibreMapAdapter implements MapAdapter {
   }
 
   toImage(options?: MapImageOptions): Promise<Blob> {
+    // The globe frame of a warm-up must not be what an image of the map on screen copies.
+    this.globeWarmUp.abandon();
     return this.imageExporter.toImage(options);
   }
 

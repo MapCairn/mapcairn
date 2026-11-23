@@ -44,32 +44,63 @@ test.describe("map shape", () => {
     mapPage,
   }) => {
     await page.addInitScript(() => {
-      new MutationObserver(() => {
+      // What the host was told of the camera: an address update or a zoom
+      // written on the map region. `atWarmUp` is the count when the canvas
+      // was first hidden; `copyShown` latches once a copy covered it.
+      const seen = { told: 0, atWarmUp: -1, copyShown: false };
+      Object.assign(window, { warmUp: seen });
+      for (const method of ["replaceState", "pushState"] as const) {
+        const original = history[method].bind(history);
+        history[method] = (...args) => {
+          seen.told += 1;
+          original(...args);
+        };
+      }
+      new MutationObserver((records) => {
+        for (const record of records) {
+          if (record.attributeName === "data-zoom") {
+            seen.told += 1;
+          }
+        }
         const canvas = document.querySelector("canvas.maplibregl-canvas");
         if (canvas instanceof HTMLElement && canvas.style.opacity === "0") {
-          Object.assign(window, {
-            warmUpSeen: true,
-            copyShown: canvas.nextElementSibling?.tagName === "CANVAS",
-          });
+          if (seen.atWarmUp < 0) {
+            seen.atWarmUp = seen.told;
+          }
+          seen.copyShown ||= canvas.nextElementSibling?.tagName === "CANVAS";
         }
       }).observe(document, {
         subtree: true,
         attributes: true,
         childList: true,
-        attributeFilter: ["style"],
+        attributeFilter: ["style", "data-zoom"],
       });
     });
     await mapPage.goto(VIEW);
-    await page.waitForFunction(() => "warmUpSeen" in window, undefined, {
-      timeout: 15_000,
-    });
+    await page.waitForFunction(
+      () =>
+        (window as unknown as { warmUp: { atWarmUp: number } }).warmUp
+          .atWarmUp >= 0,
+      undefined,
+      { timeout: 15_000 },
+    );
     const canvas = page.locator("canvas.maplibregl-canvas");
-    // A still copy of the map covered the hidden canvas, and is gone again.
-    expect(await page.evaluate(() => "copyShown" in window)).toBe(true);
     await expect(canvas).not.toHaveCSS("opacity", "0");
     await expect(canvas.locator("xpath=following-sibling::canvas")).toHaveCount(
       0,
     );
+    // A still copy of the map covered the hidden canvas, and no camera event
+    // reached the host while it did.
+    const seen = await page.evaluate(
+      () =>
+        (
+          window as unknown as {
+            warmUp: { told: number; atWarmUp: number; copyShown: boolean };
+          }
+        ).warmUp,
+    );
+    expect(seen.copyShown).toBe(true);
+    expect(seen.told).toBe(seen.atWarmUp);
     await expect(mapPage.host).toHaveAttribute("data-projection", "flat");
     await expect(mapPage.host).toHaveAttribute("aria-busy", "false");
     expect(await page.evaluate(() => window.location.hash)).toContain(

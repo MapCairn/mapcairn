@@ -2064,26 +2064,142 @@ describe("MapLibreMapAdapter", () => {
         expect(map.projection).toEqual({ type: "mercator" });
       });
 
-      it("shows the canvas again after the limit when the map stops drawing", async () => {
+      it("puts the flat map back at the limit, and shows the canvas only after the flat frame", async () => {
         const { map } = await idleFlatMap();
-        await vi.advanceTimersByTimeAsync(GLOBE_WARM_UP_DELAY_MS);
-        map.fire("render");
-        expect(map.getCanvas().style.opacity).toBe("0");
-        await vi.advanceTimersByTimeAsync(GLOBE_WARM_UP_LIMIT_MS);
-        expect(map.getCanvas().style.opacity).toBe("");
-        expect(map.getCanvas().nextElementSibling).toBeNull();
-        expect(map.projection).toEqual({ type: "mercator" });
-      });
-
-      it("still warms the globe when the browser gives no copy of the canvas", async () => {
-        const { map } = await idleFlatMap();
-        vi.spyOn(HTMLCanvasElement.prototype, "getContext").mockReturnValue(
-          null,
-        );
         await vi.advanceTimersByTimeAsync(GLOBE_WARM_UP_DELAY_MS);
         map.fire("render");
         expect(shapes(map)).toEqual([{ type: "globe" }]);
+        await vi.advanceTimersByTimeAsync(GLOBE_WARM_UP_LIMIT_MS);
+        expect(shapes(map)).toEqual([{ type: "globe" }, { type: "mercator" }]);
+        expect(map.getCanvas().style.opacity).toBe("0");
+        expect(map.getCanvas().nextElementSibling?.tagName).toBe("CANVAS");
+        map.fire("render");
+        expect(map.getCanvas().style.opacity).toBe("");
         expect(map.getCanvas().nextElementSibling).toBeNull();
+      });
+
+      describe("when the canvas cannot be copied", () => {
+        /** Runs the warm-up as far as the copy, and returns what the engine was asked. */
+        async function warmWithoutCopy(prepare: (map: FakeMap) => void) {
+          const { map } = await idleFlatMap();
+          prepare(map);
+          const repaints = map.callsOf("triggerRepaint").length;
+          await vi.advanceTimersByTimeAsync(GLOBE_WARM_UP_DELAY_MS);
+          map.fire("render");
+          map.fire("idle");
+          await vi.advanceTimersByTimeAsync(GLOBE_WARM_UP_DELAY_MS * 2);
+          return { map, repaints };
+        }
+
+        function expectSkipped({
+          map,
+          repaints,
+        }: {
+          map: FakeMap;
+          repaints: number;
+        }) {
+          expect(shapes(map)).toEqual([]);
+          expect(map.getCanvas().style.opacity).toBe("");
+          expect(map.getCanvas().nextElementSibling).toBeNull();
+          // One repaint asked for the copy, and no retry.
+          expect(map.callsOf("triggerRepaint")).toHaveLength(repaints + 1);
+        }
+
+        it("skips the warm-up and leaves the canvas shown when the browser gives no 2D context", async () => {
+          expectSkipped(
+            await warmWithoutCopy(() => {
+              vi.spyOn(
+                HTMLCanvasElement.prototype,
+                "getContext",
+              ).mockReturnValue(null);
+            }),
+          );
+        });
+
+        it("skips it when the canvas has no size", async () => {
+          expectSkipped(
+            await warmWithoutCopy((map) => {
+              map.getCanvas().width = 0;
+            }),
+          );
+        });
+
+        it("skips it when drawing the copy throws", async () => {
+          expectSkipped(
+            await warmWithoutCopy(() => {
+              vi.spyOn(
+                HTMLCanvasElement.prototype,
+                "getContext",
+              ).mockReturnValue({
+                drawImage: () => {
+                  throw new Error("tainted");
+                },
+              } as unknown as CanvasRenderingContext2D);
+            }),
+          );
+        });
+      });
+
+      it("waits again after a warm-up that was cancelled before it started", async () => {
+        const { adapter, map } = await idleFlatMap();
+        await vi.advanceTimersByTimeAsync(GLOBE_WARM_UP_DELAY_MS / 2);
+        adapter.setProjection("flat");
+        await vi.advanceTimersByTimeAsync(GLOBE_WARM_UP_DELAY_MS);
+        expect(shapes(map)).not.toContainEqual({ type: "globe" });
+        map.fire("idle");
+        await vi.advanceTimersByTimeAsync(GLOBE_WARM_UP_DELAY_MS);
+        map.fire("render");
+        expect(shapes(map)).toContainEqual({ type: "globe" });
+      });
+
+      it("does not start while the page is hidden", async () => {
+        const { map } = await idleFlatMap();
+        vi.spyOn(document, "hidden", "get").mockReturnValue(true);
+        const repaints = map.callsOf("triggerRepaint").length;
+        await vi.advanceTimersByTimeAsync(GLOBE_WARM_UP_DELAY_MS);
+        expect(map.callsOf("triggerRepaint")).toHaveLength(repaints);
+      });
+
+      describe("ends at once, with the flat map back and the busy state live again, when", () => {
+        const interruptions: [string, (map: FakeMap) => void][] = [
+          ["a gesture starts to move the map", (map) => map.fire("movestart")],
+          ["a zoom starts", (map) => map.fire("zoomstart")],
+          ["a drag starts", (map) => map.fire("dragstart")],
+          [
+            "the page is hidden",
+            () => {
+              vi.spyOn(document, "hidden", "get").mockReturnValue(true);
+              document.dispatchEvent(new Event("visibilitychange"));
+            },
+          ],
+        ];
+        for (const [name, interrupt] of interruptions) {
+          it(name, async () => {
+            const { map, loading } = await idleFlatMap();
+            await vi.advanceTimersByTimeAsync(GLOBE_WARM_UP_DELAY_MS);
+            map.fire("render");
+            expect(shapes(map)).toEqual([{ type: "globe" }]);
+            interrupt(map);
+            expect(shapes(map)).toEqual([
+              { type: "globe" },
+              { type: "mercator" },
+            ]);
+            map.fire("render");
+            expect(map.getCanvas().style.opacity).toBe("");
+            expect(map.getCanvas().nextElementSibling).toBeNull();
+            map.fire("styledataloading");
+            expect(loading).toHaveBeenCalledWith(true);
+          });
+        }
+      });
+
+      it("ends before an image of the map on screen is taken, so the globe frame cannot be saved", async () => {
+        const { adapter, map } = await idleFlatMap();
+        await vi.advanceTimersByTimeAsync(GLOBE_WARM_UP_DELAY_MS);
+        map.fire("render");
+        expect(shapes(map)).toEqual([{ type: "globe" }]);
+        adapter.toImage().catch(() => undefined);
+        expect(shapes(map)).toEqual([{ type: "globe" }, { type: "mercator" }]);
       });
 
       it("runs once", async () => {
@@ -2104,7 +2220,6 @@ describe("MapLibreMapAdapter", () => {
         await vi.advanceTimersByTimeAsync(GLOBE_WARM_UP_DELAY_MS);
         map.fire("render");
         adapter.setProjection("globe");
-        map.fire("render");
         map.fire("render");
         expect(map.projection).toEqual({ type: "globe" });
         expect(map.getCanvas().style.opacity).toBe("");
@@ -2128,9 +2243,9 @@ describe("MapLibreMapAdapter", () => {
         map.fire("render");
         void adapter.setBasemap(DARK);
         map.fire("styledataloading");
-        expect(map.getCanvas().style.opacity).toBe("");
         asked.set(map, map.callsOf("setProjection").length);
         map.fire("render");
+        expect(map.getCanvas().style.opacity).toBe("");
         map.fire("render");
         expect(shapes(map)).toEqual([]);
       });
