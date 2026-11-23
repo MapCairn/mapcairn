@@ -27,8 +27,9 @@ const DEFAULT_MIN_INTERVAL_MS = 250;
 const DEFAULT_TIMEOUT_MS = 4000;
 
 /**
- * Photon's language for names and labels. The app is English only, and `en`
- * is one of the languages Photon indexes.
+ * Photon's language for names and labels, always `en`. Photon supports only
+ * `default`, `de`, `en` and `fr` and answers any other value, such as `af`,
+ * with a 400, so the Afrikaans interface cannot send its own language.
  */
 const LANGUAGE = "en";
 

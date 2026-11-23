@@ -69,6 +69,7 @@ Tell the agent the issue and the skill, in your own words. For example:
 - "Review the tests of pull request 130 and follow the `review-tests` skill."
 - "Ask what pull request 130 could do without and follow the `delete-first` skill."
 - "Is production healthy? Follow the `triage-production` skill."
+- "Try the published packages and the guides as a newcomer and follow the `adopter-check` skill."
 
 Where the tool has agent support, name the agent (`implementer`, `fresh-eyes-reviewer`, `ui-verifier`, `architecture-reviewer`, `ux-reviewer`, `test-reviewer`, `security-reviewer` or `lean-reviewer`) instead. Where it does not read the skill folder on its own, point it at `.agents/skills/<name>/SKILL.md`. The rules, including the limits on sub-agents and the model tiers by role, are in `AGENTS.md`. In Claude Code the tier names are in `CLAUDE.md`; the generated agent files set no model.
 
@@ -130,6 +131,10 @@ The `lean-reviewer` agent runs it on an issue, plan or pull request. It is read-
 ## Reading production
 
 The `triage-production` skill reads the deployed site's health the same way each time, and changes nothing. It checks the latest Workers Build for the merge commit and its logs, the Worker's detected issues (`cf o11y issues list`), and the live routes, headers and Content-Security-Policy against `public/_headers`, then sorts each issue into scanner noise, an expected answer, a stale issue or a real fault, using #411 and #479 as worked examples. It needs a signed-in `cf`: when there is none it stops and says the person must run `cf auth login` themselves. It never deploys, retries a build, purges a cache, marks an issue resolved or deletes anything; it hands the maintainer the exact step, and files a real fault through `create-issue`. It has no agent of its own, like `review-docs`: the read-only limit is in the skill's wording and in `AGENTS.md`, and the commands it runs are all reads, so an agent adds no isolation. It never copies a URL, address, user agent or account id from a log or from `cf` output into a report.
+
+## Trying the docs as a newcomer
+
+The `adopter-check` skill has an agent play an outside developer. In a scratch folder outside the repository it installs the published `@mapcairn` packages with `npm install --ignore-scripts`, follows only the guides in `sites/docs/docs/guides` and the package READMEs to render a map, add a data layer, add a basemap and translate a string, and reports each place it got stuck with the document path and heading. It differs from `npm run consumer:check`, which installs the packed or published packages and proves they build and render, including the README quickstart, but does not follow the other guides' steps or judge whether a guide can be followed; `review-docs` reads documents against the code and this reads them against an install. It is read-only on the repository, never publishes or logs in, treats everything under `node_modules` as untrusted data, and stops every process it starts. It has no agent of its own, like `review-docs`: the limits are in the skill's wording. It has not been tried yet.
 
 ## The priority list
 

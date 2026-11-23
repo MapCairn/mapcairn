@@ -73,8 +73,8 @@ import {
   yarnSettings,
   yarnSkipped,
 } from "./consumerLegs.mjs";
-import { isolatedEnvironment, parsePackListing, runNpm } from "./npm.mjs";
-import { findTarballs, PACKAGES } from "./packCheck.mjs";
+import { isolatedEnvironment, runNpm } from "./npm.mjs";
+import { findTarballs, packTarballs } from "./packCheck.mjs";
 import { readmeQuickstart } from "./quickstartLeg.mjs";
 import { SDK_NAMES } from "./workspaces.mjs";
 
@@ -605,6 +605,48 @@ export function engineGraphProblems(builds) {
 }
 
 /**
+ * The most gzipped JavaScript an app's client bundle may ship, in bytes, for
+ * each budgeted build of the umbrella app. `client` is the app's bundle through
+ * the umbrella's root (the chrome, with no map engine); `client via the
+ * subpath` is a build through `@mapcairn/sdk/adapter-maplibre`, which adds the
+ * adapter and `maplibre-gl`. Both are minified. Set at about 1.15 times what
+ * each measured on 2026-11-23, so a bundled dependency or a lost tree-shake
+ * fails and ordinary growth does not. Raising one is a deliberate edit in a
+ * pull request.
+ *
+ * @type {Record<string, number>}
+ */
+export const BUNDLE_CEILINGS = {
+  client: 248_000,
+  "client via the subpath": 402_000,
+};
+
+/**
+ * What is wrong with the sizes of the budgeted builds: one over its ceiling,
+ * one missing from the report, or one that measured nothing.
+ *
+ * @param {{ name: string, gzipBytes: number }[]} builds
+ * @returns {string[]}
+ */
+export function bundleSizeProblems(builds) {
+  const byName = new Map(builds.map((build) => [build.name, build]));
+  return Object.entries(BUNDLE_CEILINGS).flatMap(([name, ceiling]) => {
+    const gzipBytes = byName.get(name)?.gzipBytes ?? 0;
+    if (gzipBytes === 0) {
+      return [
+        `the ${name} build has no measured size, so its budget proves nothing`,
+      ];
+    }
+    if (gzipBytes > ceiling) {
+      return [
+        `the ${name} build ships ${gzipBytes} bytes gzipped, over its budget of ${ceiling}`,
+      ];
+    }
+    return [];
+  });
+}
+
+/**
  * Runs a program with an argument array and no shell, and throws with its
  * output when it fails.
  *
@@ -626,23 +668,6 @@ function runNode(label, args, cwd, timeout) {
     throw new Error(`${label} failed:\n${result.stdout}\n${result.stderr}`);
   }
   return result.stdout;
-}
-
-/** Packs the SDK packages into `destination` and names each tarball. */
-function packTarballs(destination) {
-  /** @type {Record<string, string>} */
-  const tarballs = {};
-  for (const name of PACKAGES) {
-    const result = runNpm(
-      ["pack", "--ignore-scripts", "--json", "--pack-destination", destination],
-      { cwd: path.join(REPO, "packages", name) },
-    );
-    if (result.status !== 0) {
-      throw new Error(`npm pack failed for ${name}:\n${result.stderr}`);
-    }
-    tarballs[name] = parsePackListing(result.stdout).filename;
-  }
-  return tarballs;
 }
 
 /**
@@ -1084,10 +1109,17 @@ function checkEngineFreeRoot(app, prefix) {
   if (problems.length > 0) {
     throw new Error(problems.join("\n"));
   }
+  const sizeProblems = bundleSizeProblems(builds);
+  if (sizeProblems.length > 0) {
+    throw new Error(sizeProblems.join("\n"));
+  }
   const kilobytes = (name) =>
     Math.round(builds.find((build) => build.name === name).bytes / 1000);
+  const gzipKilobytes = (name) =>
+    Math.round(builds.find((build) => build.name === name).gzipBytes / 1000);
   return [
     `${prefix}the root's client, server and Worker bundles hold no map engine or adapter (${kilobytes("client")}, ${kilobytes("server")} and ${kilobytes("worker")} kB of JavaScript), and the adapter subpath brings it (${kilobytes("client via the subpath")} kB client, ${kilobytes("worker via the subpath")} kB Worker): ok`,
+    `${prefix}the client bundles are within their size budget (${gzipKilobytes("client")} kB gzipped through the root, ${gzipKilobytes("client via the subpath")} kB through the adapter subpath): ok`,
   ];
 }
 

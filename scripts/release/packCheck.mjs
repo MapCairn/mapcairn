@@ -458,6 +458,29 @@ export function findTarballs(fileNames, folderNames = PACKAGES) {
 }
 
 /**
+ * Packs the SDK packages into `destination` and names each tarball.
+ *
+ * @param {string} destination An existing folder to write the tarballs to.
+ * @param {string} [root] The repository root.
+ * @returns {Record<string, string>} The file name of each package's tarball, by folder name.
+ */
+export function packTarballs(destination, root = REPO) {
+  /** @type {Record<string, string>} */
+  const tarballs = {};
+  for (const name of PACKAGES) {
+    const result = runNpm(
+      ["pack", "--ignore-scripts", "--json", "--pack-destination", destination],
+      { cwd: path.join(root, "packages", name) },
+    );
+    if (result.status !== 0) {
+      throw new Error(`npm pack failed for ${name}:\n${result.stderr}`);
+    }
+    tarballs[name] = parsePackListing(result.stdout).filename;
+  }
+  return tarballs;
+}
+
+/**
  * Reads one file from inside a tarball with the system `tar`.
  *
  * @param {string} tarball
