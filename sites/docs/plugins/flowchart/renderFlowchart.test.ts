@@ -4,6 +4,11 @@ import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { renderFlowchart } from "./renderFlowchart";
 
+/** How many times `part` occurs in `text`. */
+function count(text: string, part: string): number {
+  return text.split(part).length - 1;
+}
+
 const SOURCE = `flowchart TD
   subgraph core["packages/core"]
     ports["ports (types only)"]
@@ -39,10 +44,10 @@ describe("renderFlowchart", () => {
   });
 
   it("draws a frame, a box and an arrow with its head for each", () => {
-    expect(svg.match(/class="flowchart-group"/g)).toHaveLength(1);
-    expect(svg.match(/class="flowchart-node"/g)).toHaveLength(3);
-    expect(svg.match(/class="flowchart-edge"/g)).toHaveLength(2);
-    expect(svg.match(/class="flowchart-arrow"/g)).toHaveLength(2);
+    expect(count(svg, `class="flowchart-group"`)).toBe(1);
+    expect(count(svg, `class="flowchart-node"`)).toBe(3);
+    expect(count(svg, `class="flowchart-edge"`)).toBe(2);
+    expect(count(svg, `class="flowchart-arrow"`)).toBe(2);
   });
 
   it("sits in a labelled region the keyboard can scroll", () => {
@@ -72,14 +77,17 @@ describe("the diagram in ARCHITECTURE.md", () => {
     new URL("../../../../ARCHITECTURE.md", import.meta.url),
     "utf8",
   );
-  const source = /```mermaid\n([\s\S]*?)```/.exec(document)?.[1] ?? "";
+  const fence = "```";
+  const opening = `${fence}mermaid\n`;
+  const start = document.indexOf(opening) + opening.length;
+  const source = document.slice(start, document.indexOf(fence, start));
 
   it("is drawn, with every box and arrow of its source", () => {
     expect(source).toContain("flowchart TD");
     const drawn = renderFlowchart(source, "architecture");
     const boxes = (source.match(/^\s*\w+\["/gm) ?? []).length;
-    const arrows = (source.match(/-->/g) ?? []).length;
-    expect(drawn.match(/class="flowchart-node"/g)).toHaveLength(boxes);
-    expect(drawn.match(/class="flowchart-edge"/g)).toHaveLength(arrows);
+    const arrows = count(source, "-->");
+    expect(count(drawn, `class="flowchart-node"`)).toBe(boxes);
+    expect(count(drawn, `class="flowchart-edge"`)).toBe(arrows);
   });
 });
