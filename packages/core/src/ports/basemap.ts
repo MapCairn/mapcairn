@@ -82,13 +82,13 @@ export interface BasemapDefinition {
    * Root-relative path of a preview image that the host serves. The SDK ships
    * no image files, so its own definitions name none and a host that has
    * previews adds the path to the definitions it offers. A basemap with none
-   * is shown in the picker as a plain colour swatch, as in Save data mode, and
+   * is shown in the picker as a plain colour swatch, and
    * so is one whose image fails to load.
    */
   readonly thumbnail?: string;
   /**
    * A six-digit hex colour (`#rrggbb`) for the picker's plain swatch, which a
-   * basemap with no preview image, and every basemap in Save data mode, shows.
+   * basemap with no preview image shows.
    * Without it the swatch is the interface's map background colour, the
    * default basemap's land colour. Set it for a basemap that is not light, so
    * its tile does not look like the default one. It colours the tile in the
@@ -102,14 +102,6 @@ export interface BasemapDefinition {
   readonly attribution: readonly BasemapAttributionEntry[];
   /** Whether the basemap itself is light or dark, used for chrome contrast. */
   readonly appearance: "light" | "dark";
-  /**
-   * Ids of style layers a vector basemap leaves out in Save data mode, for
-   * example a shaded-relief raster layer drawn at low zoom. The engine adapter
-   * drops them, and any source only they use, when it sets the style, so
-   * their tiles are never requested. Leave unset when nothing is worth
-   * dropping. Ignored for a raster basemap, which has no style layers.
-   */
-  readonly saveDataOmitLayers?: readonly string[];
   /**
    * True when the provider's licence allows only non-commercial use. The SDK's
    * own basemaps have none, so it stays free for commercial use; a host that

@@ -127,20 +127,10 @@ describe("LayersSection", () => {
     for (const name of ["Sample points", "Sample alerts", "Sample imagery"]) {
       expect(screen.getByRole("switch", { name })).not.toBeChecked();
     }
-    // The data cost is only worth a line when someone is saving data.
+    // The Layers list carries no data cost line; the detail card does.
     expect(
       within(item("sample-points")).queryByText(/Uses about 30 KB/),
     ).toBeNull();
-  });
-
-  it("shows what a layer uses while Save data is on", () => {
-    const { services } = setup();
-    expect(screen.queryByText(/Uses about 30 KB/)).toBeNull();
-    act(() => services.fakes.preferences.set({ saveData: true }));
-    expect(
-      within(item("sample-points")).getByText("Uses about 30 KB."),
-    ).toBeInTheDocument();
-    expect(screen.queryByText(/only while it is on/)).toBeNull();
   });
 
   it("asks the catalogue by key for its words, with the counts and times as parameters", async () => {
@@ -1561,14 +1551,12 @@ describe("LayersSection definition text", () => {
         "host.alerts.description": "Huidige veldbrande.",
         "host.group": "Brande",
         "host.alerts.disclaimer": "Outomatiese skattings.",
-        "host.alerts.cost": "ongeveer 135 KB",
         "host.period": "Tydperk",
         "host.period.day": "Dag",
         "host.level.green": "Groen waarskuwing",
       },
     });
-    const { source, services } = setup([HOSTED], undefined, afrikaans);
-    act(() => services.fakes.preferences.set({ saveData: true }));
+    const { source } = setup([HOSTED], undefined, afrikaans);
     source.setFeatures("hosted-alerts", [
       samplePoint("g", {
         title: "Brand",
@@ -1590,7 +1578,6 @@ describe("LayersSection definition text", () => {
     expect(section.getByText("Outomatiese skattings.")).toBeInTheDocument();
     expect(section.getByText("Groen waarskuwing")).toBeInTheDocument();
     expect(section.getByText("Other")).toBeInTheDocument();
-    expect(section.getByText(/ongeveer 135 KB/)).toBeInTheDocument();
     await waitFor(() =>
       expect(screen.getByTestId("live-region-polite")).toHaveTextContent(
         "Brandwaarskuwings",

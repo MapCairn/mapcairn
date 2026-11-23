@@ -29,9 +29,6 @@ export const AF_CATALOGUE: Record<MessageKey, string> = {
   "settings.zoomButtons.label": "Wys zoemknoppies",
   "settings.zoomButtons.description":
     "Gewoonlik aan met 'n muis en af op raakskerms.",
-  "settings.saveData.label": "Spaar data",
-  "settings.saveData.description":
-    "Wys kaartname in plaas van voorskoue en laat swaar kaartlae uit.",
   "settings.notSaved": "Veranderinge word nie op hierdie toestel onthou nie.",
   "settings.privacy.heading": "Privaatheid",
   "settings.privacy.link": "Lees die privaatheidsbeleid",
@@ -357,7 +354,6 @@ export const AF_CATALOGUE: Record<MessageKey, string> = {
   "panels.basemap.groupLabel": "Basiskaart",
   "panels.basemap.tryAgain": "Probeer weer",
   "panels.basemap.unavailable": "Nou nie beskikbaar nie",
-  "panels.basemap.usesMoreData": "Gebruik meer data",
   "panels.shapes.title": "Vorms",
   "panels.shapes.empty":
     "Nog niks geteken nie. Kies Teken vorms op die kaart om te begin.",

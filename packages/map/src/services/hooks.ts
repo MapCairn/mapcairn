@@ -173,7 +173,7 @@ export function useFormatMessage(): (message: Message) => string {
   );
 }
 
-/** Device and accessibility preferences (reduced motion, fine pointer, save data), updating live. */
+/** Device and accessibility preferences (reduced motion, fine pointer, languages, online), updating live. */
 export function usePreferences(): DevicePreferencesValue {
   const { preferences } = useServices();
   const subscribe = useCallback(
@@ -191,17 +191,6 @@ export function usePreferences(): DevicePreferencesValue {
  */
 export function useOnline(): boolean {
   return usePreferences().online !== false;
-}
-
-/**
- * Whether Save data mode is on: the person's own choice from Settings when
- * they made one, otherwise the device's signal (a data saver or a very slow
- * connection, where the browser reports one). Re-renders when either changes.
- */
-export function useSaveData(): boolean {
-  const { settings } = useSettings();
-  const { saveData } = usePreferences();
-  return settings.saveData ?? saveData;
 }
 
 /**

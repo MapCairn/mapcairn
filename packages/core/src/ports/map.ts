@@ -34,16 +34,8 @@ export interface MapMountOptions {
   readonly basemap: BasemapDefinition;
   /** When true, the engine's own animation (zoom, fade, fly, inertia) is off. */
   readonly reducedMotion: boolean;
-  /** Save data mode: leave out the basemap's `saveDataOmitLayers`. Defaults to false. */
-  readonly saveData?: boolean;
   /** The map's shape, kept through every later basemap swap. Defaults to `"flat"`. */
   readonly projection?: MapProjection;
-}
-
-/** Options for {@link MapAdapter.setBasemap}. */
-export interface MapBasemapOptions {
-  /** Save data mode: leave out the basemap's `saveDataOmitLayers`. Defaults to false. */
-  readonly saveData?: boolean;
 }
 
 /** Options for moving the view. */
@@ -495,8 +487,7 @@ export interface MapEvents {
    * of the two it reported, and never for a layer that has not
    * reported, so a layer that always loaded says nothing. "Each report" is per
    * drawing: setting the layer to new tiles starts the count again, and so
-   * does the map drawing it again with the same tiles (a basemap swap or a
-   * change of Save data), which keeps the report the ui is still showing so
+   * does the map drawing it again with the same tiles (a basemap swap), which keeps the report the ui is still showing so
    * the first tile after the redraw ends it. A change of opacity alone draws
    * nothing again and changes nothing.
    */
@@ -570,14 +561,9 @@ export interface MapAdapter {
    * Swaps the basemap, keeping the view. Resolves once the new basemap's
    * style has loaded. If it cannot load, rejects with a `MapEngineError` and
    * leaves the previous basemap and its zoom limits in place, so the map
-   * keeps working. With `saveData`, the layers the basemap lists in
-   * `saveDataOmitLayers` are left out of the style, and every later swap
-   * decides again.
+   * keeps working.
    */
-  setBasemap(
-    basemap: BasemapDefinition,
-    options?: MapBasemapOptions,
-  ): Promise<void>;
+  setBasemap(basemap: BasemapDefinition): Promise<void>;
   /**
    * Draws the map flat or as a globe. The adapter applies it again after every
    * style load, so a basemap swap keeps it and a style's own request for a

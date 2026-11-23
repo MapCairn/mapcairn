@@ -26,7 +26,6 @@ import {
   useMessages,
   useOnline,
   useResolveText,
-  useSaveData,
 } from "../services";
 import { Button } from "../ui/Button";
 import { Icon } from "../ui/Icon";
@@ -344,8 +343,6 @@ export function LayerItem({
   onShow,
 }: LayerItemProps) {
   const { definition, enabled, status } = layer;
-  // Only worth a line for someone who is saving data.
-  const saveData = useSaveData();
   const online = useOnline();
   const messages = useMessages();
   const resolve = useResolveText();
@@ -363,11 +360,6 @@ export function LayerItem({
         checked={enabled}
         onCheckedChange={(checked) => layers.setEnabled(definition.id, checked)}
       />
-      {saveData ? (
-        <p className={styles.muted}>
-          {t("layers.usesCost", { cost: resolve(definition.dataCost) })}
-        </p>
-      ) : null}
       {enabled ? (
         <div className={styles.details}>
           {text ? (

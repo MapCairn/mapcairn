@@ -5,7 +5,6 @@ import type {
   Bounds,
   LatLng,
   MapAdapter,
-  MapBasemapOptions,
   MapClickEvent,
   MapEditHandle,
   MapEvents,
@@ -33,12 +32,7 @@ import type {
   Subscription,
 } from "maplibre-gl";
 import { BasemapLoadState } from "./basemapLoadState";
-import {
-  applyZoomLimits,
-  composeHybrid,
-  omitSaveDataLayers,
-  styleFor,
-} from "./basemapStyle";
+import { applyZoomLimits, composeHybrid, styleFor } from "./basemapStyle";
 import { isBasemapSource } from "./basemapTiles";
 import { Camera, pixelOf, viewOfMap } from "./camera";
 import type { DataLayer } from "./dataLayerPlan";
@@ -113,10 +107,7 @@ function isElement(host: MapHostElement): host is MapHostElement & HTMLElement {
  *   again after every `style.load`, because a full style swap drops them.
  *   `maplibre-gl` and its stylesheet are imported the first time `mount` runs.
  *
- *   In Save data mode each style that loads has the basemap's
- *   `saveDataOmitLayers` removed in the `style.load` handler (see
- *   `omitSaveDataLayers`), so no code here names a basemap. MapLibre's
- *   `transformStyle` option is avoided on purpose: with it set, a style swap
+ *   MapLibre's `transformStyle` option is avoided on purpose: with it set, a style swap
  *   waits for the current style to load, so after a failed swap the last good
  *   basemap would never be put back.
  *
@@ -162,8 +153,6 @@ export class MapLibreMapAdapter implements MapAdapter {
   private pending: PendingLoad | undefined;
   private started = false;
   private destroyed = false;
-  /** Whether the basemap's `saveDataOmitLayers` are left out of its style. */
-  private saveData = false;
   private loadEmitted = false;
   /** True between a style's `style.load` and the next swap: only then can sources be added. */
   private styleReady = false;
@@ -242,7 +231,6 @@ export class MapLibreMapAdapter implements MapAdapter {
     this.basemap = basemap;
     this.mountView = view;
     this.camera.setAnimationEnabled(!reducedMotion);
-    this.saveData = options.saveData ?? false;
     this.placements.choose(options.projection ?? "flat");
 
     let maplibre: MapLibreModule;
@@ -409,10 +397,7 @@ export class MapLibreMapAdapter implements MapAdapter {
     };
   }
 
-  setBasemap(
-    basemap: BasemapDefinition,
-    options: MapBasemapOptions = {},
-  ): Promise<void> {
+  setBasemap(basemap: BasemapDefinition): Promise<void> {
     const map = this.map;
     if (!map || this.destroyed) {
       return Promise.reject(
@@ -421,7 +406,6 @@ export class MapLibreMapAdapter implements MapAdapter {
     }
     this.styleVersion += 1;
     this.settlePending();
-    this.saveData = options.saveData ?? false;
     const swapped = new Promise<void>((resolve, reject) => {
       this.pending = {
         settleOn: "style.load",
@@ -601,7 +585,6 @@ export class MapLibreMapAdapter implements MapAdapter {
           return;
         }
       }
-      omitSaveDataLayers(map, this.basemap, this.saveData);
       if (this.pending) {
         this.pending.styleLoaded = true;
       }

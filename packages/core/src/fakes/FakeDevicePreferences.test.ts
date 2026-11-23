@@ -19,11 +19,10 @@ runDevicePreferencesContract(
 );
 
 describe("FakeDevicePreferences", () => {
-  it("defaults to a fine pointer, no reduced motion, no save-data request, no languages and online", () => {
+  it("defaults to a fine pointer, no reduced motion, no languages and online", () => {
     expect(new FakeDevicePreferences().get()).toEqual({
       reducedMotion: false,
       finePointer: true,
-      saveData: false,
       languages: [],
       online: true,
     });
@@ -34,14 +33,12 @@ describe("FakeDevicePreferences", () => {
       new FakeDevicePreferences({
         reducedMotion: true,
         finePointer: false,
-        saveData: true,
         languages: ["af-ZA", "en"],
         online: false,
       }).get(),
     ).toEqual({
       reducedMotion: true,
       finePointer: false,
-      saveData: true,
       languages: ["af-ZA", "en"],
       online: false,
     });

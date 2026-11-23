@@ -13,7 +13,6 @@ import {
   useLanguages,
   useMessages,
   usePreferences,
-  useSaveData,
   useSettings,
   useTheme,
 } from "../../services";
@@ -85,16 +84,12 @@ export interface SettingsSectionProps {
 
 /**
  * The settings: theme, units, map shape (flat or globe), language (only when
- * the host offers more than one; see {@link LanguageField}), zoom buttons and
- * Save data, a note when changes will not be remembered, and a short privacy
+ * the host offers more than one; see {@link LanguageField}) and zoom buttons, a note when changes will not be remembered, and a short privacy
  * statement (the host's, or the catalogue's `settings.privacy.default`) with a
  * link to the policy.
  * @remarks The zoom switch shows the stored choice, or the device default
  *   (on with a mouse, off on touch) while nothing is stored. Toggling it stores
  *   an explicit boolean, so a person who turns it on keeps it on everywhere.
- *   The Save data switch works the same way: its default is the device's
- *   signal (a data saver or a very slow connection, where the browser reports
- *   one), and a person's own choice always wins.
  */
 export function SettingsSection({
   headingLevel = 3,
@@ -105,7 +100,6 @@ export function SettingsSection({
   const { choice, setChoice } = useTheme();
   const { settings, update, persistent } = useSettings();
   const { finePointer } = usePreferences();
-  const saveData = useSaveData();
   const announce = useAnnounce();
   const { t } = useMessages();
   const offersLanguages = (useLanguages()?.languages.length ?? 0) > 1;
@@ -168,13 +162,6 @@ export function SettingsSection({
         checked={settings.zoomButtons ?? finePointer}
         onCheckedChange={(next) => update({ zoomButtons: next })}
         data-testid="zoom-buttons-switch"
-      />
-      <Switch
-        label={t("settings.saveData.label", {})}
-        description={t("settings.saveData.description", {})}
-        checked={saveData}
-        onCheckedChange={(next) => update({ saveData: next })}
-        data-testid="save-data-switch"
       />
       {persistent ? null : (
         <p className={note} data-testid="settings-not-saved">
