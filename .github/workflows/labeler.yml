@@ -1,0 +1,28 @@
+name: Labeler
+
+# Adds area labels to a pull request from the paths it changes, using the rules in
+# `.github/labeler.yml`. It runs on `pull_request`, never `pull_request_target`, so
+# it never runs with a write token on code from a fork. A pull request from a fork
+# gets a read-only token, so the labeler cannot add labels there and the job is
+# skipped for it; a maintainer labels such a pull request by hand.
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+permissions: {}
+
+concurrency:
+  group: labeler-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  label:
+    name: Label by path
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      pull-requests: write # add labels to the pull request
+    steps:
+      - uses: actions/labeler@bf12e9b00b37c5c0ca2b87b79b2daf7891dbda13 # v7.0.0
