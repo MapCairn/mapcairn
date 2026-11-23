@@ -38,7 +38,9 @@ const ChromeLayoutContext = createContext<ChromeLayoutValue>(defaultValue);
 
 /** Props for {@link ChromeLayoutProvider}. */
 export interface ChromeLayoutProviderProps {
+  /** The layout facts every chrome component below reads, measured by `MapChrome`. */
   readonly value: ChromeLayoutValue;
+  /** The chrome that reads the layout. */
   readonly children: ReactNode;
 }
 

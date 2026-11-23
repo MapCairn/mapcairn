@@ -116,9 +116,7 @@ export function AccuracyCircle(input: AccuracyCircleProps): JSX.Element | null;
 // @public
 export interface AccuracyCircleProps {
     readonly accuracyMetres: number;
-    // (undocumented)
     readonly center: LatLng;
-    // (undocumented)
     readonly testId?: string;
 }
 
@@ -153,13 +151,9 @@ export const AREA_LAYER_ID = ":area";
 
 // @public
 export interface AreaOutcome {
-    // (undocumented)
     readonly features: readonly ReachableAreaFeature[];
-    // (undocumented)
     readonly kind: "area";
-    // (undocumented)
     readonly minutes: number;
-    // (undocumented)
     readonly mode: TravelMode;
     readonly origin: LatLng;
     readonly size: number;
@@ -238,7 +232,6 @@ export interface CatalogueView {
     readonly failed: boolean;
     readonly refresh: CatalogueRefresh;
     readonly skipped: number;
-    // (undocumented)
     readonly status: CatalogueState["status"];
 }
 
@@ -251,7 +244,6 @@ export interface CentreCrosshairProps {
         readonly x: number;
         readonly y: number;
     };
-    // (undocumented)
     readonly testId?: string;
 }
 
@@ -271,9 +263,7 @@ export function ChromeLayoutProvider(input: ChromeLayoutProviderProps): JSX.Elem
 
 // @public
 export interface ChromeLayoutProviderProps {
-    // (undocumented)
     readonly children: ReactNode;
-    // (undocumented)
     readonly value: ChromeLayoutValue;
 }
 
@@ -296,9 +286,7 @@ export function ChromeSkeleton(input: ChromeSkeletonProps): JSX.Element;
 // @public
 export interface ChromeSkeletonCopy {
     readonly credits: string;
-    // (undocumented)
     readonly endStack: EndStackSkeletonCopy;
-    // (undocumented)
     readonly search: SearchPillSkeletonCopy;
 }
 
@@ -345,11 +333,9 @@ export interface DataLayers {
     }): void;
     readonly consumeFocus: () => void;
     readonly credits: readonly LayerAttribution[];
-    // (undocumented)
     readonly detail: DetailState | null;
     readonly focusPending: boolean;
     readonly focusRequest: number;
-    // (undocumented)
     hideDetail(): void;
     holdUndo(by: UndoHolder): void;
     identifyAt(target: IdentifyTarget, options?: {
@@ -362,23 +348,17 @@ export interface DataLayers {
     reportTilesRecovered(id: string, tiles: string): void;
     reportTilesSlow(id: string, tiles: string): void;
     reportTilesUnavailable(id: string, tiles: string): void;
-    // (undocumented)
     retry(id: string): void;
     retryCatalogue(): void;
     select(layerId: string, featureId: string | null, options?: {
         readonly focus?: boolean;
         readonly keepChoices?: boolean;
     }): void;
-    // (undocumented)
     readonly selected: SelectedFeature | null;
-    // (undocumented)
     setControl(id: string, controlId: string, value: string): void;
-    // (undocumented)
     setEnabled(id: string, enabled: boolean): void;
-    // (undocumented)
     setSort(id: string, sortId: string): void;
     setView(area: Bounds, zoom: number): void;
-    // (undocumented)
     showDetail(layerId: string, featureId: string): void;
     readonly turnedOff: TurnedOff | null;
     turnOff(ids: readonly string[], options?: {
@@ -391,26 +371,19 @@ export interface DataLayers {
 // @public
 export interface DataLayerState {
     readonly controls: ControlValues;
-    // (undocumented)
     readonly definition: LayerDefinition;
-    // (undocumented)
     readonly enabled: boolean;
     readonly features: readonly LayerFeature[];
     readonly sorted: readonly LayerFeature[];
     readonly sortId: string;
-    // (undocumented)
     readonly status: LayerStatus;
 }
 
 // @public
 export interface DetailState {
-    // (undocumented)
     readonly featureId: string;
-    // (undocumented)
     readonly layerId: string;
-    // (undocumented)
     readonly shapes: readonly LayerFeature[];
-    // (undocumented)
     readonly status: "loading" | "shown" | "error";
 }
 
@@ -427,7 +400,6 @@ export function DirectionsOverlay(input: DirectionsOverlayProps): JSX.Element | 
 export interface DirectionsOverlayProps {
     readonly showCrosshair: boolean;
     readonly stops: readonly DirectionStop[];
-    // (undocumented)
     readonly testId?: string;
 }
 
@@ -464,10 +436,8 @@ export const DRAW_ANNOUNCE_DELAY_MS = 800;
 
 // @public
 export interface DrawFeedback {
-    // (undocumented)
     readonly kind: "success" | "error";
     readonly readAs?: WktAxisOrder;
-    // (undocumented)
     readonly text: string;
 }
 
@@ -492,7 +462,6 @@ export interface DrawOverlayProps {
     readonly hoveredHandle?: string | null;
     readonly selection: DrawSelection | null;
     readonly shapes: readonly DrawShape[];
-    // (undocumented)
     readonly testId?: string;
 }
 
@@ -525,7 +494,6 @@ export function EndStack(input: EndStackProps): JSX.Element;
 export interface EndStackDirections {
     readonly active: boolean;
     readonly controls: string;
-    // (undocumented)
     readonly onToggle: () => void;
 }
 
@@ -535,9 +503,7 @@ export function endStackMinHeightForZoom(compassShown: boolean, directionsShown?
 // @public
 export interface EndStackProps {
     readonly bearing: number;
-    // (undocumented)
     readonly canZoomIn: boolean;
-    // (undocumented)
     readonly canZoomOut: boolean;
     readonly directions?: EndStackDirections;
     readonly drawing?: boolean;
@@ -545,21 +511,13 @@ export interface EndStackProps {
     readonly mapOptionsControls: string;
     readonly mapOptionsOpen: boolean;
     readonly measuring: boolean;
-    // (undocumented)
     readonly onDraw?: () => void;
-    // (undocumented)
     readonly onLocate: () => void;
-    // (undocumented)
     readonly onMapOptions: () => void;
-    // (undocumented)
     readonly onMeasure: () => void;
-    // (undocumented)
     readonly onResetBearing: () => void;
-    // (undocumented)
     readonly onSettings: () => void;
-    // (undocumented)
     readonly onZoomIn: () => void;
-    // (undocumented)
     readonly onZoomOut: () => void;
     readonly settingsControls: string;
     readonly settingsOpen: boolean;
@@ -570,31 +528,20 @@ export function EndStackSkeleton(input: EndStackSkeletonProps): JSX.Element;
 
 // @public
 export interface EndStackSkeletonCopy {
-    // (undocumented)
     readonly controls: string;
-    // (undocumented)
     readonly directions: string;
-    // (undocumented)
     readonly draw: string;
-    // (undocumented)
     readonly locate: string;
-    // (undocumented)
     readonly mapOptions: string;
-    // (undocumented)
     readonly measure: string;
-    // (undocumented)
     readonly settings: string;
-    // (undocumented)
     readonly zoomControls: string;
-    // (undocumented)
     readonly zoomIn: string;
-    // (undocumented)
     readonly zoomOut: string;
 }
 
 // @public
 export interface EndStackSkeletonProps {
-    // (undocumented)
     readonly copy: EndStackSkeletonCopy;
     readonly directions?: boolean;
     readonly draw?: boolean;
@@ -608,7 +555,6 @@ export interface ExportSectionProps {
     readonly credits?: string;
     readonly drawing?: MapImageDrawing;
     readonly headingLevel?: HeadingLevel;
-    // (undocumented)
     readonly headingRef?: Ref<HTMLHeadingElement>;
 }
 
@@ -620,23 +566,17 @@ export function FeatureCard(input: FeatureCardProps): JSX.Element | null;
 
 // @public
 export interface FeatureCardProps {
-    // (undocumented)
     readonly formatters: FormatterRegistry;
-    // (undocumented)
     readonly headingLevel: 3 | 4 | 5 | 6;
-    // (undocumented)
     readonly headingRef?: Ref<HTMLHeadingElement>;
-    // (undocumented)
     readonly layers: DataLayers;
     readonly onShowOnMap: () => void;
-    // (undocumented)
     readonly selected: SelectedFeature;
 }
 
 // @public
 export interface FeatureOutline {
     readonly closed: boolean;
-    // (undocumented)
     readonly points: readonly LatLng[];
 }
 
@@ -669,7 +609,6 @@ export function FocusRegistryProvider(input: FocusRegistryProviderProps): JSX.El
 
 // @public
 export interface FocusRegistryProviderProps {
-    // (undocumented)
     readonly children: ReactNode;
     readonly focusMap: () => void;
 }
@@ -710,9 +649,7 @@ export interface HelpSectionProps {
 
 // @public
 export interface HiddenSelection {
-    // (undocumented)
     readonly ref: FeatureRef;
-    // (undocumented)
     readonly status: "not-shown";
 }
 
@@ -790,13 +727,9 @@ export function LayerItem(input: LayerItemProps): JSX.Element;
 
 // @public
 export interface LayerItemProps {
-    // (undocumented)
     readonly formatters: FormatterRegistry;
-    // (undocumented)
     readonly layer: DataLayerState;
-    // (undocumented)
     readonly layers: DataLayers;
-    // (undocumented)
     readonly onShow: (layerId: string, feature: LayerFeature) => void;
 }
 
@@ -808,7 +741,6 @@ export type LayerKeyLayout = "wrap" | "stacked";
 
 // @public
 export interface LayerKeyProps {
-    // (undocumented)
     readonly definition: LayerDefinition;
     readonly label: string;
     readonly layout?: LayerKeyLayout;
@@ -822,10 +754,8 @@ export function LayersSection(input: LayersSectionProps): JSX.Element | null;
 export interface LayersSectionProps {
     readonly formatters?: FormatterRegistry;
     readonly headingLevel?: HeadingLevel;
-    // (undocumented)
     readonly headingRef?: Ref<HTMLHeadingElement>;
     readonly intro?: string;
-    // (undocumented)
     readonly layers: DataLayers;
     readonly onShowOnMap?: () => void;
     readonly showTurnOffAll?: boolean;
@@ -874,7 +804,6 @@ export function LiveRegionProvider(input: LiveRegionProviderProps): JSX.Element;
 
 // @public
 export interface LiveRegionProviderProps {
-    // (undocumented)
     readonly children?: ReactNode;
 }
 
@@ -912,15 +841,12 @@ export const MapContext: Context<MapContextValue | null>;
 // @public
 export interface MapContextValue {
     readonly adapter: MapAdapter | null;
-    // (undocumented)
     readonly canZoomIn: boolean;
-    // (undocumented)
     readonly canZoomOut: boolean;
     readonly error: MapEngineError | null;
     readonly focusMap: () => void;
     readonly hostElement: HTMLElement | null;
     readonly loading: boolean;
-    // (undocumented)
     readonly maxZoom: number;
     readonly minZoom: number;
     readonly onUserZoom: (listener: () => void) => () => void;
@@ -940,7 +866,6 @@ export function MapDataLayers(input: MapDataLayersProps): null;
 export interface MapDataLayersProps {
     readonly formatters?: FormatterRegistry;
     readonly ignoreTaps?: boolean;
-    // (undocumented)
     readonly layers: DataLayers;
     readonly onFeatureTap?: (tap: MapFeatureTap) => void;
 }
@@ -959,12 +884,9 @@ export function MapKey(input: MapKeyProps): JSX.Element | null;
 // @public
 export interface MapKeyBlock {
     readonly chosenTime: Message | null;
-    // (undocumented)
     readonly definition: LayerDefinition;
     readonly entries: readonly [LegendEntry, ...LegendEntry[]];
-    // (undocumented)
     readonly id: string;
-    // (undocumented)
     readonly name: string;
 }
 
@@ -974,13 +896,11 @@ export function mapKeyBlocks(layers: readonly DataLayerState[], catalogue: Messa
 // @public
 export interface MapKeyProps {
     readonly defaultMinimised?: boolean;
-    // (undocumented)
     readonly layers: DataLayers;
 }
 
 // @public
 export interface MapLongPressEvent {
-    // (undocumented)
     readonly latlng: LatLng;
     readonly point: PixelPoint;
 }
@@ -991,7 +911,6 @@ export function MapOverlayLayer(input: MapOverlayLayerProps): JSX.Element;
 // @public
 export interface MapOverlayLayerProps {
     readonly children?: ReactNode;
-    // (undocumented)
     readonly testId?: string;
 }
 
@@ -1028,7 +947,6 @@ export interface MapViewProps {
     readonly onLongPress?: (event: MapLongPressEvent) => void;
     readonly onPointerMove?: (latlng: LatLng | null) => void;
     readonly onViewChange?: (view: ViewState) => void;
-    // (undocumented)
     readonly testId?: string;
 }
 
@@ -1037,10 +955,8 @@ export function MarkerGlyph(input: MarkerGlyphProps): JSX.Element;
 
 // @public
 export interface MarkerGlyphProps {
-    // (undocumented)
     readonly colour: PaletteSlot;
     readonly radius: number;
-    // (undocumented)
     readonly shape: MarkerShape;
 }
 
@@ -1067,7 +983,6 @@ export interface MeasureOverlayProps {
     readonly hover?: LatLng;
     readonly mode: "distance" | "area";
     readonly points: readonly LatLng[];
-    // (undocumented)
     readonly testId?: string;
 }
 
@@ -1118,7 +1033,6 @@ export function PinMarker(input: PinMarkerProps): JSX.Element | null;
 // @public
 export interface PinMarkerProps {
     readonly position: LatLng;
-    // (undocumented)
     readonly testId?: string;
 }
 
@@ -1153,10 +1067,8 @@ export const ROUTE_LAYER_ID = ":route";
 export interface RouteOutcome {
     readonly distance: number;
     readonly duration: number;
-    // (undocumented)
     readonly kind: "route";
     readonly legs: readonly RouteLeg[];
-    // (undocumented)
     readonly mode: TravelMode;
     readonly stops: readonly DirectionStop[];
 }
@@ -1172,7 +1084,6 @@ export function ScaleBar(input: ScaleBarProps): JSX.Element | null;
 
 // @public
 export interface ScaleBarProps {
-    // (undocumented)
     readonly units: UnitSystem;
 }
 
@@ -1198,7 +1109,6 @@ export interface SearchPillSkeletonCopy {
 
 // @public
 export interface SearchPillSkeletonProps {
-    // (undocumented)
     readonly copy: SearchPillSkeletonCopy;
 }
 
@@ -1222,7 +1132,6 @@ export function Section(input: SectionProps): JSX.Element;
 
 // @public
 export interface SectionProps extends Omit<HTMLAttributes<HTMLElement>, "children" | "title"> {
-    // (undocumented)
     readonly children?: ReactNode;
     readonly headingLevel?: HeadingLevel;
     readonly headingRef?: Ref<HTMLHeadingElement>;
@@ -1256,9 +1165,7 @@ export type SelectedEntry = ShownSelection | HiddenSelection;
 
 // @public
 export interface SelectedFeature {
-    // (undocumented)
     readonly feature: LayerFeature;
-    // (undocumented)
     readonly layer: DataLayerState;
 }
 
@@ -1267,7 +1174,6 @@ export function SelectionMarker(input: SelectionMarkerProps): JSX.Element | null
 
 // @public
 export interface SelectionMarkerProps {
-    // (undocumented)
     readonly layers: DataLayers;
 }
 
@@ -1276,7 +1182,6 @@ export function SelectionProvider(input: SelectionProviderProps): JSX.Element;
 
 // @public
 export interface SelectionProviderProps {
-    // (undocumented)
     readonly children?: ReactNode;
     readonly selection: FeatureSelectionState | null;
 }
@@ -1286,7 +1191,6 @@ export function ServicesProvider(input: ServicesProviderProps): JSX.Element;
 
 // @public
 export interface ServicesProviderProps {
-    // (undocumented)
     readonly children: ReactNode;
     readonly services: Services;
 }
@@ -1341,15 +1245,12 @@ export interface SheetContentProps {
 // @public
 export interface SheetProps {
     readonly brand?: ReactNode;
-    // (undocumented)
     readonly children: ReactNode;
     readonly detent: SheetDetent;
     readonly id: string;
     readonly onClose: () => void;
-    // (undocumented)
     readonly onDetentChange: (detent: SheetDetent) => void;
     readonly onModalChange?: (modal: boolean) => void;
-    // (undocumented)
     readonly open: boolean;
     readonly restoreFocus?: () => void;
     readonly testId?: string;
@@ -1361,13 +1262,9 @@ export const SHOW_ON_MAP_MIN_ZOOM = 5;
 
 // @public
 export interface ShownSelection {
-    // (undocumented)
     readonly definition: LayerDefinition;
-    // (undocumented)
     readonly feature: LayerFeature;
-    // (undocumented)
     readonly ref: FeatureRef;
-    // (undocumented)
     readonly status: "shown";
 }
 
@@ -1405,7 +1302,6 @@ export function StatusMessageFocusProvider(input: StatusMessageFocusProviderProp
 
 // @public
 export interface StatusMessageFocusProviderProps {
-    // (undocumented)
     readonly children: ReactNode;
     readonly fallback: () => void;
 }
@@ -1431,7 +1327,6 @@ export function Subheading(input: SubheadingProps): JSX.Element;
 
 // @public
 export interface SubheadingProps {
-    // (undocumented)
     readonly children: ReactNode;
     readonly level: HeadingLevel;
 }
@@ -1495,7 +1390,6 @@ export function TooltipProvider(input: TooltipProviderProps): JSX.Element;
 
 // @public
 export interface TooltipProviderProps {
-    // (undocumented)
     readonly children: ReactNode;
     readonly delayDuration?: number;
     readonly skipDelayDuration?: number;
@@ -1509,16 +1403,13 @@ export function TourCard(input: TourCardProps): JSX.Element | null;
 
 // @public
 export interface TourCardCopy {
-    // (undocumented)
     readonly heading: DefinitionText;
-    // (undocumented)
     readonly text: DefinitionText;
 }
 
 // @public
 export interface TourCardProps {
     readonly ending: TourCardCopy;
-    // (undocumented)
     readonly tour: UseTour;
     readonly welcome: TourCardCopy & {
         readonly announcement: DefinitionText;
@@ -1585,17 +1476,14 @@ export interface UseDirections {
     readonly canAddStop: boolean;
     readonly cancel: () => void;
     readonly clear: () => void;
-    // (undocumented)
     readonly mode: TravelMode;
     readonly moveStop: (id: string, direction: -1 | 1) => void;
-    // (undocumented)
     readonly removeStop: (id: string) => void;
     readonly requestArea: (minutes: number) => void;
     readonly requestRoute: () => void;
     readonly result: DirectionsOutcome | null;
     readonly retry: () => void;
     readonly setMode: (mode: TravelMode) => void;
-    // (undocumented)
     readonly state: DirectionsState;
     readonly stops: readonly DirectionStop[];
 }
@@ -1606,31 +1494,20 @@ export function useDirections(units: UnitSystem): UseDirections;
 // @public
 export interface UseDraw {
     readonly addPoint: (at: LatLng) => void;
-    // (undocumented)
     readonly cancel: () => void;
-    // (undocumented)
     readonly canRedo: boolean;
-    // (undocumented)
     readonly canUndo: boolean;
-    // (undocumented)
     readonly clear: () => void;
     readonly copyLink: () => Promise<void>;
-    // (undocumented)
     readonly deleteSelected: () => void;
-    // (undocumented)
     readonly deleteShape: (shapeId: string) => void;
-    // (undocumented)
     readonly deselect: () => void;
     readonly discardDraft: () => void;
     readonly draft: DrawShape | null;
-    // (undocumented)
     readonly exportCsv: () => Promise<void>;
-    // (undocumented)
     readonly exportGeoJson: () => Promise<void>;
-    // (undocumented)
     readonly exportWkt: () => Promise<void>;
     readonly feedback: DrawFeedback | null;
-    // (undocumented)
     readonly finish: () => void;
     readonly handles: readonly MapEditHandle[];
     readonly hoveredHandle: string | null;
@@ -1641,36 +1518,27 @@ export interface UseDraw {
     readonly issueMessage: string;
     readonly keyCommand: (event: DrawKeyEvent) => boolean;
     readonly measure: string;
-    // (undocumented)
     readonly mode: DrawKind;
     readonly moveSelectedTo: (at: LatLng) => void;
     readonly nudge: (dx: number, dy: number) => void;
     readonly onHandleDrag: (drag: MapHandleDrag) => void;
-    // (undocumented)
     readonly onHandleHover: (id: string | null) => void;
     readonly onMapClick: (event: Pick<MapClickEvent, "latlng" | "point">) => void;
     readonly placeAtCentre: () => void;
-    // (undocumented)
     readonly redo: () => void;
     readonly removeVertex: () => void;
     readonly rereadImport: (order: WktAxisOrder) => Bounds | null;
     readonly scaleRadius: (factor: number) => void;
     readonly select: (shapeId: string, vertex?: number | null) => void;
     readonly selected: DrawShape | null;
-    // (undocumented)
     readonly selection: DrawSelection | null;
-    // (undocumented)
     readonly setMode: (kind: DrawKind) => void;
     readonly setRadiusToCentre: () => void;
     readonly setWktAxisOrder: (order: WktAxisOrder) => void;
-    // (undocumented)
     readonly shapes: readonly DrawShape[];
-    // (undocumented)
     readonly state: DrawState;
     readonly status: string;
-    // (undocumented)
     readonly stepVertex: (delta: 1 | -1) => void;
-    // (undocumented)
     readonly undo: () => void;
     readonly wktAxisOrder: WktAxisOrder;
 }
@@ -1736,7 +1604,6 @@ export interface UseLocate {
     readonly fix: LocationFix | null;
     readonly locate: () => void;
     readonly message: string;
-    // (undocumented)
     readonly state: LocateState;
 }
 
@@ -1756,7 +1623,6 @@ export function useLocationProvider(): LocationProvider;
 export interface UseLongPress {
     readonly cancel: () => void;
     readonly consumeClick: () => boolean;
-    // (undocumented)
     readonly handlers: {
         readonly onPointerDown: (event: PointerEvent_2) => void;
         readonly onPointerMove: (event: PointerEvent_2) => void;
@@ -1786,7 +1652,6 @@ export function useMapAdapterFactory(): MapAdapterFactory;
 export interface UseMeasure {
     readonly addPoint: (point: LatLng) => void;
     readonly clear: () => void;
-    // (undocumented)
     readonly mode: MeasureMode;
     readonly movePoint: (index: number, point: LatLng) => void;
     readonly points: readonly LatLng[];
@@ -1864,7 +1729,6 @@ export function useServices(): Services;
 // @public
 export interface UseSettings {
     readonly persistent: boolean;
-    // (undocumented)
     readonly settings: Settings;
     readonly update: (patch: Partial<Settings>) => void;
 }
@@ -1882,7 +1746,6 @@ export function useSuggestions(query: string, enabled: boolean): readonly Search
 export interface UseTheme {
     readonly choice: ThemeChoice;
     readonly resolved: ResolvedTheme;
-    // (undocumented)
     readonly setChoice: (choice: ThemeChoice) => void;
 }
 
@@ -1899,10 +1762,8 @@ export interface UseTour {
     next(): void;
     skip(): void;
     start(): void;
-    // (undocumented)
     readonly state: TourState;
     readonly step: TourStep | null;
-    // (undocumented)
     readonly steps: readonly TourStep[];
 }
 
@@ -1913,7 +1774,6 @@ export function useTour(input: UseTourOptions): UseTour;
 export interface UseTourOptions {
     readonly offer: boolean;
     readonly snapshot: TourSnapshot;
-    // (undocumented)
     readonly steps: readonly TourStep[];
     readonly version: number;
 }

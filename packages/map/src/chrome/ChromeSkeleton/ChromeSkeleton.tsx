@@ -14,7 +14,9 @@ import * as styles from "../MapChrome/MapChrome.css";
 
 /** The words of every control {@link ChromeSkeleton} draws, in the host's default language. */
 export interface ChromeSkeletonCopy {
+  /** The words of the search pill's placeholder. */
   readonly search: SearchPillSkeletonCopy;
+  /** The names of the end stack's controls. */
   readonly endStack: EndStackSkeletonCopy;
   /** The credits button's name. */
   readonly credits: string;

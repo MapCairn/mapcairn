@@ -32,8 +32,11 @@ export interface MapContextValue {
   readonly projection: MapProjection;
   /** Normalised zoom limits of the active basemap. */
   readonly minZoom: number;
+  /** The highest normalised zoom the active basemap allows. */
   readonly maxZoom: number;
+  /** False once the zoom is at `maxZoom`. */
   readonly canZoomIn: boolean;
+  /** False once the zoom is at `minZoom`. */
   readonly canZoomOut: boolean;
   /** True while the engine starts, the basemap changes or tiles load. */
   readonly loading: boolean;

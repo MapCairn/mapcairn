@@ -4,6 +4,7 @@ import type { CatalogueRefresh, CatalogueState } from "@mapcairn/core";
 
 /** What the Layers section needs to know about the catalogue besides its layers. */
 export interface CatalogueView {
+  /** Whether the catalogue is loading, ready or failed. */
   readonly status: CatalogueState["status"];
   /** How many definitions the host supplied that were left out. Zero unless `ready`. */
   readonly skipped: number;

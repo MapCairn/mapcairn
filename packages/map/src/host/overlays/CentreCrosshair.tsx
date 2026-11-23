@@ -15,6 +15,7 @@ export interface CentreCrosshairProps {
    * the middle of what is left.
    */
   readonly at?: { readonly x: number; readonly y: number };
+  /** Sets `data-testid` on the crosshair. */
   readonly testId?: string;
 }
 

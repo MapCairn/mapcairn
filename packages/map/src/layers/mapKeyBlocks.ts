@@ -13,8 +13,11 @@ import type { DataLayerState } from "./useDataLayers";
 
 /** What the map key shows for one layer that is on. */
 export interface MapKeyBlock {
+  /** The layer's id. */
   readonly id: string;
+  /** The layer's name, as the key's heading. */
   readonly name: string;
+  /** The layer's definition, which draws the glyphs. */
   readonly definition: LayerDefinition;
   /** The key's rows, in the order the layer's style lists them. Never empty. */
   readonly entries: readonly [LegendEntry, ...LegendEntry[]];

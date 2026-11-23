@@ -26,6 +26,7 @@ const FocusRegistryContext = createContext<FocusRegistryValue | null>(null);
 export interface FocusRegistryProviderProps {
   /** Focuses the map region. Used when the control that opened a surface no longer exists. */
   readonly focusMap: () => void;
+  /** The chrome whose controls register themselves. */
   readonly children: ReactNode;
 }
 

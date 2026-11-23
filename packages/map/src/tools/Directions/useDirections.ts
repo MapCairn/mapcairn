@@ -38,7 +38,9 @@ export type DirectionsFailure = Exclude<RoutingErrorKind, "aborted">;
 
 /** A route that is on the map. */
 export interface RouteOutcome {
+  /** Tells a route from an {@link AreaOutcome}. */
   readonly kind: "route";
+  /** How the route travels: `walk`, `cycle` or `drive`. */
   readonly mode: TravelMode;
   /** The stops it was found for, in order. */
   readonly stops: readonly DirectionStop[];
@@ -52,11 +54,15 @@ export interface RouteOutcome {
 
 /** A travel-time area that is on the map. */
 export interface AreaOutcome {
+  /** Tells an area from a {@link RouteOutcome}. */
   readonly kind: "area";
+  /** How the area was worked out: `walk`, `cycle` or `drive`. */
   readonly mode: TravelMode;
+  /** The travel time the area covers, in minutes. */
   readonly minutes: number;
   /** Where the area is reachable from: the first stop. */
   readonly origin: LatLng;
+  /** The reachable area as map features, ready to draw. */
   readonly features: readonly ReachableAreaFeature[];
   /** The ground area, in square metres. */
   readonly size: number;
@@ -87,7 +93,9 @@ export interface UseDirections {
   readonly available: boolean;
   /** The stops, in order. */
   readonly stops: readonly DirectionStop[];
+  /** How the next request travels. Changing it clears the result. */
   readonly mode: TravelMode;
+  /** Whether a request is idle, running, done or failed. */
   readonly state: DirectionsState;
   /** The route or area on the map, or null. */
   readonly result: DirectionsOutcome | null;
@@ -95,6 +103,7 @@ export interface UseDirections {
   readonly canAddStop: boolean;
   /** Adds a stop at the end, naming it when `label` is given. Says so when the list is full. */
   readonly addStop: (position: LatLng, label?: string) => void;
+  /** Removes the stop with this id. */
   readonly removeStop: (id: string) => void;
   /** Moves a stop one place earlier (`-1`) or later (`1`). */
   readonly moveStop: (id: string, direction: -1 | 1) => void;

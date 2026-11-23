@@ -242,6 +242,7 @@ export function useFeatureQuery(): FeatureQuery | undefined {
 
 /** What {@link useSettings} returns. */
 export interface UseSettings {
+  /** The current settings. */
   readonly settings: Settings;
   /** Merges a patch into the stored settings. */
   readonly update: (patch: Partial<Settings>) => void;
@@ -273,6 +274,7 @@ export interface UseTheme {
   readonly choice: ThemeChoice;
   /** What is actually shown. */
   readonly resolved: ResolvedTheme;
+  /** Stores the person's choice of system, light or dark. It takes effect at once. */
   readonly setChoice: (choice: ThemeChoice) => void;
 }
 

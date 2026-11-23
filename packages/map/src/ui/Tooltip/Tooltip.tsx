@@ -21,6 +21,7 @@ export interface TooltipProviderProps {
    * Defaults to 300.
    */
   readonly skipDelayDuration?: number;
+  /** The components whose controls carry tooltips. */
   readonly children: ReactNode;
 }
 
