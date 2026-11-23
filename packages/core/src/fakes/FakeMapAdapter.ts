@@ -24,7 +24,6 @@ import type { Bounds, LatLng, PixelPoint, ViewState } from "../ports/geometry";
 import type {
   MapAdapter,
   MapAdapterFactory,
-  MapBasemapOptions,
   MapClickEvent,
   MapEditHandle,
   MapEvents,
@@ -202,8 +201,6 @@ export class FakeMapAdapter implements MapAdapter {
   animationEnabled = true;
   /** Whether the engine's own key handling is on, as `setKeyboardEnabled` last set it. */
   keyboardEnabled = true;
-  /** Whether the last `mount` or `setBasemap` asked for Save data mode. */
-  saveData = false;
   /** The shape the map was last asked to draw. */
   projection: MapProjection = "flat";
 
@@ -252,7 +249,6 @@ export class FakeMapAdapter implements MapAdapter {
     this.#basemap = options.basemap;
     this.#view = this.#normalise(options.view);
     this.animationEnabled = !options.reducedMotion;
-    this.saveData = options.saveData ?? false;
     this.projection = options.projection ?? "flat";
     this.#destroyed = false;
     this.mountCount += 1;
@@ -399,10 +395,7 @@ export class FakeMapAdapter implements MapAdapter {
   }
 
   /** Swaps the basemap and emits `load`. It rejects with a `MapEngineError` when `failNextBasemap` or a deferred swap says so, and the old basemap stays. */
-  async setBasemap(
-    basemap: BasemapDefinition,
-    options: MapBasemapOptions = {},
-  ): Promise<void> {
+  async setBasemap(basemap: BasemapDefinition): Promise<void> {
     if (this.#failNextBasemap) {
       this.#failNextBasemap = false;
       throw new MapEngineError(
@@ -429,7 +422,6 @@ export class FakeMapAdapter implements MapAdapter {
     }
     this.#swapTarget = null;
     this.#basemap = basemap;
-    this.saveData = options.saveData ?? false;
     this.#applyView(this.#view);
     this.#emit("load", undefined);
   }

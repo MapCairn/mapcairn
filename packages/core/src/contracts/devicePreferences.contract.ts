@@ -37,7 +37,6 @@ export function runDevicePreferencesContract(
       const value = preferences.get();
       expect(typeof value.reducedMotion).toBe("boolean");
       expect(typeof value.finePointer).toBe("boolean");
-      expect(typeof value.saveData).toBe("boolean");
     });
 
     it("reports whether the device is online, as a boolean or not at all", () => {
@@ -77,28 +76,11 @@ export function runDevicePreferencesContract(
 
     it("reflects a changed preference", () => {
       const { preferences, controls } = create();
-      controls.set({
-        reducedMotion: true,
-        finePointer: false,
-        saveData: true,
-      });
+      controls.set({ reducedMotion: true, finePointer: false });
       expect(preferences.get()).toMatchObject({
         reducedMotion: true,
         finePointer: false,
-        saveData: true,
       });
-    });
-
-    it("notifies subscribers when the device starts asking to save data", () => {
-      const { preferences, controls } = create();
-      controls.set({ saveData: false });
-      const seen: DevicePreferencesValue[] = [];
-      preferences.subscribe((value) => seen.push(value));
-      controls.set({ saveData: true });
-      expect(seen).toHaveLength(1);
-      expect(seen[0]?.saveData).toBe(true);
-      controls.set({ saveData: true });
-      expect(seen).toHaveLength(1);
     });
 
     it("notifies subscribers with the new value, only on real changes", () => {

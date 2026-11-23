@@ -24,7 +24,7 @@ function sourceOrigins(basemap: BasemapDefinition): readonly string[] {
 }
 
 // The site offers two dark basemaps, Fiord and Dark. Each needs a swatch of its
-// own for the picker's Save data tile.
+// own for the picker's plain tile.
 describe.each(["fiord", "dark"] as const)("%s in the picker", (id) => {
   const basemap = HOST_BASEMAP_CATALOGUE.resolve(id);
 
@@ -33,7 +33,7 @@ describe.each(["fiord", "dark"] as const)("%s in the picker", (id) => {
   });
   const swatch = basemap.swatch as string;
 
-  it("has a dark swatch of its own, so its Save data tile is not the default's pale land colour", () => {
+  it("has a dark swatch of its own, so its plain picker tile is not the default's pale land colour", () => {
     expect(swatch).toMatch(/^#[0-9a-f]{6}$/);
     expect(swatch).not.toBe(tokenValues.representativeBackdrops.defaultBasemap);
     expect(contrastRatio(swatch, "#ffffff")).toBeGreaterThan(7);

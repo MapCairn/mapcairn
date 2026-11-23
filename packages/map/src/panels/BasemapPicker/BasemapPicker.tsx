@@ -4,7 +4,6 @@ import {
   announceBasemap,
   type BasemapDefinition,
   DEFAULT_BASEMAP_BACKGROUND,
-  usesMoreData,
 } from "@mapcairn/core";
 import { Check } from "@phosphor-icons/react";
 import { useCallback, useId, useRef, useState } from "react";
@@ -13,7 +12,6 @@ import {
   useBasemaps,
   useMessages,
   useResolveText,
-  useSaveData,
 } from "../../services";
 import { Button } from "../../ui/Button";
 import { Icon } from "../../ui/Icon";
@@ -68,13 +66,9 @@ export interface BasemapPickerProps {
  * an ordinary choice, as the others are, and what shows as chosen is the
  * `value` the host passes.
  *
- * @remarks In Save data mode (`useSaveData`), and for a basemap that has no
- *   preview image, no preview is requested: the tile shows the same frame
- *   with a plain colour swatch, the basemap's own `swatch` colour or else the
- *   light default's land colour. A basemap whose tiles are images (`usesMoreData`: a
- *   raster map, or imagery under labels) carries the note "Uses more data". Names,
- *   the radios and the selection badge are unchanged, and every basemap can
- *   still be chosen.
+ * @remarks For a basemap that has no preview image, no preview is requested:
+ *   the tile shows the same frame with a plain colour swatch, the basemap's own
+ *   `swatch` colour or else the light default's land colour.
  *
  *   A basemap marked unavailable (`useBasemapAvailability`, which the host
  *   sets when every tile of it failed) has the words "Not available right
@@ -91,7 +85,6 @@ export function BasemapPicker({ value, onChange }: BasemapPickerProps) {
   const { t } = useMessages();
   const resolve = useResolveText();
   const shownId = catalogue.resolve(value).id;
-  const saveData = useSaveData();
   const { unavailable, clear } = useBasemapAvailability();
   const group = useRef<HTMLDivElement>(null);
 
@@ -126,7 +119,6 @@ export function BasemapPicker({ value, onChange }: BasemapPickerProps) {
             basemap={basemap}
             groupName={groupName}
             selected={basemap.id === shownId}
-            saveData={saveData}
             unavailable={unavailable.has(basemap.id)}
             onChoose={() => choose(basemap)}
             onKeep={() => keep(basemap)}
@@ -152,8 +144,6 @@ interface BasemapTileProps {
   readonly basemap: BasemapDefinition;
   readonly groupName: string;
   readonly selected: boolean;
-  /** Save data mode: a swatch instead of the preview, and a note on raster basemaps. */
-  readonly saveData: boolean;
   /**
    * The basemap's provider is not working right now. The tile says so, and is
    * disabled unless it is the chosen one, which stays enabled so the group is
@@ -170,7 +160,6 @@ function BasemapTile({
   basemap,
   groupName,
   selected,
-  saveData,
   unavailable,
   onChoose,
   onKeep,
@@ -178,7 +167,7 @@ function BasemapTile({
   const { t } = useMessages();
   const resolve = useResolveText();
   const [failed, setFailed] = useState(false);
-  const preview = saveData ? undefined : basemap.thumbnail;
+  const preview = basemap.thumbnail;
   const showSwatch = preview === undefined || failed;
   // A ref callback with a listener, not an onError prop, which the a11y lint
   // rejects on a non-interactive element.
@@ -251,14 +240,6 @@ function BasemapTile({
           data-testid={`basemap-unavailable-note-${basemap.id}`}
         >
           {t("panels.basemap.unavailable", {})}
-        </span>
-      ) : null}
-      {saveData && usesMoreData(basemap) ? (
-        <span
-          className={dataNote}
-          data-testid={`basemap-data-note-${basemap.id}`}
-        >
-          {t("panels.basemap.usesMoreData", {})}
         </span>
       ) : null}
     </label>
