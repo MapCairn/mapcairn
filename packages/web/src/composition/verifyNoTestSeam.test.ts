@@ -62,7 +62,7 @@ function caseRoot(): string {
  * (`bundle`). The `v0` in the path is the Build Output version, which the
  * script does not depend on.
  */
-const WORKER_OUTPUT = ".cloudflare/output/v0/workers/default";
+const WORKER_OUTPUT = ".cloudflare/output/v1/workers/default";
 
 /** Makes a fake package whose build output holds the given files. */
 function fakeBuild(files: Record<string, string>): string {
