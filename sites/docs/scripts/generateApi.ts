@@ -4,11 +4,27 @@ import { mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { REPOSITORY_URL } from "../src/siteConfig";
-import { buildCatalogue, requireDescriptions } from "./api/catalogue";
+import {
+  buildCatalogue,
+  requireDescriptions,
+  requireMemberDescriptions,
+} from "./api/catalogue";
 import { loadPackage } from "./api/loadPackages";
 import { CATALOGUE_FILE_NAME, type CatalogueData } from "./machineData";
 
 const REPOSITORY_ROOT = fileURLToPath(new URL("../../..", import.meta.url));
+
+/**
+ * The packages whose every member must have a description, or the build
+ * fails. A package joins the list in the pull request that describes its last
+ * member (#701); the aim is all six.
+ */
+export const MEMBER_DESCRIPTION_PACKAGES: readonly string[] = [
+  "@mapcairn/adapter-maplibre",
+  "@mapcairn/react",
+  "@mapcairn/sdk",
+  "@mapcairn/theme",
+];
 
 /** Where the generated pages go. It is git-ignored and rebuilt by `npm run generate`. */
 export const API_OUTPUT = fileURLToPath(
@@ -21,7 +37,7 @@ export const SIDEBAR_FILE = join(API_OUTPUT, "_sidebar.json");
 /**
  * Writes the API reference pages, their sidebar and the catalogue data the
  * build turns into `api.json`. It stops, listing them,
- * when an export has no description.
+ * when an export has no description, or a member in a package the gate covers.
  */
 export async function generateApi(): Promise<void> {
   const { SDK_PACKAGES } = await import("../../../scripts/sdkPackages.mjs");
@@ -31,6 +47,7 @@ export async function generateApi(): Promise<void> {
   }
   const catalogue = buildCatalogue(packages, REPOSITORY_URL);
   requireDescriptions(catalogue);
+  requireMemberDescriptions(catalogue, MEMBER_DESCRIPTION_PACKAGES);
   rmSync(API_OUTPUT, { recursive: true, force: true });
   for (const [path, text] of catalogue.files) {
     const target = join(API_OUTPUT, path);

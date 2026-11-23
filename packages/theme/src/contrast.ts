@@ -9,9 +9,13 @@
 
 /** A colour in gamma-encoded sRGB. Channels are 0 to 255, alpha is 0 to 1. */
 export interface Rgba {
+  /** Red, 0 to 255, gamma-encoded. */
   r: number;
+  /** Green, 0 to 255, gamma-encoded. */
   g: number;
+  /** Blue, 0 to 255, gamma-encoded. */
   b: number;
+  /** Opacity, 0 (clear) to 1 (opaque). A translucent colour is composited over a backdrop before its contrast is measured. */
   a: number;
 }
 
