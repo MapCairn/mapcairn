@@ -416,10 +416,13 @@ describe("SDK package manifests", () => {
     expect(manifest.peerDependenciesMeta).toBeUndefined();
     // The tests run against the engine, so it is installed beside them, at
     // the range the host installs. That range is the newest the repository
-    // tests; the peer range stays at the oldest the adapter supports.
-    expect(manifest.devDependencies?.["maplibre-gl"]).toBe("^6.19.0");
-    expect(manifestAt("packages/web").dependencies?.["maplibre-gl"]).toBe(
-      "^6.19.0",
+    // tests and moves with each release; the peer range stays at the oldest
+    // the adapter supports.
+    expect(manifest.devDependencies?.["maplibre-gl"]).toMatch(
+      /^\^6\.\d+\.\d+$/,
+    );
+    expect(manifest.devDependencies?.["maplibre-gl"]).toBe(
+      manifestAt("packages/web").dependencies?.["maplibre-gl"],
     );
   });
 
