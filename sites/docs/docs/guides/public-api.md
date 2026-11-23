@@ -147,4 +147,4 @@ The plan names removed and renamed message keys, because the keys are a union in
 
 ## Who decides
 
-The maintainer decides what is public: a new entry point, a change to the tag policy, a custom property or `data-*` name becoming public, and any breaking change. A contributor proposes it in the issue and the pull request; the pull request description names every breaking change and why. A reviewer who sees a change on this page without that note asks for it.
+The maintainer decides what is public: a new entry point, a change to the tag policy, a custom property or `data-*` name becoming public, and any breaking change. A contributor proposes it in the issue and the pull request; the pull request description names every breaking change and why. A reviewer who sees a change on this page without that note asks for it. A breaking pull request is marked with a `!` after the type in its title (`refactor!: ...`) or a `BREAKING CHANGE:` footer in its description, because the squash commit drives the version; CI warns when the API reports show a likely breaking change and neither marker is there (`scripts/apiBreakingCheck.mjs`).
