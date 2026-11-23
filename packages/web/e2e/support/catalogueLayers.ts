@@ -23,7 +23,6 @@ export function catalogueLayer(
     name,
     description: `${name}, from a scripted catalogue.`,
     group,
-    dataCost: "about 30 KB",
     attribution: [{ text: "Credit: U.S. Geological Survey" }],
     controls: [],
     source: {

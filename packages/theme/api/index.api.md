@@ -282,6 +282,8 @@ export namespace tokenValues {
         accent,
         dataPalette,
         dataMarker,
+        SyntaxRoles,
+        syntaxPalette,
         representativeBackdrops,
         ColourRoles,
         colourRoleNames,

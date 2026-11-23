@@ -26,7 +26,6 @@ const rainfallHalfHourly: TileLayerDefinition = {
   name: "layer.rainfall-half-hourly.name",
   description: "layer.rainfall-half-hourly.description",
   group: "layer.group.floodsStormsAndDroughts",
-  dataCost: "layer.rainfall-half-hourly.dataCost",
   attribution: [
     {
       text: "We acknowledge the use of imagery provided by services from NASA's Global Imagery Browse Services (GIBS), part of NASA's Earth Science Data and Information System (ESDIS).",

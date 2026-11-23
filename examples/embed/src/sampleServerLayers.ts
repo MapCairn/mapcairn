@@ -42,7 +42,6 @@ export const SAMPLE_SERVER_LAYERS: ServerLayerList = {
         url: "https://example.org/server/huts/query?f=geojson",
       },
       visibleValues: { field: "status", values: ["open", "locked"] },
-      approximateSize: "about 2 KB",
       credit: { text: "Example hut register", url: "https://example.org/" },
     },
     {
@@ -68,7 +67,6 @@ export const SAMPLE_SERVER_LAYERS: ServerLayerList = {
         kind: "features",
         url: "https://example.org/server/glens/query?f=geojson",
       },
-      approximateSize: "about 6 KB",
       credit: { text: "Example weather service", url: "https://example.org/" },
     },
     {
@@ -89,7 +87,6 @@ export const SAMPLE_SERVER_LAYERS: ServerLayerList = {
           { label: "Deep" },
         ],
       },
-      approximateSize: "about 40 KB a view",
       credit: { text: "Example weather service" },
     },
     {
@@ -107,7 +104,6 @@ export const SAMPLE_SERVER_LAYERS: ServerLayerList = {
         kind: "features",
         url: "https://example.org/server/survey/query?f=geojson",
       },
-      approximateSize: "about 1 KB",
       credit: { text: "Example survey" },
     },
   ],

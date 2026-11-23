@@ -691,13 +691,11 @@ export const AF_CATALOGUE: Record<MessageKey, string> = {
     "Huidige droogtes wat GDACS gradeer volgens hul impak op mense.",
   "layer.drought-alerts.emptyText":
     "Geen droogtewaarskuwings op die oomblik nie.",
-  "layer.earth-at-night.dataCost": "sowat 0,3 tot 1 MB per skerm",
   "layer.group.imagery": "Beelde",
   "layer.control.opacity": "Ondeursigtigheid",
   "layer.earthquakes.name": "Aardbewings",
   "layer.earthquakes.description":
     "Aardbewings wêreldwyd soos die US Geological Survey dit aanteken, sowat elke minuut opgedateer.",
-  "layer.earthquakes.dataCost": "sowat 30 KB, tot 220 KB vir 'n week",
   "layer.earthquakes.emptyText": "Geen aardbewings in hierdie tydperk nie.",
   "layer.group.earthquakesAndVolcanoes": "Aardbewings en vulkane",
   "layer.earthquakes.control.window.label": "Tydperk",
@@ -724,12 +722,10 @@ export const AF_CATALOGUE: Record<MessageKey, string> = {
   "layer.fire-hotspots-viirs.name": "Brandkolle, skerper",
   "layer.fire-hotspots-viirs.description":
     "Dieselfde soort hittemerke van die VIIRS-sensor op die NOAA-21-satelliet, op sowat 375 m. Gebruik sowat vyf keer meer data.",
-  "layer.fire-hotspots-viirs.dataCost": "sowat 50 tot 250 KB per skerm",
   "layer.control.date": "Datum",
   "layer.fire-hotspots.name": "Brandkolle",
   "layer.fire-hotspots.description":
     "Plekke waar die MODIS-sensor op die Terra-satelliet op die gekose dag ongewone hitte gesien het, soos brande. Elke merk is sowat 1 km.",
-  "layer.fire-hotspots.dataCost": "sowat 10 tot 50 KB per skerm",
   "layer.flood-alerts.name": "Vloedwaarskuwings",
   "layer.flood-alerts.description":
     "Huidige vloede wat GDACS gradeer volgens hul impak op mense.",
@@ -737,16 +733,13 @@ export const AF_CATALOGUE: Record<MessageKey, string> = {
   "layer.imagery.name": "Satellietbeelde",
   "layer.imagery.description":
     "'n Daaglikse prent in ware kleur van die hele aarde van die NOAA-21-satelliet, met daardie dag se wolke, anders as die Satelliet-basiskaart. Die fynste detail is sowat 300 m.",
-  "layer.imagery.dataCost": "sowat 0,5 tot 1 MB per skerm",
   "layer.population.name": "Waar mense woon",
   "layer.population.description":
     "Bevolkingsdigtheid oor die hele wêreld in 2020, van donker en leeg tot helder en druk. Die fynste detail is sowat 5 km. Antarktika word nie gewys nie.",
-  "layer.population.dataCost": "sowat 20 tot 100 KB per skerm",
   "layer.group.people": "Mense",
   "layer.rainfall-half-hourly.name": "Reënval, elke halfuur",
   "layer.rainfall-half-hourly.description":
     "Reën wat uit satelliete vir die hele aarde geskat word, as die reëntempo in een halfuur in millimeter per uur (mm per uur). Reën gaan van groen (lig, tot sowat 1) deur geel en oranje (sowat 1 tot 4) na rooi (sowat 5 tot 20) en donkerrooi (swaar, oor 20; die skaal stop by 53). Sneeu en ander bevrore neerslag gebruik ligte siaan, blou en pers oor dieselfde stappe. Niks onder 0,1 word geteken nie. Elke halfuur kom ses tot sewe uur laat, en die fynste detail is sowat 10 km.",
-  "layer.rainfall-half-hourly.dataCost": "sowat 50 tot 250 KB per skerm",
   "layer.rainfall-half-hourly.disclaimer":
     "Nie 'n voorspelling nie, en nie vir waarskuwings nie. Dit is 'n skatting uit satelliete, growwer as radar, en kan reën mis of oorskat. Onlangse halfure is vroeë skattings wat NASA later hersien. Gebruik jou nasionale weerdiens vir waarskuwings.",
   "layer.rainfall-half-hourly.control.time.label": "Halfuur gewys",
@@ -755,7 +748,6 @@ export const AF_CATALOGUE: Record<MessageKey, string> = {
   "layer.rainfall.name": "Reënval",
   "layer.rainfall.description":
     "Reën wat uit satelliete vir die hele aarde geskat word, as die reëntempo vir die gekose dag in millimeter per uur (mm per uur). Reën gaan van groen (lig, tot sowat 1) deur geel en oranje (sowat 1 tot 4) na rooi (sowat 5 tot 20) en donkerrooi (swaar, oor 20; die skaal stop by 53). Sneeu en ander bevrore neerslag gebruik ligte siaan, blou en pers oor dieselfde stappe. Niks onder 0,1 word geteken nie. Elke dag kom twee tot drie dae laat, en die fynste detail is sowat 10 km.",
-  "layer.rainfall.dataCost": "sowat 50 tot 160 KB per skerm",
   "layer.rainfall.disclaimer":
     "Nie 'n voorspelling nie, en nie vir waarskuwings nie. Dit is 'n skatting uit satelliete, growwer as radar, en kan reën mis of oorskat. Gebruik jou nasionale weerdiens vir waarskuwings.",
   "layer.rainfall.control.date.description":
@@ -763,7 +755,6 @@ export const AF_CATALOGUE: Record<MessageKey, string> = {
   "layer.sea-temperature-anomaly.name": "Seetemperatuur teenoor normaal",
   "layer.sea-temperature-anomaly.description":
     "Warm kleure, van geel tot donkerrooi, wys seewater wat warmer as gewoonlik is vir die tyd van die jaar. Grys is omtrent normaal, en siaan tot blou is koeler. Ongewoon warm water langs die ewenaar in die Stille Oseaan is die teken van El Niño, en ongewoon koel water is La Niña. Die fynste detail is sowat 5 km.",
-  "layer.sea-temperature-anomaly.dataCost": "sowat 20 tot 60 KB per skerm",
   "layer.group.oceans": "Oseane",
   "layer.volcano-alerts.name": "Vulkaanwaarskuwings",
   "layer.volcano-alerts.description":
@@ -773,7 +764,6 @@ export const AF_CATALOGUE: Record<MessageKey, string> = {
   "layer.world-countries.name": "Lande volgens bevolking",
   "layer.world-countries.description":
     "Landsgrense ingekleur volgens geskatte bevolking, van Natural Earth.",
-  "layer.world-countries.dataCost": "sowat 840 KB",
   "layer.world-countries.disclaimer":
     "Bevolkingsyfers is skattings, nie amptelike tellings nie.",
   "layer.world-countries.emptyText": "Geen lande kon gewys word nie.",
@@ -785,7 +775,6 @@ export const AF_CATALOGUE: Record<MessageKey, string> = {
   "layer.world-countries.key.5": "200 miljoen en meer",
   "layer.world-countries.sort.name": "Naam",
   "layer.world-countries.sort.population": "Meeste mense",
-  "layer.gdacs.dataCost": "sowat 135 KB",
   "layer.gdacs.disclaimer":
     "GDACS-waarskuwings is outomatiese skattings uit modelle. Kyk na amptelike bronne voordat jy iets doen.",
   "layer.gdacs.key.1": "Groen waarskuwing",

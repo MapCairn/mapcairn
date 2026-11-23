@@ -70,7 +70,6 @@ describe("mapServerLayers", () => {
       name: "Mountain huts",
       description: "Huts a walker can shelter in, and whether each is open.",
       group: "Sample server",
-      dataCost: "about 2 KB",
       attribution: [
         { text: "Example hut register", url: "https://example.org/" },
       ],
@@ -202,7 +201,6 @@ describe("mapServerLayers", () => {
       name: "Snow cover",
       description: "How much of each tile is under snow.",
       group: "Sample server",
-      dataCost: "about 40 KB a view",
       attribution: [{ text: "Example weather service" }],
       controls: [],
       source: {

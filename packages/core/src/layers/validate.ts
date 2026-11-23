@@ -702,7 +702,7 @@ export function validateLayerDefinition(
       "must be lowercase letters, digits and hyphens, starting with a letter",
     );
   }
-  for (const key of ["name", "description", "group", "dataCost"]) {
+  for (const key of ["name", "description", "group"]) {
     problems.definitionText(value[key], key);
   }
   if (problems.list(value.attribution, "attribution")) {

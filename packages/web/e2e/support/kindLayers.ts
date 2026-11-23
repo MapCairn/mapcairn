@@ -23,7 +23,6 @@ export const CENTRE = { lat: 30, lng: 31 };
 
 const base = {
   group: "Kinds",
-  dataCost: "a few KB",
   attribution: [{ text: "Sample provider" }],
   controls: [],
 } as const;

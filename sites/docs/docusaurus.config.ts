@@ -86,6 +86,7 @@ const config: Config = {
           customCss: [
             "./src/css/fonts.css",
             "./src/css/generated/infima.css",
+            "./src/css/generated/syntax.css",
             "./src/css/custom.css",
           ],
         },

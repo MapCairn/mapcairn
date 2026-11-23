@@ -11,7 +11,6 @@ const population: TileLayerDefinition = {
   name: "layer.population.name",
   description: "layer.population.description",
   group: "layer.group.people",
-  dataCost: "layer.population.dataCost",
   attribution: [
     {
       text: "We acknowledge the use of imagery provided by services from NASA's Global Imagery Browse Services (GIBS), part of NASA's Earth Science Data and Information System (ESDIS).",

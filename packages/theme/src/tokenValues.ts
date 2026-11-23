@@ -102,6 +102,62 @@ export const dataMarker = {
   haloWidth: 1.5,
 } as const;
 
+/** The roles a highlighted code sample is coloured by. */
+export interface SyntaxRoles {
+  /** Keywords, tags and at-rules. */
+  keyword: string;
+  /** Strings, characters, attribute values and regular expressions. */
+  string: string;
+  /** Numbers, booleans and constants. */
+  number: string;
+  /** Comments, the lowest-emphasis role, which still holds 4.5:1. */
+  comment: string;
+  /** Function names and built-ins. */
+  function: string;
+  /** Class and type names, and selectors. */
+  className: string;
+  /** Properties and attribute names. */
+  property: string;
+  /** Brackets, commas and semicolons. */
+  punctuation: string;
+  /** Operators, entities and URLs. */
+  operator: string;
+}
+
+/**
+ * Syntax colours for code samples, by theme. They are for code only, a
+ * documented exception to the one-accent rule: six muted hues (purple, green,
+ * rust, gold and teal, with the accent blue for functions) and the neutral
+ * ramp for comments, punctuation and operators. The background is not a role:
+ * a code block sits on `surfaceRaised` over the page background. Every role
+ * holds 4.5:1 on that and on the highlighted line's accent tint, in every
+ * contrast set (`syntaxPalette.test.ts`).
+ */
+export const syntaxPalette: Record<ThemeName, SyntaxRoles> = {
+  light: {
+    keyword: "oklch(0.45 0.12 305)",
+    string: "oklch(0.45 0.09 155)",
+    number: "oklch(0.47 0.1 40)",
+    comment: "oklch(0.49 0.012 250)",
+    function: accent[700],
+    className: "oklch(0.45 0.08 200)",
+    property: "oklch(0.45 0.08 100)",
+    punctuation: neutral[700],
+    operator: neutral[800],
+  },
+  dark: {
+    keyword: "oklch(0.8 0.1 305)",
+    string: "oklch(0.82 0.1 155)",
+    number: "oklch(0.82 0.1 40)",
+    comment: neutral[400],
+    function: accent[300],
+    className: "oklch(0.82 0.08 200)",
+    property: "oklch(0.84 0.09 100)",
+    punctuation: neutral[300],
+    operator: neutral[200],
+  },
+};
+
 /**
  * Backdrops that surface contrast is measured over. A translucent surface
  * takes on whatever map is under it, so tests composite over both extremes,

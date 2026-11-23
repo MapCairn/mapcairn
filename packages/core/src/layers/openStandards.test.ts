@@ -52,7 +52,6 @@ const ogcParks: FeedLayerDefinition<PointStyle> = {
   name: "Parks",
   description: "Example parks from a feature service, asked for by view.",
   group: "Places",
-  dataCost: "a few KB per screen",
   attribution: [{ text: "Example provider", url: "https://example.org/" }],
   controls: [],
   source: {
@@ -82,7 +81,6 @@ const wmsRoads: IdentifiableLayerDefinition = {
   name: "Roads",
   description: "Example road map drawn by a WMS, with the road at a tap.",
   group: "Places",
-  dataCost: "about 100 KB per screen",
   attribution: [{ text: "Example provider", url: "https://example.org/" }],
   controls: [],
   source: {
@@ -109,7 +107,6 @@ const wmtsImagery: LayerDefinition = {
   name: "Imagery",
   description: "Example imagery from a WMTS tile service.",
   group: "Imagery",
-  dataCost: "about 300 KB per screen",
   attribution: [{ text: "Example provider", url: "https://example.org/" }],
   controls: [],
   source: {

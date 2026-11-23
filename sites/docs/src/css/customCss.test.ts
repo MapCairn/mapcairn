@@ -55,12 +55,13 @@ describe("custom.css", () => {
     );
   });
 
-  it("colours every class a drawn diagram carries, and scrolls it sideways before its text gets too small", () => {
+  it("colours every class a drawn diagram carries, and shrinks it to the column without a minimum width or a scroll box", () => {
     for (const name of ["group", "node", "edge", "arrow", "text", "title"]) {
       expect(RULES, name).toMatch(new RegExp(`\\.flowchart-${name}\\b`));
     }
-    expect(RULES).toMatch(/\.flowchart\s*{[^}]*overflow-x:\s*auto/);
-    expect(RULES).toMatch(/\.flowchart-svg\s*{[^}]*min-width:/);
+    const rules = RULES.match(/\.flowchart(-svg)?\s*{[^}]*}/g) ?? [];
+    expect(rules.join("")).toMatch(/max-width:\s*100%/);
+    expect(rules.join("")).not.toMatch(/min-width|overflow/);
   });
 
   it("lines the roadmap lanes up on shared rows", () => {
@@ -73,11 +74,37 @@ describe("custom.css", () => {
     );
   });
 
-  it("names only token aliases that the generated stylesheet defines", async () => {
-    const { tokens } = await import("@mapcairn/theme");
+  it("colours every syntax role of the palette from its property, on the highlighter's token classes", async () => {
+    const { tokenValues } = await import("@mapcairn/theme");
+    const roles = Object.keys(tokenValues.syntaxPalette.light);
+    expect(roles.length).toBeGreaterThan(0);
+    for (const role of roles) {
+      const name = role.replace(/[A-Z]/g, (l) => `-${l.toLowerCase()}`);
+      const rule = RULES.match(
+        new RegExp(`([^{}]*)\\{[^}]*color:\\s*var\\(--mc-syntax-${name}\\)`),
+      );
+      expect(rule, role).not.toBeNull();
+      expect(rule?.[1], role).toContain(".token.");
+    }
+  });
+
+  it("draws a highlighted line on the accent tint, whose contrast the palette test checks", () => {
+    expect(RULES).toMatch(
+      /--docusaurus-highlighted-code-line-bg:\s*var\(--mc-color-accent-tint\)/,
+    );
+  });
+
+  it("names only token aliases that the generated stylesheets define", async () => {
+    const { tokens, tokenValues } = await import("@mapcairn/theme");
     const { buildThemeCss } = await import("../../scripts/themeCss");
+    const { buildSyntaxCss } = await import("../../scripts/syntaxCss");
     const defined = new Set(
-      [...buildThemeCss(tokens).matchAll(/(--mc-[\w-]+):/g)].map((m) => m[1]),
+      [
+        ...buildThemeCss(tokens).matchAll(/(--mc-[\w-]+):/g),
+        ...buildSyntaxCss(tokenValues.syntaxPalette).matchAll(
+          /(--mc-[\w-]+):/g,
+        ),
+      ].map((m) => m[1]),
     );
     const used = [...RULES.matchAll(/var\((--mc-[\w-]+)\)/g)].map((m) => m[1]);
     expect(used.length).toBeGreaterThan(20);
