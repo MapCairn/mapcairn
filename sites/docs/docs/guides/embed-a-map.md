@@ -149,7 +149,7 @@ The first line of `main.tsx`, `/// <reference types="vite/client" />`, gives Typ
 
 Search and the rest of the interface run on the SDK's in-memory fakes, so search shows sample results until you add a search adapter, and nothing but the map is requested. Another bundler must serve `maplibre-gl/dist/maplibre-gl-worker.mjs` as a same-origin file and resolve `loadWorkerUrl` to its address. The adapter makes no request until a map mounts, and then asks only for what the basemap you pass `MapView` names. The basemap shown follows the theme: `defaultBasemapFor(basemaps, resolved)` gives the built-in catalogue's Bright in the light theme and Fiord in the dark theme, so the map and its placeholder colour agree in both. Both are served by a public tile provider (OpenFreeMap), so choose the basemap whose terms and privacy you accept. To show one basemap in every theme, pass `basemaps.resolve(id)` instead and leave `useTheme` out; an id the catalogue does not hold gives the catalogue's default, Bright in the built-in one.
 
-Under a strict Content Security Policy, this page needs only the default basemaps' origin (Bright and Fiord share it), `https://tiles.openfreemap.org`, in `connect-src` and `img-src`, with the worker served from the page's own origin. A policy line to start from, which is the one the consumer check's browser leg runs under with a mocked style, so it has not been run against the default basemap's real style:
+Under a strict Content Security Policy, this page needs only the default basemaps' origin (Bright and Fiord share it), `https://tiles.openfreemap.org`, in `connect-src` and `img-src`, with the worker served from the page's own origin. A policy line to start from. The release's consumer check builds this page from the blocks above as written and runs it in Chromium under exactly this line, with the default basemap's real Bright style document and stand-in tiles, sprite and glyphs answered locally. It fails on any violation, and fails if the page still draws with `https://tiles.openfreemap.org` taken out of `connect-src` or `'self'` out of `worker-src`. The `img-src` entry is not proved by it: Bright's layers load no raster tiles and taking the origin out raised no violation, so it stays for a basemap that does.
 
 ```text
 default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data: blob: https://tiles.openfreemap.org; font-src 'self'; connect-src 'self' https://tiles.openfreemap.org; worker-src 'self' blob:
@@ -157,7 +157,7 @@ default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data: bl
 
 [Content Security Policy](content-security-policy.md) says what each directive is for, including when `worker-src` needs `blob:`. A Vite 8 build prints 18 `"use client"` warnings (`MODULE_LEVEL_DIRECTIVE`) from the Radix UI packages that `@mapcairn/map` depends on; they are expected and harmless.
 
-What is tested, and what is not, is in [Extending MapCairn](extending.md#show-a-real-map): a test compiles `main.tsx` as written, and the release's consumer check draws a map in Chromium from a similar app, not from this file.
+What is tested, and what is not, is in [Extending MapCairn](extending.md#show-a-real-map): a test compiles `main.tsx` as written, and the release's consumer check builds this page's blocks as written and draws the map from them in Chromium under the policy line above.
 
 ## What each part does
 

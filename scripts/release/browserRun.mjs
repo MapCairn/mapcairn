@@ -63,10 +63,10 @@ const COLLECT_VIOLATIONS = `
  * Starts a static server for a folder, with the policy on every response.
  *
  * @param {string} root
+ * @param {string} [policy] The Content-Security-Policy to send; the leg's own by default.
  * @returns {Promise<import("node:http").Server>} Listening on a free port.
  */
-function serve(root) {
-  const policy = browserPolicy();
+export function serve(root, policy = browserPolicy()) {
   const server = createServer(async (request, response) => {
     const file = staticFile(root, request.url ?? "/");
     try {
@@ -98,7 +98,7 @@ function serve(root) {
  * @param {import("node:http").Server} server
  * @returns {Promise<void>}
  */
-function closeServer(server) {
+export function closeServer(server) {
   return new Promise((resolve) => {
     server.close(() => resolve());
     server.closeAllConnections();

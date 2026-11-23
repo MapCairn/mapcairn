@@ -27,8 +27,9 @@
  *
  * The umbrella app also draws a real map in a browser (`checkRealMap`): the
  * one leg that starts a server, a static one on 127.0.0.1, and the repository's
- * Playwright Chromium. The other legs start none: the page is rendered by
- * calling the built render function in Node.
+ * Playwright Chromium, and so does the quickstart leg (`checkQuickstart`). The
+ * other legs start none: the page is rendered by calling the built render
+ * function in Node.
  */
 import { spawnSync } from "node:child_process";
 import {
@@ -73,6 +74,7 @@ import {
 } from "./consumerLegs.mjs";
 import { isolatedEnvironment, runNpm } from "./npm.mjs";
 import { findTarballs, PACKAGES } from "./packCheck.mjs";
+import { readmeQuickstart } from "./quickstartLeg.mjs";
 import { SDK_NAMES } from "./workspaces.mjs";
 
 const REPO = path.resolve(
@@ -1146,6 +1148,74 @@ function checkRealMap(app, prefix) {
 }
 
 /**
+ * Builds the README's own quickstart (its page, style sheet and `main.tsx`,
+ * taken from the "Embed a map" section as written) with plain Vite, in the
+ * installed umbrella app, and runs it in Chromium under the policy line the
+ * README gives, with the default basemap's real style answered from fixtures
+ * (`quickstartRun.mjs`): no network, no CSP violation, and a violation when the
+ * README's `connect-src` origin or `worker-src` `'self'` is taken out. Skips
+ * and fails as `checkRealMap` does.
+ *
+ * @param {string} app The installed umbrella app.
+ * @param {string} prefix Put before each line of the report.
+ * @returns {string[]} One line for each check.
+ */
+function checkQuickstart(app, prefix) {
+  const executable = chromiumExecutable(REPO);
+  const plan = browserLegPlan({
+    playwright: playwrightAvailable(REPO),
+    executable,
+  });
+  if (plan.action === "fail") {
+    throw new Error(plan.message);
+  }
+  if (plan.action === "skip") {
+    return [`${prefix}${plan.line}`];
+  }
+  const quickstart = readmeQuickstart(
+    readFileSync(path.join(REPO, "README.md"), "utf8"),
+  );
+  const page = path.join(app, "quickstart");
+  mkdirSync(path.join(page, "src"), { recursive: true });
+  writeFileSync(path.join(page, "index.html"), quickstart.html);
+  writeFileSync(path.join(page, "src", "page.css"), quickstart.css);
+  writeFileSync(path.join(page, "src", "main.tsx"), quickstart.tsx);
+  copyFileSync(
+    path.join(BROWSER_FIXTURE, "tsconfig.json"),
+    path.join(page, "tsconfig.json"),
+  );
+  const policyFile = path.join(app, "quickstart-policy.txt");
+  writeFileSync(policyFile, quickstart.policy);
+  const vite = path.join(app, "node_modules", "vite", "bin", "vite.js");
+  runNode(
+    "vite build (README quickstart)",
+    [
+      vite,
+      "build",
+      "quickstart",
+      "--outDir",
+      "../dist/quickstart",
+      "--emptyOutDir",
+    ],
+    app,
+  );
+  const lines = JSON.parse(
+    runNode(
+      "draw the README's quickstart in Chromium",
+      [
+        path.join(REPO, "scripts", "release", "quickstartRun.mjs"),
+        path.join(app, "dist", "quickstart"),
+        String(executable),
+        policyFile,
+      ],
+      app,
+      BROWSER_TIMEOUT,
+    ),
+  );
+  return lines.map((line) => `${prefix}README quickstart in Chromium, ${line}`);
+}
+
+/**
  * The manifest of an app that lists the given packages, from the tarballs or
  * from the registry.
  *
@@ -1187,6 +1257,7 @@ function checkUmbrella({ root, packed, published, versions }) {
     ...checkApp(app, prefix, { engineStyles: true }),
     ...checkEngineFreeRoot(app, prefix),
     ...checkRealMap(app, prefix),
+    ...checkQuickstart(app, prefix),
   ];
   if (published !== null) {
     return [
