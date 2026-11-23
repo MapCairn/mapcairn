@@ -202,7 +202,8 @@ function byteLength(text: string): number {
 
 /**
  * The area a page belongs to: the package for an API reference page, the
- * name of a page generated from `ARCHITECTURE.md` or `DESIGN.md`,
+ * name of a page generated from `ARCHITECTURE.md` or `DESIGN.md` (its overview
+ * and each of its parts),
  * `changelog`, and `guides` for every other page.
  * @param id - The page's path under `docs/` without the extension.
  */
@@ -212,7 +213,7 @@ export function areaOf(id: string): string {
   if (first === "api" && depth > 2) {
     return second;
   }
-  if (first === "generated" && depth === 2) {
+  if (first === "generated" && depth >= 2) {
     return second;
   }
   return first === "changelog" ? "changelog" : "guides";

@@ -12,13 +12,14 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import { writeMarkdownFiles } from "../plugins/markdownCopiesPlugin";
-import { markdownFindings } from "./markdownChecks";
+import { markdownFindings, PART_COPY_ALLOWANCE } from "./markdownChecks";
 import {
   type CopyContext,
   copyUrl,
   LLMS_INDEX_CEILING,
   parseDocSource,
 } from "./markdownCopies";
+import { PART_CEILING } from "./repositoryDocParts";
 
 const CONTEXT: CopyContext = {
   origin: "https://example.test",
@@ -128,6 +129,32 @@ describe("markdownFindings", () => {
     expect(markdownFindings(root, pages, CONTEXT)).toContain(
       `llms.txt is over ${LLMS_INDEX_CEILING} bytes.`,
     );
+  });
+
+  it("names the copy of a part of a repository document over the part ceiling, and no other page", () => {
+    const root = mkdtempSync(join(tmpdir(), "mapcairn-md-"));
+    roots.push(root);
+    const text = (title: string): string =>
+      `---\ntitle: ${title}\ndescription: Long.\n---\n\n${"a".repeat(PART_CEILING + PART_COPY_ALLOWANCE)}\n`;
+    const pages = [
+      parseDocSource("generated/design", text("Overview")),
+      parseDocSource("generated/design/big", text("Big")),
+      parseDocSource("guides/long", text("Long")),
+    ];
+    for (const page of pages) {
+      mkdirSync(join(root, page.permalink), { recursive: true });
+      writeFileSync(
+        join(root, page.permalink, "index.html"),
+        "<html><head></head><body></body></html>",
+      );
+    }
+    writeMarkdownFiles(root, pages, CONTEXT);
+    const findings = markdownFindings(root, pages, CONTEXT).filter((finding) =>
+      finding.includes("most a part"),
+    );
+    expect(findings).toEqual([
+      `generated/design/big.md is over ${PART_CEILING + PART_COPY_ALLOWANCE} bytes, the most a part of a repository document holds.`,
+    ]);
   });
 
   it("names a robots.txt that blocks a crawler", () => {

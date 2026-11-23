@@ -218,6 +218,8 @@ describe("areaOf and isListedInIndex", () => {
     expect(areaOf("api/index")).toBe("guides");
     expect(areaOf("generated/architecture")).toBe("architecture");
     expect(areaOf("generated/design")).toBe("design");
+    expect(areaOf("generated/design/tokens")).toBe("design");
+    expect(areaOf("generated/architecture/ports-part-2")).toBe("architecture");
     expect(areaOf("changelog/0.2.0")).toBe("changelog");
     expect(areaOf("tasks/add-a-layer")).toBe("guides");
     expect(areaOf("get-started")).toBe("guides");

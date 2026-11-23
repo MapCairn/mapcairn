@@ -10,16 +10,26 @@ import { writeRepositoryDocs } from "./generateRepositoryDocs";
 const REPOSITORY_ROOT = fileURLToPath(new URL("../../..", import.meta.url));
 
 describe("writeRepositoryDocs", () => {
-  it("writes a page for the architecture and the design document from the files themselves", () => {
+  it("writes an overview and the parts of the architecture and the design document from the files themselves, and the sidebar that lists them", () => {
     const out = join(mkdtempSync(join(tmpdir(), "docs-")), "generated");
-    const written = writeRepositoryDocs(REPOSITORY_ROOT, out);
-    expect(written.map((path) => path.slice(out.length + 1))).toEqual([
-      "architecture.md",
-      "design.md",
+    const written = writeRepositoryDocs(REPOSITORY_ROOT, out).map((path) =>
+      path.slice(out.length + 1),
+    );
+    expect(written).toContain("architecture.md");
+    expect(written).toContain("design.md");
+    expect(written).toContain("design/tokens.md");
+    expect(written.at(-1)).toBe("_sidebar.json");
+    const sidebar = JSON.parse(
+      readFileSync(join(out, "_sidebar.json"), "utf8"),
+    ) as { link: { id: string }; items: string[] }[];
+    expect(sidebar.map((entry) => entry.link.id)).toEqual([
+      "generated/architecture",
+      "generated/design",
     ]);
+    expect(sidebar[1]?.items).toContain("generated/design/tokens");
     const architecture = readFileSync(join(out, "architecture.md"), "utf8");
     expect(architecture).toContain("# Architecture");
-    expect(architecture).toContain("slug: /architecture");
+    expect(architecture).toContain('slug: "/architecture"');
     expect(architecture).not.toMatch(/\]\((?:packages|docs|scripts)\//);
     expect(architecture).not.toMatch(/\]\(\.\.\/(?!guides\/)|\]\(\.\//);
   });

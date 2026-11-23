@@ -39,6 +39,23 @@ function changelogSidebar(): SidebarEntry {
   ) as SidebarEntry;
 }
 
+/** The sidebar entries for the pages built from `ARCHITECTURE.md` and `DESIGN.md`, which `scripts/generateRepositoryDocs.ts` writes. */
+const GENERATED_SIDEBAR_FILE = fileURLToPath(
+  new URL("./docs/generated/_sidebar.json", import.meta.url),
+);
+
+/** Reads the sidebar entries of the generated repository pages. A missing file stops the build with the command that writes it. */
+function generatedSidebar(): SidebarEntry[] {
+  if (!existsSync(GENERATED_SIDEBAR_FILE)) {
+    throw new Error(
+      'docs/generated/_sidebar.json is missing. Run "npm run generate -w @mapcairn/docs" to write the Architecture and Design system pages.',
+    );
+  }
+  return JSON.parse(
+    readFileSync(GENERATED_SIDEBAR_FILE, "utf8"),
+  ) as SidebarEntry[];
+}
+
 /**
  * The documentation's one sidebar. Every page in `docs/` must be listed
  * here: `scripts/verifyBuild.ts` and `scripts/docChecks.test.ts` fail the
@@ -86,7 +103,7 @@ export const sidebar: SidebarEntry[] = [
   {
     type: "category",
     label: "Architecture and design",
-    items: ["generated/architecture", "generated/design"],
+    items: generatedSidebar(),
   },
   {
     type: "category",
