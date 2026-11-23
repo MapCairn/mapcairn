@@ -12,6 +12,7 @@ import {
 } from "node:fs";
 import { createRequire } from "node:module";
 import path from "node:path";
+import { hashBuildScripts } from "./buildInputs.mjs";
 import { isEntryPoint } from "./entryPoint.mjs";
 import {
   MAIN_ENTRY,
@@ -22,7 +23,7 @@ import {
 /** The export condition that points a build tool at source. */
 export const SOURCE_CONDITION = "@mapcairn/source";
 
-/** The stamp `buildSdk.mjs` compares with the sources, written last. */
+/** The stamp `buildSdk.mjs` compares with the sources and the build scripts, written last. */
 export const STAMP_FILE = ".built";
 
 /**
@@ -314,11 +315,12 @@ export async function buildPackage(folder) {
     }
   }
   rmSync(path.join(dist, DECLARATION_FOLDER), { recursive: true, force: true });
-  // The stamp is empty, so two builds of the same sources pack to the same
-  // tarball, and carries the time the build started, so an edit made while
-  // it ran is newer than the stamp and builds again.
+  // The stamp holds the hash of the build scripts, so a change to them builds
+  // again, and the same sources and scripts still pack to the same tarball.
+  // Its time is the one the build started, so an edit made while it ran is
+  // newer than the stamp and builds again.
   const stamp = path.join(dist, STAMP_FILE);
-  writeFileSync(stamp, "");
+  writeFileSync(stamp, hashBuildScripts());
   utimesSync(stamp, started, started);
 }
 
