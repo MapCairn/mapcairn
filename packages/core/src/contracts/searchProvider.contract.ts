@@ -58,7 +58,7 @@ const ERROR_KINDS: readonly SearchErrorKind[] = [
 ];
 
 /**
- * Runs the shared behavioural suite for a {@link SearchProvider}. Every test
+ * Runs the shared behavioural suite for a `SearchProvider`. Every test
  * calls `create` for a fresh subject.
  */
 export function runSearchProviderContract(

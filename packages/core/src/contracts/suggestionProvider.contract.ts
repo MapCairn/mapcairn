@@ -56,7 +56,7 @@ const ERROR_KINDS: readonly SearchErrorKind[] = [
 ];
 
 /**
- * Runs the shared behavioural suite for a {@link SuggestionProvider}. Every
+ * Runs the shared behavioural suite for a `SuggestionProvider`. Every
  * test calls `create` for a fresh subject.
  */
 export function runSuggestionProviderContract(

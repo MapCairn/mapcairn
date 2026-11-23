@@ -213,7 +213,7 @@ function checkShape(shape: Shape, geographic: boolean, depth: number): void {
  * that runs past the antimeridian shows up: GeoJSON wants such a shape split
  * at 180 degrees.
  *
- * @throws {GeometryError} `invalid` for a malformed shape, `empty` for a
+ * @throws `GeometryError` of kind `invalid` for a malformed shape, `empty` for a
  *   feature with no geometry, `unsupported` for a feature collection.
  */
 export function validateGeometry(
