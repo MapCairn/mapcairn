@@ -119,7 +119,6 @@ describe("LocalStorageSettingsStore", () => {
     store.set({
       units: "imperial",
       zoomButtons: false,
-      saveData: true,
       projection: "globe",
       basemapId: "positron",
       lastView: VIEW,
@@ -129,7 +128,6 @@ describe("LocalStorageSettingsStore", () => {
     expect(storage.getItem("mapcairn:language")).toBe('"af"');
     expect(LANGUAGE_STORAGE_KEY).toBe("mapcairn:language");
     expect(storage.getItem("mapcairn:zoomButtons")).toBe("false");
-    expect(storage.getItem("mapcairn:saveData")).toBe("true");
     expect(storage.getItem("mapcairn:projection")).toBe('"globe"');
     // The pre-paint script reads the same key to paint a globe's placeholder.
     expect(PROJECTION_STORAGE_KEY).toBe("mapcairn:projection");
@@ -144,7 +142,6 @@ describe("LocalStorageSettingsStore", () => {
       [THEME_STORAGE_KEY]: "light",
       "mapcairn:units": '"imperial"',
       "mapcairn:zoomButtons": "true",
-      "mapcairn:saveData": "false",
       "mapcairn:projection": '"globe"',
       "mapcairn:basemapId": '"osm"',
       "mapcairn:lastView": JSON.stringify(VIEW),
@@ -155,13 +152,20 @@ describe("LocalStorageSettingsStore", () => {
       theme: "light",
       units: "imperial",
       zoomButtons: true,
-      saveData: false,
       projection: "globe",
       basemapId: "osm",
       lastView: VIEW,
       tourSeen: 1,
       language: "af",
     });
+  });
+
+  it("ignores a Save data choice stored before the setting was removed, and leaves it alone", () => {
+    const { store, storage } = setup({ "mapcairn:saveData": "true" });
+    expect(store.get()).not.toHaveProperty("saveData");
+    store.set({ units: "imperial" });
+    expect(store.get()).not.toHaveProperty("saveData");
+    expect(storage.getItem("mapcairn:units")).toBe('"imperial"');
   });
 
   it("keeps a Liberty choice saved before Bright became the default", () => {
@@ -181,7 +185,6 @@ describe("LocalStorageSettingsStore", () => {
       [THEME_STORAGE_KEY]: '"dark"',
       "mapcairn:units": '"furlongs"',
       "mapcairn:zoomButtons": '"yes"',
-      "mapcairn:saveData": '"yes"',
       "mapcairn:projection": '"cube"',
       "mapcairn:basemapId": '"Not A Basemap!"',
       "mapcairn:lastView":
@@ -192,7 +195,6 @@ describe("LocalStorageSettingsStore", () => {
       theme: "system",
       units: "metric",
       zoomButtons: null,
-      saveData: null,
       projection: "flat",
       basemapId: null,
       lastView: null,

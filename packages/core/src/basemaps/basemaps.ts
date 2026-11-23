@@ -87,9 +87,6 @@ const BRIGHT: BasemapDefinition = {
   maxZoom: VECTOR_MAX_ZOOM,
   attribution: OPEN_FREE_MAP_CREDITS,
   appearance: "light",
-  // Nothing to leave out in Save data mode: the style names the Natural Earth
-  // raster source but draws no raster layer from it, so every byte of its first
-  // view is vector tiles, glyphs and the sprite.
 };
 
 const LIBERTY: BasemapDefinition = {
@@ -103,10 +100,6 @@ const LIBERTY: BasemapDefinition = {
   // No `swatch`: the `background` layer of its style is #f8f4f0, the default's
   // land colour (checked 2026-11-12), so the picker's plain tile needs no
   // colour of its own.
-  // The Natural Earth shaded relief raster layer (source "ne2_shaded"), drawn
-  // from zoom 0 to 7. It is 933 KB of a 2.7 MB first view of the world, and
-  // the vector layers carry the same map without it.
-  saveDataOmitLayers: ["natural_earth"],
 };
 
 const COLORFUL: BasemapDefinition = {
@@ -120,14 +113,8 @@ const COLORFUL: BasemapDefinition = {
   maxZoom: VECTOR_MAX_ZOOM,
   attribution: VERSATILES_CREDITS,
   appearance: "light",
-  // Nothing is left out in Save data mode, on purpose. The style draws only
-  // vector layers, no raster. Its nine `landcover-*` fill layers read a second
-  // tileset that is 27 to 40 percent of the bytes of a typical zoom 4 to 6 tile
-  // pair (measured 2026-11-11), but they are the style's land colouring (forest,
-  // farmland, grass) at every zoom up to 12, so leaving them out would turn
-  // Colorful into a plain map. Its background, rgb(248,244,240), is the default
-  // land colour, so the plain tile Save data mode shows needs no swatch of its
-  // own.
+  // No `swatch`: its background, rgb(248,244,240), is the default land colour,
+  // so the picker's plain tile needs no colour of its own.
 };
 
 const FIORD: BasemapDefinition = {
@@ -139,12 +126,9 @@ const FIORD: BasemapDefinition = {
   attribution: OPEN_FREE_MAP_CREDITS,
   appearance: "dark",
   // Fiord's own land colour (the `background` layer of its style), so the
-  // plain tile the picker shows (the SDK names no preview image, and Save data
-  // mode shows one too) reads as a dark map, not as Bright's.
+  // plain tile the picker shows (the SDK names no preview image) reads as a
+  // dark map, not as Bright's.
   swatch: DEFAULT_DARK_BASEMAP_BACKGROUND,
-  // Nothing to leave out in Save data mode: like Bright, the style names the
-  // Natural Earth raster source but draws no raster layer from it.
-  //
   // Known, and the provider's: around Cape Town the style shows lighter,
   // tile-edged rectangles over the sea (checked 2026-11-22). The tiles carry
   // the marine protected areas (Robben Island, Table Mountain National Park)
@@ -164,10 +148,8 @@ const DARK: BasemapDefinition = {
   attribution: OPEN_FREE_MAP_CREDITS,
   appearance: "dark",
   // Dark's own land colour (the `background` layer of its style, rgb(12,12,12)),
-  // so the plain tile Save data mode shows reads as a dark map.
+  // so the plain tile the picker shows reads as a dark map.
   swatch: "#0c0c0c",
-  // Nothing to leave out in Save data mode: the style names the Natural Earth
-  // raster source but draws no raster layer from it (checked 2026-11-11).
 };
 
 /** Every built-in basemap, in the order the picker shows them, the default first. */
@@ -331,25 +313,6 @@ export const BUILT_IN_BASEMAP_CATALOGUE: BasemapCatalogue =
     light: DEFAULT_BASEMAP_ID,
     dark: DEFAULT_DARK_BASEMAP_ID,
   });
-
-/**
- * The style layer ids a basemap leaves out, given whether Save data is on.
- * Empty when it is off, or when the basemap names none.
- */
-export function omittedLayers(
-  basemap: BasemapDefinition,
-  saveData: boolean,
-): readonly string[] {
-  return saveData ? (basemap.saveDataOmitLayers ?? []) : [];
-}
-
-/**
- * Whether a basemap draws image tiles (a raster map, or imagery under labels),
- * which cost more data than vector tiles. The picker says so in Save data mode.
- */
-export function usesMoreData(basemap: BasemapDefinition): boolean {
-  return basemap.source.kind !== "vector";
-}
 
 /**
  * The credits of a basemap and the layers drawn over it as one line of

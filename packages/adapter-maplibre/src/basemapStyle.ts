@@ -1,10 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
-import {
-  type BasemapDefinition,
-  omittedLayers,
-  toEngineZoom,
-} from "@mapcairn/core";
+import { type BasemapDefinition, toEngineZoom } from "@mapcairn/core";
 import type { Map as MapLibreMap, StyleSpecification } from "maplibre-gl";
 
 /** The id of the source and layer of an inline raster style. */
@@ -144,21 +140,6 @@ export function styleFor(
     },
     layers: [{ id: RASTER_ID, type: "raster", source: RASTER_ID }],
   };
-}
-
-/**
- * Removes a basemap's `saveDataOmitLayers` from the style that has just
- * loaded, and any source only those layers drew from, while Save data is on.
- * It runs in `style.load`, before the first frame, so no tile of the layers is
- * requested; a layer or source the style does not have is skipped. With no
- * basemap, or with Save data off, nothing is removed.
- */
-export function omitSaveDataLayers(
-  map: MapLibreMap,
-  basemap: BasemapDefinition | undefined,
-  saveData: boolean,
-): void {
-  removeStyleLayers(map, basemap ? omittedLayers(basemap, saveData) : []);
 }
 
 /**

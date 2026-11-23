@@ -7,14 +7,10 @@ import {
   createBasemapCatalogue,
   createFakeServices,
   DEFAULT_BASEMAP_BACKGROUND,
-  FAKE_HYBRID_BASEMAP,
   FAKE_RASTER_BASEMAP,
   FAKE_VECTOR_BASEMAP,
-  FakeDevicePreferences,
   FakeMessageCatalogue,
-  MemorySettingsStore,
   resolveText,
-  type Settings,
 } from "@mapcairn/core";
 import { act, fireEvent, render, screen, within } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
@@ -51,17 +47,11 @@ const NO_PREVIEW_BASEMAP: BasemapDefinition = {
 
 function renderPicker(
   props: Partial<BasemapPickerProps> = {},
-  device: {
-    saveData?: boolean;
-    settings?: Partial<Settings>;
-    catalogue?: BasemapCatalogue;
-  } = {},
+  device: { catalogue?: BasemapCatalogue } = {},
 ) {
   const onChange = vi.fn();
   const services = createFakeServices({
     basemaps: device.catalogue,
-    preferences: new FakeDevicePreferences({ saveData: device.saveData }),
-    settings: new MemorySettingsStore({ initial: device.settings }),
   });
   const view = render(
     <ServicesProvider services={services}>
@@ -267,92 +257,10 @@ describe("BasemapPicker", () => {
   });
 });
 
-describe("BasemapPicker in Save data mode", () => {
-  it("shows a thumbnail for every basemap when Save data is off", () => {
+describe("BasemapPicker previews", () => {
+  it("shows a thumbnail for every basemap that has one", () => {
     const { container } = renderPicker({}, { catalogue: PREVIEWED_CATALOGUE });
     expect(container.querySelectorAll("img")).toHaveLength(PREVIEWED.length);
-    expect(screen.queryByTestId("basemap-data-note-osm")).toBeNull();
-  });
-
-  it("requests no thumbnail and keeps every name, radio and the selection badge", () => {
-    const { container } = renderPicker(
-      { value: "liberty" },
-      { saveData: true, catalogue: PREVIEWED_CATALOGUE },
-    );
-    expect(container.querySelectorAll("img")).toHaveLength(0);
-    for (const basemap of BASEMAPS) {
-      expect(
-        screen.getByRole("radio", { name: new RegExp(`^${nameOf(basemap)}`) }),
-      ).toBeInTheDocument();
-      expect(
-        screen.getByTestId(`basemap-swatch-${basemap.id}`),
-      ).toBeInTheDocument();
-    }
-    expect(radio("Liberty")).toBeChecked();
-    expect(screen.getByTestId("basemap-selected-liberty")).toBeInTheDocument();
-  });
-
-  it("notes that the raster basemap uses more data, and no other", () => {
-    renderPicker({}, { saveData: true });
-    const note = screen.getByTestId("basemap-data-note-osm");
-    expect(note).toHaveTextContent("Uses more data");
-    expect(
-      screen.getByRole("radio", { name: "Streets Uses more data" }),
-    ).toBeInTheDocument();
-    expect(screen.queryByTestId("basemap-data-note-liberty")).toBeNull();
-    expect(screen.queryByTestId("basemap-data-note-positron")).toBeNull();
-  });
-
-  it("still chooses a basemap, including the one that uses more data", () => {
-    const { onChange } = renderPicker({}, { saveData: true });
-    fireEvent.click(screen.getByRole("radio", { name: /^Streets/ }));
-    expect(onChange).toHaveBeenCalledWith("osm");
-  });
-
-  it("swaps previews for swatches, and back, as the setting changes", () => {
-    const settings = new MemorySettingsStore();
-    const services = createFakeServices({
-      settings,
-      basemaps: PREVIEWED_CATALOGUE,
-    });
-    const { container } = render(
-      <ServicesProvider services={services}>
-        <LiveRegionProvider>
-          <BasemapPicker value="liberty" onChange={vi.fn()} />
-        </LiveRegionProvider>
-      </ServicesProvider>,
-    );
-    expect(container.querySelectorAll("img")).toHaveLength(PREVIEWED.length);
-    act(() => settings.set({ saveData: true }));
-    expect(container.querySelectorAll("img")).toHaveLength(0);
-    expect(screen.getByTestId("basemap-swatch-positron")).toBeInTheDocument();
-    act(() => settings.set({ saveData: false }));
-    expect(container.querySelectorAll("img")).toHaveLength(PREVIEWED.length);
-    expect(screen.queryByTestId("basemap-swatch-positron")).toBeNull();
-  });
-
-  it("follows an explicit choice over the device signal", () => {
-    const off = renderPicker(
-      {},
-      {
-        saveData: true,
-        settings: { saveData: false },
-        catalogue: PREVIEWED_CATALOGUE,
-      },
-    );
-    expect(off.container.querySelectorAll("img")).toHaveLength(
-      PREVIEWED.length,
-    );
-    off.unmount();
-    const on = renderPicker(
-      {},
-      {
-        saveData: false,
-        settings: { saveData: true },
-        catalogue: PREVIEWED_CATALOGUE,
-      },
-    );
-    expect(on.container.querySelectorAll("img")).toHaveLength(0);
   });
 });
 
@@ -369,11 +277,8 @@ describe("BasemapPicker swatch colours", () => {
     SWATCHED,
   ]);
 
-  function renderSwatched(saveData: boolean) {
-    const services = createFakeServices({
-      basemaps: catalogue,
-      preferences: new FakeDevicePreferences({ saveData }),
-    });
+  function renderSwatched() {
+    const services = createFakeServices({ basemaps: catalogue });
     return render(
       <ServicesProvider services={services}>
         <LiveRegionProvider>
@@ -389,18 +294,12 @@ describe("BasemapPicker swatch colours", () => {
       .style.getPropertyValue("--basemap-swatch");
 
   it("paints a basemap's own swatch colour, and the light default's land colour on one without, in either theme", () => {
-    renderSwatched(false);
+    renderSwatched();
     // This basemap has a preview, so no swatch yet; the one without has no
     // colour of its own, so it takes the light default's land colour, not the
     // map background token, which is Fiord's in the dark theme.
     expect(screen.queryByTestId("basemap-swatch-fake-swatched")).toBeNull();
     expect(colourOf("fake-plain")).toBe(DEFAULT_BASEMAP_BACKGROUND);
-  });
-
-  it("shows the same swatch colour in Save data mode, where every basemap is a swatch", () => {
-    renderSwatched(true);
-    expect(colourOf("fake-swatched")).toBe("#22262c");
-    expect(colourOf("fake-vector")).toBe(DEFAULT_BASEMAP_BACKGROUND);
   });
 
   it("paints the swatch of a basemap that has no preview image", () => {
@@ -460,31 +359,6 @@ describe("BasemapPicker with a host's basemaps", () => {
     const { onChange } = renderHosted("fake-vector");
     fireEvent.click(screen.getByRole("radio", { name: "Fake plain" }));
     expect(onChange).toHaveBeenCalledWith("fake-plain");
-  });
-
-  it("notes in Save data mode that a hybrid basemap uses more data, as a raster one does", () => {
-    const services = createFakeServices({
-      basemaps: createBasemapCatalogue([
-        FAKE_VECTOR_BASEMAP,
-        FAKE_RASTER_BASEMAP,
-        FAKE_HYBRID_BASEMAP,
-      ]),
-      preferences: new FakeDevicePreferences({ saveData: true }),
-    });
-    render(
-      <ServicesProvider services={services}>
-        <LiveRegionProvider>
-          <BasemapPicker value="fake-vector" onChange={vi.fn()} />
-        </LiveRegionProvider>
-      </ServicesProvider>,
-    );
-    expect(
-      screen.getByRole("radio", { name: "Fake hybrid Uses more data" }),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByTestId("basemap-data-note-fake-raster"),
-    ).toBeInTheDocument();
-    expect(screen.queryByTestId("basemap-data-note-fake-vector")).toBeNull();
   });
 
   it("draws a plain swatch, and requests no image, for a basemap with no preview", () => {
@@ -606,16 +480,6 @@ describe("BasemapPicker message catalogue", () => {
       key: "panels.basemap.groupLabel",
       params: {},
     });
-  });
-
-  it("asks for the Save data note by key", () => {
-    const { services } = renderPicker(
-      {},
-      { saveData: true, catalogue: PREVIEWED_CATALOGUE },
-    );
-    expect(services.fakes.messages.calls.map((call) => call.key)).toContain(
-      "panels.basemap.usesMoreData",
-    );
   });
 
   it("asks for the unavailable note and the retry button by key", () => {

@@ -16,7 +16,6 @@ const DEFAULTS: Settings = Object.freeze({
   theme: "system",
   units: "metric",
   zoomButtons: null,
-  saveData: null,
   projection: "flat",
   basemapId: null,
   lastView: null,
@@ -36,7 +35,6 @@ const SETTING_NAMES: readonly SettingName[] = [
   "theme",
   "units",
   "zoomButtons",
-  "saveData",
   "projection",
   "basemapId",
   "lastView",
@@ -162,8 +160,6 @@ function parseSetting(
     case "units":
       return parseUnits(parseJson(raw));
     case "zoomButtons":
-      return parseOptionalBoolean(parseJson(raw));
-    case "saveData":
       return parseOptionalBoolean(parseJson(raw));
     case "projection":
       return parseProjection(parseJson(raw));

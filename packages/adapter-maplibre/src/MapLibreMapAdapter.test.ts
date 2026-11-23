@@ -155,13 +155,6 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-/** A basemap that names its relief layer as one to leave out in Save data mode. */
-const WITH_RELIEF: BasemapDefinition = {
-  ...DARK,
-  id: "with-relief",
-  saveDataOmitLayers: ["relief"],
-};
-
 /**
  * Gives the fake engine the style it "loaded": a relief raster layer that only
  * it uses, and a vector source two other layers share.
@@ -2001,136 +1994,12 @@ describe("MapLibreMapAdapter", () => {
     });
   });
 
-  describe("Save data", () => {
-    it("takes the basemap's omitted layers and the source only they use out of the style that loads, when mounted in Save data mode", async () => {
-      const { map } = await mounted({ basemap: WITH_RELIEF, saveData: true });
-      loadReliefStyle(map);
-      expect(layerIds(map)).toEqual(["background", "roads", "water"]);
-      // The source the other layers share, and one no layer used, stay.
-      expect([...map.sources.keys()].sort()).toEqual(["planet", "spare"]);
-      expect(map.callsOf("removeLayer").map((call) => call.args[0])).toEqual([
-        "relief",
-      ]);
-      expect(map.callsOf("removeSource").map((call) => call.args[0])).toEqual([
-        "relief-source",
-      ]);
-    });
-
-    it("leaves a source that another layer still uses", async () => {
-      const { map } = await mounted({
-        basemap: { ...WITH_RELIEF, saveDataOmitLayers: ["roads"] },
-        saveData: true,
-      });
-      loadReliefStyle(map);
-      expect(layerIds(map)).toEqual(["background", "relief", "water"]);
-      expect(map.callsOf("removeSource")).toEqual([]);
-    });
-
-    it("keeps every layer when Save data is off, and by default", async () => {
-      for (const options of [
-        { basemap: WITH_RELIEF },
-        { basemap: WITH_RELIEF, saveData: false },
-      ]) {
-        const { map } = await mounted(options);
-        loadReliefStyle(map);
-        expect(layerIds(map)).toContain("relief");
-        expect(map.callsOf("removeLayer")).toEqual([]);
-      }
-    });
-
-    it("skips a listed layer the style does not have, and a basemap that lists none", async () => {
-      const { map } = await mounted({
-        basemap: { ...WITH_RELIEF, saveDataOmitLayers: ["no-such-layer"] },
-        saveData: true,
-      });
-      loadReliefStyle(map);
-      expect(layerIds(map)).toHaveLength(4);
-      const plain = await mounted({ basemap: POSITRON, saveData: true });
-      loadReliefStyle(plain.map);
-      expect(layerIds(plain.map)).toHaveLength(4);
-    });
-
-    it("decides again on every swap, with the same setStyle call as before", async () => {
-      const { adapter, map } = await mounted({
-        basemap: WITH_RELIEF,
-        saveData: true,
-      });
-      const toPositron = adapter.setBasemap(POSITRON, { saveData: true });
-      expect(map.callsOf("setStyle")[0]?.args).toEqual([
-        "https://tiles.example/positron",
-        { diff: false },
-      ]);
-      loadReliefStyle(map);
-      expect(layerIds(map)).toContain("relief");
-      await toPositron;
-
-      const back = adapter.setBasemap(WITH_RELIEF);
-      loadReliefStyle(map);
-      expect(layerIds(map)).toContain("relief");
-      await back;
-
-      const saving = adapter.setBasemap(WITH_RELIEF, { saveData: true });
-      loadReliefStyle(map);
-      expect(layerIds(map)).not.toContain("relief");
-      await saving;
-    });
-
-    it("draws the data layers again on a swap that leaves layers out, so a Save data toggle keeps them", async () => {
-      const { adapter, map } = await mounted({ basemap: WITH_RELIEF });
-      map.fire("style.load");
-      adapter.setFeatureLayer("quakes", [
-        {
-          id: "a",
-          position: { lat: 0, lng: 0 },
-          colour: "#e69f00",
-          radius: 6,
-          shape: "square" as const,
-        },
-      ]);
-      adapter.setTileLayer("imagery", {
-        tiles: "https://t.test/{z}/{x}/{y}.png",
-        tileSize: 256,
-        maxzoom: 9,
-        opacity: 1,
-      });
-      const saving = adapter.setBasemap(WITH_RELIEF, { saveData: true });
-      loadReliefStyle(map);
-      await saving;
-      expect(layerIds(map)).not.toContain("relief");
-      expect(layerIds(map)).toEqual(
-        expect.arrayContaining([
-          "mapcairn:quakes:points",
-          "mapcairn:imagery:tiles",
-        ]),
-      );
-      const full = adapter.setBasemap(WITH_RELIEF, { saveData: false });
-      loadReliefStyle(map);
-      await full;
-      expect(layerIds(map)).toContain("relief");
-      expect(layerIds(map)).toEqual(
-        expect.arrayContaining([
-          "mapcairn:quakes:points",
-          "mapcairn:imagery:tiles",
-        ]),
-      );
-    });
-
-    it("puts the last basemap back, still in Save data mode, when a swap fails", async () => {
-      vi.spyOn(console, "error").mockImplementation(() => {});
-      const { adapter, map } = await mounted({
-        basemap: WITH_RELIEF,
-        saveData: true,
-      });
-      const failing = adapter.setBasemap(POSITRON, { saveData: true });
-      map.fire("error", { error: new Error("style 404") });
-      await expect(failing).rejects.toBeInstanceOf(MapEngineError);
-      expect(map.callsOf("setStyle").at(-1)?.args).toEqual([
-        "https://tiles.example/dark",
-        { diff: false },
-      ]);
-      loadReliefStyle(map);
-      expect(layerIds(map)).not.toContain("relief");
-    });
+  it("keeps every layer of the style that loads", async () => {
+    const { map } = await mounted({ basemap: DARK });
+    loadReliefStyle(map);
+    expect(layerIds(map)).toEqual(["background", "relief", "roads", "water"]);
+    expect(map.callsOf("removeLayer")).toEqual([]);
+    expect(map.callsOf("removeSource")).toEqual([]);
   });
 
   describe("a hybrid basemap", () => {

@@ -22,9 +22,7 @@ import {
   defaultBasemapFor,
   getBasemap,
   MAPLIBRE_CREDIT,
-  omittedLayers,
   resolveBasemapFor,
-  usesMoreData,
 } from "./basemaps";
 
 const english = new FakeMessageCatalogue();
@@ -251,7 +249,7 @@ describe("BASEMAPS", () => {
     }
   });
 
-  it("names each dark basemap's own land colour as its picker swatch, so Save data mode shows a dark tile", () => {
+  it("names each dark basemap's own land colour as its picker swatch, so the picker shows a dark tile", () => {
     // Copied from the `background` layer's `background-color` in
     // https://tiles.openfreemap.org/styles/fiord and .../dark (checked
     // 2026-11-11), as six-digit lowercase hex. Dark writes it as rgb(12,12,12).
@@ -271,17 +269,6 @@ describe("BASEMAPS", () => {
     for (const basemap of BASEMAPS) {
       expect(Object.keys(basemap)).not.toContain("darkVariantId");
     }
-  });
-});
-
-describe("usesMoreData", () => {
-  it("is true for a basemap drawn from image tiles: raster or hybrid", () => {
-    expect(usesMoreData(FAKE_RASTER_BASEMAP)).toBe(true);
-    expect(usesMoreData(FAKE_HYBRID_BASEMAP)).toBe(true);
-  });
-
-  it("is false for a vector basemap", () => {
-    expect(usesMoreData(FAKE_VECTOR_BASEMAP)).toBe(false);
   });
 });
 
@@ -368,59 +355,6 @@ describe("buildAttribution", () => {
   });
 });
 
-describe("omittedLayers", () => {
-  const liberty = BUILT_IN_BASEMAP_CATALOGUE.resolve("liberty");
-
-  it("lists the layers a basemap leaves out in Save data mode, and only then", () => {
-    expect(omittedLayers(liberty, true)).toEqual(["natural_earth"]);
-    expect(omittedLayers(liberty, false)).toEqual([]);
-  });
-
-  // Checked against https://tiles.openfreemap.org/styles/bright on 2026-11-10:
-  // it declares the Natural Earth raster source but draws no raster layer
-  // from it, so its first view has no relief image to leave out.
-  it("is empty for a basemap that names no such layers", () => {
-    for (const basemap of BASEMAPS) {
-      if (basemap.saveDataOmitLayers === undefined) {
-        expect(omittedLayers(basemap, true)).toEqual([]);
-      }
-    }
-    expect(
-      omittedLayers(BUILT_IN_BASEMAP_CATALOGUE.resolve("bright"), true),
-    ).toEqual([]);
-    expect(
-      omittedLayers(BUILT_IN_BASEMAP_CATALOGUE.resolve("positron"), true),
-    ).toEqual([]);
-    expect(
-      omittedLayers(BUILT_IN_BASEMAP_CATALOGUE.resolve("osm"), true),
-    ).toEqual([]);
-  });
-
-  // Checked against https://tiles.openfreemap.org/styles/fiord on 2026-11-10:
-  // like Bright, it declares the Natural Earth raster source but draws no
-  // raster layer from it (48 layers: background, fill, line and symbol).
-  it("is empty for Fiord, whose style draws no raster layer", () => {
-    expect(
-      BUILT_IN_BASEMAP_CATALOGUE.resolve("fiord").saveDataOmitLayers,
-    ).toBeUndefined();
-    expect(
-      omittedLayers(BUILT_IN_BASEMAP_CATALOGUE.resolve("fiord"), true),
-    ).toEqual([]);
-  });
-
-  // Checked against https://tiles.openfreemap.org/styles/liberty on 2026-11-09:
-  // the one raster layer, "natural_earth" (Natural Earth shaded relief, 933 KB
-  // of the first view's 2,689 KB, drawn from zoom 0 to 7).
-  it("names only vector basemaps, which have a style to take layers from", () => {
-    for (const basemap of BASEMAPS) {
-      if (basemap.saveDataOmitLayers !== undefined) {
-        expect(basemap.source.kind).toBe("vector");
-        expect(basemap.saveDataOmitLayers.length).toBeGreaterThan(0);
-      }
-    }
-  });
-});
-
 describe("createBasemapCatalogue", () => {
   const extra: BasemapDefinition = {
     ...FAKE_VECTOR_BASEMAP,
@@ -501,16 +435,6 @@ describe("createBasemapCatalogue", () => {
         DEFAULT_BASEMAP_ID,
       );
     }
-  });
-
-  it("leaves out no layers for Colorful in Save data mode, whose style draws no raster layer", () => {
-    // Checked against the style on 2026-11-11: 266 background, fill, line and
-    // symbol layers over two vector sources, no raster or hillshade layer. The
-    // nine landcover-* layers read the second source, about a third of the tile
-    // bytes at zoom 4 to 6, but they are the style's land colouring, so they stay.
-    expect(
-      BUILT_IN_BASEMAP_CATALOGUE.resolve("colorful").saveDataOmitLayers,
-    ).toBeUndefined();
   });
 });
 

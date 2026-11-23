@@ -44,7 +44,7 @@ A rule marked "(lint)" is enforced by the harmony scanner (`npm run lint:harmony
 ## Images
 
 - **I1** An `<img>` has `width` and `height`. Images below the first view use `loading="lazy"`, and the one critical image uses `fetchPriority="high"`.
-- **I2** A basemap preview that fails, or Save data mode, shows the plain swatch.
+- **I2** A basemap preview that fails, or a basemap with no preview, shows the plain swatch.
 
 ## Performance
 

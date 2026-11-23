@@ -26,7 +26,6 @@ import {
   useMessages,
   useOnline,
   useResolveText,
-  useSaveData,
 } from "../services";
 import { Button } from "../ui/Button";
 import { Icon } from "../ui/Icon";
@@ -337,8 +336,8 @@ export interface LayerItemProps {
 }
 
 /**
- * One layer in the Layers section: its switch with what it costs, and while
- * it is on, its status, controls, legend, disclaimer and list. Everything
+ * One layer in the Layers section: its switch, and while it is on, its
+ * status, controls, legend, disclaimer and list. Everything
  * comes from the definition.
  */
 export function LayerItem({
@@ -348,8 +347,6 @@ export function LayerItem({
   onShow,
 }: LayerItemProps) {
   const { definition, enabled, status } = layer;
-  // Only worth a line for someone who is saving data.
-  const saveData = useSaveData();
   const online = useOnline();
   const messages = useMessages();
   const resolve = useResolveText();
@@ -367,11 +364,6 @@ export function LayerItem({
         checked={enabled}
         onCheckedChange={(checked) => layers.setEnabled(definition.id, checked)}
       />
-      {saveData ? (
-        <p className={styles.muted}>
-          {t("layers.usesCost", { cost: resolve(definition.dataCost) })}
-        </p>
-      ) : null}
       {enabled ? (
         <div className={styles.details}>
           {text ? (
