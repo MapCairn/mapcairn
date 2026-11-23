@@ -53,10 +53,20 @@ function length(box: Bounds): number {
   return box.east - box.west;
 }
 
-/** Whether the longitudes `box` covers include `lng`, on any copy of the world. */
+/** The longitude of the antimeridian, which is both -180 and 180. */
+const ANTIMERIDIAN = 180;
+
+/**
+ * Whether the longitudes `box` covers include `lng`, on any copy of the
+ * world. The antimeridian is one line with two names, so a point on it is
+ * covered by a box that reaches it as -180 or as 180.
+ */
 function covers(boxes: readonly Bounds[], lng: number): boolean {
   const wrapped = wrapLongitude(lng);
-  return boxes.some((box) => box.west <= wrapped && wrapped <= box.east);
+  const names = wrapped === -ANTIMERIDIAN ? [wrapped, ANTIMERIDIAN] : [wrapped];
+  return boxes.some((box) =>
+    names.some((name) => box.west <= name && name <= box.east),
+  );
 }
 
 describe("queryWindow and queryBoxes, for views across the antimeridian", () => {
@@ -85,6 +95,12 @@ describe("queryWindow and queryBoxes, for views across the antimeridian", () => 
       }),
       PROPERTY_PARAMETERS,
     );
+  });
+
+  it("covers a longitude on the antimeridian from a view that ends on it, however it is named", () => {
+    // fast-check found this: the view ends at -540, one more name for 180, and its last point wraps to -180.
+    const view = { west: -541.5, east: -540, south: 0, north: 1 };
+    expect(covers(queryBoxes(queryWindow(view)), view.east)).toBe(true);
   });
 
   it("covers every longitude of the view, with no gap", () => {

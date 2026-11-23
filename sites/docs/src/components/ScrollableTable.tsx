@@ -7,33 +7,32 @@ import {
   useRef,
   useState,
 } from "react";
-import { scrolls } from "./scrolls";
+import { scrolls, tableLabel } from "./scrolls";
 
-/** What a box that scrolls needs: a name, a role to carry it, and a place in the tab order. */
-const REGION = {
-  role: "region",
-  tabIndex: 0,
-  "aria-label": "Table, scrolls sideways",
-} as const;
+/** The class on every table's box, used to number the tables on a page. */
+const BOX_CLASS = "table-scroll";
 
 /**
  * A table in a box that scrolls sideways on its own, so a wide table never
  * pushes the page sideways. When the table is wider than the box, the box is a
- * labelled region and a tab stop, so a keyboard reader can scroll it; a table
- * that fits adds no tab stop.
+ * region named by its number on the page and a tab stop, so a keyboard reader
+ * can scroll it; a table that fits adds no tab stop.
  */
 export default function ScrollableTable(
   props: ComponentProps<"table">,
 ): ReactNode {
   const box = useRef<HTMLDivElement>(null);
-  const [overflowing, setOverflowing] = useState(false);
+  const [label, setLabel] = useState<string | null>(null);
 
   useEffect(() => {
     const element = box.current;
     if (!element) {
       return;
     }
-    const measure = (): void => setOverflowing(scrolls(element));
+    const measure = (): void => {
+      const boxes = Array.from(document.querySelectorAll(`.${BOX_CLASS}`));
+      setLabel(scrolls(element) ? tableLabel(boxes.indexOf(element)) : null);
+    };
     measure();
     const observer = new ResizeObserver(measure);
     observer.observe(element);
@@ -44,7 +43,11 @@ export default function ScrollableTable(
   }, []);
 
   return (
-    <div ref={box} className="table-scroll" {...(overflowing ? REGION : {})}>
+    <div
+      ref={box}
+      className={BOX_CLASS}
+      {...(label ? { role: "region", tabIndex: 0, "aria-label": label } : {})}
+    >
       <table {...props} />
     </div>
   );
