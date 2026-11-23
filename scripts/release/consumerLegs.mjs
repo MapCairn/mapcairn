@@ -20,7 +20,7 @@ export const WORKER_CONDITIONS = ["workerd", "worker", "browser"];
 
 /**
  * The Yarn Berry release the check runs, through corepack. It is exact, and
- * older than the repository's seven-day minimum release age.
+ * older than the repository's three-day minimum release age.
  */
 export const YARN_VERSION = "4.18.1";
 
@@ -55,15 +55,24 @@ export const BROWSER_TIMEOUT = 3 * 60 * 1000;
  */
 export const REMOTE_SESSION_CHROMIUM = "/opt/pw-browsers/chromium";
 
-/** Seven days, in the seconds Bun counts a release age in. */
-export const BUN_MINIMUM_RELEASE_AGE = 7 * 24 * 60 * 60;
+/**
+ * The minimum release age the throwaway apps hold, in days: the repository's
+ * `.npmrc` `min-release-age`, which every package manager leg simulates.
+ */
+export const MINIMUM_RELEASE_AGE_DAYS = 3;
+
+/** The minimum release age in the minutes pnpm counts it in. */
+export const PNPM_MINIMUM_RELEASE_AGE = MINIMUM_RELEASE_AGE_DAYS * 24 * 60;
+
+/** The minimum release age in the seconds Bun counts it in. */
+export const BUN_MINIMUM_RELEASE_AGE = MINIMUM_RELEASE_AGE_DAYS * 24 * 60 * 60;
 
 /**
  * Yarn's settings for the throwaway app: real `node_modules` (what most
  * projects use), no lifecycle scripts, no telemetry, a lockfile that may be
  * created (the app has none, and Yarn's hardened mode on a pull request
- * forbids that), and the same seven-day
- * minimum release age as the repository's `.npmrc`.
+ * forbids that), and the same minimum
+ * release age (three days) as the repository's `.npmrc`.
  *
  * @returns {string} The text of `.yarnrc.yml`.
  */
@@ -74,7 +83,7 @@ export function yarnSettings() {
     "enableImmutableInstalls: false",
     "enableHardenedMode: false",
     "enableTelemetry: false",
-    'npmMinimalAgeGate: "7d"',
+    `npmMinimalAgeGate: "${MINIMUM_RELEASE_AGE_DAYS}d"`,
     "",
   ].join("\n");
 }
@@ -102,7 +111,7 @@ export function yarnManifest(manifest) {
 }
 
 /**
- * Bun's settings for the throwaway app: the same seven-day minimum release
+ * Bun's settings for the throwaway app: the same three-day minimum release
  * age as the repository's `.npmrc`, in Bun's own unit.
  *
  * @returns {string} The text of `bunfig.toml`.
@@ -139,7 +148,7 @@ export function yarnSkipped(env = process.env) {
 
 /**
  * The line for a leg that does not run against the published packages: the
- * seven-day age these installs hold would refuse the packages just published.
+ * three-day age these installs hold would refuse the packages just published.
  *
  * @param {string} tool The package manager.
  * @param {NodeJS.ProcessEnv} [env] The environment to read.
@@ -147,7 +156,7 @@ export function yarnSkipped(env = process.env) {
  */
 export function publishedSkipped(tool, env = process.env) {
   return skipLine(
-    `the ${tool} install was skipped for the published packages: its seven-day release age would refuse a release made today`,
+    `the ${tool} install was skipped for the published packages: its three-day release age would refuse a release made today`,
     env,
   );
 }
@@ -283,7 +292,7 @@ export function bunVersionProblem(version) {
   if (major > 1 || (major === 1 && minor >= 3)) {
     return undefined;
   }
-  return `Bun ${version.trim()} is older than ${BUN_MINIMUM_VERSION}, which is the first to read minimumReleaseAge, so the seven-day release age would not hold`;
+  return `Bun ${version.trim()} is older than ${BUN_MINIMUM_VERSION}, which is the first to read minimumReleaseAge, so the three-day release age would not hold`;
 }
 
 /**
