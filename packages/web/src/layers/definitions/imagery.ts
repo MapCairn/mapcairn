@@ -13,7 +13,6 @@ const imagery: TileLayerDefinition = {
   name: "layer.imagery.name",
   description: "layer.imagery.description",
   group: "layer.group.imagery",
-  dataCost: "layer.imagery.dataCost",
   attribution: [
     {
       text: "We acknowledge the use of imagery provided by services from NASA's Global Imagery Browse Services (GIBS), part of NASA's Earth Science Data and Information System (ESDIS).",

@@ -310,7 +310,6 @@ function common(layer: ServerLayer): LayerCandidate {
     name: layer.title,
     description: layer.description,
     group: LAYER_GROUP,
-    dataCost: layer.approximateSize,
     attribution: [url === undefined ? { text } : { text, url }],
     controls: [],
   };

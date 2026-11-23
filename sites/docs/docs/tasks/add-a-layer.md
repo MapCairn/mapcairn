@@ -51,7 +51,6 @@ const OVERLAY: TileLayerDefinition = {
   name: "Example overlay",
   description: "What the overlay shows, in one sentence.",
   group: "Imagery",
-  dataCost: "about 100 KB per screen",
   attribution: [{ text: "Example provider", url: "https://example.org/" }],
   controls: [{ kind: "opacity", id: "opacity", label: "Opacity", default: 0.8 }],
   source: {

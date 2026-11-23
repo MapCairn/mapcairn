@@ -22,7 +22,6 @@ export const SAMPLE_FEED_LAYER: FeedLayerDefinition<PointStyle> = {
   name: "Sample points",
   description: "Points from a sample feed.",
   group: "Samples",
-  dataCost: "about 30 KB",
   attribution: [{ text: "Sample provider", url: "https://sample.test/" }],
   controls: [
     {
@@ -114,7 +113,6 @@ export const SAMPLE_ALERT_LAYER: FeedLayerDefinition<PointStyle> = {
   name: "Sample alerts",
   description: "Alerts from a sample feed.",
   group: "Samples",
-  dataCost: "about 130 KB",
   attribution: [{ text: "Sample alerts provider" }],
   disclaimer: "Automatic estimates. Check official sources before acting.",
   controls: [],
@@ -188,7 +186,6 @@ export const SAMPLE_AREA_LAYER: FeedLayerDefinition<ShapeStyle> = {
   name: "Sample areas",
   description: "Polygons from a sample feed, shaded by density.",
   group: "Samples",
-  dataCost: "about 20 KB",
   attribution: [{ text: "Sample areas provider" }],
   controls: [],
   source: {
@@ -234,7 +231,6 @@ export const SAMPLE_LINE_LAYER: FeedLayerDefinition<ShapeStyle> = {
   name: "Sample lines",
   description: "Lines from a sample feed, drawn by kind.",
   group: "Samples",
-  dataCost: "about 10 KB",
   attribution: [{ text: "Sample lines provider" }],
   controls: [],
   source: {
@@ -279,7 +275,6 @@ export const SAMPLE_QUERY_LAYER: FeedLayerDefinition<PointStyle> = {
   name: "Sample query",
   description: "Points requested for the part of the map in view.",
   group: "Samples",
-  dataCost: "a few KB per screen",
   attribution: [{ text: "Sample query provider" }],
   controls: [],
   source: {
@@ -305,7 +300,6 @@ export const SAMPLE_HEATMAP_LAYER: HeatmapLayerDefinition = {
   name: "Sample density",
   description: "How dense the points of a sample feed are.",
   group: "Samples",
-  dataCost: "about 40 KB",
   attribution: [{ text: "Sample density provider" }],
   controls: [
     {
@@ -354,7 +348,6 @@ export const SAMPLE_VECTOR_LAYER: VectorTileLayerDefinition = {
   name: "Sample districts",
   description: "Areas, roads and events from sample vector tiles.",
   group: "Samples",
-  dataCost: "about 100 KB per screen",
   attribution: [{ text: "Sample tiles provider" }],
   controls: [],
   source: {
@@ -434,7 +427,6 @@ export const SAMPLE_TILE_LAYER: TileLayerDefinition = {
   name: "Sample imagery",
   description: "Daily sample imagery.",
   group: "Imagery",
-  dataCost: "about 1 MB per screen",
   attribution: [{ text: "Sample imagery provider" }],
   controls: [
     {
@@ -468,7 +460,6 @@ export const SAMPLE_IDENTIFY_LAYER: IdentifiableLayerDefinition = {
   name: "Sample flood depth",
   description: "Modelled sample flood depth.",
   group: "Imagery",
-  dataCost: "about 200 KB per screen",
   attribution: [{ text: "Sample flood provider" }],
   controls: [
     {
@@ -507,7 +498,6 @@ export const SAMPLE_TIME_LAYER: TileLayerDefinition = {
   name: "Sample rain",
   description: "Half-hourly sample rain, about six hours behind.",
   group: "Imagery",
-  dataCost: "about 100 KB per screen",
   attribution: [{ text: "Sample rain provider" }],
   controls: [
     {

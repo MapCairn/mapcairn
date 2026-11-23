@@ -104,8 +104,6 @@ export interface ServerLayer {
     readonly field: string;
     readonly values: readonly (string | number)[];
   };
-  /** Roughly what turning the layer on downloads, such as `about 4 KB`. */
-  readonly approximateSize: string;
   readonly credit: { readonly text: string; readonly url?: string };
 }
 

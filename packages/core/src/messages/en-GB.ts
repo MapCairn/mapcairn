@@ -674,13 +674,11 @@ export const EN_GB_CATALOGUE: Record<MessageKey, string> = {
   "layer.drought-alerts.description":
     "Current droughts that GDACS rates for their impact on people.",
   "layer.drought-alerts.emptyText": "No drought alerts right now.",
-  "layer.earth-at-night.dataCost": "about 0.3 to 1 MB per screen",
   "layer.group.imagery": "Imagery",
   "layer.control.opacity": "Opacity",
   "layer.earthquakes.name": "Earthquakes",
   "layer.earthquakes.description":
     "Earthquakes recorded by the US Geological Survey worldwide, updated about every minute.",
-  "layer.earthquakes.dataCost": "about 30 KB, up to 220 KB for a week",
   "layer.earthquakes.emptyText": "No earthquakes in this period.",
   "layer.group.earthquakesAndVolcanoes": "Earthquakes and volcanoes",
   "layer.earthquakes.control.window.label": "Period",
@@ -706,12 +704,10 @@ export const EN_GB_CATALOGUE: Record<MessageKey, string> = {
   "layer.fire-hotspots-viirs.name": "Fire hotspots, sharper",
   "layer.fire-hotspots-viirs.description":
     "The same kind of heat marks from the VIIRS sensor on the NOAA-21 satellite, at about 375 m. Uses about five times more data.",
-  "layer.fire-hotspots-viirs.dataCost": "about 50 to 250 KB per screen",
   "layer.control.date": "Date",
   "layer.fire-hotspots.name": "Fire hotspots",
   "layer.fire-hotspots.description":
     "Places where the MODIS sensor on the Terra satellite saw unusual heat on the chosen day, such as fires. Each mark is about 1 km.",
-  "layer.fire-hotspots.dataCost": "about 10 to 50 KB per screen",
   "layer.flood-alerts.name": "Flood alerts",
   "layer.flood-alerts.description":
     "Current floods that GDACS rates for their impact on people.",
@@ -719,16 +715,13 @@ export const EN_GB_CATALOGUE: Record<MessageKey, string> = {
   "layer.imagery.name": "Satellite imagery",
   "layer.imagery.description":
     "A daily true-colour picture of the whole Earth from the NOAA-21 satellite, with that day's clouds, unlike the Satellite basemap. Detail stops at about 300 m.",
-  "layer.imagery.dataCost": "about 0.5 to 1 MB per screen",
   "layer.population.name": "Where people live",
   "layer.population.description":
     "Population density across the world in 2020, from dark and empty to bright and crowded. Detail stops at about 5 km. Antarctica is not shown.",
-  "layer.population.dataCost": "about 20 to 100 KB per screen",
   "layer.group.people": "People",
   "layer.rainfall-half-hourly.name": "Rainfall, half-hourly",
   "layer.rainfall-half-hourly.description":
     "Rain estimated from satellites for the whole Earth, as the rain rate in one half hour in millimetres per hour (mm per hour). Rain runs from green (light, up to about 1) through yellow and orange (about 1 to 4) to red (about 5 to 20) and dark red (heavy, over 20; the scale stops at 53). Snow and other frozen precipitation use pale cyan, blue and purple over the same steps. Nothing is drawn below 0.1. Each half hour arrives six to seven hours late, and detail stops at about 10 km.",
-  "layer.rainfall-half-hourly.dataCost": "about 50 to 250 KB per screen",
   "layer.rainfall-half-hourly.disclaimer":
     "Not a forecast, and not for warnings. It is a satellite estimate, coarser than radar, and can miss or overstate rain. Recent half hours are early estimates that NASA revises later. For warnings, use your national weather service.",
   "layer.rainfall-half-hourly.control.time.label": "Half hour shown",
@@ -737,7 +730,6 @@ export const EN_GB_CATALOGUE: Record<MessageKey, string> = {
   "layer.rainfall.name": "Rainfall",
   "layer.rainfall.description":
     "Rain estimated from satellites for the whole Earth, as the rain rate for the chosen day in millimetres per hour (mm per hour). Rain runs from green (light, up to about 1) through yellow and orange (about 1 to 4) to red (about 5 to 20) and dark red (heavy, over 20; the scale stops at 53). Snow and other frozen precipitation use pale cyan, blue and purple over the same steps. Nothing is drawn below 0.1. Each day arrives two to three days late, and detail stops at about 10 km.",
-  "layer.rainfall.dataCost": "about 50 to 160 KB per screen",
   "layer.rainfall.disclaimer":
     "Not a forecast, and not for warnings. It is a satellite estimate, coarser than radar, and can miss or overstate rain. For warnings, use your national weather service.",
   "layer.rainfall.control.date.description":
@@ -745,7 +737,6 @@ export const EN_GB_CATALOGUE: Record<MessageKey, string> = {
   "layer.sea-temperature-anomaly.name": "Sea temperature compared with normal",
   "layer.sea-temperature-anomaly.description":
     "Warm colours, from yellow to dark red, show sea water warmer than usual for the time of year. Grey is about normal, and cyan to blue is cooler. Unusually warm water along the equator in the Pacific is the sign of El Niño, and unusually cool water is La Niña. Detail stops at about 5 km.",
-  "layer.sea-temperature-anomaly.dataCost": "about 20 to 60 KB per screen",
   "layer.group.oceans": "Oceans",
   "layer.volcano-alerts.name": "Volcano alerts",
   "layer.volcano-alerts.description":
@@ -754,7 +745,6 @@ export const EN_GB_CATALOGUE: Record<MessageKey, string> = {
   "layer.world-countries.name": "Countries by population",
   "layer.world-countries.description":
     "Country outlines shaded by estimated population, from Natural Earth.",
-  "layer.world-countries.dataCost": "about 840 KB",
   "layer.world-countries.disclaimer":
     "Population figures are estimates, not official counts.",
   "layer.world-countries.emptyText": "No countries could be shown.",
@@ -766,7 +756,6 @@ export const EN_GB_CATALOGUE: Record<MessageKey, string> = {
   "layer.world-countries.key.5": "200 million and above",
   "layer.world-countries.sort.name": "Name",
   "layer.world-countries.sort.population": "Most people",
-  "layer.gdacs.dataCost": "about 135 KB",
   "layer.gdacs.disclaimer":
     "GDACS alerts are automatic estimates from models. Check official sources before you act.",
   "layer.gdacs.key.1": "Green alert",

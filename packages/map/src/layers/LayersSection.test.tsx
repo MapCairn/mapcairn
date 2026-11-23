@@ -1381,7 +1381,6 @@ describe("LayersSection definition text", () => {
     name: "layer.fire-alerts.name",
     description: "layer.fire-alerts.description",
     group: "layer.group.fires",
-    dataCost: "layer.gdacs.dataCost",
     disclaimer: "layer.gdacs.disclaimer",
     emptyText: "layer.fire-alerts.emptyText",
     controls: [
@@ -1452,7 +1451,6 @@ describe("LayersSection definition text", () => {
         "layer.fire-alerts.name": "Brandwaarskuwings",
         "layer.fire-alerts.description": "Huidige veldbrande.",
         "layer.group.fires": "Brande",
-        "layer.gdacs.dataCost": "ongeveer 135 KB",
         "layer.gdacs.disclaimer": "Outomatiese skattings.",
         "layer.fire-alerts.emptyText": "Geen brandwaarskuwings nou nie.",
         "layer.earthquakes.control.window.label": "Tydperk",
@@ -1510,7 +1508,6 @@ describe("LayersSection definition text", () => {
       name: hostText("host.alerts.name", "Fire alerts"),
       description: hostText("host.alerts.description", "Current wildfires."),
       group: hostText("host.group", "Fires"),
-      dataCost: hostText("host.alerts.cost", "about 135 KB"),
       disclaimer: hostText("host.alerts.disclaimer", "Automatic estimates."),
       emptyText: hostText("host.alerts.empty", "No fire alerts now."),
       controls: [

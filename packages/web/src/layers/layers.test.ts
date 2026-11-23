@@ -44,7 +44,7 @@ const ATTRIBUTIONS = readFileSync(
 );
 
 /**
- * How many times the largest size a definition documents the source's default
+ * How many times the size a detail source documents the source's default
  * response limit must be, so a feed that grows a little still loads.
  */
 const RESPONSE_LIMIT_MARGIN = 4;
@@ -335,19 +335,14 @@ describe("the host's layer definitions", () => {
         );
       });
 
-      it("has its documented data cost well under the source's default response limit", () => {
-        const largest = Math.max(
-          largestDocumentedBytes(definition.dataCost),
-          definition.detail
-            ? largestDocumentedBytes(definition.detail.dataCost)
-            : 0,
-        );
-        expect(DEFAULT_MAX_RESPONSE_BYTES).toBeGreaterThanOrEqual(
-          RESPONSE_LIMIT_MARGIN * largest,
-        );
-      });
-
       if (definition.detail) {
+        const detailCost = definition.detail.dataCost;
+        it("has its documented detail data cost well under the source's default response limit", () => {
+          expect(DEFAULT_MAX_RESPONSE_BYTES).toBeGreaterThanOrEqual(
+            RESPONSE_LIMIT_MARGIN * largestDocumentedBytes(detailCost),
+          );
+        });
+
         it("decodes its recorded detail fixture to shapes", () => {
           const detail = MANIFEST[definition.id]?.detail;
           expect(

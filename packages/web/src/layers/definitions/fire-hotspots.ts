@@ -12,7 +12,6 @@ const fireHotspots: TileLayerDefinition = {
   name: "layer.fire-hotspots.name",
   description: "layer.fire-hotspots.description",
   group: "layer.group.fires",
-  dataCost: "layer.fire-hotspots.dataCost",
   attribution: [
     {
       text: "We acknowledge the use of imagery provided by services from NASA's Global Imagery Browse Services (GIBS), part of NASA's Earth Science Data and Information System (ESDIS).",

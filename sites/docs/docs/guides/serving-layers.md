@@ -30,7 +30,7 @@ A `tiles` source names a URL template with `{z}`, `{x}`, `{y}` and, for a WMS, `
 - Set `maxzoom` to the deepest level you hold and let the engine stretch it beyond that, rather than answering 404 for a level that does not exist.
 - Set `bounds` when the provider fills the rest of the world with blank or opaque tiles. The map then asks for no tile wholly outside the box. This matters at the poles, where a globe stretches the edge row of tiles over the pole.
 - Serve `Cache-Control` with a long `max-age` for a tile that never changes, and a version in the URL when it does. A browser cache and a cache in front of the server both do most of the work here.
-- A tile is a picture, so the tiles have no cards or list. An identify endpoint, which the layer's `identify` block names, gives a tap its card; see [identify features on a raster layer](extending.md#identify-features-on-a-raster-layer). Offer a control such as opacity or a date and time, and say in `dataCost` what a screen costs, in words a person can read.
+- A tile is a picture, so the tiles have no cards or list. An identify endpoint, which the layer's `identify` block names, gives a tap its card; see [identify features on a raster layer](extending.md#identify-features-on-a-raster-layer). Offer a control such as opacity or a date and time.
 - Say when there is no tile. This applies only to raster layers. When the map has settled and every tile the layer asked for has failed, with none loaded, the layer's entry in the list shows a status: "No imagery was found for" the chosen date or time when the layer has such a control, and otherwise "Could not load". A layer whose tiles partly load says nothing. Before the map settles, a layer that has had tiles asked for and none loaded after 10 seconds shows "Still waiting for imagery. The provider may be slow or not answering." with an hourglass, so a tile server slower than that is reported without waiting for the give-up; the line goes when a tile loads or the layer's tiles change. A server that publishes time-stamped imagery should answer `404` with `Access-Control-Allow-Origin` for a date or time it has no imagery for. A `404` counts as "no tile" only when it carries open CORS headers; without them the browser blocks the response and the engine reports a request error instead. The CORS requirement covers error responses as well as tiles.
 
 ## Vector tiles where a generator exists
@@ -84,7 +84,6 @@ const parks: FeedLayerDefinition<PointStyle> = {
   name: "Parks",
   description: "Example parks from a feature service, asked for by view.",
   group: "Places",
-  dataCost: "a few KB per screen",
   attribution: [{ text: "Example provider", url: "https://example.org/" }],
   controls: [],
   source: {
@@ -130,7 +129,6 @@ const roads: IdentifiableLayerDefinition = {
   name: "Roads",
   description: "Example road map drawn by a WMS, with the road at a tap.",
   group: "Places",
-  dataCost: "about 100 KB per screen",
   attribution: [{ text: "Example provider", url: "https://example.org/" }],
   controls: [],
   source: {
@@ -169,7 +167,6 @@ const imagery: LayerDefinition = {
   name: "Imagery",
   description: "Example imagery from a WMTS tile service.",
   group: "Imagery",
-  dataCost: "about 300 KB per screen",
   attribution: [{ text: "Example provider", url: "https://example.org/" }],
   controls: [],
   source: {

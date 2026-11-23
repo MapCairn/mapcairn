@@ -69,7 +69,6 @@ const TILE_LAYER: TileLayerDefinition = {
   name: "Overlay",
   description: "A tile overlay.",
   group: "Example",
-  dataCost: "some",
   attribution: [],
   controls: [],
   source: {
@@ -91,7 +90,6 @@ const QUERY_LAYER: HeatmapLayerDefinition = {
   name: "Density",
   description: "A heatmap from a query.",
   group: "Example",
-  dataCost: "some",
   attribution: [],
   controls: [],
   source: {
