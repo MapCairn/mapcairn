@@ -25,7 +25,7 @@ One issue per step, in plan order. Each body has: `Part of #<tracker>` and the p
 
 ## 4. Update the tracker
 
-Start from the current body (`node scripts/agents/issue-body.mjs <tracker> <path>` (the exact body, saved outside the repository as `pick-up-issue` section 4 says)), add one `- [ ] #<child>` line per child in order, keep all other text unchanged, and save it with `gh issue edit <tracker> --repo MapCairn/mapcairn --body-file <path>`. Without triage rights you cannot edit or label issues: comment the list of children on the tracker instead and leave the editing and labels to the maintainer. When the first step's pull request merges, comment that the plan is now in progress; that pull request moves the plan file and its README line from "proposed" to "in progress".
+Start from the current body (`node scripts/agents/issue-body.mjs <tracker> <path>` (the exact body, saved outside the repository as `pick-up-issue` section 4 says)), add one `- [ ] #<child>` line per child in order, keep all other text unchanged, and save it with `gh issue edit <tracker> --repo MapCairn/mapcairn --body-file <path>`. Without triage rights you cannot edit or label issues: comment the list of children on the tracker instead and leave the editing and labels to the maintainer. When the first step's pull request merges, comment that the plan is now in progress; that pull request moves the plan file and its README line from "proposed" to "in progress". The pull request for the last child deletes the plan file, its README line and every reference to it, or folds what still governs the code into the guides.
 
 ## 5. Report
 

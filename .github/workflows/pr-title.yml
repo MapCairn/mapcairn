@@ -1,0 +1,48 @@
+name: Pull request title
+
+# Fails a pull request whose title is not a Conventional Commit, using
+# `scripts/prTitleCheck.mjs`, the same reading of a subject the release scripts use.
+# The job runs on every pull request and changes no label or setting. It is not a
+# required check yet: the maintainer can add `Conventional Commit title` to the
+# ruleset once it has run on a few pull requests.
+on:
+  pull_request:
+    # `edited` runs the check again when the title changes.
+    types: [opened, reopened, edited, synchronize]
+
+permissions: {}
+
+concurrency:
+  group: pr-title-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  title:
+    name: Conventional Commit title
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      # The script needs only itself and the release rules it imports, so check out
+      # just those files.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          sparse-checkout: |
+            scripts/prTitleCheck.mjs
+            scripts/entryPoint.mjs
+            scripts/release/versionRules.mjs
+            scripts/release/semver.mjs
+          sparse-checkout-cone-mode: false
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version: 24
+
+      - name: Check the title
+        # The title reaches the script through the environment, never through the
+        # shell script text.
+        env:
+          PR_TITLE: ${{ github.event.pull_request.title }}
+        run: node scripts/prTitleCheck.mjs

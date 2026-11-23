@@ -38,7 +38,7 @@ Packages, ports, files, lint rules and manifests touched, and the public API in 
 ## Tests
 The failing tests the work starts with, and how each is proved.
 ## Order of work
-Numbered steps, each independently shippable (one pull request, build green), each with the files it touches.
+Numbered steps, each independently shippable (one pull request, build green), each with the files it touches. The last step's pull request also deletes the plan file, its entry in `docs/plans/README.md` and every reference to it, or folds what still governs the code into the guides.
 ## Documents to update
 Which of README, ARCHITECTURE, DESIGN, guides and PRIVACY change, and in which step.
 ## Risks
