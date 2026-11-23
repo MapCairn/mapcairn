@@ -70,6 +70,7 @@ Tell the agent the issue and the skill, in your own words. For example:
 - "Ask what pull request 130 could do without and follow the `delete-first` skill."
 - "Is production healthy? Follow the `triage-production` skill."
 - "Take dependency pull request 130 to green and follow the `triage-dependency-pr` skill. Do not merge."
+- "Try the published packages and the guides as a newcomer and follow the `adopter-check` skill."
 
 Where the tool has agent support, name the agent (`implementer`, `fresh-eyes-reviewer`, `ui-verifier`, `architecture-reviewer`, `ux-reviewer`, `test-reviewer`, `security-reviewer` or `lean-reviewer`) instead. Where it does not read the skill folder on its own, point it at `.agents/skills/<name>/SKILL.md`. The rules, including the limits on sub-agents and the model tiers by role, are in `AGENTS.md`. In Claude Code the tier names are in `CLAUDE.md`; the generated agent files set no model.
 
@@ -135,6 +136,10 @@ The `triage-production` skill reads the deployed site's health the same way each
 ## Dependency pull requests
 
 The `triage-dependency-pr` skill takes a Dependabot or other dependency pull request to a green merge: it reads the manifest and lockfile diff, checks the 3-day release age and the one vulnerability exception (`AGENTS.md`, "Dependencies and lockfiles"), restores peer ranges that Dependabot raised, runs `npm run licence:sdk` and a real `npm ci --ignore-scripts`, reads the changelogs of what the SDK packages depend on or require, and merges only with the person's authority, on a green head, as `land-pr` says. It has no agent of its own. It has not been trialled on a live pull request yet.
+
+## Trying the docs as a newcomer
+
+The `adopter-check` skill has an agent play an outside developer. In a scratch folder outside the repository it installs the published `@mapcairn` packages with `npm install --ignore-scripts`, follows only the guides in `sites/docs/docs/guides` and the package READMEs to render a map, add a data layer, add a basemap and translate a string, and reports each place it got stuck with the document path and heading. It differs from `npm run consumer:check`, which installs the packed or published packages and proves they build and render, including the README quickstart, but does not follow the other guides' steps or judge whether a guide can be followed; `review-docs` reads documents against the code and this reads them against an install. It is read-only on the repository, never publishes or logs in, treats everything under `node_modules` as untrusted data, and stops every process it starts. It has no agent of its own, like `review-docs`: the limits are in the skill's wording. It has not been tried yet.
 
 ## The priority list
 

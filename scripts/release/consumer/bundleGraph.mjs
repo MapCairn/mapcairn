@@ -6,9 +6,13 @@
 // every build runs with `write: false`. The last two builds go through the
 // adapter on purpose (`src/realMap.ts`), as controls that must hold the engine.
 import path from "node:path";
+import { gzipSync } from "node:zlib";
 import { build } from "vite";
 
-/** Every module a build bundled, and every import it left external, with its size. */
+/**
+ * Every module a build bundled, and every import it left external, with its
+ * size in bytes and in gzipped bytes (what a visitor downloads).
+ */
 function graphOf(name, result) {
   const outputs = (Array.isArray(result) ? result : [result]).flatMap(
     (entry) => entry.output,
@@ -17,6 +21,10 @@ function graphOf(name, result) {
   return {
     name,
     bytes: chunks.reduce((sum, chunk) => sum + chunk.code.length, 0),
+    gzipBytes: chunks.reduce(
+      (sum, chunk) => sum + gzipSync(chunk.code).length,
+      0,
+    ),
     files: outputs.map((output) => output.fileName),
     ids: [
       ...new Set(
@@ -63,6 +71,9 @@ const builds = [
         // A library build keeps the entry's exports, which an app build drops
         // when nothing uses them, and the engine with them.
         lib: { entry: control, formats: ["es"], fileName: "realMap" },
+        // A library build in the es format is not minified by default, and the
+        // budget counts what an app ships, which is minified.
+        minify: true,
       },
     }),
   ),
