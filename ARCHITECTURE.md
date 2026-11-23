@@ -4,40 +4,22 @@ MapCairn separates what the app does from what it runs on. The interface and the
 
 ```mermaid
 flowchart TD
-  subgraph web["packages/web"]
-    root["composition root<br/>createServices()"]
-    adapters["adapters<br/>search, routing, layers,<br/>location, settings, clipboard,<br/>url, theme"]
-    definitions["layer definitions<br/>(data)"]
-    host["SSR host, routes"]
-  end
-  subgraph maplibre["packages/adapter-maplibre"]
-    engine["MapLibre adapter<br/>and engine CSS"]
-  end
-  subgraph map["packages/map"]
-    ui["ui: components, MapChrome,<br/>ServicesProvider, hooks"]
-  end
-  subgraph core["packages/core"]
-    ports["ports (types only)"]
-    logic["pure logic<br/>state machines, maths,<br/>formatters, announcements"]
-    fakes["fakes and contract suites"]
-  end
-  theme["packages/theme<br/>tokens, contrast maths"]
-  react["packages/react<br/>generic hooks"]
-  root --> adapters
-  root --> engine
-  root --> definitions
-  root --> ui
-  adapters --> ports
-  adapters --> logic
-  engine --> ports
-  engine --> theme
-  ui --> ports
-  ui --> logic
-  ui --> theme
-  ui --> react
-  ports --> logic
-  fakes --> ports
+  web["web, the host<br/>createServices(), web adapters"]
+  map["map<br/>user interface"]
+  maplibre["adapter-maplibre<br/>MapLibre adapter"]
+  core["core<br/>ports, logic"]
+  theme["theme"]
+  react["react"]
+  web --> map
+  web --> maplibre
+  map --> core
+  map --> theme
+  map --> react
+  maplibre --> core
+  maplibre --> theme
 ```
+
+An arrow means "imports". Each box is a package under `packages/`, so `core` is `packages/core`. `core` holds the ports (types only), the pure logic, the fakes and the contract suites, and imports no other package, as do `theme` (the tokens and their contrast maths) and `react` (generic hooks). Only the host imports the MapLibre adapter, and no SDK package imports the host. The host's own adapters import `core` as well, which the picture leaves out.
 
 ## Layers and dependency rules
 
@@ -184,6 +166,27 @@ MapLibre GL JS is the only map engine, and the ui never imports it. The adapter 
 
 A data layer is typed data: a `LayerDefinition` in `packages/web/src/layers/definitions/`, one file each, collected with `import.meta.glob`. Nothing in the code branches on a layer id, a provider or a response shape.
 
+A layer's path from file to map, for a feed layer (`createServices()` passes the catalogue and `FetchLayerSource` to the ui). A tile or vector layer has no load step: `MapDataLayers` hands the adapter its source, and the engine requests the tiles.
+
+```mermaid
+flowchart TD
+  subgraph start["At start-up"]
+    defs["definitions/*.ts<br/>one LayerDefinition each"]
+    catalogue["createStaticLayerCatalogue<br/>validates every definition"]
+  end
+  subgraph on["When a layer is turned on"]
+    hook["useDataLayers<br/>in packages/map"]
+    source["LayerSource.load<br/>FetchLayerSource in packages/web"]
+    draw["MapDataLayers<br/>setFeatureLayer and its kin"]
+    adapter["MapAdapter<br/>MapLibre adapter draws it"]
+  end
+  defs --> catalogue
+  catalogue --> hook
+  hook --> source
+  source --> draw
+  draw --> adapter
+```
+
 - **Core** (`packages/core/src/layers`) holds the definition types and a hand-written schema check (`validateLayerDefinition`; core stays free of schema libraries), URL and card templates (`{window}`, `{time|relative}`; a tile URL leaves the engine's `{z}`, `{x}`, `{y}` and `{bbox-epsg-3857}` alone, while an identify URL fills `{x}` and `{y}` itself), host-keyed card, list, feed-shape label and unit templates (`LayerTemplate`), derived URL variables looked up from control values, filters, a decoder registry with the built-in `geojson` decoder (fields mapped by dotted path, so USGS and GDACS share it), a formatter registry (`relative`, `number`, `km`, `date`), style evaluation with a legend derived from the style, palette slot names, and `SharedResponseCache`, which reuses a response for its `max-age` (or the definition's `cacheSeconds`) and shares a request in flight, so layers split from one feed cost one request. It also holds the `LayerCatalogue` implementations and `partitionDefinitions` (see "Ports").
 - **The `LayerSource` port** loads any feed definition with `load({ definition, controls, now, signal })` and an on-request `loadDetail`, and rejects only with a typed `LayerError` (`network`, `invalid`, `empty`, `aborted`). A detail URL comes from the provider's data, so it is requested only when it is `https` on an origin the definition declares. Its third method, `identify({ definition, controls, now, at, signal })`, asks what a tile layer's `identify` block says is at a tap and is required, so a host's own `LayerSource` must implement it. Nothing found resolves to an empty list, never `empty`; it rejects with `network` (which includes any error status, 401 and 403 too until an `unauthorised` kind exists), `invalid` (a URL that cannot be built or is not `https`, which core's `identifyRequestUrl` checks for every source, or an answer that is not a document the decoder reads) or `aborted`. The size of an answer belongs to the source: one that reads from a network applies a limit of its own to every answer and refuses a larger one as `invalid`, so the contract suite requires it. `FetchLayerSource` reads at most `MAX_IDENTIFY_RESPONSE_BYTES` (1 MiB) of an identify answer and at most `maxResponseBytes` of a feed, query or detail answer, checked against `Content-Length` and again while reading, which stops and cancels the stream at the first chunk over the line. `maxResponseBytes` is an option of the source (`FetchLayerSourceOptions`), not of a definition, so it is the same for every layer the source serves: one large layer raises it for all of them. It defaults to `DEFAULT_MAX_RESPONSE_BYTES` (4 MiB, in `FetchLayerSource.ts`), about five times the largest answer the reference definitions document (the country outlines, about 840 KB decoded), and a test in `layers.test.ts` requires it to be at least four times the largest size any definition's `dataCost` states. An over-limit answer is not kept in the response cache, and the layer shows the same error state and message as any other `invalid` answer. The identify path sends the request through the same private fetch-and-parse method as every other request, but never through `SharedResponseCache`: a tap's URL never repeats, and a kept answer would push feed responses out of the cache, so it ignores `Cache-Control` and shares no request in flight. `FakeLayerSource` scripts identify apart from load (`setIdentified`, `failIdentify`, `holdIdentify(layerId)` for one layer, and `identifyRequests` with the URL a real source would fetch) and applies no size limit to an identify answer. `setOversizeAnswer(layerId, kind)` makes a layer's feed or detail answer larger than the source's limit, so it refuses it as `invalid`, and a host can script "features load, detail refused". The `LayerSource` contract suite covers identify with two layers, `CONTRACT_IDENTIFY_LAYER` and `CONTRACT_OTHER_IDENTIFY_LAYER`, and `LayerSourceControls` has four required members beyond the feed ones: `respondToIdentifyWith`, `failIdentifyWith` and `holdIdentify` for identify, and `respondWithOversizeAnswer(kind)` for the size limit (the subject makes its source answer a feed or a detail with a body larger than whatever limit it applies, and the suite requires the read to fail as `invalid` and an answer within the limit to load), so a host that runs the contract against its own source must supply them. `useDataLayers.identifyAt` calls it (see "Identify at a tap" below); the reference site's layers have no `identify` block, so nothing asks it there.
 - **Map** (`packages/map/src/layers`) has `useDataLayers` (state, loading, cancellation, announcements, the permalink value), `MapDataLayers` (draws through the adapter, turns taps into open cards), `SelectionMarker`, and the generic `LayersSection`, card and list. "Show on map" in `LayersSection` fits a polygon or line with `fitPadding`, clear of the sheet (at its half detent) or the side panel, the search pill and the end stack, and above the map key while it shows: `MapChrome` publishes how far up from the bottom edge the key reaches (`mapKeyClearance` in the chrome layout context), and the fit keeps clear of it where that still leaves twice `REVEAL_CLEARANCE` of map. A point is centred in what the sheet or panel leaves free. The data palette values live in `@mapcairn/theme` (`tokenValues.dataPalette`).
@@ -221,6 +224,21 @@ The draw tool follows the same split. `packages/core/src/draw` holds a pure redu
 - **Sharing.** Shapes are never written to the address bar and never stored. "Copy link with shapes" calls `UrlState.link` with the current address state plus `shapes=`, a text of link-safe characters (`A-Z a-z 0-9 . - _`): one letter for the kind, then positions in units of 0.00001 degrees (coarser than the file exports, which keep six decimals or more) and a circle's radius in whole metres, the first absolute and each later one as a zigzag step, packed five bits to a character, with shapes separated by a full stop. A link is limited to 2,000 characters and 50 shapes, and is refused with a message rather than cut short for its size. A shape the link cannot carry is left out, and the message says how many were and offers a file instead (every shape too small gives an error and copies nothing): a circle under a metre, since a radius in whole metres would read back up to twice the size, or as nothing, and a line or polygon that does not read back as a valid shape once its positions are whole units, such as a line whose two ends fall on the same unit. `unsharableShapes` finds them by encoding each shape and decoding it again with the rules the reader uses, so the writer and the reader cannot disagree. The radius is not scaled, so a link written before keeps its meaning. Reading a link skips a part that cannot be read or that fails the draw rules, and keeps the rest; the text as a whole is refused when it is outside the alphabet, too long, over 50 parts or holds no valid shape. Reading a link is bounded and linear in its length, and the next write of the address drops `shapes=`, because only the view, basemap and layers are written.
 
 ## Adding an adapter
+
+An adapter reaches the ui through the services. Arrows run from the port towards the code that uses it.
+
+```mermaid
+flowchart TD
+  port["SearchProvider<br/>port, in packages/core"]
+  adapter["NominatimSearchProvider<br/>in packages/web/src/adapters"]
+  create["createServices()<br/>real adapters, then the test seam,<br/>then options.overrides"]
+  provider["ServicesProvider<br/>in routes/app.tsx"]
+  hook["useSearch, useSettings, ...<br/>hooks in packages/map"]
+  port --> adapter
+  adapter --> create
+  create --> provider
+  provider --> hook
+```
 
 1. Define or extend the port in `packages/core/src/ports`, with typed errors and an `AbortSignal` on async calls.
 2. Write the fake in `packages/core/src/fakes` and the contract suite in `packages/core/src/contracts`.

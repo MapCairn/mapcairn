@@ -55,12 +55,13 @@ describe("custom.css", () => {
     );
   });
 
-  it("colours every class a drawn diagram carries, and scrolls it sideways before its text gets too small", () => {
+  it("colours every class a drawn diagram carries, and shrinks it to the column without a minimum width or a scroll box", () => {
     for (const name of ["group", "node", "edge", "arrow", "text", "title"]) {
       expect(RULES, name).toMatch(new RegExp(`\\.flowchart-${name}\\b`));
     }
-    expect(RULES).toMatch(/\.flowchart\s*{[^}]*overflow-x:\s*auto/);
-    expect(RULES).toMatch(/\.flowchart-svg\s*{[^}]*min-width:/);
+    const rules = RULES.match(/\.flowchart(-svg)?\s*{[^}]*}/g) ?? [];
+    expect(rules.join("")).toMatch(/max-width:\s*100%/);
+    expect(rules.join("")).not.toMatch(/min-width|overflow/);
   });
 
   it("lines the roadmap lanes up on shared rows", () => {

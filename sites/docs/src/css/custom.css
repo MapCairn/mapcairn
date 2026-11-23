@@ -934,13 +934,12 @@ blockquote {
 }
 
 /*
- * A diagram drawn at build time from a Mermaid block (plugins/flowchart). It
- * shrinks to the column, but not below 34rem, where its text is about 11px;
- * a narrower screen scrolls the box sideways instead. The colours are the
- * tokens', so both themes follow the site's.
+ * A diagram drawn at build time from a Mermaid block (plugins/flowchart). The
+ * build refuses one wider than a phone's column, so it only ever shrinks to
+ * fit and never scrolls. The colours are the tokens', so both themes follow
+ * the site's.
  */
 .flowchart {
-  overflow-x: auto;
   margin-block-end: var(--mc-space-md);
 }
 
@@ -948,7 +947,6 @@ blockquote {
   display: block;
   margin-inline: auto;
   max-width: 100%;
-  min-width: 34rem;
   height: auto;
 }
 
