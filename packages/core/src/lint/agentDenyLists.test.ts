@@ -140,8 +140,9 @@ const RELEASE_GATE_COMMANDS = [
 
 /**
  * Whether a wildcard pattern matches a whole command. `*` matches any text.
- * With `bareEnds`, a lone trailing ` *` also matches the command without
- * arguments, as Claude Code's permission page says it does.
+ * With `bareEnds`, a trailing ` *` also matches the command without
+ * arguments, but only when it is the pattern's only `*` (`npm publish *`, not
+ * `npm * publish *`), as https://code.claude.com/docs/en/permissions says.
  */
 function wildcardMatches(
   pattern: string,
