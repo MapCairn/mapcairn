@@ -159,7 +159,7 @@ Only the maintainer does these; an agent lists them and waits.
 
    - It changed the sentence in [The public API](https://mapcairn.timothybrits.co.za/docs/guides/public-api/) ("The package READMEs are written for the npm page") that said the Status line calls the packages a release candidate.
    - Then step 5 above, after the packages are published.
-5. After `npm view @mapcairn/core@0.1.0` found it: the follow-up pull request (plan step 15) dropped `@next` from `INSTALL_COMMAND` in `packages/web/src/product/productContent.ts`, the one install line that still said it, because the README install lines were done in step 4. It also added the "View on npm" action to the product page, the same link to `/index.md`, `/llms.txt` and `/llms-full.txt`, and the GitHub Release and npm version badges to the root `README.md`. The six package READMEs carry no badges yet, because they are packed into the tarballs and so change only in a release.
+5. After `npm view @mapcairn/core@0.1.0` found it: the follow-up pull request (plan step 15) dropped `@next` from `INSTALL_COMMAND` in `packages/web/src/product/productContent.ts`, the one install line that still said it, because the README install lines were done in step 4. It also added the "View on npm" action to the product page, the same link to `/index.md`, `/llms.txt` and `/llms-full.txt`, and the GitHub Release and npm version badges to the root `README.md`. The six package READMEs now carry two badges too, the package's own npm version badge and the GitHub Release badge, but they are packed into the tarballs and so reach the npm pages only with the next release.
 
 ### Adding a package to the release set
 

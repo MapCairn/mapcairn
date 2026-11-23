@@ -1,5 +1,8 @@
 # `@mapcairn/map`
 
+[![npm version](https://img.shields.io/npm/v/@mapcairn/map)](https://www.npmjs.com/package/@mapcairn/map)
+[![GitHub Release](https://img.shields.io/github/v/release/MapCairn/mapcairn)](https://github.com/MapCairn/mapcairn/releases)
+
 The map user interface of MapCairn, in React: the chrome around the map, the bottom sheet and its panels, the search, locate, measure, draw and directions tools, the first-visit tour, the accessible primitives and the `MapView` host. Use it to put a finished, accessible interface around a MapLibre map without building each control yourself.
 
 Most apps should install [`@mapcairn/sdk`](https://github.com/MapCairn/mapcairn/tree/main/packages/sdk) instead: one install, one import and one stylesheet for the whole SDK, which re-exports this package. Install `@mapcairn/map` on its own as the advanced option, for a host that wants fewer dependencies.
