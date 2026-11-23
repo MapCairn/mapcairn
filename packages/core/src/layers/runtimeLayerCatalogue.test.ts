@@ -142,7 +142,7 @@ describe("createRuntimeLayerCatalogue", () => {
     catalogue.subscribe(() => undefined);
     loads[0]?.resolve([
       SAMPLE_FEED_LAYER,
-      { ...SAMPLE_TILE_LAYER, dataCost: "" },
+      { ...SAMPLE_TILE_LAYER, group: "" },
       42,
     ]);
     await catalogue.refresh();

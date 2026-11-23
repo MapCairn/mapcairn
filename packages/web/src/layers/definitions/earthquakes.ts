@@ -14,7 +14,6 @@ const earthquakes: FeedLayerDefinition = {
   name: "layer.earthquakes.name",
   description: "layer.earthquakes.description",
   group: "layer.group.earthquakesAndVolcanoes",
-  dataCost: "layer.earthquakes.dataCost",
   attribution: [
     {
       text: "Credit: U.S. Geological Survey",

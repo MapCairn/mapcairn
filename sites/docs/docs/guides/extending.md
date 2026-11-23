@@ -125,7 +125,7 @@ A layer is data, not code: one definition file, one recorded fixture (feeds only
 
 On the reference site, adding a dataset is the maintainer's decision. The `review-layer` skill (`.claude/skills/review-layer/SKILL.md`) is the checklist for a proposed or changed layer: the provider's terms and attribution wording, direct browser access, what the provider learns about a visitor, the origins, failure behaviour and the text. It prepares the review and the questions for the maintainer; it does not add a layer.
 
-The text a person reads in a definition (`name`, `description`, `group`, `dataCost`, `disclaimer`, `emptyText`, control and option labels, the labels of a style's classes, sort labels, the card's link label and the detail source's `label` and `dataCost`) is a `MessageKey`, a `HostText` or a plain string. A plain string is shown as written, which is all a layer of your own host needs; a host that wants its own text translated writes `{ key, text }` and supplies `definitionTexts` in its catalogue (see the [translation guide](translate-the-sdk.md)), with `text` as the source and fallback. The reference host's definitions use keys, so each key is added to `MessageKey`, `EN_GB_CATALOGUE` (with the exact English) and `EXPECTED_PLACEHOLDERS` in `packages/core/src/lint/messages.test.ts`, and to each of the site's translations (`packages/web/src/i18n/af.ts`), which typecheck holds complete.
+The text a person reads in a definition (`name`, `description`, `group`, `disclaimer`, `emptyText`, control and option labels, the labels of a style's classes, sort labels, the card's link label and the detail source's `label` and `dataCost`) is a `MessageKey`, a `HostText` or a plain string. A plain string is shown as written, which is all a layer of your own host needs; a host that wants its own text translated writes `{ key, text }` and supplies `definitionTexts` in its catalogue (see the [translation guide](translate-the-sdk.md)), with `text` as the source and fallback. The reference host's definitions use keys, so each key is added to `MessageKey`, `EN_GB_CATALOGUE` (with the exact English) and `EXPECTED_PLACEHOLDERS` in `packages/core/src/lint/messages.test.ts`, and to each of the site's translations (`packages/web/src/i18n/af.ts`), which typecheck holds complete.
 
 Card titles and lines, list secondary lines, feed polygon and line labels, and range and interval units use `LayerTemplate`: the existing plain string or an object with a host-defined `key` and source `text`. The optional `MessageCatalogue.layerTemplates` record holds a translation by key; `createMessageCatalogue` accepts it as its fourth argument. A translation may reorder placeholders but must preserve every source field and formatter, including duplicates. If the key is missing or the placeholders differ, the source text is used. A unit includes its own spacing, such as ` per km²`. Vector-tile labels remain plain property names because the map engine reads them directly, and credits in `attribution` are never translated.
 
@@ -139,7 +139,6 @@ const example: TileLayerDefinition = {
   name: "Example overlay",
   description: "What the overlay shows, in one sentence.",
   group: "Imagery",
-  dataCost: "about 100 KB per screen",
   attribution: [{ text: "Example provider", url: "https://example.org/" }],
   controls: [{ kind: "opacity", id: "opacity", label: "Opacity", default: 0.8 }],
   source: {
@@ -186,7 +185,6 @@ const districts: FeedLayerDefinition<ShapeStyle> = {
   name: "Districts by density",
   description: "Example districts shaded by people per square kilometre.",
   group: "Boundaries",
-  dataCost: "about 60 KB",
   attribution: [{ text: "Example provider", url: "https://example.org/" }],
   controls: [],
   source: {
@@ -238,7 +236,6 @@ const density: HeatmapLayerDefinition = {
   name: "Event density",
   description: "How dense the example events are.",
   group: "Density",
-  dataCost: "about 40 KB",
   attribution: [{ text: "Example provider", url: "https://example.org/" }],
   controls: [
     { kind: "range", id: "radius", label: "Radius", min: 4, max: 80, step: 2, default: 20, unit: " px" },
@@ -276,7 +273,6 @@ const parks: VectorTileLayerDefinition = {
   name: "Parks and water",
   description: "Example areas and roads from vector tiles.",
   group: "Boundaries",
-  dataCost: "about 100 KB per screen",
   attribution: [{ text: "Example provider", url: "https://example.org/" }],
   controls: [],
   source: { kind: "vector-tiles", tiles: "https://tiles.example.org/{z}/{x}/{y}.pbf", maxzoom: 14 },
@@ -334,7 +330,6 @@ const floodDepth: IdentifiableLayerDefinition = {
   name: "Flood depth",
   description: "Example modelled flood depth, with the depth at a tap.",
   group: "Imagery",
-  dataCost: "about 200 KB per screen",
   attribution: [{ text: "Example provider", url: "https://example.org/" }],
   controls: [
     {
@@ -431,7 +426,6 @@ const places: FeedLayerDefinition<PointStyle> = {
   name: "Places in view",
   description: "Example places, requested for the part of the map in view.",
   group: "Places",
-  dataCost: "a few KB per screen",
   attribution: [{ text: "Example provider", url: "https://example.org/" }],
   controls: [],
   source: {
@@ -505,7 +499,34 @@ Every `SearchResult` has these fields (`packages/core/src/ports/search.ts`):
 | `centre`         | `{ lat, lng }`, in degrees. Required.                                                                                                              |
 | `bounds`         | Optional `{ south, west, north, east }`. When present, a host that follows the reference site fits the map to it instead of centring on the point. |
 
-Moving the map is the host's job, not the provider's or the pill's: the pill calls its `onSelect` prop with the picked result. The reference host fits `bounds` when there are some and otherwise centres at a fixed zoom (`flyTo` in `packages/web/src/app/useMapApp.ts`), and the example does the same in `src/showResult.ts`. A host that only reads `centre` still works, but frames a glen or a lake as a point.
+Moving the map is the host's job, not the provider's or the pill's: the pill calls its `onSelect` prop with the picked result. Here is a suggestion in the reference host, from typing to the map moving. Arrows follow the order in time.
+
+```mermaid
+flowchart TD
+  subgraph typing["1. Typing"]
+    pill["SearchPill, useSuggestions<br/>in packages/map"]
+    port["SuggestionProvider.suggest<br/>port, in packages/core"]
+    photon["PhotonSuggestionProvider<br/>in packages/web"]
+  end
+  subgraph picking["2. Picking a suggestion"]
+    pick["SearchPill onSelect<br/>called with the SearchResult"]
+    fly["flyTo in useMapApp<br/>in packages/web"]
+    move["MapAdapter.fitBounds or setView<br/>port, in packages/core"]
+    camera["Camera<br/>in packages/adapter-maplibre"]
+    engine["MapLibre fitBounds, easeTo<br/>or jumpTo"]
+    save["onViewChange, UrlState.write<br/>the address follows the map"]
+  end
+  pill --> port
+  port --> photon
+  photon --> pick
+  pick --> fly
+  fly --> move
+  move --> camera
+  camera --> engine
+  engine --> save
+```
+
+`flyTo` (`packages/web/src/app/useMapApp.ts`) fits `bounds` when there are some and otherwise centres at a fixed zoom, and the example does the same in `src/showResult.ts`. A host that only reads `centre` still works, but frames a glen or a lake as a point.
 
 ### What the pill and the provider each do
 

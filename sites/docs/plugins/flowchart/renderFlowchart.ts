@@ -15,6 +15,13 @@ import { type Flowchart, parseFlowchart } from "./parseFlowchart";
 const ARROW_LENGTH = 8;
 const ARROW_HALF_WIDTH = 4;
 
+/**
+ * The widest a diagram may be laid out, in pixels. The column of a page at
+ * 390 px is 358 px wide, and at 320 px it is 288, where a diagram of this
+ * width shrinks to 85%, so its 13 px text is about 11 px.
+ */
+export const MAX_DIAGRAM_WIDTH = 340;
+
 /** The corner radius of a box and of a frame, in pixels. */
 const NODE_RADIUS = 6;
 const GROUP_RADIUS = 10;
@@ -84,22 +91,27 @@ function describeChart(chart: Flowchart): string {
  * the page needs no script and no inline style. The colours come from classes
  * the site's stylesheet defines (`flowchart-*`), so both themes follow the
  * site's own. The picture has a title and a description that lists every
- * frame and arrow, and sits in a keyboard-scrollable region for a narrow
- * screen.
+ * frame and arrow, and shrinks to the column, so it never scrolls: a diagram
+ * wider than {@link MAX_DIAGRAM_WIDTH} is refused instead.
  * @param source - The text of a `mermaid` code block.
  * @param id - A name that no other figure on the page has, which prefixes the ids the markup uses.
- * @throws When the flowchart uses syntax the site does not draw.
+ * @throws When the flowchart uses syntax the site does not draw, or is too wide for a phone.
  */
 export function renderFlowchart(source: string, id: string): string {
   const chart = parseFlowchart(source);
   const layout = layOutFlowchart(chart);
+  if (layout.width > MAX_DIAGRAM_WIDTH) {
+    throw new Error(
+      `The flowchart is too wide for a phone: ${n(layout.width)} px, and the most is ${MAX_DIAGRAM_WIDTH} px. Use shorter text, or stack the boxes with arrows between them.`,
+    );
+  }
   const title = `Diagram of ${chart.nodes.length} boxes and ${chart.edges.length} arrows`;
   const frames = layout.groups.flatMap((group) => [
     `<rect class="flowchart-group" x="${n(group.x)}" y="${n(group.y)}" width="${n(group.width)}" height="${n(group.height)}" rx="${GROUP_RADIUS}"/>`,
     `<text class="flowchart-title" x="${n(group.x + GROUP_PADDING)}" y="${n(group.y + GROUP_TITLE_HEIGHT / 2)}">${escapeText(group.title)}</text>`,
   ]);
   return [
-    `<div class="flowchart" role="region" aria-label="${escapeText(title)}, scrolls sideways" tabindex="0">`,
+    `<div class="flowchart">`,
     `<svg class="flowchart-svg" role="img" aria-labelledby="${id}-title ${id}-description" viewBox="0 0 ${n(layout.width)} ${n(layout.height)}" width="${n(layout.width)}" height="${n(layout.height)}">`,
     `<title id="${id}-title">${escapeText(title)}</title>`,
     `<desc id="${id}-description">${escapeText(describeChart(chart))}</desc>`,

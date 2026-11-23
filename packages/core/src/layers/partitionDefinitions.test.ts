@@ -34,7 +34,7 @@ describe("partitionDefinitions", () => {
   });
 
   it("skips one bad definition among good ones and names its id and problems", () => {
-    const bad = { ...SAMPLE_ALERT_LAYER, dataCost: "" };
+    const bad = { ...SAMPLE_ALERT_LAYER, group: "" };
     const result = partitionDefinitions(
       [SAMPLE_FEED_LAYER, bad, SAMPLE_TILE_LAYER],
       options,
@@ -42,7 +42,7 @@ describe("partitionDefinitions", () => {
     expect(result.layers).toEqual([SAMPLE_FEED_LAYER, SAMPLE_TILE_LAYER]);
     expect(result.skipped).toHaveLength(1);
     expect(result.skipped[0]?.id).toBe(SAMPLE_ALERT_LAYER.id);
-    expect(result.skipped[0]?.problems.join("\n")).toMatch(/dataCost/);
+    expect(result.skipped[0]?.problems.join("\n")).toMatch(/group/);
   });
 
   it("keeps the first of two definitions with the same id and skips the second", () => {
@@ -55,7 +55,7 @@ describe("partitionDefinitions", () => {
   });
 
   it("keeps a valid definition whose id an invalid earlier one had", () => {
-    const invalid = { ...SAMPLE_FEED_LAYER, dataCost: "" };
+    const invalid = { ...SAMPLE_FEED_LAYER, group: "" };
     const result = partitionDefinitions([invalid, SAMPLE_FEED_LAYER], options);
     expect(result.layers).toEqual([SAMPLE_FEED_LAYER]);
     expect(result.skipped.map((entry) => entry.id)).toEqual([
@@ -113,7 +113,7 @@ describe("partitionDefinitions", () => {
     });
 
     it("keeps the old skipped list when it is the same", () => {
-      const raw = [{ ...SAMPLE_FEED_LAYER, dataCost: "" }];
+      const raw = [{ ...SAMPLE_FEED_LAYER, group: "" }];
       const first = partitionDefinitions(raw, options);
       const second = partitionDefinitions(clone(raw), options, first);
       expect(second.skipped).toBe(first.skipped);

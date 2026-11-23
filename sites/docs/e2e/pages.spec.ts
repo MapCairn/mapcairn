@@ -51,6 +51,37 @@ for (const width of [390, 1280]) {
   });
 }
 
+for (const width of [320, 390]) {
+  for (const path of [
+    "/docs/architecture/",
+    "/docs/architecture/data-layers/",
+    "/docs/architecture/adding-an-adapter/",
+    "/docs/guides/extending/",
+  ]) {
+    test(`the diagrams on ${path} fit the column at ${width} px, with a text alternative`, async ({
+      page,
+    }) => {
+      await prepare(page, "light", width);
+      await open(page, path);
+      const figures = page.locator(".flowchart");
+      expect(await figures.count()).toBeGreaterThan(0);
+      const overflowing = await page.evaluate(() => [
+        document.documentElement.scrollWidth >
+          document.documentElement.clientWidth,
+        ...[...document.querySelectorAll<HTMLElement>(".flowchart")].map(
+          (figure) => figure.scrollWidth > figure.clientWidth,
+        ),
+      ]);
+      expect(overflowing.every((over) => !over)).toBe(true);
+      for (const svg of await page.locator(".flowchart svg").all()) {
+        await expect(svg).toHaveAccessibleName(
+          /^Diagram of \d+ boxes and \d+ arrows.* points to /,
+        );
+      }
+    });
+  }
+}
+
 test("each roadmap card's link names its milestone", async ({ page }) => {
   await open(page, "/docs/roadmap/");
   const links = page.getByRole("link", { name: /^View .+ on GitHub$/ });

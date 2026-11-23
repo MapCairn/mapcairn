@@ -130,7 +130,7 @@ function unionOf(entry) {
   if (match === null) {
     return null;
   }
-  const members = unionMembers(match[2].replace(/;\s*$/, ""));
+  const members = [...new Set(unionMembers(match[2].replace(/;\s*$/, "")))];
   return members.length > 1
     ? { header: match[1].replace(/\s+/g, " "), members }
     : null;
@@ -154,6 +154,74 @@ function missingFrom(from, against) {
     return false;
   });
 }
+
+/**
+ * Splits text into the parts outside quotes and the string or template
+ * literals (quotes included, an escaped quote kept inside), in order.
+ *
+ * @param {string} text
+ * @returns {Array<{ text: string, literal: boolean }>}
+ */
+function splitLiterals(text) {
+  /** @type {Array<{ text: string, literal: boolean }>} */
+  const parts = [];
+  /** @type {string | null} The quote that closes the literal being read. */
+  let quote = null;
+  let escaped = false;
+  let current = "";
+  for (const character of text) {
+    if (quote === null) {
+      if (!"\"'`".includes(character)) {
+        current += character;
+        continue;
+      }
+      parts.push({ text: current, literal: false });
+      current = character;
+      quote = character;
+      continue;
+    }
+    current += character;
+    if (escaped) {
+      escaped = false;
+    } else if (character === "\\") {
+      escaped = true;
+    } else if (character === quote) {
+      parts.push({ text: current, literal: true });
+      current = "";
+      quote = null;
+    }
+  }
+  parts.push({ text: current, literal: quote !== null });
+  return parts;
+}
+
+/**
+ * A declaration's text with its layout removed: outside string and template
+ * literals, whitespace is collapsed and dropped around punctuation, so
+ * wrapping a signature onto several lines or re-indenting it gives the same
+ * string. A literal is kept exactly, because its spaces are part of its value.
+ *
+ * @param {string[]} lines
+ * @returns {string}
+ */
+function withoutLayout(lines) {
+  return splitLiterals(lines.join(" "))
+    .map(({ text, literal }) =>
+      literal
+        ? text
+        : text
+            .replace(/\s+/g, " ")
+            .replace(/\s*([^\w$\s])\s*/g, "$1")
+            .trim(),
+    )
+    .join("");
+}
+
+/**
+ * Unions whose added members the public API guide says are not breaking: a
+ * catalogue without a new message key falls back to English.
+ */
+const UNIONS_THAT_MAY_GROW = new Set(["MessageKey"]);
 
 /** The header of a type whose implementers a host may write: an interface or an abstract class. */
 const IMPLEMENTED_TYPE =
@@ -263,6 +331,9 @@ function compareEntries(before, after) {
       detail: `${name} is now tagged @internal, and a host may use it today.`,
     };
   }
+  if (withoutLayout(before.lines) === withoutLayout(after.lines)) {
+    return gainedBeta(before, after, name);
+  }
   const beforeLines = before.lines.map(withoutTrailingComma);
   const afterLines = after.lines.map(withoutTrailingComma);
   const removed = missingFrom(beforeLines, afterLines);
@@ -276,8 +347,10 @@ function compareEntries(before, after) {
       return {
         kind: "union-member-added",
         name,
-        likelyBreaking: supported,
-        detail: `${name} gained ${fresh.join(", ")}, so a host's exhaustive switch stops compiling.`,
+        likelyBreaking: supported && !UNIONS_THAT_MAY_GROW.has(name),
+        detail: UNIONS_THAT_MAY_GROW.has(name)
+          ? `${name} gained ${fresh.join(", ")}; adding one is not breaking.`
+          : `${name} gained ${fresh.join(", ")}, so a host's exhaustive switch stops compiling.`,
       };
     }
     if (gone.length > 0) {

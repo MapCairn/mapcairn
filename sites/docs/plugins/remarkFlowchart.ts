@@ -20,16 +20,30 @@ interface MarkdownNode {
  * its Markdown copy.
  * @returns A remark plugin.
  */
-export function remarkFlowchart(): () => (tree: MarkdownNode) => void {
-  return () => (tree) => {
+export function remarkFlowchart(): () => (
+  tree: MarkdownNode,
+  file?: { readonly path?: string },
+) => void {
+  return () => (tree, file) => {
     let count = 0;
+    const draw = (source: string): string => {
+      try {
+        return renderFlowchart(source, `flowchart-${count}`);
+      } catch (error) {
+        const reason = error instanceof Error ? error.message : String(error);
+        throw new Error(
+          `${file?.path ?? "A document"}, diagram ${count}: ${reason}`,
+          { cause: error },
+        );
+      }
+    };
     const replace = (node: MarkdownNode): void => {
       node.children?.forEach((child, index) => {
         if (child.type === "code" && child.lang === DIAGRAM_LANGUAGE) {
           count += 1;
           node.children?.splice(index, 1, {
             type: "html",
-            value: renderFlowchart(child.value ?? "", `flowchart-${count}`),
+            value: draw(child.value ?? ""),
           });
           return;
         }

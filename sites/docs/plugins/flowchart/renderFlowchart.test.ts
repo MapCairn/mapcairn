@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { renderFlowchart } from "./renderFlowchart";
+import { MAX_DIAGRAM_WIDTH, renderFlowchart } from "./renderFlowchart";
 
 /** How many times `part` occurs in `text`. */
 function count(text: string, part: string): number {
@@ -50,9 +50,25 @@ describe("renderFlowchart", () => {
     expect(count(svg, `class="flowchart-arrow"`)).toBe(2);
   });
 
-  it("sits in a labelled region the keyboard can scroll", () => {
-    expect(svg).toMatch(
-      /^<div class="flowchart" role="region" aria-label="[^"]+, scrolls sideways" tabindex="0">/,
+  it("sits in a plain box that never scrolls, so the keyboard has nothing to reach", () => {
+    expect(svg).toMatch(/^<div class="flowchart">\n<svg /);
+    expect(svg).not.toContain("tabindex");
+    expect(svg).not.toContain("scrolls");
+  });
+
+  it("is as wide as it was laid out, so it is never drawn larger than it was planned", () => {
+    expect(Number(/ width="([\d.]+)"/.exec(svg)?.[1])).toBeLessThanOrEqual(
+      MAX_DIAGRAM_WIDTH,
+    );
+  });
+
+  it("refuses a diagram too wide for a phone, naming the width and the limit", () => {
+    const wide = `flowchart TD
+  a["${"x".repeat(60)}"]
+  b["${"y".repeat(60)}"]
+  a --> b`;
+    expect(() => renderFlowchart(wide, "wide")).toThrow(
+      new RegExp(`too wide.*${MAX_DIAGRAM_WIDTH}`),
     );
   });
 
@@ -72,22 +88,59 @@ describe("renderFlowchart", () => {
   });
 });
 
-describe("the diagram in ARCHITECTURE.md", () => {
-  const document = readFileSync(
-    new URL("../../../../ARCHITECTURE.md", import.meta.url),
-    "utf8",
-  );
-  const fence = "```";
-  const opening = `${fence}mermaid\n`;
-  const start = document.indexOf(opening) + opening.length;
-  const source = document.slice(start, document.indexOf(fence, start));
+const REPOSITORY = new URL("../../../../", import.meta.url);
+const FENCE = "```";
+const OPENING = `${FENCE}mermaid\n`;
 
-  it("is drawn, with every box and arrow of its source", () => {
-    expect(source).toContain("flowchart TD");
-    const drawn = renderFlowchart(source, "architecture");
-    const boxes = (source.match(/^\s*\w+\["/gm) ?? []).length;
-    const arrows = count(source, "-->");
-    expect(count(drawn, `class="flowchart-node"`)).toBe(boxes);
-    expect(count(drawn, `class="flowchart-edge"`)).toBe(arrows);
+/** The text of each `mermaid` block in a document. */
+function diagramsIn(document: string): string[] {
+  const sources: string[] = [];
+  let from = document.indexOf(OPENING);
+  while (from !== -1) {
+    const start = from + OPENING.length;
+    const end = document.indexOf(FENCE, start);
+    sources.push(document.slice(start, end));
+    from = document.indexOf(OPENING, end);
+  }
+  return sources;
+}
+
+/** The documents the site draws: the two repository documents it builds pages from, and its own pages (not the generated ones). */
+function documentPaths(): URL[] {
+  const pages = readdirSync(new URL("sites/docs/docs/", REPOSITORY), {
+    recursive: true,
+    encoding: "utf8",
+  }).filter(
+    (path) => path.endsWith(".md") && !/^(api|generated)([\\/]|$)/.test(path),
+  );
+  return [
+    new URL("ARCHITECTURE.md", REPOSITORY),
+    new URL("DESIGN.md", REPOSITORY),
+    ...pages.map((path) => new URL(`sites/docs/docs/${path}`, REPOSITORY)),
+  ];
+}
+
+describe("the diagrams in the documents", () => {
+  const found = documentPaths().flatMap((path) =>
+    diagramsIn(readFileSync(path, "utf8")).map((source) => ({
+      name: `${path.pathname.split("/").pop()}, ${source.split("\n")[1]?.trim()}`,
+      source,
+    })),
+  );
+
+  it("exist", () => {
+    expect(found.length).toBeGreaterThan(0);
   });
+
+  it.each(found)(
+    "$name is drawn within a phone's width, with every box and arrow of its source and a text alternative",
+    ({ source }) => {
+      const drawn = renderFlowchart(source, "document");
+      const boxes = (source.match(/^\s*\w+\["/gm) ?? []).length;
+      expect(count(drawn, `class="flowchart-node"`)).toBe(boxes);
+      expect(count(drawn, `class="flowchart-edge"`)).toBe(count(source, "-->"));
+      expect(drawn).toMatch(/<title id="document-title">[^<]+<\/title>/);
+      expect(drawn).toMatch(/<desc id="document-description">[^<]+<\/desc>/);
+    },
+  );
 });

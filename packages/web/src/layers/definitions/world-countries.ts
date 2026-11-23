@@ -15,7 +15,6 @@ const worldCountries: FeedLayerDefinition<ShapeStyle> = {
   name: "layer.world-countries.name",
   description: "layer.world-countries.description",
   group: "layer.group.boundaries",
-  dataCost: "layer.world-countries.dataCost",
   attribution: [
     {
       text: "Made with Natural Earth",

@@ -53,6 +53,19 @@ jobs:
         # `shell: bash` turns on pipefail, so a failing `git log` fails the step.
         shell: bash
         run: git log --format=%B "origin/$BASE_REF..HEAD" | node scripts/names-check.mjs text
+      - name: Check that a breaking API change is marked in the pull request title
+        if: github.event_name == 'pull_request'
+        # Reads the API reports at the merge base and at HEAD, which needs the
+        # full history fetched above. The title, description and base branch
+        # reach the script through the environment, never through the shell
+        # script text. Release and Dependabot pull requests are skipped inside it.
+        env:
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          PR_BODY: ${{ github.event.pull_request.body }}
+          PR_AUTHOR: ${{ github.event.pull_request.user.login }}
+          PR_LABELS: ${{ join(github.event.pull_request.labels.*.name, ',') }}
+          BASE_REF: ${{ github.base_ref }}
+        run: node scripts/apiBreakingCheck.mjs
       - run: npm run typecheck
       - run: npm run test:coverage
       - name: Upload coverage report

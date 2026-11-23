@@ -41,10 +41,10 @@ describe("createStaticLayerCatalogue", () => {
   it("refuses an invalid definition when it is built, not when it is used", () => {
     expect(() =>
       createStaticLayerCatalogue(
-        [{ ...SAMPLE_FEED_LAYER, dataCost: "" }],
+        [{ ...SAMPLE_FEED_LAYER, group: "" }],
         options,
       ),
-    ).toThrow(/sample-points: dataCost/);
+    ).toThrow(/sample-points: group/);
   });
 
   it("refuses a duplicate id when it is built", () => {

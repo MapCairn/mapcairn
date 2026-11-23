@@ -11,7 +11,7 @@ const layer = {
   name: { key: "quakes.name", text: "Earthquakes" },
   description: "Recent earthquakes.",
   group: "layer.group.hazards",
-  dataCost: { key: "quakes.cost", text: "about 30 KB" },
+  disclaimer: { key: "quakes.disclaimer", text: "Indicative." },
   controls: [
     {
       id: "window",
@@ -32,7 +32,7 @@ describe("checkDefinitionTexts", () => {
     expect(
       checkDefinitionTexts([layer], { "quakes.name": "Aardbewings" }),
     ).toEqual([
-      { key: "quakes.cost", problem: "missing" },
+      { key: "quakes.disclaimer", problem: "missing" },
       { key: "quakes.window", problem: "missing" },
       { key: "quakes.day", problem: "missing" },
       { key: "quakes.link", problem: "missing" },
@@ -42,17 +42,17 @@ describe("checkDefinitionTexts", () => {
   it("reports a blank or non-string entry as blank", () => {
     const texts = {
       "quakes.name": "  ",
-      "quakes.cost": 3,
+      "quakes.disclaimer": 3,
     } as unknown as Record<string, string>;
     expect(checkDefinitionTexts([layer], texts).slice(0, 2)).toEqual([
       { key: "quakes.name", problem: "blank" },
-      { key: "quakes.cost", problem: "blank" },
+      { key: "quakes.disclaimer", problem: "blank" },
     ]);
   });
 
   it("finds nothing wrong when every key is translated", () => {
     const texts = Object.fromEntries(
-      ["name", "cost", "window", "day", "link"].map((id) => [
+      ["name", "disclaimer", "window", "day", "link"].map((id) => [
         `quakes.${id}`,
         "Vertaal",
       ]),

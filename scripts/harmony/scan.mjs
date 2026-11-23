@@ -33,7 +33,11 @@ const SKIP_DIRS = new Set([
 
 /**
  * Every file the scanner reads: scripts, styles and html under `packages`,
- * and under `examples`, whose apps follow the same design rules.
+ * and under `examples`, whose apps follow the same design rules. `sites/docs`
+ * is left out: its icon and live-region rules point at components of
+ * `packages/map` that a Docusaurus theme does not use, so scanning it reports
+ * ten problems that no change could fix. It takes its colours from the token
+ * stylesheet, with no hard-coded colour in its CSS.
  * @param {string} root
  * @returns {string[]} Repository relative paths with forward slashes.
  */

@@ -16,7 +16,6 @@ export const CAIRNS_LAYER: FeedLayerDefinition<PointStyle> = {
   name: "Cairns",
   description: "Three made-up cairns, served from memory.",
   group: "Example",
-  dataCost: "nothing, it is in memory",
   attribution: [{ text: "Example data", url: "https://example.org/" }],
   controls: [],
   source: {

@@ -30,6 +30,10 @@ const CONTENTS: Record<string, string> = {
     name: "@mapcairn/web",
     scripts: { dev: "x", e2e: "x" },
   }),
+  "sites/docs/package.json": JSON.stringify({
+    name: "@mapcairn/docs",
+    scripts: { build: "x" },
+  }),
 };
 const CONTEXT = buildContext(Object.keys(CONTENTS), (p: string) => CONTENTS[p]);
 
@@ -104,6 +108,14 @@ describe("findDeadReferences", () => {
       "2 npm run nothing",
       "4 npm run lint -w @mapcairn/web",
     ]);
+  });
+
+  it("checks an npm script named for a site workspace", () => {
+    const text = [
+      "`npm run build -w @mapcairn/docs`",
+      "`npm run nothing -w @mapcairn/docs`",
+    ].join("\n");
+    expect(dead(text)).toEqual(["2 npm run nothing -w @mapcairn/docs"]);
   });
 
   it("checks fenced code blocks line by line", () => {

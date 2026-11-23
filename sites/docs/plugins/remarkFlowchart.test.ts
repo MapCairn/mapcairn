@@ -56,4 +56,18 @@ describe("remarkFlowchart", () => {
     };
     expect(() => run(tree)).toThrow(/Unsupported flowchart syntax/);
   });
+
+  it("names the document and the diagram when one cannot be drawn, such as one too wide", () => {
+    const wide = `flowchart TD\n a["${"x".repeat(60)}"]`;
+    const tree: Node = {
+      type: "root",
+      children: [
+        { type: "code", lang: "mermaid", value: CHART },
+        { type: "code", lang: "mermaid", value: wide },
+      ],
+    };
+    expect(() => remarkFlowchart()()(tree, { path: "docs/guide.md" })).toThrow(
+      /docs\/guide\.md, diagram 2: .*too wide/,
+    );
+  });
 });

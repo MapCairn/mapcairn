@@ -526,11 +526,13 @@ function workingTreeReports(root) {
 }
 
 /**
+ * The reports at any git revision, a tag or a commit.
+ *
  * @param {string} tag
  * @param {string} root
  * @returns {import("./apiChanges.mjs").ReportSource}
  */
-function tagReports(tag, root) {
+export function tagReports(tag, root) {
   return {
     list: (folder) =>
       git(["ls-tree", "--name-only", tag, `${folder}/`], root)

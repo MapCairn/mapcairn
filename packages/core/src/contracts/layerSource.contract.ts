@@ -21,7 +21,6 @@ export const CONTRACT_LAYER: FeedLayerDefinition = {
   name: "Contract points",
   description: "Points for the layer source contract.",
   group: "Contract",
-  dataCost: "about 1 KB",
   attribution: [{ text: "Contract provider" }],
   controls: [],
   source: {
@@ -57,7 +56,6 @@ export const CONTRACT_IDENTIFY_LAYER: IdentifiableLayerDefinition = {
   description:
     "A tile layer that answers a tap, for the layer source contract.",
   group: "Contract",
-  dataCost: "about 1 KB",
   attribution: [{ text: "Contract provider" }],
   controls: [],
   source: {
