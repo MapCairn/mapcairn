@@ -60,14 +60,19 @@ export type DrawEvent =
 
 /** A shape as it is given to `load`: everything but the generated fields. */
 export interface DrawShapeInput {
+  /** Whether the shape is a point, line, polygon or circle. */
   readonly kind: DrawKind;
+  /** The shape's positions, in order. */
   readonly vertices: readonly LatLng[];
+  /** A circle's radius in metres. Ignored for other kinds. */
   readonly radiusMetres?: number;
 }
 
 /** One undo step: the shapes and the selection as they were. */
 export interface DrawHistoryEntry {
+  /** The shapes as they were. */
   readonly shapes: readonly DrawShape[];
+  /** The selection as it was. */
   readonly selection: DrawSelection | null;
 }
 
@@ -80,8 +85,11 @@ export interface DrawState {
   readonly shapes: readonly DrawShape[];
   /** The kind of shape the next tap starts. */
   readonly mode: DrawKind;
+  /** The selected shape and vertex, or null. */
   readonly selection: DrawSelection | null;
+  /** The undo steps, oldest first. */
   readonly past: readonly DrawHistoryEntry[];
+  /** The steps undone, which redo reapplies, most recently undone last. */
   readonly future: readonly DrawHistoryEntry[];
   /**
    * The key of the last coalescing edit. An edit with the same key joins the
@@ -93,6 +101,7 @@ export interface DrawState {
   readonly nextId: number;
   /** How many shapes of each kind have been named, for labels such as "Polygon 2". */
   readonly serials: Readonly<Record<DrawKind, number>>;
+  /** What the last action did, for announcements. Null before any action. */
   readonly lastEvent: DrawEvent | null;
 }
 

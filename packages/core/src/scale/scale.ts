@@ -23,6 +23,7 @@ export interface ScaleBarInput {
   readonly metresPerPixel: number;
   /** The widest the bar may be, in CSS pixels. */
   readonly maxWidthPx: number;
+  /** Whether the bar is labelled in metric or imperial units. */
   readonly units: UnitSystem;
   /** The catalogue the visible label is written with: its digits, symbols and order. */
   readonly messages: MessageCatalogue;
@@ -34,6 +35,7 @@ export interface ScaleBar {
   readonly widthPx: number;
   /** The distance the bar stands for, in `unit`. */
   readonly value: number;
+  /** The unit of `value`. */
   readonly unit: DistanceUnit;
   /** Short visible text, for example "200 m". */
   readonly label: string;

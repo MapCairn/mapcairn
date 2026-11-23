@@ -11,7 +11,9 @@ import type { LayerGeometry } from "./layers";
  * `HTMLElement`, so this port names no DOM type.
  */
 export interface MapHostElement {
+  /** Moves keyboard focus to the element. `preventScroll` keeps the page from scrolling to it. */
   focus(options?: { preventScroll?: boolean }): void;
+  /** The element's size and position in CSS pixels, as the browser reports them. */
   getBoundingClientRect(): {
     readonly width: number;
     readonly height: number;
@@ -30,7 +32,9 @@ export type MapProjection = "flat" | "globe";
 
 /** Everything the adapter needs when it mounts. */
 export interface MapMountOptions {
+  /** The view the map starts at. */
   readonly view: ViewState;
+  /** The basemap the map starts with. */
   readonly basemap: BasemapDefinition;
   /** When true, the engine's own animation (zoom, fade, fly, inertia) is off. */
   readonly reducedMotion: boolean;
@@ -67,7 +71,9 @@ export interface MapFitOptions extends MapMoveOptions {
 
 /** A pointer click on the map. */
 export interface MapClickEvent {
+  /** The position that was clicked or tapped. */
   readonly latlng: LatLng;
+  /** The same place in pixels from the top left of the map host. */
   readonly point: PixelPoint;
   /** Opaque descriptions of the rendered features under the pointer. */
   readonly features?: readonly Readonly<Record<string, unknown>>[];
@@ -78,12 +84,15 @@ export interface MapClickEvent {
  * layer's style, so the adapter draws without knowing any style rule.
  */
 export interface MapFeature {
+  /** Unique among the features of one layer. It names the feature in a tap. */
   readonly id: string;
+  /** Where the point is drawn. */
   readonly position: LatLng;
   /** A hex colour, such as `#e69f00`. */
   readonly colour: string;
   /** Radius in CSS pixels. */
   readonly radius: number;
+  /** The marker's shape. */
   readonly shape: MarkerShape;
 }
 
@@ -94,6 +103,7 @@ export interface MapTileOverlay {
    * `{bbox-epsg-3857}` for a WMS GetMap URL.
    */
   readonly tiles: string;
+  /** The tiles' size in pixels, 256 or 512. */
   readonly tileSize: 256 | 512;
   /** The deepest tile level the service has; the engine scales beyond it. */
   readonly maxzoom: number;
@@ -138,6 +148,7 @@ export type MapTileLayerRecovered = MapTileLayerUnavailable;
 
 /** Polygons and lines drawn on request, such as an event's affected area. */
 export interface MapShapes {
+  /** The polygons and lines to draw, in one look. */
   readonly geometries: readonly LayerGeometry[];
   /** A hex colour for the lines and a translucent fill. */
   readonly colour: string;
@@ -156,7 +167,9 @@ export interface MapShapeLook {
   readonly colour: string;
   /** From 0 to 1. Polygons only. */
   readonly fillOpacity: number;
+  /** The hatching drawn over a polygon, or `none`. */
   readonly pattern: FillPattern;
+  /** How the outline or line is dashed. */
   readonly dash: LineDash;
   /** Line width, or outline width for a polygon, in CSS pixels. */
   readonly width: number;
@@ -164,8 +177,11 @@ export interface MapShapeLook {
 
 /** One polygon or line of a styled shape layer. */
 export interface MapStyledShape {
+  /** Unique among the shapes of one layer. */
   readonly id: string;
+  /** The polygon or line to draw. */
   readonly geometry: LayerGeometry;
+  /** How it is drawn. */
   readonly look: MapShapeLook;
   /** Text drawn on the shape, when the layer has labels and the engine can draw them. */
   readonly label?: string;
@@ -177,7 +193,9 @@ export interface MapStyledShape {
  * tapped like points.
  */
 export interface MapStyledShapes {
+  /** Whether the layer draws polygons (`area`) or lines (`line`). */
   readonly geometry: "area" | "line";
+  /** The shapes, each with its own look. */
   readonly shapes: readonly MapStyledShape[];
   /** Labels appear from this normalised zoom. */
   readonly labelMinZoom?: number;
@@ -189,6 +207,7 @@ export interface MapVectorSource {
   readonly tiles: string;
   /** The shallowest and deepest tile levels the service has; the engine scales beyond them. */
   readonly minzoom: number;
+  /** The deepest tile level the service has; the engine scales beyond it. */
   readonly maxzoom: number;
 }
 
@@ -223,10 +242,13 @@ export type MapLookRule =
 export interface MapVectorSourceLayer {
   /** The layer's name inside the tiles. */
   readonly sourceLayer: string;
+  /** Whether the layer is drawn as polygons (`area`) or lines (`line`). */
   readonly geometry: "area" | "line";
+  /** How each feature's look is picked from its properties. */
   readonly rule: MapLookRule;
   /** Visible from and to these normalised zoom levels. */
   readonly minzoom?: number;
+  /** The normalised zoom from which this layer is hidden. */
   readonly maxzoom?: number;
   /** Draws the property's value on each feature. */
   readonly label?: { readonly field: string; readonly minzoom?: number };
@@ -234,10 +256,13 @@ export interface MapVectorSourceLayer {
 
 /** A vector tile layer: one source, drawn from one or more of its source layers. */
 export interface MapVectorTiles {
+  /** Where the tiles come from. */
   readonly source: MapVectorSource;
+  /** The layers of the tiles that are drawn, each with its own look. */
   readonly layers: readonly MapVectorSourceLayer[];
   /** Normalised zoom levels the whole layer is visible between. */
   readonly minzoom?: number;
+  /** The normalised zoom from which the whole layer is hidden. */
   readonly maxzoom?: number;
 }
 
@@ -275,13 +300,17 @@ export type MapHeatmapSource =
 
 /** Point density drawn as a heatmap. It has no tappable features. */
 export interface MapHeatmap {
+  /** Where the points come from: given points or a vector tile layer. */
   readonly source: MapHeatmapSource;
+  /** How the density is drawn. */
   readonly style: MapHeatmapStyle;
 }
 
 /** One feature of a data layer under a tap. */
 export interface MapFeatureHit {
+  /** The id the layer was drawn under. */
   readonly layerId: string;
+  /** The id of the feature in that layer. */
   readonly featureId: string;
 }
 
@@ -291,6 +320,7 @@ export interface MapFeatureHit {
  * and listed once each.
  */
 export interface MapFeatureTap extends MapFeatureHit {
+  /** Every feature found at the tap, topmost first. The first is the one a tap would open. */
   readonly hits: readonly MapFeatureHit[];
 }
 
@@ -316,12 +346,15 @@ export interface MapImageDrawing {
   readonly colour: string;
   /** The colour of the outline that separates a mark from the map beneath. */
   readonly halo: string;
+  /** The marks to draw, in the order they are drawn. */
   readonly marks: readonly MapImageMark[];
 }
 
 /** The size of a map, in CSS pixels. */
 export interface MapImageSize {
+  /** Width in CSS pixels. */
   readonly width: number;
+  /** Height in CSS pixels. */
   readonly height: number;
 }
 
@@ -387,7 +420,9 @@ export type MapEditHandleKind = "vertex" | "midpoint" | "radius";
 export interface MapEditHandle {
   /** Names the handle in `handleDrag` and `handleHover`. Unique among the handles set. */
   readonly id: string;
+  /** Where the handle sits on the map. */
   readonly position: LatLng;
+  /** What the handle stands for: a `vertex`, the `midpoint` of an edge or a circle's `radius`. */
   readonly kind: MapEditHandleKind;
 }
 
@@ -444,6 +479,7 @@ export interface MapEvents {
   userZoom: ViewState;
   /** The bearing changed. */
   rotate: ViewState;
+  /** A click or tap on the map, other than one that ends a press on an edit handle. */
   click: MapClickEvent;
   /**
    * The current basemap's style and its own sources are in. Data layers are
@@ -533,9 +569,13 @@ export interface MapAdapter {
   /** Removes the engine and every listener it added. Safe to call twice. */
   destroy(): void;
 
+  /** The view the map shows now. It is updated as the map moves. */
   getView(): ViewState;
+  /** Moves the map to the parts of the view that are given and keeps the rest. A move may animate unless animation is off. */
   setView(view: Partial<ViewState>, options?: MapMoveOptions): void;
+  /** Zooms in by one level, towards the centre of the map. */
   zoomIn(options?: MapMoveOptions): void;
+  /** Zooms out by one level, from the centre of the map. */
   zoomOut(options?: MapMoveOptions): void;
   /** Moves the view by a number of screen pixels (positive x is right, positive y is down). */
   panBy(dx: number, dy: number, options?: MapMoveOptions): void;
@@ -543,10 +583,12 @@ export interface MapAdapter {
   rotateBy(degrees: number, options?: MapMoveOptions): void;
   /** Sets the bearing to north. */
   resetBearing(options?: MapMoveOptions): void;
+  /** Moves and zooms so the box fills the map, inside the padding, and not past `maxZoom` when that is given. */
   fitBounds(bounds: Bounds, options?: MapFitOptions): void;
 
   /** Normalised zoom limits of the active basemap. */
   getMinZoom(): number;
+  /** The deepest normalised zoom the active basemap allows. */
   getMaxZoom(): number;
 
   /**

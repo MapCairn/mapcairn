@@ -46,10 +46,12 @@ export class FakeDevicePreferences implements DevicePreferences {
     }
   }
 
+  /** The current values. The same object is returned until `set` changes one. */
   get(): DevicePreferencesValue {
     return this.#value;
   }
 
+  /** Calls the listener when `set` changes a value. Returns the function that unsubscribes. */
   subscribe(listener: (value: DevicePreferencesValue) => void): () => void {
     this.#listeners.add(listener);
     return () => {

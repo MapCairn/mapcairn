@@ -34,7 +34,9 @@ export interface FeatureQueryControls {
 
 /** One feature query under test, with its controls. */
 export interface FeatureQuerySubject {
+  /** The feature query under test. */
   readonly query: FeatureQuery;
+  /** How the contract scripts it. */
   readonly controls: FeatureQueryControls;
 }
 

@@ -36,7 +36,9 @@ export const DEFAULT_IMAGE_PIXEL_RATIO = 1;
 
 /** The map on screen, which a request falls back to where it names no size or view. */
 export interface VisibleMap {
+  /** The map's size in CSS pixels. */
   readonly size: MapImageSize;
+  /** The view the map shows. */
   readonly view: ViewState;
 }
 
@@ -44,7 +46,9 @@ export interface VisibleMap {
 export interface RequestedImage {
   /** The map's size in CSS pixels. */
   readonly size: MapImageSize;
+  /** How many image pixels there are for each CSS pixel. */
   readonly pixelRatio: number;
+  /** The view the image shows. */
   readonly view: MapImageView;
   /** The image's width in pixels, as the engine rounds it. */
   readonly pixelWidth: number;

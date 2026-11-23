@@ -15,10 +15,15 @@ export type MapKeyAction =
 
 /** The parts of a keyboard event the map shortcuts read. */
 export interface MapKeyEvent {
+  /** The key's value, as `KeyboardEvent.key` gives it. */
   readonly key: string;
+  /** Whether Shift was held. */
   readonly shiftKey: boolean;
+  /** Whether Control was held. */
   readonly ctrlKey: boolean;
+  /** Whether Meta (Command on a Mac) was held. */
   readonly metaKey: boolean;
+  /** Whether Alt (Option on a Mac) was held. */
   readonly altKey: boolean;
 }
 
@@ -99,13 +104,17 @@ export function mapKeyAction(event: MapKeyEvent): MapKeyAction | null {
  * own extra lines).
  */
 export interface MapKeyHelpEntry {
+  /** The key or keys, such as `Shift + arrows`. */
   readonly keys: DefinitionText;
+  /** What the keys do, as a sentence without a trailing full stop. */
   readonly description: DefinitionText;
 }
 
 /** A line of the SDK's own keyboard help, written in message keys only. */
 export interface ShippedKeyHelpEntry extends MapKeyHelpEntry {
+  /** The message key for the key or keys. */
   readonly keys: MessageKey;
+  /** The message key for what they do. */
   readonly description: MessageKey;
 }
 

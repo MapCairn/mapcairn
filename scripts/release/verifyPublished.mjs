@@ -23,7 +23,7 @@
  *
  * Run it after the workflow's `npm` job has published. It only
  * reads the registry. The four SDK packages are exempted from the repository's
- * seven-day minimum release age for this install, because a version that was
+ * three-day minimum release age for this install, because a version that was
  * published a moment ago would otherwise not install; third-party packages
  * keep the rule.
  *

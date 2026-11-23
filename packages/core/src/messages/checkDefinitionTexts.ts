@@ -16,7 +16,9 @@ export type DefinitionTextProblemKind = "missing" | "blank" | "unused";
 
 /** One problem {@link checkDefinitionTexts} found, and the key it is in. */
 export interface DefinitionTextProblem {
+  /** The key that has the problem. */
   readonly key: string;
+  /** What is wrong with it. */
   readonly problem: DefinitionTextProblemKind;
 }
 

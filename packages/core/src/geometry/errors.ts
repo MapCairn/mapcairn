@@ -21,6 +21,7 @@ const ENGLISH = createMessageCatalogue(
 
 /** The only error the geometry helpers throw. */
 export class GeometryError extends Error {
+  /** Which rule the input broke: `invalid`, `empty` or `unsupported`. */
   readonly kind: GeometryErrorKind;
 
   /**

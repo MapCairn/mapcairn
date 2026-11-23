@@ -9,7 +9,9 @@ import type { LayerFeature } from "./layers";
  * polygon or circle passes straight in.
  */
 export interface QueryArea {
+  /** Always `Polygon`. */
   readonly type: "Polygon";
+  /** The rings, outer ring first, then any holes, as closed lists of `[longitude, latitude]` positions. */
   readonly coordinates: number[][][];
 }
 
@@ -19,7 +21,9 @@ export interface QueryArea {
  * feature's `id` are the two ids a `FeatureRef` keeps.
  */
 export interface SelectionHit {
+  /** The id of the layer that holds the feature. */
   readonly layerId: string;
+  /** The feature, so it can be shown without loading its layer. */
   readonly feature: LayerFeature;
 }
 
@@ -35,6 +39,7 @@ export interface FeatureQueryRequest {
    * more lie inside, and the host can stop looking once it has them.
    */
   readonly limit: number;
+  /** Cancels the query. It then rejects with an `aborted` error. */
   readonly signal?: AbortSignal;
 }
 
@@ -65,5 +70,6 @@ export interface FeatureQueryRequest {
  *   positions a ring has, so a host guards against a very large ring itself.
  */
 export interface FeatureQuery {
+  /** Finds the features of the named layers that lie inside the area, at most `limit` of them. */
   within(request: FeatureQueryRequest): Promise<readonly SelectionHit[]>;
 }

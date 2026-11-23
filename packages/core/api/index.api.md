@@ -237,7 +237,6 @@ export function assertValidDefinitions<T extends readonly LayerDefinition[]>(def
 // @public
 export interface BasemapAttributionEntry {
     readonly href?: string;
-    // (undocumented)
     readonly text: string;
 }
 
@@ -254,15 +253,12 @@ export interface BasemapCatalogue {
 export interface BasemapDefinition {
     readonly appearance: "light" | "dark";
     readonly attribution: readonly BasemapAttributionEntry[];
-    // (undocumented)
     readonly id: string;
-    // (undocumented)
     readonly maxZoom: number;
     readonly minZoom: number;
     readonly name: DefinitionText;
     readonly nonCommercial?: boolean;
     readonly saveDataOmitLayers?: readonly string[];
-    // (undocumented)
     readonly source: BasemapSource;
     readonly swatch?: string;
     readonly thumbnail?: string;
@@ -316,13 +312,9 @@ export function boundingBoxToBounds(box: BoundingBox): Bounds;
 
 // @public
 export interface Bounds {
-    // (undocumented)
     readonly east: number;
-    // (undocumented)
     readonly north: number;
-    // (undocumented)
     readonly south: number;
-    // (undocumented)
     readonly west: number;
 }
 
@@ -358,7 +350,6 @@ export const BUILT_IN_FORMATTERS: Readonly<Record<string, Formatter>>;
 // @public
 export interface CachedResponse<T> {
     readonly maxAgeSeconds: number;
-    // (undocumented)
     readonly value: T;
 }
 
@@ -375,7 +366,6 @@ export interface CardSpec {
         readonly field: string;
         readonly label: DefinitionText;
     };
-    // (undocumented)
     readonly title: LayerTemplate;
 }
 
@@ -416,11 +406,8 @@ export type CategoricalSlot = (typeof CATEGORICAL_SLOTS)[number];
 
 // @public
 export interface CategoryColour {
-    // (undocumented)
     readonly categories: readonly StyleCategory[];
-    // (undocumented)
     readonly field: string;
-    // (undocumented)
     readonly kind: "category";
     readonly other: {
         readonly label: DefinitionText;
@@ -486,7 +473,6 @@ export type ClipboardFailureReason = Extract<ClipboardResult, {
 
 // @public
 export interface ClipboardPort {
-    // (undocumented)
     writeText(text: string): Promise<ClipboardResult>;
 }
 
@@ -533,18 +519,14 @@ export function computeScaleBar(input: ScaleBarInput): ScaleBar;
 // @public
 export interface ControlBase {
     readonly description?: DefinitionText;
-    // (undocumented)
     readonly enabledWhen?: ControlCondition;
     readonly id: string;
-    // (undocumented)
     readonly label: DefinitionText;
 }
 
 // @public
 export interface ControlCondition {
-    // (undocumented)
     readonly control: string;
-    // (undocumented)
     readonly in: readonly string[];
 }
 
@@ -556,19 +538,12 @@ export function coordinateSearchResult(text: string, messages: MessageCatalogue)
 
 // @public
 export interface CoordinateWords {
-    // (undocumented)
     readonly degree: string;
-    // (undocumented)
     readonly east: string;
-    // (undocumented)
     readonly minute: string;
-    // (undocumented)
     readonly north: string;
-    // (undocumented)
     readonly second: string;
-    // (undocumented)
     readonly south: string;
-    // (undocumented)
     readonly west: string;
 }
 
@@ -631,13 +606,9 @@ export type DateBound = string | RelativeDate;
 
 // @public
 export interface DateControlDefinition extends ControlBase {
-    // (undocumented)
     readonly default: DateBound;
-    // (undocumented)
     readonly kind: "date";
-    // (undocumented)
     readonly max: DateBound;
-    // (undocumented)
     readonly min: DateBound;
 }
 
@@ -646,13 +617,9 @@ export type DateTimeBound = string | RelativeTime;
 
 // @public
 export interface DateTimeControlDefinition extends ControlBase {
-    // (undocumented)
     readonly default: DateTimeBound;
-    // (undocumented)
     readonly kind: "datetime";
-    // (undocumented)
     readonly max: DateTimeBound;
-    // (undocumented)
     readonly min: DateTimeBound;
     readonly stepMinutes: number;
 }
@@ -665,9 +632,7 @@ export function dateTimeRange(control: DateTimeControlDefinition, now: number): 
 
 // @public
 export interface DaySlot {
-    // (undocumented)
     readonly label: string;
-    // (undocumented)
     readonly value: string;
 }
 
@@ -751,7 +716,6 @@ export function defaultSlot(control: DateTimeControlDefinition, now: number): st
 
 // @public
 export interface Deferred<T> extends HeldCall<T> {
-    // (undocumented)
     readonly promise: Promise<T>;
 }
 
@@ -760,9 +724,7 @@ export type DefinitionText = MessageKey | string | HostText;
 
 // @public
 export interface DefinitionTextProblem {
-    // (undocumented)
     readonly key: string;
-    // (undocumented)
     readonly problem: DefinitionTextProblemKind;
 }
 
@@ -771,7 +733,6 @@ export type DefinitionTextProblemKind = "missing" | "blank" | "unused";
 
 // @public
 export interface DensifiedPath {
-    // (undocumented)
     readonly positions: readonly LatLng[];
     readonly vertices: readonly number[];
 }
@@ -781,10 +742,8 @@ export function densifyAlongGreatCircles(positions: readonly LatLng[], closed: b
 
 // @public
 export interface DerivedVariable {
-    // (undocumented)
     readonly from: readonly string[];
     readonly id: string;
-    // (undocumented)
     readonly table: Readonly<Record<string, string>>;
 }
 
@@ -858,7 +817,6 @@ export function destinationPoint(from: LatLng, bearing: number, metres: number):
 export interface DetailSource {
     readonly colour: PaletteSlot;
     readonly dataCost: DefinitionText;
-    // (undocumented)
     readonly decoder: string;
     readonly label: DefinitionText;
     readonly origins: readonly string[];
@@ -893,7 +851,6 @@ export function difference(first: GeometryInput, second: GeometryInput): Polygon
 export interface DirectionStop {
     readonly id: string;
     readonly label?: string;
-    // (undocumented)
     readonly position: LatLng;
 }
 
@@ -1069,9 +1026,7 @@ export type DrawEvent = {
 
 // @public
 export interface DrawHistoryEntry {
-    // (undocumented)
     readonly selection: DrawSelection | null;
-    // (undocumented)
     readonly shapes: readonly DrawShape[];
 }
 
@@ -1131,7 +1086,6 @@ export const drawReducer: (state: DrawState, action: DrawAction) => DrawState;
 
 // @public
 export interface DrawSelection {
-    // (undocumented)
     readonly shapeId: string;
     readonly vertex: number | null;
 }
@@ -1140,36 +1094,27 @@ export interface DrawSelection {
 export interface DrawShape {
     readonly done: boolean;
     readonly id: string;
-    // (undocumented)
     readonly kind: DrawKind;
     readonly label: string;
     readonly radiusMetres?: number;
-    // (undocumented)
     readonly vertices: readonly LatLng[];
 }
 
 // @public
 export interface DrawShapeInput {
-    // (undocumented)
     readonly kind: DrawKind;
-    // (undocumented)
     readonly radiusMetres?: number;
-    // (undocumented)
     readonly vertices: readonly LatLng[];
 }
 
 // @public
 export interface DrawState {
     readonly coalesce: string | null;
-    // (undocumented)
     readonly future: readonly DrawHistoryEntry[];
-    // (undocumented)
     readonly lastEvent: DrawEvent | null;
     readonly mode: DrawKind;
     readonly nextId: number;
-    // (undocumented)
     readonly past: readonly DrawHistoryEntry[];
-    // (undocumented)
     readonly selection: DrawSelection | null;
     readonly serials: Readonly<Record<DrawKind, number>>;
     readonly shapes: readonly DrawShape[];
@@ -1225,35 +1170,28 @@ export const FAKE_VECTOR_BASEMAP: BasemapDefinition;
 
 // @public
 export class FakeClipboard implements ClipboardPort {
-    // (undocumented)
     readonly attempts: string[];
     failWith(reason: ClipboardFailureReason): void;
     succeed(): void;
-    // (undocumented)
     writeText(text: string): Promise<ClipboardResult>;
-    // (undocumented)
     readonly written: string[];
 }
 
 // @public
 export class FakeDevicePreferences implements DevicePreferences {
     constructor(initial?: Partial<DevicePreferencesValue>);
-    // (undocumented)
     get(): DevicePreferencesValue;
     set(patch: Partial<DevicePreferencesValue>): void;
-    // (undocumented)
     subscribe(listener: (value: DevicePreferencesValue) => void): () => void;
 }
 
 // @public
 export class FakeFeatureQuery implements FeatureQuery {
-    // (undocumented)
     readonly calls: FeatureQueryRequest[];
     clearFailure(): void;
     failWith(kind: FakeFeatureQueryFailure): void;
     hold(): () => void;
     respondWith(hits: readonly SelectionHit[]): void;
-    // (undocumented)
     within(request: FeatureQueryRequest): Promise<readonly SelectionHit[]>;
 }
 
@@ -1265,9 +1203,7 @@ export class FakeFileOpener implements FileOpener {
     cancel(): void;
     choose(file: OpenedFile): void;
     failWith(kind: FakeFileOpenFailure): void;
-    // (undocumented)
     open(options: FileOpenOptions): Promise<OpenedFile>;
-    // (undocumented)
     readonly opens: FileOpenOptions[];
     succeed(): void;
     get waiting(): boolean;
@@ -1278,12 +1214,9 @@ export type FakeFileOpenFailure = Extract<FileOpenErrorKind, "unsupported" | "un
 
 // @public
 export class FakeFileSaver implements FileSaver {
-    // (undocumented)
     readonly attempts: SavedFile[];
     failWith(reason: FileSaveFailureReason): void;
-    // (undocumented)
     save(file: SavedFile): Promise<FileSaveResult>;
-    // (undocumented)
     readonly saved: SavedFile[];
     succeed(): void;
 }
@@ -1291,34 +1224,25 @@ export class FakeFileSaver implements FileSaver {
 // @public
 export class FakeLayerCatalogue implements LayerCatalogue {
     constructor(layers?: readonly LayerDefinition[]);
-    // (undocumented)
     readonly getState: () => CatalogueState;
-    // (undocumented)
     readonly refresh: () => Promise<void>;
     refreshes: number;
     setLayers(layers: readonly LayerDefinition[]): void;
     setState(state: CatalogueState): void;
-    // (undocumented)
     readonly subscribe: (listener: () => void) => (() => void);
 }
 
 // @public
 export class FakeLayerSource implements LayerSource {
-    // (undocumented)
     readonly detailRequests: RecordedLayerRequest<LayerDetailRequest>[];
     fail(layerId: string, error: "network" | "invalid"): void;
     failIdentify(layerId: string, error: "network" | "invalid"): void;
     hold(): () => void;
     holdIdentify(layerId: string): () => void;
-    // (undocumented)
     identify(request: LayerIdentifyRequest): Promise<readonly LayerFeature[]>;
-    // (undocumented)
     readonly identifyRequests: RecordedLayerRequest<LayerIdentifyRequest>[];
-    // (undocumented)
     load(request: LayerLoadRequest): Promise<readonly LayerFeature[]>;
-    // (undocumented)
     loadDetail(request: LayerDetailRequest): Promise<readonly LayerFeature[]>;
-    // (undocumented)
     readonly requests: RecordedLayerRequest<LayerLoadRequest>[];
     setDetail(layerId: string, shapes: readonly LayerFeature[]): void;
     setFeatures(layerId: string, features: readonly LayerFeature[]): void;
@@ -1334,14 +1258,10 @@ export class FakeLocationProvider implements LocationProvider {
     emitFix(fix: LocationFix): void;
     failWith(kind: LocationErrorKind): void;
     holdNext(): HeldCall<LocationFix>;
-    // (undocumented)
     locate(options?: LocateOptions): Promise<LocationFix>;
-    // (undocumented)
     readonly locateCalls: (LocateOptions | undefined)[];
     setFix(fix: LocationFix): void;
-    // (undocumented)
     readonly supportsWatch: boolean;
-    // (undocumented)
     readonly watch?: LocationProvider["watch"];
     get watcherCount(): number;
 }
@@ -1355,13 +1275,11 @@ export interface FakeLocationProviderOptions {
 // @public
 export class FakeMapAdapter implements MapAdapter {
     constructor(options?: FakeMapAdapterOptions);
-    // (undocumented)
     animationEnabled: boolean;
     deferNextBasemap(): {
         readonly resolve: () => void;
         readonly reject: () => void;
     };
-    // (undocumented)
     destroy(): void;
     get destroyed(): boolean;
     drawnLayers(): DrawnLayer[];
@@ -1370,68 +1288,39 @@ export class FakeMapAdapter implements MapAdapter {
     failNextImage(): void;
     featuresAt(_point: PixelPoint): readonly MapFeatureHit[];
     featuresOf(id: string): readonly MapFeature[] | undefined;
-    // (undocumented)
     fitBounds(bounds: Bounds, options?: MapFitOptions): void;
-    // (undocumented)
     focus(): void;
-    // (undocumented)
     focusCount: number;
-    // (undocumented)
     getBounds(): Bounds;
-    // (undocumented)
     getMaxZoom(): number;
-    // (undocumented)
     getMinZoom(): number;
-    // (undocumented)
     getView(): ViewState;
     heatmapOf(id: string): MapHeatmap | undefined;
     readonly imageRequests: (MapImageOptions | undefined)[];
     isVisible(latlng: LatLng): boolean;
-    // (undocumented)
     keyboardEnabled: boolean;
-    // (undocumented)
     metresPerPixel(lat?: number): number;
-    // (undocumented)
     mount(host: MapHostElement, options: MapMountOptions): Promise<void>;
-    // (undocumented)
     mountCount: number;
-    // (undocumented)
     on<K extends keyof MapEvents>(event: K, handler: (payload: MapEvents[K]) => void): () => void;
-    // (undocumented)
     panBy(dx: number, dy: number): void;
-    // (undocumented)
     project(latlng: LatLng): PixelPoint;
     projection: MapProjection;
-    // (undocumented)
     removeLayer(id: string): void;
-    // (undocumented)
     resetBearing(): void;
-    // (undocumented)
     rotateBy(degrees: number): void;
     saveData: boolean;
-    // (undocumented)
     setAnimationEnabled(enabled: boolean): void;
-    // (undocumented)
     setBasemap(basemap: BasemapDefinition, options?: MapBasemapOptions): Promise<void>;
-    // (undocumented)
     setEditHandles(handles: readonly MapEditHandle[]): void;
-    // (undocumented)
     setFeatureLayer(id: string, features: readonly MapFeature[]): void;
-    // (undocumented)
     setHeatmapLayer(id: string, heatmap: MapHeatmap): void;
-    // (undocumented)
     setKeyboardEnabled(enabled: boolean): void;
-    // (undocumented)
     setProjection(projection: MapProjection): void;
-    // (undocumented)
     setShapeLayer(id: string, shapes: MapShapes): void;
-    // (undocumented)
     setStyledShapes(id: string, layer: MapStyledShapes): void;
-    // (undocumented)
     setTileLayer(id: string, overlay: MapTileOverlay): void;
-    // (undocumented)
     setVectorLayer(id: string, layer: MapVectorTiles): void;
-    // (undocumented)
     setView(view: Partial<ViewState>): void;
     simulateBasemapUnavailable(): void;
     simulateClick(latlng: LatLng, features?: MapClickEvent["features"]): void;
@@ -1449,14 +1338,10 @@ export class FakeMapAdapter implements MapAdapter {
     simulateUserZoom(zoom: number): void;
     stallNextImageTiles(): void;
     styledShapesOf(id: string): MapStyledShapes | undefined;
-    // (undocumented)
     toImage(options?: MapImageOptions): Promise<Blob>;
-    // (undocumented)
     unproject(point: PixelPoint): LatLng;
     vectorLayerOf(id: string): MapVectorTiles | undefined;
-    // (undocumented)
     zoomIn(): void;
-    // (undocumented)
     zoomOut(): void;
 }
 
@@ -1467,48 +1352,37 @@ export interface FakeMapAdapterOptions {
 
 // @public
 export class FakeMapHost implements MapHostElement {
-    constructor(width?: number, height?: number);
-    // (undocumented)
+    constructor(
+    width?: number,
+    height?: number);
     focus(options?: {
         preventScroll?: boolean;
     }): void;
-    // (undocumented)
     readonly focusCalls: ({
         preventScroll?: boolean;
     } | undefined)[];
-    // (undocumented)
     getBoundingClientRect(): {
         readonly width: number;
         readonly height: number;
         readonly left: number;
         readonly top: number;
     };
-    // (undocumented)
     readonly height: number;
-    // (undocumented)
     readonly width: number;
 }
 
 // @public
 export class FakeMessageCatalogue implements MessageCatalogue {
     constructor(options?: FakeMessageCatalogueOptions);
-    // (undocumented)
     readonly calls: MessageCatalogueCall[];
-    // (undocumented)
     readonly definitionTexts?: Readonly<Record<string, string>>;
-    // (undocumented)
     get language(): string;
-    // (undocumented)
     readonly layerTemplates?: Readonly<Record<string, string>>;
-    // (undocumented)
     list: (items: readonly string[], type?: "conjunction" | "disjunction") => string;
-    // (undocumented)
     get numberingSystem(): string | undefined;
-    // (undocumented)
     plural: <K extends MessageKey>(key: K, params: MessageParams[K] & {
         readonly count: number;
     }) => string;
-    // (undocumented)
     t: <K extends MessageKey>(key: K, params: MessageParams[K]) => string;
 }
 
@@ -1533,13 +1407,9 @@ export class FakeRoutingProvider implements RoutingProvider {
     failWith(kind: FakeRoutingFailure): void;
     holdNextReachableArea(): HeldReachableAreaCall;
     holdNextRoute(): HeldRouteCall;
-    // (undocumented)
     reachableArea(request: ReachableAreaRequest): Promise<ReachableAreaResult>;
-    // (undocumented)
     readonly reachableAreaCalls: ReachableAreaRequest[];
-    // (undocumented)
     route(request: RouteRequest): Promise<RouteResult>;
-    // (undocumented)
     readonly routeCalls: RouteRequest[];
     setReachableArea(result: ReachableAreaResult | null): void;
     setRoute(result: RouteResult | null): void;
@@ -1551,13 +1421,9 @@ export class FakeSearchProvider implements SearchProvider {
     clearFailure(): void;
     failWith(kind: SearchErrorKind): void;
     holdNext(): HeldSearchCall;
-    // (undocumented)
     reverse(position: LatLng, options?: Pick<SearchOptions, "signal">): Promise<SearchResult | null>;
-    // (undocumented)
     readonly reverseCalls: RecordedReverseCall[];
-    // (undocumented)
     search(query: string, options?: SearchOptions): Promise<readonly SearchResult[]>;
-    // (undocumented)
     readonly searchCalls: RecordedSearchCall[];
     setDefaultResults(results: readonly SearchResult[]): void;
     setResults(query: string, results: readonly SearchResult[]): void;
@@ -1566,44 +1432,27 @@ export class FakeSearchProvider implements SearchProvider {
 
 // @public
 export interface FakeServiceHandles {
-    // (undocumented)
     readonly clipboard: FakeClipboard;
-    // (undocumented)
     readonly featureQuery: FakeFeatureQuery;
-    // (undocumented)
     readonly fileOpener: FakeFileOpener;
-    // (undocumented)
     readonly fileSaver: FakeFileSaver;
-    // (undocumented)
     readonly layers: FakeLayerCatalogue;
-    // (undocumented)
     readonly layerSource: FakeLayerSource;
-    // (undocumented)
     readonly location: FakeLocationProvider;
     readonly maps: FakeMapAdapter[];
-    // (undocumented)
     readonly messages: FakeMessageCatalogue;
-    // (undocumented)
     readonly preferences: FakeDevicePreferences;
-    // (undocumented)
     readonly routing: FakeRoutingProvider;
-    // (undocumented)
     readonly search: FakeSearchProvider;
-    // (undocumented)
     readonly selection: MemoryFeatureSelection;
-    // (undocumented)
     readonly settings: MemorySettingsStore;
-    // (undocumented)
     readonly suggestions: FakeSuggestionProvider;
-    // (undocumented)
     readonly theme: FakeThemeSource;
-    // (undocumented)
     readonly url: MemoryUrlState;
 }
 
 // @public
 export interface FakeServices extends Services {
-    // (undocumented)
     readonly fakes: FakeServiceHandles;
 }
 
@@ -1614,9 +1463,7 @@ export class FakeSuggestionProvider implements SuggestionProvider {
     holdNext(): HeldSuggestCall;
     setDefaultResults(results: readonly SearchResult[]): void;
     setResults(query: string, results: readonly SearchResult[]): void;
-    // (undocumented)
     suggest(query: string, options?: SuggestOptions): Promise<readonly SearchResult[]>;
-    // (undocumented)
     readonly suggestCalls: RecordedSuggestCall[];
 }
 
@@ -1624,35 +1471,27 @@ export class FakeSuggestionProvider implements SuggestionProvider {
 export class FakeThemeSource implements ThemeSource {
     constructor(systemTheme?: ResolvedTheme);
     get appliedTheme(): ResolvedTheme | null;
-    // (undocumented)
     apply(theme: ResolvedTheme): void;
-    // (undocumented)
     readonly applyCalls: ResolvedTheme[];
-    // (undocumented)
     getSystemTheme(): ResolvedTheme;
     setSystemTheme(theme: ResolvedTheme): void;
-    // (undocumented)
     subscribe(listener: (theme: ResolvedTheme) => void): () => void;
 }
 
 // @public
 export interface FeatureFilter {
-    // (undocumented)
     readonly field: string;
-    // (undocumented)
     readonly in: readonly (string | number)[];
 }
 
 // @public
 export interface FeatureQuery {
-    // (undocumented)
     within(request: FeatureQueryRequest): Promise<readonly SelectionHit[]>;
 }
 
 // @public
 export class FeatureQueryError extends Error {
     constructor(kind: FeatureQueryErrorKind, message?: string);
-    // (undocumented)
     readonly kind: FeatureQueryErrorKind;
 }
 
@@ -1664,7 +1503,6 @@ export interface FeatureQueryRequest {
     readonly area: QueryArea;
     readonly layerIds: readonly string[];
     readonly limit: number;
-    // (undocumented)
     readonly signal?: AbortSignal;
 }
 
@@ -1687,16 +1525,11 @@ export interface FeatureSelection {
 
 // @public
 export interface FeedLayerDefinition<S extends PointStyle | FeedShapeStyle = PointStyle | FeedShapeStyle> extends LayerDefinitionBase {
-    // (undocumented)
     readonly card: CardSpec;
-    // (undocumented)
     readonly detail?: DetailSource;
     readonly emptyText: DefinitionText;
-    // (undocumented)
     readonly list: ListSpec;
-    // (undocumented)
     readonly source: FeedSource | QuerySource;
-    // (undocumented)
     readonly style: S;
 }
 
@@ -1707,11 +1540,8 @@ export type FeedShapeStyle = ShapeStyle<LayerTemplate>;
 export interface FeedSource {
     readonly cacheSeconds?: number;
     readonly decoder: string;
-    // (undocumented)
     readonly fields: FieldMap;
-    // (undocumented)
     readonly filter?: FeatureFilter;
-    // (undocumented)
     readonly kind: "feed";
     readonly url: string;
 }
@@ -1727,11 +1557,8 @@ export function feetToMetres(feet: number): number;
 
 // @public
 export interface FieldMap {
-    // (undocumented)
     readonly [field: string]: string;
-    // (undocumented)
     readonly id: string;
-    // (undocumented)
     readonly title: string;
 }
 
@@ -1740,14 +1567,12 @@ export type FieldValue = string | number | boolean | null;
 
 // @public
 export interface FileOpener {
-    // (undocumented)
     open(options: FileOpenOptions): Promise<OpenedFile>;
 }
 
 // @public
 export class FileOpenError extends Error {
     constructor(kind: FileOpenErrorKind, message?: string);
-    // (undocumented)
     readonly kind: FileOpenErrorKind;
 }
 
@@ -1768,7 +1593,6 @@ export type FileSaveFailureReason = Extract<FileSaveResult, {
 
 // @public
 export interface FileSaver {
-    // (undocumented)
     save(file: SavedFile): Promise<FileSaveResult>;
 }
 
@@ -1788,11 +1612,8 @@ export function fillUrlTemplate(template: string, values: Readonly<Record<string
 
 // @public
 export interface FixedColour {
-    // (undocumented)
     readonly colour: PaletteSlot;
-    // (undocumented)
     readonly kind: "fixed";
-    // (undocumented)
     readonly label: DefinitionText;
 }
 
@@ -1871,7 +1692,6 @@ export function geometryArea(input: GeometryInput): number;
 export class GeometryError extends Error {
     constructor(kind: GeometryErrorKind, message?: string | Message);
     readonly description: Message | undefined;
-    // (undocumented)
     readonly kind: GeometryErrorKind;
 }
 
@@ -1916,11 +1736,9 @@ export const HANDLE_HIT_RADIUS_TOUCH_PX = 22;
 
 // @public
 export interface HandleGesture {
-    // (undocumented)
     readonly id: string;
     readonly moved: boolean;
     readonly origin: PixelPoint;
-    // (undocumented)
     readonly pointer: HandlePointer;
 }
 
@@ -1939,9 +1757,7 @@ export function hasZoomWindow(definition: LayerDefinition): boolean;
 // @public
 export interface HeatmapLayerDefinition extends LayerDefinitionBase {
     readonly emptyText: DefinitionText;
-    // (undocumented)
     readonly heatmap: HeatmapSpec;
-    // (undocumented)
     readonly source: FeedSource | QuerySource;
 }
 
@@ -1988,13 +1804,9 @@ export type HeldSuggestCall = HeldCall<readonly SearchResult[]>;
 
 // @public
 export interface Hemispheres {
-    // (undocumented)
     readonly east: string;
-    // (undocumented)
     readonly north: string;
-    // (undocumented)
     readonly south: string;
-    // (undocumented)
     readonly west: string;
 }
 
@@ -2009,15 +1821,12 @@ export function hitTestHandle(handles: readonly ProjectedHandle[], at: PixelPoin
 
 // @public
 export interface HostText {
-    // (undocumented)
     readonly key: string;
-    // (undocumented)
     readonly text: string;
 }
 
 // @public
 export interface IdentifiableLayerDefinition extends TileLayerDefinition {
-    // (undocumented)
     readonly identify: IdentifySource;
 }
 
@@ -2026,9 +1835,7 @@ export const IDENTIFY_VARIABLES: readonly string[];
 
 // @public
 export interface IdentifyAnnouncement {
-    // (undocumented)
     readonly message: Message;
-    // (undocumented)
     readonly priority: "polite" | "assertive";
 }
 
@@ -2147,9 +1954,7 @@ export function joinMessages(parts: readonly Message[], joiner?: MessageJoiner):
 
 // @public
 export interface KeyedLayerText {
-    // (undocumented)
     readonly key: string;
-    // (undocumented)
     readonly text: string;
 }
 
@@ -2178,9 +1983,7 @@ export interface LanguageOption {
 
 // @public
 export interface LatLng {
-    // (undocumented)
     readonly lat: number;
-    // (undocumented)
     readonly lng: number;
 }
 
@@ -2192,7 +1995,6 @@ export interface LayerAttribution {
 
 // @public
 export interface LayerCatalogue {
-    // (undocumented)
     getState(): CatalogueState;
     refresh(): Promise<void>;
     subscribe(listener: () => void): () => void;
@@ -2206,34 +2008,27 @@ export type LayerDefinition = FeedLayerDefinition | HeatmapLayerDefinition | Til
 
 // @public
 export interface LayerDefinitionBase {
-    // (undocumented)
     readonly attribution: readonly LayerAttribution[];
-    // (undocumented)
     readonly controls: readonly LayerControlDefinition[];
     readonly dataCost: DefinitionText;
     readonly description: DefinitionText;
     readonly disclaimer?: DefinitionText;
     readonly group: DefinitionText;
     readonly id: string;
-    // (undocumented)
     readonly name: DefinitionText;
-    // (undocumented)
     readonly variables?: readonly DerivedVariable[];
 }
 
 // @public
 export interface LayerDetailRequest {
-    // (undocumented)
     readonly definition: LayerDefinition;
     readonly feature: LayerFeature;
-    // (undocumented)
     readonly signal?: AbortSignal;
 }
 
 // @public
 export class LayerError extends Error {
     constructor(kind: LayerErrorKind, message?: string);
-    // (undocumented)
     readonly kind: LayerErrorKind;
 }
 
@@ -2242,9 +2037,7 @@ export type LayerErrorKind = "network" | "invalid" | "empty" | "aborted";
 
 // @public
 export interface LayerFeature {
-    // (undocumented)
     readonly fields: Readonly<Record<string, FieldValue>>;
-    // (undocumented)
     readonly geometry: LayerGeometry;
     readonly id: string;
 }
@@ -2273,7 +2066,6 @@ export interface LayerIdentifyRequest {
     readonly controls: ControlValues;
     readonly definition: IdentifiableLayerDefinition;
     readonly now: number;
-    // (undocumented)
     readonly signal?: AbortSignal;
 }
 
@@ -2283,17 +2075,13 @@ export interface LayerLoadRequest {
     readonly controls: ControlValues;
     readonly definition: LayerDefinition;
     readonly now: number;
-    // (undocumented)
     readonly signal?: AbortSignal;
 }
 
 // @public
 export interface LayerSource {
-    // (undocumented)
     identify(request: LayerIdentifyRequest): Promise<readonly LayerFeature[]>;
-    // (undocumented)
     load(request: LayerLoadRequest): Promise<readonly LayerFeature[]>;
-    // (undocumented)
     loadDetail(request: LayerDetailRequest): Promise<readonly LayerFeature[]>;
 }
 
@@ -2312,26 +2100,18 @@ export function layerZoomLimit(definition: LayerDefinition, zoom: number): ZoomL
 
 // @public
 export interface Legend {
-    // (undocumented)
     readonly entries: readonly LegendEntry[];
 }
 
 // @public
 export interface LegendEntry {
-    // (undocumented)
     readonly colour: PaletteSlot;
-    // (undocumented)
     readonly dash?: LineDash;
-    // (undocumented)
     readonly label: string;
-    // (undocumented)
     readonly pattern?: FillPattern;
-    // (undocumented)
     readonly radius: number;
-    // (undocumented)
     readonly shape: MarkerShape;
     readonly swatch?: "marker" | "area" | "line" | "density";
-    // (undocumented)
     readonly width?: number;
 }
 
@@ -2343,12 +2123,9 @@ export type LineDash = "solid" | "dashed" | "dotted";
 
 // @public
 export interface ListSort {
-    // (undocumented)
     readonly direction: "asc" | "desc";
-    // (undocumented)
     readonly field: string;
     readonly id: string;
-    // (undocumented)
     readonly label: DefinitionText;
 }
 
@@ -2363,16 +2140,13 @@ export function loadsFeatures(definition: LayerDefinition): definition is FeedLa
 
 // @public
 export interface LocateOptions {
-    // (undocumented)
     readonly signal?: AbortSignal;
-    // (undocumented)
     readonly timeoutMs?: number;
 }
 
 // @public
 export class LocationError extends Error {
     constructor(kind: LocationErrorKind, message?: string);
-    // (undocumented)
     readonly kind: LocationErrorKind;
 }
 
@@ -2381,16 +2155,13 @@ export type LocationErrorKind = "denied" | "unavailable" | "timeout";
 
 // @public
 export interface LocationFix {
-    // (undocumented)
     readonly accuracyMetres: number;
-    // (undocumented)
     readonly position: LatLng;
     readonly timestamp: number;
 }
 
 // @public
 export interface LocationProvider {
-    // (undocumented)
     locate(options?: LocateOptions): Promise<LocationFix>;
     readonly supportsWatch: boolean;
     watch?(handlers: LocationWatchHandlers, options: {
@@ -2400,9 +2171,7 @@ export interface LocationProvider {
 
 // @public
 export interface LocationWatchHandlers {
-    // (undocumented)
     onError(error: Error): void;
-    // (undocumented)
     onFix(fix: LocationFix): void;
 }
 
@@ -2419,14 +2188,11 @@ export const MAP_SHAPE_ATTRIBUTE = "data-map-shape";
 export interface MapAdapter {
     destroy(): void;
     featuresAt(point: PixelPoint): readonly MapFeatureHit[];
-    // (undocumented)
     fitBounds(bounds: Bounds, options?: MapFitOptions): void;
     focus(): void;
     getBounds(): Bounds;
-    // (undocumented)
     getMaxZoom(): number;
     getMinZoom(): number;
-    // (undocumented)
     getView(): ViewState;
     isVisible(latlng: LatLng): boolean;
     metresPerPixel(lat?: number): number;
@@ -2448,13 +2214,10 @@ export interface MapAdapter {
     setStyledShapes(id: string, layer: MapStyledShapes): void;
     setTileLayer(id: string, overlay: MapTileOverlay): void;
     setVectorLayer(id: string, layer: MapVectorTiles): void;
-    // (undocumented)
     setView(view: Partial<ViewState>, options?: MapMoveOptions): void;
     toImage(options?: MapImageOptions): Promise<Blob>;
     unproject(point: PixelPoint): LatLng;
-    // (undocumented)
     zoomIn(options?: MapMoveOptions): void;
-    // (undocumented)
     zoomOut(options?: MapMoveOptions): void;
 }
 
@@ -2469,18 +2232,14 @@ export interface MapBasemapOptions {
 // @public
 export interface MapClickEvent {
     readonly features?: readonly Readonly<Record<string, unknown>>[];
-    // (undocumented)
     readonly latlng: LatLng;
-    // (undocumented)
     readonly point: PixelPoint;
 }
 
 // @public
 export interface MapEditHandle {
     readonly id: string;
-    // (undocumented)
     readonly kind: MapEditHandleKind;
-    // (undocumented)
     readonly position: LatLng;
 }
 
@@ -2490,7 +2249,6 @@ export type MapEditHandleKind = "vertex" | "midpoint" | "radius";
 // @public
 export class MapEngineError extends Error {
     constructor(reason: MapEngineErrorReason, message?: string);
-    // (undocumented)
     readonly reason: MapEngineErrorReason;
 }
 
@@ -2500,7 +2258,6 @@ export type MapEngineErrorReason = "webgl-unavailable" | "load-failed" | "stoppe
 // @public
 export interface MapEvents {
     basemapUnavailable: BasemapDefinition;
-    // (undocumented)
     click: MapClickEvent;
     fatalError: MapEngineError;
     featureTap: MapFeatureTap;
@@ -2522,26 +2279,20 @@ export interface MapEvents {
 // @public
 export interface MapFeature {
     readonly colour: string;
-    // (undocumented)
     readonly id: string;
-    // (undocumented)
     readonly position: LatLng;
     readonly radius: number;
-    // (undocumented)
     readonly shape: MarkerShape;
 }
 
 // @public
 export interface MapFeatureHit {
-    // (undocumented)
     readonly featureId: string;
-    // (undocumented)
     readonly layerId: string;
 }
 
 // @public
 export interface MapFeatureTap extends MapFeatureHit {
-    // (undocumented)
     readonly hits: readonly MapFeatureHit[];
 }
 
@@ -2566,9 +2317,7 @@ export interface MapHandleDrag {
 
 // @public
 export interface MapHeatmap {
-    // (undocumented)
     readonly source: MapHeatmapSource;
-    // (undocumented)
     readonly style: MapHeatmapStyle;
 }
 
@@ -2598,11 +2347,9 @@ export interface MapHeatmapStyle {
 
 // @public
 export interface MapHostElement {
-    // (undocumented)
     focus(options?: {
         preventScroll?: boolean;
     }): void;
-    // (undocumented)
     getBoundingClientRect(): {
         readonly width: number;
         readonly height: number;
@@ -2615,14 +2362,12 @@ export interface MapHostElement {
 export interface MapImageDrawing {
     readonly colour: string;
     readonly halo: string;
-    // (undocumented)
     readonly marks: readonly MapImageMark[];
 }
 
 // @public
 export class MapImageExportError extends MapEngineError {
     constructor(kind: MapImageExportErrorKind, message: string);
-    // (undocumented)
     readonly kind: MapImageExportErrorKind;
 }
 
@@ -2652,9 +2397,7 @@ export interface MapImageOptions {
 
 // @public
 export interface MapImageSize {
-    // (undocumented)
     readonly height: number;
-    // (undocumented)
     readonly width: number;
 }
 
@@ -2693,23 +2436,16 @@ export function mapKeyAction(event: MapKeyEvent): MapKeyAction | null;
 
 // @public
 export interface MapKeyEvent {
-    // (undocumented)
     readonly altKey: boolean;
-    // (undocumented)
     readonly ctrlKey: boolean;
-    // (undocumented)
     readonly key: string;
-    // (undocumented)
     readonly metaKey: boolean;
-    // (undocumented)
     readonly shiftKey: boolean;
 }
 
 // @public
 export interface MapKeyHelpEntry {
-    // (undocumented)
     readonly description: DefinitionText;
-    // (undocumented)
     readonly keys: DefinitionText;
 }
 
@@ -2742,12 +2478,10 @@ export function mapMetresPerPixel(projection: MapProjection, latitude: number, c
 
 // @public
 export interface MapMountOptions {
-    // (undocumented)
     readonly basemap: BasemapDefinition;
     readonly projection?: MapProjection;
     readonly reducedMotion: boolean;
     readonly saveData?: boolean;
-    // (undocumented)
     readonly view: ViewState;
 }
 
@@ -2758,13 +2492,9 @@ export interface MapMoveOptions {
 
 // @public
 export interface MapPlacement {
-    // (undocumented)
     isVisible(position: LatLng): boolean;
-    // (undocumented)
     project(position: LatLng): PixelPoint;
-    // (undocumented)
     readonly projection: MapProjection;
-    // (undocumented)
     readonly view: Pick<ViewState, "center" | "zoom">;
 }
 
@@ -2774,10 +2504,8 @@ export type MapProjection = "flat" | "globe";
 // @public
 export interface MapShapeLook {
     readonly colour: string;
-    // (undocumented)
     readonly dash: LineDash;
     readonly fillOpacity: number;
-    // (undocumented)
     readonly pattern: FillPattern;
     readonly width: number;
 }
@@ -2785,28 +2513,22 @@ export interface MapShapeLook {
 // @public
 export interface MapShapes {
     readonly colour: string;
-    // (undocumented)
     readonly geometries: readonly LayerGeometry[];
     readonly lineWidth?: number;
 }
 
 // @public
 export interface MapStyledShape {
-    // (undocumented)
     readonly geometry: LayerGeometry;
-    // (undocumented)
     readonly id: string;
     readonly label?: string;
-    // (undocumented)
     readonly look: MapShapeLook;
 }
 
 // @public
 export interface MapStyledShapes {
-    // (undocumented)
     readonly geometry: "area" | "line";
     readonly labelMinZoom?: number;
-    // (undocumented)
     readonly shapes: readonly MapStyledShape[];
 }
 
@@ -2828,13 +2550,11 @@ export interface MapTileOverlay {
     readonly maxzoom: number;
     readonly opacity: number;
     readonly tiles: string;
-    // (undocumented)
     readonly tileSize: 256 | 512;
 }
 
 // @public
 export interface MapVectorSource {
-    // (undocumented)
     readonly maxzoom: number;
     readonly minzoom: number;
     readonly tiles: string;
@@ -2842,28 +2562,22 @@ export interface MapVectorSource {
 
 // @public
 export interface MapVectorSourceLayer {
-    // (undocumented)
     readonly geometry: "area" | "line";
     readonly label?: {
         readonly field: string;
         readonly minzoom?: number;
     };
-    // (undocumented)
     readonly maxzoom?: number;
     readonly minzoom?: number;
-    // (undocumented)
     readonly rule: MapLookRule;
     readonly sourceLayer: string;
 }
 
 // @public
 export interface MapVectorTiles {
-    // (undocumented)
     readonly layers: readonly MapVectorSourceLayer[];
-    // (undocumented)
     readonly maxzoom?: number;
     readonly minzoom?: number;
-    // (undocumented)
     readonly source: MapVectorSource;
 }
 
@@ -2872,12 +2586,9 @@ export type MarkerShape = "circle" | "square" | "triangle" | "diamond";
 
 // @public
 export interface MarkerStyle {
-    // (undocumented)
     readonly colour: PaletteSlot;
     readonly label: DefinitionText;
-    // (undocumented)
     readonly radius: number;
-    // (undocumented)
     readonly shape: MarkerShape;
 }
 
@@ -2952,9 +2663,7 @@ export function measureLineDistance(positions: readonly Position_2[]): number | 
 
 // @public
 export interface MeasurementReading<Unit extends string> {
-    // (undocumented)
     readonly unit: Unit;
-    // (undocumented)
     readonly value: number;
 }
 
@@ -2967,20 +2676,13 @@ export function measureShape(shape: DrawShape): ShapeMeasure;
 // @public
 export class MemoryFeatureSelection implements FeatureSelection {
     constructor(options?: MemoryFeatureSelectionOptions);
-    // (undocumented)
     add(refs: readonly FeatureRef[]): void;
-    // (undocumented)
     clear(): void;
-    // (undocumented)
     readonly getState: () => readonly FeatureRef[];
-    // (undocumented)
     readonly limit: number;
-    // (undocumented)
     remove(refs: readonly FeatureRef[]): void;
-    // (undocumented)
     replace(refs: readonly FeatureRef[]): void;
     replaceExternally(refs: readonly FeatureRef[]): void;
-    // (undocumented)
     readonly subscribe: (listener: () => void) => (() => void);
 }
 
@@ -2992,13 +2694,9 @@ export interface MemoryFeatureSelectionOptions {
 // @public
 export class MemorySettingsStore implements SettingsStore {
     constructor(options?: MemorySettingsStoreOptions);
-    // (undocumented)
     get(): Settings;
-    // (undocumented)
     readonly persistent: boolean;
-    // (undocumented)
     set(patch: Partial<Settings>): void;
-    // (undocumented)
     subscribe(listener: (settings: Settings) => void): () => void;
 }
 
@@ -3011,13 +2709,9 @@ export interface MemorySettingsStoreOptions {
 // @public
 export class MemoryUrlState implements UrlState {
     constructor(initial?: UrlStateValue);
-    // (undocumented)
     link(value: UrlStateValue): string;
-    // (undocumented)
     read(): UrlStateValue;
-    // (undocumented)
     write(value: UrlStateValue): void;
-    // (undocumented)
     readonly writes: UrlStateValue[];
 }
 
@@ -3056,9 +2750,7 @@ export interface MessageCatalogue {
 
 // @public
 export interface MessageCatalogueCall {
-    // (undocumented)
     readonly key: MessageKey;
-    // (undocumented)
     readonly params: unknown;
 }
 
@@ -3071,9 +2763,7 @@ export interface MessageCatalogueCheckOptions {
 
 // @public
 export interface MessageCatalogueProblem {
-    // (undocumented)
     readonly key: string;
-    // (undocumented)
     readonly problem: MessageCatalogueProblemKind;
 }
 
@@ -3127,9 +2817,7 @@ export function moveStop(stops: readonly DirectionStop[], id: string, direction:
 
 // @public
 export interface NamedRegistry<T> {
-    // (undocumented)
     get(name: string): T | undefined;
-    // (undocumented)
     has(name: string): boolean;
     names(): readonly string[];
     with(items: Readonly<Record<string, T>>): NamedRegistry<T>;
@@ -3153,9 +2841,7 @@ export function omittedLayers(basemap: BasemapDefinition, saveData: boolean): re
 
 // @public
 export interface OpacityControlDefinition extends ControlBase {
-    // (undocumented)
     readonly default: number;
-    // (undocumented)
     readonly kind: "opacity";
 }
 
@@ -3195,9 +2881,7 @@ export function parseCoordinates(text: string, hemispheres?: Hemispheres, words?
 // @public
 export interface ParsedHandleId {
     readonly index: number;
-    // (undocumented)
     readonly kind: MapEditHandleKind;
-    // (undocumented)
     readonly shapeId: string;
 }
 
@@ -3232,9 +2916,7 @@ export function partitionDefinitions(raw: readonly unknown[], options: Validatio
 
 // @public
 export interface PartitionedDefinitions {
-    // (undocumented)
     readonly layers: readonly LayerDefinition[];
-    // (undocumented)
     readonly skipped: readonly SkippedDefinition[];
 }
 
@@ -3243,9 +2925,7 @@ export function pickShape(shapes: readonly DrawShape[], at: PixelPoint, placemen
 
 // @public
 export interface PixelPoint {
-    // (undocumented)
     readonly x: number;
-    // (undocumented)
     readonly y: number;
 }
 
@@ -3283,7 +2963,6 @@ export type PointInput = Position_2 | LatLng | Point;
 
 // @public
 export interface PointStyle {
-    // (undocumented)
     readonly colour: CategoryColour | StepColour | FixedColour;
     readonly shape?: MarkerShape;
     readonly size?: SizeStops;
@@ -3311,11 +2990,8 @@ export function pressHandle(handles: readonly ProjectedHandle[], at: PixelPoint,
 
 // @public
 export interface ProjectedHandle {
-    // (undocumented)
     readonly id: string;
-    // (undocumented)
     readonly kind: MapEditHandleKind;
-    // (undocumented)
     readonly point: PixelPoint;
 }
 
@@ -3330,9 +3006,7 @@ export const QUERY_PLACEHOLDERS: readonly string[];
 
 // @public
 export interface QueryArea {
-    // (undocumented)
     readonly coordinates: number[][][];
-    // (undocumented)
     readonly type: "Polygon";
 }
 
@@ -3346,17 +3020,12 @@ export type QueryLayerDefinition = (FeedLayerDefinition | HeatmapLayerDefinition
 
 // @public
 export interface QuerySource {
-    // (undocumented)
     readonly decoder: string;
-    // (undocumented)
     readonly fields: FieldMap;
-    // (undocumented)
     readonly filter?: FeatureFilter;
-    // (undocumented)
     readonly kind: "query";
     readonly maxFeatures: number;
     readonly minzoom?: number;
-    // (undocumented)
     readonly url: string;
 }
 
@@ -3365,13 +3034,9 @@ export function queryWindow(view: Bounds): Bounds;
 
 // @public
 export interface RangeControlDefinition extends ControlBase {
-    // (undocumented)
     readonly default: number;
-    // (undocumented)
     readonly kind: "range";
-    // (undocumented)
     readonly max: number;
-    // (undocumented)
     readonly min: number;
     readonly step: number;
     readonly unit?: LayerTemplate;
@@ -3379,30 +3044,23 @@ export interface RangeControlDefinition extends ControlBase {
 
 // @public
 export interface ReachableAreaFeature {
-    // (undocumented)
     readonly geometry: AreaGeometry;
-    // (undocumented)
     readonly properties: {
         readonly minutes: number;
     };
-    // (undocumented)
     readonly type: "Feature";
 }
 
 // @public
 export interface ReachableAreaRequest {
     readonly minutes: number;
-    // (undocumented)
     readonly mode: TravelMode;
-    // (undocumented)
     readonly origin: LatLng;
-    // (undocumented)
     readonly signal?: AbortSignal;
 }
 
 // @public
 export interface ReachableAreaResult {
-    // (undocumented)
     readonly features: readonly ReachableAreaFeature[];
 }
 
@@ -3443,25 +3101,19 @@ export type RecordedLayerRequest<T> = T & {
 
 // @public
 export interface RecordedReverseCall {
-    // (undocumented)
     readonly options: Pick<SearchOptions, "signal"> | undefined;
-    // (undocumented)
     readonly position: LatLng;
 }
 
 // @public
 export interface RecordedSearchCall {
-    // (undocumented)
     readonly options: SearchOptions | undefined;
-    // (undocumented)
     readonly query: string;
 }
 
 // @public
 export interface RecordedSuggestCall {
-    // (undocumented)
     readonly options: SuggestOptions | undefined;
-    // (undocumented)
     readonly query: string;
 }
 
@@ -3470,13 +3122,11 @@ export function refuseBoxOnGlobe(view: MapImageView, projection: MapProjection):
 
 // @public
 export interface RelativeDate {
-    // (undocumented)
     readonly daysAgo: number;
 }
 
 // @public
 export interface RelativeTime {
-    // (undocumented)
     readonly minutesAgo: number;
 }
 
@@ -3486,11 +3136,9 @@ export function removeStop(stops: readonly DirectionStop[], id: string): readonl
 // @public
 export interface RequestedImage {
     readonly pixelHeight: number;
-    // (undocumented)
     readonly pixelRatio: number;
     readonly pixelWidth: number;
     readonly size: MapImageSize;
-    // (undocumented)
     readonly view: MapImageView;
 }
 
@@ -3539,30 +3187,23 @@ export function routeBounds(features: readonly (RouteLeg | ReachableAreaFeature)
 
 // @public
 export interface RouteLeg {
-    // (undocumented)
     readonly geometry: RouteLineGeometry;
-    // (undocumented)
     readonly properties: {
         readonly distance: number;
         readonly duration: number;
     };
-    // (undocumented)
     readonly type: "Feature";
 }
 
 // @public
 export interface RouteLineGeometry {
-    // (undocumented)
     readonly coordinates: number[][];
-    // (undocumented)
     readonly type: "LineString";
 }
 
 // @public
 export interface RouteRequest {
-    // (undocumented)
     readonly mode: TravelMode;
-    // (undocumented)
     readonly signal?: AbortSignal;
     readonly stops: readonly LatLng[];
 }
@@ -3577,7 +3218,6 @@ export interface RouteResult {
 // @public
 export class RoutingError extends Error {
     constructor(kind: RoutingErrorKind, message?: string);
-    // (undocumented)
     readonly kind: RoutingErrorKind;
 }
 
@@ -3664,7 +3304,6 @@ export interface SavedFile {
 export interface ScaleBar {
     readonly accessibleLabel: Message<"scale.label">;
     readonly label: string;
-    // (undocumented)
     readonly unit: DistanceUnit;
     readonly value: number;
     readonly widthPx: number;
@@ -3675,14 +3314,12 @@ export interface ScaleBarInput {
     readonly maxWidthPx: number;
     readonly messages: MessageCatalogue;
     readonly metresPerPixel: number;
-    // (undocumented)
     readonly units: UnitSystem;
 }
 
 // @public
 export class SearchError extends Error {
     constructor(kind: SearchErrorKind, message?: string);
-    // (undocumented)
     readonly kind: SearchErrorKind;
 }
 
@@ -3692,45 +3329,34 @@ export type SearchErrorKind = "offline" | "rate-limited" | "failed";
 // @public
 export interface SearchOptions {
     readonly bias?: Bounds;
-    // (undocumented)
     readonly limit?: number;
-    // (undocumented)
     readonly signal?: AbortSignal;
 }
 
 // @public
 export interface SearchProvider {
     reverse(position: LatLng, options?: Pick<SearchOptions, "signal">): Promise<SearchResult | null>;
-    // (undocumented)
     search(query: string, options?: SearchOptions): Promise<readonly SearchResult[]>;
 }
 
 // @public
 export interface SearchResult {
     readonly bounds?: Bounds;
-    // (undocumented)
     readonly centre: LatLng;
-    // (undocumented)
     readonly id: string;
-    // (undocumented)
     readonly label: string;
-    // (undocumented)
     readonly secondaryLabel?: string;
 }
 
 // @public
 export interface SegmentedControlDefinition extends ControlBase {
-    // (undocumented)
     readonly default: string;
-    // (undocumented)
     readonly kind: "segmented";
-    // (undocumented)
     readonly options: readonly SegmentedOption[];
 }
 
 // @public
 export interface SegmentedOption {
-    // (undocumented)
     readonly label: DefinitionText;
     readonly value: string;
 }
@@ -3740,9 +3366,7 @@ export function selectedShape(state: DrawState): DrawShape | null;
 
 // @public
 export interface SelectionHit {
-    // (undocumented)
     readonly feature: LayerFeature;
-    // (undocumented)
     readonly layerId: string;
 }
 
@@ -3752,9 +3376,7 @@ export function serialiseUrlHash(value: UrlStateValue): string;
 // @public
 export interface Services {
     readonly basemaps?: BasemapCatalogue;
-    // (undocumented)
     readonly clipboard: ClipboardPort;
-    // (undocumented)
     readonly createMapAdapter: MapAdapterFactory;
     readonly featureQuery?: FeatureQuery;
     readonly fileOpener?: FileOpener;
@@ -3762,21 +3384,15 @@ export interface Services {
     readonly languages?: LanguageCatalogue;
     readonly layers: LayerCatalogue;
     readonly layerSource: LayerSource;
-    // (undocumented)
     readonly location: LocationProvider;
     readonly messages: MessageCatalogue;
-    // (undocumented)
     readonly preferences: DevicePreferences;
     readonly routing?: RoutingProvider;
-    // (undocumented)
     readonly search: SearchProvider;
     readonly selection?: FeatureSelection;
-    // (undocumented)
     readonly settings: SettingsStore;
     readonly suggestions?: SuggestionProvider;
-    // (undocumented)
     readonly theme: ThemeSource;
-    // (undocumented)
     readonly url: UrlState;
 }
 
@@ -3787,14 +3403,11 @@ export function setDetent(detent: SheetDetent): SurfaceAction;
 export interface Settings {
     readonly basemapId: string | null;
     readonly language: string | null;
-    // (undocumented)
     readonly lastView: ViewState | null;
     readonly projection: MapProjection;
     readonly saveData: boolean | null;
-    // (undocumented)
     readonly theme: ThemeChoice;
     readonly tourSeen: number | null;
-    // (undocumented)
     readonly units: UnitSystem;
     readonly zoomButtons: boolean | null;
 }
@@ -3803,9 +3416,7 @@ export interface Settings {
 export interface SettingsStore {
     get(): Settings;
     readonly persistent: boolean;
-    // (undocumented)
     set(patch: Partial<Settings>): void;
-    // (undocumented)
     subscribe(listener: (settings: Settings) => void): () => void;
 }
 
@@ -3814,13 +3425,9 @@ export const SHAPE_FILE_TYPES: readonly string[];
 
 // @public
 export interface ShapeAppearance {
-    // (undocumented)
     readonly colour: PaletteSlot;
-    // (undocumented)
     readonly dash: LineDash;
-    // (undocumented)
     readonly fillOpacity: number;
-    // (undocumented)
     readonly pattern: FillPattern;
     readonly width: number;
 }
@@ -3830,21 +3437,15 @@ export function shapeAppearances(style: FeedShapeStyle): readonly ShapeAppearanc
 
 // @public
 export interface ShapeCategory extends ShapeMarks {
-    // (undocumented)
     readonly colour: PaletteSlot;
-    // (undocumented)
     readonly label: DefinitionText;
-    // (undocumented)
     readonly value: string | number;
 }
 
 // @public
 export interface ShapeCategoryColour {
-    // (undocumented)
     readonly categories: readonly ShapeCategory[];
-    // (undocumented)
     readonly field: string;
-    // (undocumented)
     readonly kind: "category";
     readonly other: ShapeMarks & {
         readonly label: DefinitionText;
@@ -3866,11 +3467,8 @@ export function shapeEvaluator(style: FeedShapeStyle, catalogue: MessageCatalogu
 
 // @public
 export interface ShapeFixedColour extends ShapeMarks {
-    // (undocumented)
     readonly colour: PaletteSlot;
-    // (undocumented)
     readonly kind: "fixed";
-    // (undocumented)
     readonly label: DefinitionText;
 }
 
@@ -3905,20 +3503,14 @@ export function shapeInputBounds(inputs: readonly DrawShapeInput[]): Bounds | un
 
 // @public
 export interface ShapeIntervalColour {
-    // (undocumented)
     readonly dashes?: readonly LineDash[];
-    // (undocumented)
     readonly field: string;
-    // (undocumented)
     readonly kind: "intervals";
-    // (undocumented)
     readonly max: number;
-    // (undocumented)
     readonly min: number;
     readonly patterns?: readonly FillPattern[];
     readonly ramp: readonly PaletteSlot[];
     readonly unit?: LayerTemplate;
-    // (undocumented)
     readonly widths?: readonly number[];
 }
 
@@ -3957,19 +3549,14 @@ export const SHAPES_CSV_HEADER = "id,type,area_m2,length_m,geometry,radius_m,cen
 
 // @public
 export interface ShapeStep extends ShapeMarks {
-    // (undocumented)
     readonly colour: PaletteSlot;
-    // (undocumented)
     readonly label: DefinitionText;
-    // (undocumented)
     readonly min: number;
 }
 
 // @public
 export interface ShapeStepColour {
-    // (undocumented)
     readonly field: string;
-    // (undocumented)
     readonly kind: "steps";
     readonly steps: readonly ShapeStep[];
 }
@@ -3988,15 +3575,11 @@ export function shapesToWkt(shapes: readonly DrawShape[]): string;
 
 // @public
 export interface ShapeStyle<T extends LayerTemplate = string> {
-    // (undocumented)
     readonly colour: ShapeColour;
     readonly dash?: LineDash;
     readonly fillOpacity?: number;
-    // (undocumented)
     readonly geometry: "area" | "line";
-    // (undocumented)
     readonly kind: "shapes";
-    // (undocumented)
     readonly label?: ShapeLabel<T>;
     readonly width?: number;
 }
@@ -4030,9 +3613,7 @@ export type SheetSection = "basemap" | "pin" | "settings" | "help" | "layers" | 
 
 // @public
 export interface ShippedKeyHelpEntry extends MapKeyHelpEntry {
-    // (undocumented)
     readonly description: MessageKey;
-    // (undocumented)
     readonly keys: MessageKey;
 }
 
@@ -4063,7 +3644,6 @@ export function simplify(input: GeometryInput, tolerance: number): Geometry;
 
 // @public
 export interface SizeStops {
-    // (undocumented)
     readonly field: string;
     readonly labels: readonly DefinitionText[];
     readonly stops: readonly (readonly [number, number])[];
@@ -4116,9 +3696,7 @@ export function startsLikeWkt(text: string): boolean;
 
 // @public
 export interface StepColour {
-    // (undocumented)
     readonly field: string;
-    // (undocumented)
     readonly kind: "steps";
     readonly steps: readonly {
         readonly min: number;
@@ -4144,27 +3722,20 @@ export function stopMeasure(): SurfaceAction;
 
 // @public
 export interface StyleCategory {
-    // (undocumented)
     readonly colour: PaletteSlot;
-    // (undocumented)
     readonly label: DefinitionText;
-    // (undocumented)
     readonly shape?: MarkerShape;
-    // (undocumented)
     readonly value: string | number;
 }
 
 // @public
 export interface SuggestionProvider {
-    // (undocumented)
     suggest(query: string, options?: SuggestOptions): Promise<readonly SearchResult[]>;
 }
 
 // @public
 export interface SuggestOptions {
-    // (undocumented)
     readonly limit?: number;
-    // (undocumented)
     readonly signal?: AbortSignal;
 }
 
@@ -4221,23 +3792,18 @@ export interface SurfaceState {
     readonly returnFocusTo: FocusTarget | null;
     readonly sheetDetent: SheetDetent;
     readonly sheetSection: SheetSection | null;
-    // (undocumented)
     readonly surface: SurfaceKind;
 }
 
 // @public
 export interface SwitchControlDefinition extends ControlBase {
-    // (undocumented)
     readonly default: boolean;
-    // (undocumented)
     readonly kind: "switch";
 }
 
 // @public
 export interface TemplatePlaceholder {
-    // (undocumented)
     readonly formatter?: string;
-    // (undocumented)
     readonly name: string;
 }
 
@@ -4271,7 +3837,6 @@ export interface ThemeDefaultIds {
 // @public
 export interface ThemeSource {
     apply(theme: ResolvedTheme): void;
-    // (undocumented)
     getSystemTheme(): ResolvedTheme;
     subscribe(listener: (theme: ResolvedTheme) => void): () => void;
 }
@@ -4283,18 +3848,15 @@ export interface TileLayerDefinition extends LayerDefinitionBase {
         readonly label: DefinitionText;
         readonly colour: PaletteSlot;
     }[];
-    // (undocumented)
     readonly source: TileSource;
 }
 
 // @public
 export interface TileSource {
     readonly bounds?: readonly [number, number, number, number];
-    // (undocumented)
     readonly kind: "tiles";
     readonly maxzoom: number;
     readonly tiles: string;
-    // (undocumented)
     readonly tileSize: 256 | 512;
 }
 
@@ -4335,9 +3897,7 @@ export function tourReducer(state: TourState, action: TourAction): TourState;
 // @public
 export interface TourSnapshot {
     readonly layersOn: number;
-    // (undocumented)
     readonly projection: MapProjection;
-    // (undocumented)
     readonly surface: SurfaceKind;
 }
 
@@ -4384,20 +3944,15 @@ export function unwrapLongitudes(positions: readonly LatLng[], referenceLng: num
 // @public
 export interface UrlState {
     link(value: UrlStateValue): string;
-    // (undocumented)
     read(): UrlStateValue;
-    // (undocumented)
     write(value: UrlStateValue): void;
 }
 
 // @public
 export interface UrlStateValue {
-    // (undocumented)
     readonly basemapId?: string;
-    // (undocumented)
     readonly layers?: LayersUrlState;
     readonly shapes?: string;
-    // (undocumented)
     readonly view?: ViewState;
 }
 
@@ -4420,27 +3975,20 @@ export function validateShape(shape: DrawShape): DrawIssue | null;
 
 // @public
 export interface ValidationOptions {
-    // (undocumented)
     readonly decoders: DecoderRegistry;
-    // (undocumented)
     readonly formatters: FormatterRegistry;
 }
 
 // @public
 export interface VectorHeatmapLayer {
-    // (undocumented)
     readonly heatmap: HeatmapSpec;
-    // (undocumented)
     readonly maxzoom?: number;
-    // (undocumented)
     readonly minzoom?: number;
-    // (undocumented)
     readonly sourceLayer: string;
 }
 
 // @public
 export interface VectorShapeLayer {
-    // (undocumented)
     readonly maxzoom?: number;
     readonly minzoom?: number;
     readonly sourceLayer: string;
@@ -4452,18 +4000,14 @@ export type VectorSourceLayer = VectorShapeLayer | VectorHeatmapLayer;
 
 // @public
 export interface VectorTileLayerDefinition extends LayerDefinitionBase {
-    // (undocumented)
     readonly maxzoom?: number;
     readonly minzoom?: number;
-    // (undocumented)
     readonly source: VectorTileSource;
-    // (undocumented)
     readonly sourceLayers: readonly VectorSourceLayer[];
 }
 
 // @public
 export interface VectorTileSource {
-    // (undocumented)
     readonly kind: "vector-tiles";
     readonly maxzoom: number;
     readonly minzoom?: number;
@@ -4475,19 +4019,14 @@ export function verticesCollinear(vertices: readonly LatLng[]): boolean;
 
 // @public
 export interface ViewState {
-    // (undocumented)
     readonly bearing: number;
-    // (undocumented)
     readonly center: LatLng;
-    // (undocumented)
     readonly zoom: number;
 }
 
 // @public
 export interface VisibleMap {
-    // (undocumented)
     readonly size: MapImageSize;
-    // (undocumented)
     readonly view: ViewState;
 }
 
@@ -4499,9 +4038,7 @@ export const WEB_MERCATOR_HALF_WORLD: number;
 
 // @public
 export interface WebMercatorPoint {
-    // (undocumented)
     readonly x: number;
-    // (undocumented)
     readonly y: number;
 }
 
@@ -4519,7 +4056,6 @@ export function wrapLongitude(lng: number): number;
 
 // @public
 export interface ZoomButtonVisibility {
-    // (undocumented)
     readonly show: boolean;
     readonly yieldedToHeight: boolean;
 }

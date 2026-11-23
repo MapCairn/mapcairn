@@ -26,13 +26,17 @@ export const QUERY_PLACEHOLDERS: readonly string[] = [...QUERY_BOX, "limit"];
 
 /** One `{name}` or `{name|formatter}` in a template. */
 export interface TemplatePlaceholder {
+  /** The decoded field to read. */
   readonly name: string;
+  /** The name of the registered formatter to run the value through, when there is one. */
   readonly formatter?: string;
 }
 
 /** A host-defined translation key and its source text for a layer template. */
 export interface KeyedLayerText {
+  /** The key the text is looked up by. */
   readonly key: string;
+  /** The text, as the layer's definition wrote it. */
   readonly text: string;
 }
 

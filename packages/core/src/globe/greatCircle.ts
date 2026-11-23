@@ -160,6 +160,7 @@ export function greatCircleMidpoint(from: LatLng, to: LatLng): LatLng {
 
 /** A path cut into short pieces, and where each given position ended up in it. */
 export interface DensifiedPath {
+  /** The path's positions, including the ones added to follow the great circle. */
   readonly positions: readonly LatLng[];
   /** The index in `positions` of each given position, in order. */
   readonly vertices: readonly number[];

@@ -131,7 +131,9 @@ export interface MapAdapterControls {
 
 /** One map adapter under test, with its controls. */
 export interface MapAdapterSubject {
+  /** The map adapter under test. */
   readonly adapter: MapAdapter;
+  /** How the contract scripts it. */
   readonly controls: MapAdapterControls;
 }
 
