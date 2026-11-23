@@ -39,6 +39,50 @@ test.describe("map shape", () => {
     ).not.toBeChecked();
   });
 
+  test("the idle warm-up of the globe leaves nothing to see or hear", async ({
+    page,
+    mapPage,
+  }) => {
+    await page.addInitScript(() => {
+      new MutationObserver(() => {
+        const canvas = document.querySelector("canvas.maplibregl-canvas");
+        if (canvas instanceof HTMLElement && canvas.style.opacity === "0") {
+          Object.assign(window, {
+            warmUpSeen: true,
+            copyShown: canvas.nextElementSibling?.tagName === "CANVAS",
+          });
+        }
+      }).observe(document, {
+        subtree: true,
+        attributes: true,
+        childList: true,
+        attributeFilter: ["style"],
+      });
+    });
+    await mapPage.goto(VIEW);
+    await page.waitForFunction(() => "warmUpSeen" in window, undefined, {
+      timeout: 15_000,
+    });
+    const canvas = page.locator("canvas.maplibregl-canvas");
+    // A still copy of the map covered the hidden canvas, and is gone again.
+    expect(await page.evaluate(() => "copyShown" in window)).toBe(true);
+    await expect(canvas).not.toHaveCSS("opacity", "0");
+    await expect(canvas.locator("xpath=following-sibling::canvas")).toHaveCount(
+      0,
+    );
+    await expect(mapPage.host).toHaveAttribute("data-projection", "flat");
+    await expect(mapPage.host).toHaveAttribute("aria-busy", "false");
+    expect(await page.evaluate(() => window.location.hash)).toContain(
+      "#map=2.00/0.00000/0.00000",
+    );
+    expect(await mapPage.announcements()).toEqual([]);
+
+    await mapPage.openSettings();
+    await shapeGroup(page).getByRole("radio", { name: "Globe" }).click();
+    await expect(mapPage.host).toHaveAttribute("data-projection", "globe");
+    await expect(canvas).not.toHaveCSS("opacity", "0");
+  });
+
   test("choosing Globe redraws the map as a globe, announces it and survives a reload", async ({
     page,
     mapPage,

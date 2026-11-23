@@ -588,7 +588,17 @@ export class FakeMapLibreMap {
   setProjection(projection: { type: string }): this {
     this.record("setProjection", [projection]);
     this.projection = projection;
+    if (this.rendersOnRepaint) {
+      queueMicrotask(() => {
+        this.fire("render");
+      });
+    }
     return this;
+  }
+  /** True while a test has the camera moving, as a drag or an animation does. */
+  moving = false;
+  isMoving(): boolean {
+    return this.moving;
   }
   setStyle(style: unknown, options?: unknown): void {
     this.record("setStyle", [style, options]);

@@ -41,6 +41,7 @@ vi.mock("maplibre-gl", async () => ({
 }));
 vi.mock("maplibre-gl/dist/maplibre-gl.css", () => ({}));
 
+import { GLOBE_WARM_UP_DELAY_MS, GLOBE_WARM_UP_LIMIT_MS } from "./globeWarmUp";
 import { IMAGE_WAIT_MS } from "./imageExport";
 import {
   createMapLibreMapAdapter,
@@ -1987,6 +1988,159 @@ describe("MapLibreMapAdapter", () => {
       expect(map.callsOf("setProjection")).toHaveLength(0);
       map.fire("style.load");
       expect(map.projection).toEqual({ type: "globe" });
+    });
+
+    describe("the warm-up of the globe", () => {
+      const asked = new WeakMap<FakeMap, number>();
+
+      /** A map that has loaded and gone idle, with the clock held. */
+      async function idleFlatMap(options: Partial<MapMountOptions> = {}) {
+        const mountedMap = await mounted(options);
+        const loading = vi.fn();
+        mountedMap.adapter.on("loading", loading);
+        vi.useFakeTimers();
+        vi.spyOn(HTMLCanvasElement.prototype, "getContext").mockReturnValue({
+          drawImage: vi.fn(),
+        } as unknown as CanvasRenderingContext2D);
+        // A test fires each frame itself.
+        mountedMap.map.rendersOnRepaint = false;
+        mountedMap.map.fire("style.load");
+        mountedMap.map.fire("idle");
+        loading.mockClear();
+        asked.set(
+          mountedMap.map,
+          mountedMap.map.callsOf("setProjection").length,
+        );
+        return { ...mountedMap, loading };
+      }
+
+      /** What the engine was asked for since the map went idle, by call. */
+      const shapes = (map: FakeMap) =>
+        map
+          .callsOf("setProjection")
+          .slice(asked.get(map) ?? 0)
+          .map((call) => call.args[0]);
+
+      it("copies the flat map, draws one globe frame under the copy after the map has been idle, then puts the flat map back", async () => {
+        const { map } = await idleFlatMap();
+        const paint = map.callsOf("triggerRepaint").length;
+        await vi.advanceTimersByTimeAsync(GLOBE_WARM_UP_DELAY_MS - 1);
+        expect(map.callsOf("triggerRepaint")).toHaveLength(paint);
+
+        await vi.advanceTimersByTimeAsync(1);
+        expect(map.callsOf("triggerRepaint")).toHaveLength(paint + 1);
+        expect(shapes(map)).toEqual([]);
+
+        map.fire("render");
+        expect(shapes(map)).toEqual([{ type: "globe" }]);
+        expect(map.getCanvas().style.opacity).toBe("0");
+        expect(map.getCanvas().nextElementSibling?.tagName).toBe("CANVAS");
+
+        map.fire("render");
+        expect(shapes(map)).toEqual([{ type: "globe" }, { type: "mercator" }]);
+        expect(map.getCanvas().style.opacity).toBe("0");
+
+        map.fire("render");
+        expect(map.getCanvas().style.opacity).toBe("");
+        expect(map.getCanvas().nextElementSibling).toBeNull();
+      });
+
+      it("tells the host of nothing, and leaves the view and the busy state as they were", async () => {
+        const { adapter, map, loading } = await idleFlatMap();
+        const view = adapter.getView();
+        const events = vi.fn();
+        for (const name of ["move", "moveEnd", "zoom", "rotate"] as const) {
+          adapter.on(name, events);
+        }
+        await vi.advanceTimersByTimeAsync(GLOBE_WARM_UP_DELAY_MS);
+        map.fire("sourcedataloading", { sourceId: "openmaptiles", tile: {} });
+        map.fire("render");
+        map.fire("render");
+        map.fire("render");
+        map.fire("idle");
+        expect(events).not.toHaveBeenCalled();
+        expect(loading).not.toHaveBeenCalled();
+        expect(adapter.getView()).toEqual(view);
+        expect(map.projection).toEqual({ type: "mercator" });
+      });
+
+      it("shows the canvas again after the limit when the map stops drawing", async () => {
+        const { map } = await idleFlatMap();
+        await vi.advanceTimersByTimeAsync(GLOBE_WARM_UP_DELAY_MS);
+        map.fire("render");
+        expect(map.getCanvas().style.opacity).toBe("0");
+        await vi.advanceTimersByTimeAsync(GLOBE_WARM_UP_LIMIT_MS);
+        expect(map.getCanvas().style.opacity).toBe("");
+        expect(map.getCanvas().nextElementSibling).toBeNull();
+        expect(map.projection).toEqual({ type: "mercator" });
+      });
+
+      it("still warms the globe when the browser gives no copy of the canvas", async () => {
+        const { map } = await idleFlatMap();
+        vi.spyOn(HTMLCanvasElement.prototype, "getContext").mockReturnValue(
+          null,
+        );
+        await vi.advanceTimersByTimeAsync(GLOBE_WARM_UP_DELAY_MS);
+        map.fire("render");
+        expect(shapes(map)).toEqual([{ type: "globe" }]);
+        expect(map.getCanvas().nextElementSibling).toBeNull();
+      });
+
+      it("runs once", async () => {
+        const { map } = await idleFlatMap();
+        await vi.advanceTimersByTimeAsync(GLOBE_WARM_UP_DELAY_MS);
+        map.fire("render");
+        map.fire("render");
+        map.fire("render");
+        map.fire("idle");
+        asked.set(map, map.callsOf("setProjection").length);
+        map.fire("idle");
+        await vi.advanceTimersByTimeAsync(GLOBE_WARM_UP_DELAY_MS * 2);
+        expect(shapes(map)).toEqual([]);
+      });
+
+      it("keeps the globe when the person chooses it while the warm-up draws", async () => {
+        const { adapter, map } = await idleFlatMap();
+        await vi.advanceTimersByTimeAsync(GLOBE_WARM_UP_DELAY_MS);
+        map.fire("render");
+        adapter.setProjection("globe");
+        map.fire("render");
+        map.fire("render");
+        expect(map.projection).toEqual({ type: "globe" });
+        expect(map.getCanvas().style.opacity).toBe("");
+        expect(shapes(map).at(-1)).toEqual({ type: "globe" });
+      });
+
+      it("does not run when the person chose the globe, or while the map moves", async () => {
+        const globe = await idleFlatMap({ projection: "globe" });
+        await vi.advanceTimersByTimeAsync(GLOBE_WARM_UP_DELAY_MS);
+        expect(shapes(globe.map)).toEqual([]);
+
+        const moving = await idleFlatMap();
+        moving.map.moving = true;
+        await vi.advanceTimersByTimeAsync(GLOBE_WARM_UP_DELAY_MS);
+        expect(shapes(moving.map)).toEqual([]);
+      });
+
+      it("gives way to a basemap swap, which shows its own busy state", async () => {
+        const { adapter, map } = await idleFlatMap();
+        await vi.advanceTimersByTimeAsync(GLOBE_WARM_UP_DELAY_MS);
+        map.fire("render");
+        void adapter.setBasemap(DARK);
+        map.fire("styledataloading");
+        expect(map.getCanvas().style.opacity).toBe("");
+        asked.set(map, map.callsOf("setProjection").length);
+        map.fire("render");
+        map.fire("render");
+        expect(shapes(map)).toEqual([]);
+      });
+
+      it("does not run after the map is destroyed", async () => {
+        const { adapter, map } = await idleFlatMap();
+        adapter.destroy();
+        await vi.advanceTimersByTimeAsync(GLOBE_WARM_UP_DELAY_MS);
+        expect(shapes(map)).toEqual([]);
+      });
     });
 
     it("asks the engine's horizon test whether a place is visible, and only on a globe", async () => {

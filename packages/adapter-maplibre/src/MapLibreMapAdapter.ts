@@ -44,6 +44,7 @@ import { isUserEvent } from "./engineErrors";
 import { loadEngine, type MapLibreModule } from "./engineLoader";
 import { engineMapOptions, neutraliseEngineAccessibility } from "./engineMap";
 import { FailureDetection } from "./failureDetection";
+import { GlobeWarmUp } from "./globeWarmUp";
 import { MapImageExporter } from "./imageExport";
 import { OverlayPlacement } from "./overlayPlacement";
 import type { PendingLoad } from "./pendingLoad";
@@ -156,6 +157,10 @@ export class MapLibreMapAdapter implements MapAdapter {
   private loadEmitted = false;
   /** True between a style's `style.load` and the next swap: only then can sources be added. */
   private styleReady = false;
+  private readonly globeWarmUp = new GlobeWarmUp(
+    (map) => this.placements.apply(map),
+    () => this.updateLoading(),
+  );
 
   constructor(
     options: MapLibreMapAdapterOptions,
@@ -367,6 +372,7 @@ export class MapLibreMapAdapter implements MapAdapter {
 
   setProjection(projection: MapProjection): void {
     this.styleVersion += 1;
+    this.globeWarmUp.abandon();
     this.placements.choose(projection);
     this.applyProjection();
   }
@@ -566,6 +572,7 @@ export class MapLibreMapAdapter implements MapAdapter {
       this.emitter.emit("click", click);
     });
     listen("styledataloading", () => {
+      this.globeWarmUp.abandon();
       this.loadState.startStyleLoad();
       this.updateLoading();
     });
@@ -608,6 +615,10 @@ export class MapLibreMapAdapter implements MapAdapter {
       this.loadState.idle(map);
       this.updateLoading();
       this.failure.settled();
+      this.globeWarmUp.schedule(
+        map,
+        () => this.placements.projection === "flat",
+      );
     });
     listen("render", () => {
       // A tile answered with a 404 fires no source event, so a frame is when
@@ -714,6 +725,9 @@ export class MapLibreMapAdapter implements MapAdapter {
    * `load` waits for every source, data layers included.
    */
   private updateLoading(): void {
+    if (this.globeWarmUp.active) {
+      return;
+    }
     const loading = !this.loadState.isIn(this.map);
     if (!loading) {
       this.emitLoad();
@@ -744,6 +758,7 @@ export class MapLibreMapAdapter implements MapAdapter {
 
   private teardownMap(): void {
     this.styleReady = false;
+    this.globeWarmUp.reset();
     this.editHandles.reset();
     this.failure.reset();
     for (const subscription of this.subscriptions) {
