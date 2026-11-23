@@ -104,7 +104,7 @@ These Web Interface Guidelines rules do not apply here, so do not flag their abs
 - Tailwind class names, `nuqs`, a Next.js `priority` image prop and `<Link>` from another router.
 - Putting state in query parameters (the address fragment is used so nothing is sent to a server).
 - Virtualising lists above 50 items (the project caps and pages them), and hand-written font preload links.
-- Detecting language from `Accept-Language` (the server renders the default language and the client resolves the stored or browser language, plan 0009) and `translate="no"`.
+- Detecting language from `Accept-Language` (the server renders the default language and the client resolves the stored or browser language, `ARCHITECTURE.md` "The language setting") and `translate="no"`.
 
 ## Licence of the source
 

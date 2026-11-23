@@ -7,7 +7,7 @@ description: Add a language to the interface, wire your own messages, and handle
 
 # Translate the SDK
 
-This page is for a developer who builds an interface with the SDK in a language other than British English, or in more than one. By the end you will know how to change the words the interface shows, offer visitors a choice of languages, handle direction, plurals and fonts, and wire a message-format library of your own, without forking a component. The design is in [plan 0009](https://github.com/MapCairn/mapcairn/blob/main/docs/plans/0009-i18n-message-catalogue.md) and the ports are described in [ARCHITECTURE.md](https://github.com/MapCairn/mapcairn/blob/main/ARCHITECTURE.md) ("The message catalogue" and "The language setting"). British English (`en-GB`) is the source language and the SDK's default.
+This page is for a developer who builds an interface with the SDK in a language other than British English, or in more than one. By the end you will know how to change the words the interface shows, offer visitors a choice of languages, handle direction, plurals and fonts, and wire a message-format library of your own, without forking a component. The ports are described in [ARCHITECTURE.md](https://github.com/MapCairn/mapcairn/blob/main/ARCHITECTURE.md) ("The message catalogue" and "The language setting"). British English (`en-GB`) is the source language and the SDK's default.
 
 Checked against `@mapcairn/sdk` %sdkVersion%, the version in this repository.
 
