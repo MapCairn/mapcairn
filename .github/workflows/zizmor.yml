@@ -16,8 +16,8 @@ name: Workflow security lint
 # Both jobs pin zizmor to the same exact version through the action's `version` input
 # (the action's default is `latest`, which let a new release fail the lint with no
 # change here). Dependabot raises the action's commit SHA but not this input, so raise
-# the version by hand, to a release at least seven days old, and keep the two jobs
-# equal. To run the same zizmor locally (the seven-day date is today minus seven days):
+# the version by hand, to a release at least three days old, and keep the two jobs
+# equal. To run the same zizmor locally (the three-day date is today minus three days):
 #   uvx --exclude-newer <YYYY-MM-DD> zizmor@1.32.0 .github
 on:
   pull_request:

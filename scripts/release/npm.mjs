@@ -72,7 +72,7 @@ export function runNpm(args, options = {}) {
 }
 
 /**
- * Option for reading the registry: the repository's seven-day minimum release
+ * Option for reading the registry: the repository's three-day minimum release
  * age hides a version published a moment ago from `npm view`, which a release
  * check must see. A read installs nothing, so the rule for installs is intact.
  */
