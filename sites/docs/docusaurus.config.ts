@@ -36,6 +36,10 @@ const config: Config = {
   baseUrl: BASE_URL,
   trailingSlash: true,
   baseUrlIssueBanner: false,
+  future: {
+    v4: { removeLegacyPostBuildHeadAttribute: true },
+    faster: { ssgWorkerThreads: true },
+  },
   // No namespace suffix on storage keys, so the framework's choice is stored
   // under the plain `theme` key that `src/themeBridge.ts` writes to.
   storage: { type: "localStorage", namespace: false },
