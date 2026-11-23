@@ -22,7 +22,7 @@ import { renderToString } from "react-dom/server";
 
 const html = renderToString(
   createElement(
-    ServicesProvider,
+    /** @type {any} */ (ServicesProvider),
     { services: createFakeServices() },
     createElement(
       LiveRegionProvider,

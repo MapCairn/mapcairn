@@ -39,6 +39,7 @@ const MAX_WRITE_ATTEMPTS = 3;
  *   context: {
  *     repo: { owner: string, repo: string },
  *     payload: any,
+ *     eventName: string,
  *   },
  *   core: {
  *     info: (message: string) => void,

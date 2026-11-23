@@ -203,9 +203,13 @@ function startServer() {
  */
 async function capture(page, basemap) {
   await page.goto(`http://127.0.0.1:${PORT}/?id=${basemap.id}`);
-  await page.waitForFunction(() => window.__mapReady === true, undefined, {
-    timeout: 15_000,
-  });
+  await page.waitForFunction(
+    () => /** @type {any} */ (window).__mapReady === true,
+    undefined,
+    {
+      timeout: 15_000,
+    },
+  );
   // Let the last frame paint and any late glyphs or sprites settle.
   await page.waitForTimeout(750);
   let quality = START_QUALITY;
