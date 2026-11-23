@@ -16,7 +16,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { isEntryPoint } from "../entryPoint.mjs";
 import { SDK_PACKAGES } from "../sdkPackages.mjs";
-import { runNpm } from "./npm.mjs";
+import { parsePackListing, runNpm } from "./npm.mjs";
 
 const REPO = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
@@ -403,7 +403,7 @@ function listPackage(folder) {
   if (result.status !== 0) {
     throw new Error(`npm pack failed in ${folder}:\n${result.stderr}`);
   }
-  return JSON.parse(result.stdout)[0];
+  return parsePackListing(result.stdout);
 }
 
 /** The text of a file, or `undefined` when it cannot be read. */

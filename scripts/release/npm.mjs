@@ -74,6 +74,21 @@ export function runNpm(args, options = {}) {
 }
 
 /**
+ * The listing of the one package `npm pack --json` printed. npm 11 prints an
+ * array of listings; npm 12 prints an object keyed by package name.
+ *
+ * @param {string} output The standard output of `npm pack --json`.
+ * @returns {any} The package's listing (`filename`, `files`, `size`, ...).
+ */
+export function parsePackListing(output) {
+  const [listing] = Object.values(JSON.parse(output));
+  if (listing === undefined) {
+    throw new Error("npm pack --json listed no package.");
+  }
+  return listing;
+}
+
+/**
  * Option for reading the registry: the repository's three-day minimum release
  * age hides a version published a moment ago from `npm view`, which a release
  * check must see. A read installs nothing, so the rule for installs is intact.
