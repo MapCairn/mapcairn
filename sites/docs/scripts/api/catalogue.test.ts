@@ -8,6 +8,7 @@ import {
   type ModuleInput,
   type PackageInput,
   requireDescriptions,
+  requireMemberDescriptions,
 } from "./catalogue";
 import { anExport } from "./fixtures";
 
@@ -227,6 +228,42 @@ describe("buildCatalogue", () => {
       /no description[\s\S]*nothing \(@fixture\/bare\)[\s\S]*also \(@fixture\/bare\)/,
     );
     expect(() => requireDescriptions(catalogue)).not.toThrow();
+  });
+
+  it("stops the build for a member with no description, only in the packages it is switched on for", () => {
+    const member = (name: string, summary: string) => ({
+      name,
+      kind: "property" as const,
+      signature: `${name}: string;`,
+      summary,
+      parameters: [],
+      returns: "",
+      deprecated: "",
+    });
+    const result = buildCatalogue(
+      [
+        aPackage("bare", [
+          aModule("@fixture/bare", [
+            anExport({
+              name: "Shape",
+              kind: "interface",
+              packageName: "@fixture/bare",
+              members: [member("width", ""), member("height", "How tall.")],
+            }),
+          ]),
+        ]),
+      ],
+      REPOSITORY,
+    );
+    expect(result.undocumentedMembers).toEqual([
+      { package: "@fixture/bare", label: "Shape.width (@fixture/bare)" },
+    ]);
+    expect(() => requireMemberDescriptions(result, ["@fixture/bare"])).toThrow(
+      /These members have no description[\s\S]*Shape\.width \(@fixture\/bare\)/,
+    );
+    expect(() =>
+      requireMemberDescriptions(result, ["@fixture/other"]),
+    ).not.toThrow();
   });
 
   it("gives names that differ only by case their own files", () => {
