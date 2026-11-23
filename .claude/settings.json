@@ -13,6 +13,7 @@
     ]
   },
   "permissions": {
+    "allow": ["Bash(npm view *)", "mcp__peon-ping__play_sound"],
     "deny": [
       "Bash(npm publish *)",
       "Bash(npm * publish *)",
