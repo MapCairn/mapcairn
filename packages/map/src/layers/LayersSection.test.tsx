@@ -127,7 +127,7 @@ describe("LayersSection", () => {
     for (const name of ["Sample points", "Sample alerts", "Sample imagery"]) {
       expect(screen.getByRole("switch", { name })).not.toBeChecked();
     }
-    // The Layers list carries no data cost line; the detail card does.
+    // The Layers list carries no data cost line; only a detail button's card does.
     expect(
       within(item("sample-points")).queryByText(/Uses about 30 KB/),
     ).toBeNull();

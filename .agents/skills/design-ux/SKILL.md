@@ -47,7 +47,7 @@ One table per surface. Write "n/a" with the reason rather than drop a state.
 - Offline when the page opens, going offline mid-task, coming back, online with no route (the browser's signal is a hint), and a connection that drops and returns repeatedly.
 - The server render, where no browser signal exists, and the first render after hydration, which must match it.
 - The optional service absent in a host, so the control is not offered.
-- Save data on, reduced motion, both themes, right to left, Afrikaans (longer words), long place names (isolated text), the largest count the code allows.
+- Reduced motion, both themes, right to left, Afrikaans (longer words), long place names (isolated text), the largest count the code allows.
 
 For announcements:
 
@@ -76,7 +76,7 @@ One line per problem found, with the state or step it affects:
 - Does it match how the map's existing controls behave, and reuse their components?
 - Does it prevent the error (a control disabled with a reason, not hidden, as `DESIGN.md` does) rather than report it?
 - Is anything needed only on hover, only by gesture, or only in colour?
-- What does it cost in requests and data, and does Save data change it?
+- What does it cost in requests and data?
 
 ## 6. Output and hand-over
 

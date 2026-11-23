@@ -102,9 +102,9 @@ export const image = style({
 });
 
 /**
- * A plain colour in place of the preview, for a basemap with no preview, one
- * or whose preview failed to load: the basemap's own swatch
- * colour when it has one, else the light default's land colour (set in code), so the tile
+ * A plain colour in place of the preview, for a basemap with no preview or
+ * one whose preview failed to load: the basemap's own swatch colour when it
+ * has one, else the light default's land colour (set in code), so the tile
  * keeps its size without an image. The hairline keeps it visible against a
  * sheet of a similar colour.
  */

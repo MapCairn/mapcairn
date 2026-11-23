@@ -487,8 +487,8 @@ export interface MapEvents {
    * of the two it reported, and never for a layer that has not
    * reported, so a layer that always loaded says nothing. "Each report" is per
    * drawing: setting the layer to new tiles starts the count again, and so
-   * does the map drawing it again with the same tiles (a basemap swap), which keeps the report the ui is still showing so
-   * the first tile after the redraw ends it. A change of opacity alone draws
+   * does the map drawing it again with the same tiles (a basemap swap), which keeps the report the ui is
+   * still showing so the first tile after the redraw ends it. A change of opacity alone draws
    * nothing again and changes nothing.
    */
   tileLayerRecovered: MapTileLayerRecovered;

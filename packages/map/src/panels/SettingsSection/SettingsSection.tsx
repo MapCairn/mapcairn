@@ -84,8 +84,8 @@ export interface SettingsSectionProps {
 
 /**
  * The settings: theme, units, map shape (flat or globe), language (only when
- * the host offers more than one; see {@link LanguageField}) and zoom buttons, a note when changes will not be remembered, and a short privacy
- * statement (the host's, or the catalogue's `settings.privacy.default`) with a
+ * the host offers more than one; see {@link LanguageField}) and zoom buttons,
+ * a note when changes will not be remembered, and a short privacy statement (the host's, or the catalogue's `settings.privacy.default`) with a
  * link to the policy.
  * @remarks The zoom switch shows the stored choice, or the device default
  *   (on with a mouse, off on touch) while nothing is stored. Toggling it stores

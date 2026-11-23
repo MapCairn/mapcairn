@@ -332,8 +332,8 @@ export interface LayerItemProps {
 }
 
 /**
- * One layer in the Layers section: its switch with what it costs, and while
- * it is on, its status, controls, legend, disclaimer and list. Everything
+ * One layer in the Layers section: its switch, and while it is on, its
+ * status, controls, legend, disclaimer and list. Everything
  * comes from the definition.
  */
 export function LayerItem({

@@ -10,8 +10,8 @@ import type {
  *
  * How to script it: pass the starting values (no reduced motion, fine pointer,
  * no languages and online by default) and call `set(patch)` to change them.
- * Subscribers are notified only when a value actually changes, and `get()` returns the same object
- * until then.
+ * Subscribers are notified only when a value actually changes, and `get()`
+ * returns the same object until then.
  */
 export class FakeDevicePreferences implements DevicePreferences {
   #value: DevicePreferencesValue;
