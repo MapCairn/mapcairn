@@ -179,7 +179,7 @@ jobs:
         run: |
           cat > /tmp/probe.mjs <<'EOF'
           import { firefox } from "@playwright/test";
-          const browser = await firefox.launch({ firefoxUserPrefs: { "webgl.disabled": false, "webgl.force-enabled": true, "webgl.enable-webgl2": true, "webgl.out-of-process": false, "gfx.webrender.software": true } });
+          const browser = await firefox.launch({ headless: false, firefoxUserPrefs: { "webgl.disabled": false, "webgl.force-enabled": true, "webgl.enable-webgl2": true, "webgl.out-of-process": false, "gfx.webrender.software": true } });
           const page = await browser.newPage();
           page.on("console", (m) => console.log("console:", m.text()));
           await page.goto("about:blank");
@@ -194,11 +194,11 @@ jobs:
           await browser.close();
           EOF
           cp /tmp/probe.mjs ./probe.mjs
-          node probe.mjs || true
+          LIBGL_ALWAYS_SOFTWARE=1 xvfb-run -a node probe.mjs || true
           rm probe.mjs
 
       - name: Run the Firefox project
-        run: npm run test:e2e -w @mapcairn/web -- --project=firefox --max-failures=2
+        run: LIBGL_ALWAYS_SOFTWARE=1 xvfb-run -a npm run test:e2e -w @mapcairn/web -- --project=firefox --headed --max-failures=2
 
       - name: Upload Playwright test results
         if: failure()
