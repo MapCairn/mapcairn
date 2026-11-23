@@ -6,6 +6,9 @@ import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import { sidebar } from "../sidebars";
 import { sidebarDocIds } from "./docChecks";
+import { PART_COPY_ALLOWANCE } from "./markdownChecks";
+import { type CopyContext, copyText, parseDocSource } from "./markdownCopies";
+import { PART_CEILING } from "./repositoryDocParts";
 import {
   buildRepositoryPages,
   REPOSITORY_DOCS,
@@ -13,6 +16,14 @@ import {
 } from "./repositoryDocs";
 
 const BLOB = "https://github.com/MapCairn/mapcairn/blob/main/";
+
+const COPY_CONTEXT: CopyContext = {
+  origin: "https://mapcairn.timothybrits.co.za",
+  baseUrl: "/docs/",
+  version: "0.2.0",
+  title: "MapCairn documentation",
+  tagline: "Documentation for the MapCairn SDK",
+};
 
 const ARCH: RepositoryDoc = {
   source: "ARCHITECTURE.md",
@@ -135,11 +146,40 @@ describe("the overview page", () => {
 
   it("lists every part with its size and the first sentence of its text, built from the headings", () => {
     expect(overview).toContain(
-      "- [Layers and rules](architecture/layers-and-rules.md) (0.2 KB): Layers are stacked.",
+      '- <span id="layers-and-rules"></span>[Layers and rules](architecture/layers-and-rules.md) (0.2 KB): Layers are stacked.',
     );
     expect(overview).toContain(
-      "- [Ports](architecture/ports.md) (0.2 KB): Table rows A to B.",
+      '- <span id="ports"></span>[Ports](architecture/ports.md) (0.2 KB): Table rows A to B.',
     );
+  });
+
+  it("gives each section's old id on its line, once, so an old link to the section lands there", () => {
+    const cut = buildRepositoryPages(
+      new Map([
+        [
+          ARCH.source,
+          `# T\n\n## Big\n\n| N | W |\n| - | - |\n${Array.from({ length: 20 }, (_, i) => `| \`r${i}\` | ${"y".repeat(30)} |`).join("\n")}\n`,
+        ],
+      ]),
+      [ARCH],
+      400,
+    );
+    const text = cut.files.get("architecture.md") ?? "";
+    expect(text.match(/<span id="big">/g)).toHaveLength(1);
+    expect(text).toContain('<span id="big"></span>[Big (part 1 of ');
+  });
+
+  it("gives an anchor on a heading that two sections share to the first one", () => {
+    const twice = buildRepositoryPages(
+      new Map([
+        [
+          ARCH.source,
+          "# T\n\n## A\n\n### Same\n\nx\n\n## B\n\n### Same\n\ny\n\n## C\n\n[link](#same)\n",
+        ],
+      ]),
+      [ARCH],
+    );
+    expect(twice.files.get("architecture/c.md")).toContain("[link](a.md#same)");
   });
 
   it("says what a part that begins with a table covers, and a single row as a row", () => {
@@ -207,6 +247,18 @@ describe("a part page", () => {
       "[architecture](../architecture/ports.md#the-detail)",
     );
     expect(design).toContain("[it](../architecture/layers-and-rules.md)");
+  });
+
+  it("leaves a link inside a code span as written", () => {
+    const spanned = buildRepositoryPages(
+      new Map([
+        [ARCH.source, "# T\n\n## A\n\nUse `[a](packages/x.ts)` here.\n"],
+      ]),
+      [ARCH],
+    );
+    expect(spanned.files.get("architecture/a.md")).toContain(
+      "`[a](packages/x.ts)`",
+    );
   });
 
   it("marks a ts block no-check, because it is repository documentation and not a site snippet", () => {
@@ -287,6 +339,38 @@ describe("the documents rendered on the site", () => {
     expect(
       [...listed].filter((id) => id.startsWith("generated/")).sort(),
     ).toEqual(generated.sort());
+  });
+
+  it("keep the built Markdown copy of every part within the ceiling and its allowance, with room to spare", () => {
+    const sources = [...real.files]
+      .filter(([name]) => name.endsWith(".md"))
+      .map(([name, text]) =>
+        parseDocSource(`generated/${name.replace(/\.md$/, "")}`, text),
+      );
+    const guides = new Set(
+      [...real.files.values()].flatMap((text) =>
+        [...text.matchAll(/\]\(\.\.\/(?:\.\.\/)?guides\/([\w-]+)\.md/g)].map(
+          (match) => match[1] ?? "",
+        ),
+      ),
+    );
+    const stubs = [...guides].map((name) =>
+      parseDocSource(
+        `guides/${name}`,
+        `---\ntitle: ${name}\ndescription: A guide.\n---\n`,
+      ),
+    );
+    const largest = Math.max(
+      ...sources
+        .filter((source) => source.id.split("/").length === 3)
+        .map((source) =>
+          Buffer.byteLength(
+            copyText(source, [...sources, ...stubs], COPY_CONTEXT),
+          ),
+        ),
+    );
+    const margin = PART_CEILING + PART_COPY_ALLOWANCE - largest;
+    expect(margin).toBeGreaterThan(PART_COPY_ALLOWANCE / 2);
   });
 
   it("have a link from each overview to every one of its parts", () => {

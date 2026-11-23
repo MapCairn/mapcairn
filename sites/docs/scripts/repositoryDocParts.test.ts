@@ -200,6 +200,66 @@ describe("splitDocument, over the ceiling", () => {
   });
 });
 
+describe("splitDocument, edge cases", () => {
+  const bytesOf = (text: string): number => Buffer.byteLength(text);
+
+  it("counts bytes, not characters, so multibyte text splits at the ceiling", () => {
+    const paragraph = `${"é".repeat(150)}\n\n`;
+    const source = `# T\n\n## A\n\n${paragraph}${paragraph}${paragraph}`;
+    const split = splitDocument(source, 500);
+    expect(split.parts.length).toBeGreaterThan(1);
+    for (const part of split.parts) {
+      expect(part.bytes).toBe(bytesOf(part.tableHeader + part.markdown));
+      expect(part.bytes).toBeLessThanOrEqual(500);
+    }
+    expect(rejoin(split)).toBe(afterTitle(source));
+  });
+
+  it("keeps a section of exactly the ceiling whole and cuts one a byte over", () => {
+    const section = `## A\n\n${"a".repeat(40)}\n\n${"b".repeat(40)}\n`;
+    const source = `# T\n\n${section}`;
+    expect(splitDocument(source, bytesOf(section)).parts).toHaveLength(1);
+    expect(splitDocument(source, bytesOf(section) - 1).parts).toHaveLength(2);
+  });
+
+  it("terminates on a table whose header alone is over the ceiling, one row to a part", () => {
+    const header = `| ${"H".repeat(120)} |\n| ${"-".repeat(120)} |\n`;
+    const rows = Array.from({ length: 4 }, (_, index) => `| r${index} |\n`);
+    const source = `# T\n\n## A\n\n${header}${rows.join("")}`;
+    const split = splitDocument(source, 100);
+    expect(split.parts.length).toBeGreaterThanOrEqual(4);
+    expect(rejoin(split)).toBe(afterTitle(source));
+  });
+
+  it("does not take a heading inside a ~~~ fence for a section", () => {
+    const source = "# T\n\n## A\n\n~~~md\n## Not a section\n~~~\n\n## B\n\nx\n";
+    expect(splitDocument(source).parts.map((part) => part.title)).toEqual([
+      "A",
+      "B",
+    ]);
+  });
+
+  it("refuses text before the title, which would otherwise be lost", () => {
+    expect(() => splitDocument("Lost words.\n\n# T\n\n## A\n\nx\n")).toThrow(
+      /before the title/,
+    );
+    expect(splitDocument("\n\n# T\n\n## A\n\nx\n").parts).toHaveLength(1);
+  });
+
+  it("refuses a fence of more than three characters, which it does not read", () => {
+    expect(() => splitDocument("# T\n\n## A\n\n````md\n```\n````\n")).toThrow(
+      /fence/,
+    );
+  });
+
+  it("does not take an underlined (setext) heading for a section, and loses nothing", () => {
+    const source = "# T\n\n## A\n\nUnderlined\n---------\n\ntext\n";
+    const split = splitDocument(source);
+    expect(split.parts).toHaveLength(1);
+    expect(rejoin(split)).toBe(afterTitle(source));
+  });
+});
+
 describe("headingsOf", () => {
   it("lists the headings outside code blocks with their level, text and id", () => {
     expect(headingsOf("## A b\n\n```\n### no\n```\n\n### C `d`\n")).toEqual([

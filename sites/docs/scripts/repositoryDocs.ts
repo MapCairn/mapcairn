@@ -298,7 +298,11 @@ function overviewPage(
 ): string {
   const items = split.parts.map((part) => {
     const summary = summaryOf(part);
-    return `- [${part.title}](${partFile(doc, part)}) (${sizeOf(part)})${summary === "" ? "" : `: ${summary}`}`;
+    const anchor =
+      part.part === 1
+        ? `<span id="${slugifyHeading(part.sectionTitle)}"></span>`
+        : "";
+    return `- ${anchor}[${part.title}](${partFile(doc, part)}) (${sizeOf(part)})${summary === "" ? "" : `: ${summary}`}`;
   });
   const preamble = markCodeNotChecked(
     relinkRepositoryDoc(split.preamble.trim(), context),

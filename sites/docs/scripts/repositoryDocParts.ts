@@ -11,6 +11,7 @@
 export const PART_CEILING = 40_000;
 
 const FENCE = /^\s*(?:```|~~~)/;
+const LONG_FENCE = /^\s*(?:`{4,}|~{4,})/;
 const TITLE = /^# (.+?)\s*$/;
 const SECTION = /^## (.+?)\s*$/;
 const HEADING = /^(#{1,6}) /;
@@ -273,17 +274,29 @@ function outline(lines: readonly string[]): {
  * parts, joined, are the document after its title line.
  * @param text - The document's Markdown.
  * @param ceiling - The most bytes a part holds, {@link PART_CEILING} by default.
- * @throws When the document has no first-level heading.
+ * @throws When the document has no first-level heading, has text before it,
+ *   or has a code fence of more than three characters. A heading underlined
+ *   with `=` or `-` is not read as a heading and stays inside its section.
  */
 export function splitDocument(
   text: string,
   ceiling: number = PART_CEILING,
 ): SplitDocument {
   const lines = linesOf(text);
+  if (lines.some((line) => LONG_FENCE.test(line))) {
+    throw new Error(
+      "The document has a code fence of more than three characters, which the splitter does not read.",
+    );
+  }
   const { title, sections } = outline(lines);
   const titleLine = lines[title] ?? "";
   if (title < 0) {
     throw new Error("The document has no title (a first-level heading).");
+  }
+  if (lines.slice(0, title).some((line) => line.trim() !== "")) {
+    throw new Error(
+      "The document has text before the title, which would be lost.",
+    );
   }
   const used = new Set<string>();
   const stemFor = (wanted: string): string => {
