@@ -24,9 +24,9 @@ describe("renderFlowchart", () => {
     expect(svg).toContain(
       '<title id="figure-1-title">Diagram of 3 boxes and 2 arrows</title>',
     );
-    const description = /<desc id="figure-1-description">(.*)<\/desc>/.exec(
-      svg,
-    )?.[1];
+    const open = '<desc id="figure-1-description">';
+    const from = svg.indexOf(open) + open.length;
+    const description = svg.slice(from, svg.indexOf("</desc>", from));
     expect(description).toBe(
       "packages/core holds ports (types only); pure logic state machines. ui &amp; &lt;hooks&gt; points to ports (types only). ports (types only) points to pure logic state machines.",
     );
@@ -52,7 +52,14 @@ describe("renderFlowchart", () => {
   });
 
   it("has no script, no style attribute, no external reference and no blank line, which would end an HTML block", () => {
-    expect(svg).not.toMatch(/<script|\sstyle=|href=|url\(|\n\s*\n/i);
+    const lower = svg.toLowerCase();
+    for (const forbidden of ["<script", " style=", "href=", "url("]) {
+      expect(lower, forbidden).not.toContain(forbidden);
+    }
+    expect(
+      svg.split("\n").filter((line) => line.trim() === ""),
+      "blank lines",
+    ).toEqual([]);
   });
 
   it("is the same every time", () => {
