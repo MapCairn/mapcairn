@@ -3,6 +3,7 @@
 import type { Config } from "@docusaurus/types";
 import machineDataPlugin from "./plugins/machineDataPlugin";
 import markdownCopiesPlugin from "./plugins/markdownCopiesPlugin";
+import { remarkFlowchart } from "./plugins/remarkFlowchart";
 import { remarkSdkVersion } from "./plugins/remarkSdkVersion";
 import searchIndexPlugin from "./plugins/searchIndexPlugin";
 import securityHeadersPlugin from "./plugins/securityHeadersPlugin";
@@ -73,7 +74,7 @@ const config: Config = {
           routeBasePath: "/",
           sidebarPath: "./sidebars.ts",
           editUrl: `${REPOSITORY_URL}/edit/main/sites/docs/`,
-          remarkPlugins: [remarkSdkVersion(sdkVersion)],
+          remarkPlugins: [remarkSdkVersion(sdkVersion), remarkFlowchart()],
         },
         blog: false,
         pages: false,
