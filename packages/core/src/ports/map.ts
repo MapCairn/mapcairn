@@ -359,8 +359,11 @@ export interface MapImageOptions {
    * What the image shows. Defaults to where the map on screen is looking, but
    * north-up. It is drawn without moving the map on screen. Latitudes are
    * within the Web Mercator limit and longitudes within -180 to 180; a box has
-   * its west below its east, so one across the antimeridian is refused as
-   * `invalid` for now, and a later step may add it. A box the map cannot frame
+   * its west below its east, and one across the antimeridian is given in the
+   * short form, with its west inside -180 to 180 and its east past 180 (the
+   * box of a Fiji-sized view is `west: 178.44`, `east: 180.1`), at most 360
+   * degrees past its west. The long form, with its west beyond its east, is
+   * `invalid`. A box the map cannot frame
    * at the requested size (below the basemap's lowest zoom, or one it would
    * have to crop to fit) is `invalid` too, and so is any box on a globe for
    * now (a centre and zoom is drawn on either). What `getBounds()` gives for a
@@ -651,7 +654,7 @@ export interface MapAdapter {
    * `export-failed` ("The map changed while the image was waiting.") rather
    * than mixing the new style with the old view and credits. The CSS size is
    * rounded to whole pixels, and a box must have its west below its east, so
-   * one across the antimeridian is not drawn yet.
+   * one across the antimeridian has its east past 180.
    *
    * Rejects with a `MapEngineError` whose reason is `export-failed` when the
    * engine cannot produce an image, and also while a basemap swap is still

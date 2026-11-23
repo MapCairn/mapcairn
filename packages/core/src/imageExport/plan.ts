@@ -14,6 +14,9 @@ import { MAX_MERCATOR_LATITUDE } from "../zoom/zoom";
 /** The furthest a longitude can be from the prime meridian. */
 const MAX_LONGITUDE_DEGREES = 180;
 
+/** The widest a box can be: all the way round the world. */
+const FULL_WORLD_DEGREES = 360;
+
 /**
  * The most image pixels on one side. It is the limit the engine is asked to
  * allow, and a smaller GPU limit is reported as `too-large` rather than
@@ -56,12 +59,13 @@ export interface RequestedImage {
  *
  * The CSS size is rounded to whole pixels, because MapLibre draws a canvas of
  * `round(ratio * floor(width))` pixels from a container's width, and the
- * rounded size is the one returned. A box has its west below its east, so a
- * box across the antimeridian is not accepted yet.
+ * rounded size is the one returned. A box has its west below its east, and one
+ * across the antimeridian is in the short form, with its east past 180.
  * @throws MapImageExportError of kind `invalid` for a size, ratio or view that
  *   is not a finite, positive or on-planet number (latitudes within the Web
- *   Mercator limit, longitudes within -180 to 180), or leaves under one pixel,
- *   and of kind `too-large` for an image over {@link MAX_IMAGE_SIDE_PX} on a
+ *   Mercator limit, longitudes within -180 to 180, except the east of a box
+ *   across the antimeridian, which may be up to 360 degrees past its west),
+ *   or leaves under one pixel, and of kind `too-large` for an image over {@link MAX_IMAGE_SIDE_PX} on a
  *   side or {@link MAX_IMAGE_PIXELS} in all. It throws before any engine work.
  */
 export function planRequestedImage(
@@ -138,23 +142,37 @@ function isPositive(value: number): boolean {
   return Number.isFinite(value) && value > 0;
 }
 
-/** Whether a position is a finite place the flat map can draw: within the Web Mercator latitudes and -180 to 180 degrees of longitude. */
-function isPlace({ lat, lng }: LatLng): boolean {
-  return (
-    Number.isFinite(lng) &&
-    Number.isFinite(lat) &&
-    Math.abs(lng) <= MAX_LONGITUDE_DEGREES &&
-    Math.abs(lat) <= MAX_MERCATOR_LATITUDE
-  );
+/** Whether a latitude is finite and within the Web Mercator limit. */
+function isLatitude(lat: number): boolean {
+  return Number.isFinite(lat) && Math.abs(lat) <= MAX_MERCATOR_LATITUDE;
 }
 
-/** Whether a box has sides the map can draw, its south below its north and its west below its east. */
+/** Whether a longitude is finite and within -180 to 180 degrees. */
+function isLongitude(lng: number): boolean {
+  return Number.isFinite(lng) && Math.abs(lng) <= MAX_LONGITUDE_DEGREES;
+}
+
+/** Whether a position is a finite place the flat map can draw: within the Web Mercator latitudes and -180 to 180 degrees of longitude. */
+function isPlace({ lat, lng }: LatLng): boolean {
+  return isLatitude(lat) && isLongitude(lng);
+}
+
+/**
+ * Whether a box has sides the map can draw: its south below its north, its west
+ * within -180 to 180 and its east above its west by no more than a whole
+ * world. A box across the antimeridian is in the short form, with its east
+ * past 180 (a west of 178.44 and an east of 180.1), as the box that holds
+ * a set of points is.
+ */
 function isBox({ south, west, north, east }: Bounds): boolean {
   return (
-    isPlace({ lat: south, lng: west }) &&
-    isPlace({ lat: north, lng: east }) &&
+    isLatitude(south) &&
+    isLatitude(north) &&
+    isLongitude(west) &&
+    Number.isFinite(east) &&
     south < north &&
-    west < east
+    west < east &&
+    east - west <= FULL_WORLD_DEGREES
   );
 }
 
@@ -186,7 +204,7 @@ function checkValues(request: {
   if (!isDrawable(request.view)) {
     throw new MapImageExportError(
       "invalid",
-      "The view must be a box with its south below its north and its west below its east, or a centre and a zoom, within the Web Mercator latitudes and -180 to 180 degrees of longitude.",
+      "The view must be a box with its south below its north, its west below its east and at most 360 degrees away from it, or a centre and a zoom, within the Web Mercator latitudes and -180 to 180 degrees of longitude.",
     );
   }
 }
