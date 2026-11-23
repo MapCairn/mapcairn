@@ -276,7 +276,7 @@ npm run dev
 
 ## How it is checked
 
-- **The playground** is built from the SDK packages and is what the browser tests run against, on desktop and mobile Chromium, with the basemap, keyboard, sheet and app-shell tests also on iPhone WebKit and in a right-to-left layout.
+- **The playground** is built from the SDK packages and is what the browser tests run against, on desktop and mobile Chromium, with the basemap, keyboard, sheet and app-shell tests also on iPhone WebKit and in a right-to-left layout, and the core specs on desktop Firefox in an advisory job.
 - **The example app** imports the SDK by package name only. It is type-checked, built and tested on every pull request, so a missing export or build step fails CI.
 - **Coverage floors:** `npm run test:coverage` fails below 95% of statements, branches, functions and lines across the SDK packages.
 - **Contract suites:** each port has one suite, run against its fake and, where the playground has one, its real adapter, so they cannot drift apart.
