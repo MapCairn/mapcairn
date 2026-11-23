@@ -50,7 +50,7 @@ const ERROR_KINDS: readonly LocationErrorKind[] = [
 ];
 
 /**
- * Runs the shared behavioural suite for a {@link LocationProvider}. Every
+ * Runs the shared behavioural suite for a `LocationProvider`. Every
  * test calls `create` for a fresh subject. The watch tests run only when the
  * provider reports `supportsWatch`, so run the suite once for each case.
  */

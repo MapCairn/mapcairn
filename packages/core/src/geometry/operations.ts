@@ -129,7 +129,7 @@ function bufferShape(
  * refused too. Buffer a shape that is far from both, or split it first.
  *
  * @param distance - Metres, finite. Negative only for a polygon.
- * @throws {GeometryError} `invalid` for a malformed geometry, a distance or
+ * @throws `GeometryError` of kind `invalid` for a malformed geometry, a distance or
  *   `steps` that is not valid, or a negative distance for a point or line;
  *   `empty` for a geometry with no positions; `unsupported` when the buffer
  *   would cross the antimeridian or enclose a pole.
@@ -161,7 +161,7 @@ export function buffer(
  * polygon, and ones that do not stay apart as a multipolygon. A single input
  * comes back as a copy.
  *
- * @throws {GeometryError} `invalid` for a malformed geometry, `empty` for no
+ * @throws `GeometryError` of kind `invalid` for a malformed geometry, `empty` for no
  *   input or an empty polygon, `unsupported` for anything but a `Polygon` or
  *   `MultiPolygon`.
  */
@@ -182,7 +182,7 @@ export function union(geometries: readonly GeometryInput[]): PolygonalGeometry {
  * The area two polygons share, or `null` when they share none. Polygons that
  * only touch along an edge or at a point share no area.
  *
- * @throws {GeometryError} `invalid` for a malformed geometry, `empty` for an
+ * @throws `GeometryError` of kind `invalid` for a malformed geometry, `empty` for an
  *   empty polygon, `unsupported` for anything but a `Polygon` or
  *   `MultiPolygon`.
  */
@@ -203,7 +203,7 @@ export function intersect(
  * The part of `first` that `second` does not cover, or `null` when nothing
  * is left. A `second` inside `first` leaves a hole.
  *
- * @throws {GeometryError} `invalid` for a malformed geometry, `empty` for an
+ * @throws `GeometryError` of kind `invalid` for a malformed geometry, `empty` for an
  *   empty polygon, `unsupported` for anything but a `Polygon` or
  *   `MultiPolygon`.
  */
@@ -274,7 +274,7 @@ function simplifyShape(geometry: Geometry, tolerance: number): Geometry {
  * approximate.
  *
  * @param tolerance - Metres, finite and not negative. 0 returns a copy.
- * @throws {GeometryError} `invalid` for a malformed geometry or a bad
+ * @throws `GeometryError` of kind `invalid` for a malformed geometry or a bad
  *   tolerance, `empty` for a geometry with no positions.
  */
 export function simplify(input: GeometryInput, tolerance: number): Geometry {

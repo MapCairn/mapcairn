@@ -22,7 +22,7 @@ export interface DevicePreferencesSubject {
 }
 
 /**
- * Runs the shared behavioural suite for {@link DevicePreferences}. Every test
+ * Runs the shared behavioural suite for `DevicePreferences`. Every test
  * calls `create` for a fresh subject.
  */
 export function runDevicePreferencesContract(

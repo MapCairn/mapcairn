@@ -38,9 +38,10 @@ const RUBBER_BAND_STIFFNESS = 0.55;
 
 /**
  * The visible height of each detent for a viewport, in whole pixels.
- * @param input.viewportHeight - Height of the visual viewport.
- * @param input.insetBottom - Bottom safe-area inset. It is added to the peek
- *   so the peek's content is not hidden behind a home indicator.
+ * @param input - The fields, by name:
+ *   - `viewportHeight`: Height of the visual viewport.
+ *   - `insetBottom`: Bottom safe-area inset. It is added to the peek
+ *     so the peek's content is not hidden behind a home indicator.
  * @remarks The result is always ordered `peek <= half <= full`, even on a
  *   very short viewport, so snapping never has to deal with crossed detents.
  */
@@ -74,8 +75,9 @@ function nearestDetent(heights: DetentHeights, height: number): SheetDetent {
 
 /**
  * Picks the detent to settle on when a drag ends.
- * @param input.currentHeight - The sheet's visible height at release.
- * @param input.velocityPxPerSecond - Positive when the sheet is expanding.
+ * @param input - The fields, by name:
+ *   - `currentHeight`: The sheet's visible height at release.
+ *   - `velocityPxPerSecond`: Positive when the sheet is expanding.
  * @remarks A fast fling (faster than {@link SHEET_FLING_VELOCITY}) moves one
  *   detent from the nearest one, in the fling's direction. Anything slower
  *   projects 0.15 seconds of momentum and snaps to the

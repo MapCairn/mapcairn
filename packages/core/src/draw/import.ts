@@ -884,7 +884,7 @@ function insideWorld(lng: number, lat: number): boolean {
  *   read, and text over {@link MAX_IMPORT_BYTES} gets no suggestion, since
  *   {@link parseShapeFile} would refuse it. The scan is one pass with no
  *   recursion, so the depth limit does not apply to it.
- * @param order The order the text is being read in.
+ * @param order - The order the text is being read in.
  */
 export function suggestWktAxisOrder(
   text: string,

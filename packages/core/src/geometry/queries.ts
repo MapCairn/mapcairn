@@ -40,7 +40,7 @@ function nonEmpty(input: GeometryInput): Geometry {
  * short way across. Use `boundingBoxToBounds` for the shape the map port
  * takes.
  *
- * @throws {GeometryError} `invalid` for a malformed geometry, `empty` when it
+ * @throws `GeometryError` of kind `invalid` for a malformed geometry, `empty` when it
  *   has no positions.
  */
 export function boundingBox(input: GeometryInput): BoundingBox {
@@ -60,7 +60,7 @@ export function boundingBoxToBounds(box: BoundingBox): Bounds {
  * so a polygon with many vertices along one side leans towards that side. It
  * is not the centre of mass, and for a concave shape it may fall outside it.
  *
- * @throws {GeometryError} `invalid` for a malformed geometry, `empty` when it
+ * @throws `GeometryError` of kind `invalid` for a malformed geometry, `empty` when it
  *   has no positions.
  */
 export function centroid(input: GeometryInput): LatLng {
@@ -92,7 +92,7 @@ function resolvePoint(point: PointInput): Position {
  * sound for any polygon that does not cross the antimeridian (GeoJSON splits
  * those at 180 degrees, and each piece works).
  *
- * @throws {GeometryError} `invalid` for a malformed point or polygon,
+ * @throws `GeometryError` of kind `invalid` for a malformed point or polygon,
  *   `unsupported` when the shape is not a `Polygon` or `MultiPolygon`.
  */
 export function pointInPolygon(
@@ -186,7 +186,7 @@ function measureArea(geometry: Geometry): number {
  * members. A point, and any empty geometry, has no length. It sums the same
  * per-line measure as `measureLineDistance`, so the two agree.
  *
- * @throws {GeometryError} `invalid` for a malformed geometry.
+ * @throws `GeometryError` of kind `invalid` for a malformed geometry.
  */
 export function geometryLength(input: GeometryInput): number {
   return measureLength(validateGeometry(input));
@@ -198,7 +198,7 @@ export function geometryLength(input: GeometryInput): number {
  * that covers no area (a point, a line, an empty shape) is 0. It sums the
  * same per-ring measure as `measurePolygonArea`, so the two agree.
  *
- * @throws {GeometryError} `invalid` for a malformed geometry.
+ * @throws `GeometryError` of kind `invalid` for a malformed geometry.
  */
 export function geometryArea(input: GeometryInput): number {
   return measureArea(validateGeometry(input));

@@ -139,7 +139,7 @@ const CENTRE: LatLng = { lat: -33.9, lng: 18.4 };
 const NO_ANIMATION = { animate: false } as const;
 
 /**
- * Runs the shared behavioural suite for a {@link MapAdapter}. Every test calls
+ * Runs the shared behavioural suite for a `MapAdapter`. Every test calls
  * `create` for a fresh, unmounted subject, so tests never share state.
  * A real adapter passes the same suite with its own controls.
  */
