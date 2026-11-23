@@ -25,33 +25,35 @@ describe("checkPlans", () => {
     ).toEqual([]);
   });
 
-  it("accepts a plan marked done whose tracking issue is closed", () => {
+  it("warns for a plan marked done whose tracking issue is closed, because the final pull request deletes it", () => {
     expect(
       checkPlans(
         [plan("0001-a.md", "done: both slices merged", "#5")],
         states([5, "CLOSED"], [9, "OPEN"]),
       ),
-    ).toEqual([]);
+    ).toEqual([
+      "warning: docs/plans/0001-a.md: tracking issue #5 is closed; delete the plan, its README entry and its references, or fold what still governs the code into the guides",
+    ]);
   });
 
-  it("warns for a plan whose tracking issue is closed and whose status is not done", () => {
+  it("warns for a plan whose tracking issue is closed and whose status is in progress", () => {
     expect(
       checkPlans(
         [plan("0002-b.md", "in progress", "#6")],
         states([6, "CLOSED"], [9, "OPEN"]),
       ),
     ).toEqual([
-      'warning: docs/plans/0002-b.md: tracking issue #6 is closed, but the status is "in progress"; mark the plan done, or delete or fold it into the guides',
+      "warning: docs/plans/0002-b.md: tracking issue #6 is closed; delete the plan, its README entry and its references, or fold what still governs the code into the guides",
     ]);
   });
 
-  it("reads the issue from a link or a bare number, and the status case-insensitively", () => {
+  it("reads the issue from a link or a bare number", () => {
     expect(
       checkPlans(
         [plan("0003-c.md", "Done", "[#7](https://x/issues/7)")],
         states([7, "CLOSED"], [9, "OPEN"]),
       ),
-    ).toEqual([]);
+    ).toHaveLength(1);
     expect(
       checkPlans(
         [plan("0004-d.md", "proposed", "[#7](https://x/issues/7)")],

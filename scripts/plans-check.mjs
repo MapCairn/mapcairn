@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
 /**
- * Warns about a plan in `docs/plans/` whose tracking issue is closed but whose
- * status line does not say "done", so a finished plan is marked done, deleted
- * or folded into the guides instead of left to mislead.
+ * Warns about a plan in `docs/plans/` whose tracking issue is closed. The pull
+ * request that finishes a plan's last step deletes the plan (or folds what still
+ * governs the code into the guides), so a closed plan is one that was missed.
  *
  *   node scripts/plans-check.mjs
  *
@@ -24,12 +24,11 @@ const PLAN_FILE = /^\d{4}-.+\.md$/;
 const STATUS_LINE = /^Status: (.+)$/m;
 /** The tracking issue a plan names, as `#316` or `[#49](...)`, on its status line. */
 const TRACKING_ISSUE = /Tracking issue: \[?#(\d+)/;
-const DONE = /^done\b/i;
 
 /**
  * @param {{ file: string, text: string }[]} plans Each plan's file name and text.
  * @param {Map<number, string>} states Upper-case issue state by number. A number not in the map is unknown and is skipped.
- * @returns {string[]} One warning for each plan whose tracking issue is closed and whose status does not start with "done".
+ * @returns {string[]} One warning for each plan whose tracking issue is closed.
  */
 export function checkPlans(plans, states) {
   const warnings = [];
@@ -39,10 +38,9 @@ export function checkPlans(plans, states) {
     if (status === undefined || issue === undefined) {
       continue;
     }
-    if (states.get(Number(issue)) === "CLOSED" && !DONE.test(status)) {
-      const label = status.split(/[.:]/)[0];
+    if (states.get(Number(issue)) === "CLOSED") {
       warnings.push(
-        `warning: docs/plans/${file}: tracking issue #${issue} is closed, but the status is "${label}"; mark the plan done, or delete or fold it into the guides`,
+        `warning: docs/plans/${file}: tracking issue #${issue} is closed; delete the plan, its README entry and its references, or fold what still governs the code into the guides`,
       );
     }
   }

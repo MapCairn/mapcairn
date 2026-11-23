@@ -1,0 +1,54 @@
+# Path rules for actions/labeler (.github/workflows/labeler.yml). Each key is an
+# existing repository label; a pull request that changes a matching file gets it.
+# The workflow only adds labels, so a label a person removes stays removed.
+map:
+  - changed-files:
+      - any-glob-to-any-file:
+          - packages/map/**
+          - packages/adapter-maplibre/**
+
+search:
+  - changed-files:
+      - any-glob-to-any-file:
+          - packages/web/src/adapters/search/**
+          - packages/map/src/tools/SearchPill/**
+          - packages/core/src/ports/search.ts
+          - packages/core/src/contracts/searchProvider.contract.ts
+
+layers:
+  - changed-files:
+      - any-glob-to-any-file:
+          - packages/web/src/layers/**
+
+design-system:
+  - changed-files:
+      - any-glob-to-any-file:
+          - packages/theme/**
+          - DESIGN.md
+
+a11y:
+  - changed-files:
+      - any-glob-to-any-file:
+          - packages/web/e2e/**a11y*
+          - packages/web/e2e/support/a11y.ts
+
+performance:
+  - changed-files:
+      - any-glob-to-any-file:
+          - packages/web/lighthouserc.json
+          - packages/web/scripts/print-lighthouse-summary.mjs
+          - sites/docs/lighthouserc.json
+          - .github/workflows/lighthouse.yml
+
+privacy:
+  - changed-files:
+      - any-glob-to-any-file:
+          - PRIVACY.md
+          - packages/web/src/app/PrivacyPage.tsx
+
+documentation:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "**/*.md"
+          - sites/docs/docs/**
+          - docs/**
