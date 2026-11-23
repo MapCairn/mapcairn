@@ -210,6 +210,83 @@ describe("diffReports", () => {
     expect(change.detail).toContain('"auto"');
   });
 
+  describe("message keys", () => {
+    // Shapes from the reports at 07284835 (keys added), 537b63c4 (a key
+    // added) and db97b93e (a key removed); the guide says adding a key is not
+    // breaking because a catalogue without it falls back to English.
+    const keys =
+      '// @public\nexport type MessageKey = "settings.title" | "settings.theme.label" | "common.followedBy";';
+
+    it("does not call added message keys breaking, and still reports them", () => {
+      const [change] = changes(
+        [keys],
+        [
+          keys.replace(
+            '"common.followedBy";',
+            '"common.followedBy" | "attribution.copy" | "search.picked";',
+          ),
+        ],
+      );
+      expect(change).toMatchObject({
+        kind: "union-member-added",
+        name: "MessageKey",
+        likelyBreaking: false,
+      });
+      expect(change.detail).toContain('"attribution.copy"');
+    });
+
+    it("still calls a removed message key likely breaking", () => {
+      const [change] = changes(
+        [keys],
+        [keys.replace(' | "common.followedBy"', "")],
+      );
+      expect(change).toMatchObject({
+        kind: "union-member-removed",
+        likelyBreaking: true,
+      });
+    });
+
+    it("calls a renamed message key likely breaking", () => {
+      const [change] = changes(
+        [keys],
+        [keys.replace('"settings.title"', '"settings.heading"')],
+      );
+      expect(change).toMatchObject({
+        kind: "union-member-removed",
+        likelyBreaking: true,
+      });
+    });
+
+    it("does not extend the exemption to other unions", () => {
+      const [change] = changes(
+        [mode],
+        ['// @public\nexport type Mode = "light" | "dark" | "auto";'],
+      );
+      expect(change.likelyBreaking).toBe(true);
+    });
+  });
+
+  describe("formatting", () => {
+    // The FakeMapHost constructor at 121037bd^ and 121037bd: the same
+    // declaration, wrapped onto three lines.
+    const oneLine =
+      "// @public\nexport class FakeMapHost implements MapHostElement {\n    constructor(width?: number, height?: number);\n    // (undocumented)\n    focus(options?: {\n        preventScroll?: boolean;\n    }): void;\n}";
+    const wrapped =
+      "// @public\nexport class FakeMapHost implements MapHostElement {\n    constructor(\n    width?: number,\n    height?: number);\n    focus(options?: {\n        preventScroll?: boolean;\n    }): void;\n}";
+
+    it("finds nothing when only whitespace and line wrapping changed", () => {
+      expect(changes([oneLine], [wrapped])).toEqual([]);
+    });
+
+    it("still finds a real change to a wrapped declaration", () => {
+      const [change] = changes(
+        [oneLine],
+        [wrapped.replace("height?: number", "height: number")],
+      );
+      expect(change).toMatchObject({ kind: "changed", likelyBreaking: true });
+    });
+  });
+
   it("reads a union that holds bars inside brackets and generics", () => {
     const before =
       "// @public\nexport type Handler = (value: string | number) => void | Promise<void> | Set<string | number>;";

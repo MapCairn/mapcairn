@@ -155,6 +155,28 @@ function missingFrom(from, against) {
   });
 }
 
+/**
+ * A declaration's text with its layout removed: whitespace is collapsed and
+ * dropped around punctuation, so wrapping a signature onto several lines or
+ * re-indenting it gives the same string.
+ *
+ * @param {string[]} lines
+ * @returns {string}
+ */
+function withoutLayout(lines) {
+  return lines
+    .join(" ")
+    .replace(/\s+/g, " ")
+    .replace(/\s*([^\w$\s])\s*/g, "$1")
+    .trim();
+}
+
+/**
+ * Unions whose added members the public API guide says are not breaking: a
+ * catalogue without a new message key falls back to English.
+ */
+const UNIONS_THAT_MAY_GROW = new Set(["MessageKey"]);
+
 /** The header of a type whose implementers a host may write: an interface or an abstract class. */
 const IMPLEMENTED_TYPE =
   /^export\s+(?:declare\s+)?(?:(abstract)\s+class|interface)\s/;
@@ -263,6 +285,9 @@ function compareEntries(before, after) {
       detail: `${name} is now tagged @internal, and a host may use it today.`,
     };
   }
+  if (withoutLayout(before.lines) === withoutLayout(after.lines)) {
+    return gainedBeta(before, after, name);
+  }
   const beforeLines = before.lines.map(withoutTrailingComma);
   const afterLines = after.lines.map(withoutTrailingComma);
   const removed = missingFrom(beforeLines, afterLines);
@@ -276,8 +301,10 @@ function compareEntries(before, after) {
       return {
         kind: "union-member-added",
         name,
-        likelyBreaking: supported,
-        detail: `${name} gained ${fresh.join(", ")}, so a host's exhaustive switch stops compiling.`,
+        likelyBreaking: supported && !UNIONS_THAT_MAY_GROW.has(name),
+        detail: UNIONS_THAT_MAY_GROW.has(name)
+          ? `${name} gained ${fresh.join(", ")}; adding one is not breaking.`
+          : `${name} gained ${fresh.join(", ")}, so a host's exhaustive switch stops compiling.`,
       };
     }
     if (gone.length > 0) {
