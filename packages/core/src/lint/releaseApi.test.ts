@@ -242,8 +242,54 @@ describe("diffReports", () => {
       );
       expect(change).toMatchObject({
         kind: "union-member-removed",
+        name: "MessageKey",
         likelyBreaking: true,
       });
+      expect(change.detail).toContain('"common.followedBy"');
+    });
+
+    it("calls a change that removes one key and adds another likely breaking", () => {
+      const [change] = changes(
+        [keys],
+        [keys.replace(' | "common.followedBy"', ' | "common.joined"')],
+      );
+      expect(change).toMatchObject({
+        kind: "union-member-removed",
+        likelyBreaking: true,
+      });
+    });
+
+    it("does not exempt a type whose name only starts with MessageKey", () => {
+      const [change] = changes(
+        [keys.replace("MessageKey =", "MessageKeyMap =")],
+        [
+          keys
+            .replace("MessageKey =", "MessageKeyMap =")
+            .replace('"common.followedBy";', '"common.followedBy" | "x.y";'),
+        ],
+      );
+      expect(change).toMatchObject({
+        kind: "union-member-added",
+        name: "MessageKeyMap",
+        likelyBreaking: true,
+      });
+    });
+
+    it("finds nothing when the keys are only reordered", () => {
+      expect(
+        changes(
+          [keys],
+          [
+            '// @public\nexport type MessageKey = "common.followedBy" | "settings.title" | "settings.theme.label";',
+          ],
+        ),
+      ).toEqual([]);
+    });
+
+    it("finds nothing when a key is listed twice", () => {
+      expect(
+        changes([keys], [keys.replace(";", ' | "settings.title";')]),
+      ).toEqual([]);
     });
 
     it("calls a renamed message key likely breaking", () => {
@@ -276,6 +322,24 @@ describe("diffReports", () => {
 
     it("finds nothing when only whitespace and line wrapping changed", () => {
       expect(changes([oneLine], [wrapped])).toEqual([]);
+    });
+
+    it.each([
+      ['"a, b"', '"a,b"'],
+      ['"a "', '"a"'],
+      ['"x | y"', '"x|y"'],
+      ["`a ${string}`", "`a${string}`"],
+    ])("keeps the spaces inside a literal: %s against %s", (was, now) => {
+      const declaration = (literal: string) =>
+        `// @public\nexport interface Defaults {\n    separator: ${literal};\n}`;
+      const [change] = changes([declaration(was)], [declaration(now)]);
+      expect(change).toMatchObject({ kind: "changed", likelyBreaking: true });
+    });
+
+    it("finds nothing when the spaces around a literal change", () => {
+      const declaration = (gap: string) =>
+        `// @public\nexport interface Defaults {\n    separator${gap}:${gap}"a, b";\n}`;
+      expect(changes([declaration("")], [declaration("  ")])).toEqual([]);
     });
 
     it("still finds a real change to a wrapped declaration", () => {
