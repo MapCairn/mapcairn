@@ -19,7 +19,7 @@ flowchart TD
   maplibre --> theme
 ```
 
-An arrow means "imports". Each box is a package under `packages/`, so `core` is `packages/core`. `core` holds the ports (types only), the pure logic, the fakes and the contract suites, and imports no other package, as do `theme` (the tokens and their contrast maths) and `react` (generic hooks). Only the host imports the MapLibre adapter, and no SDK package imports the host. The host's own adapters import `core` as well, which the picture leaves out.
+An arrow means "imports". Each box is a package under `packages/`, so `core` is `packages/core`. `core` holds the ports (types only), the pure logic, the fakes and the contract suites, and imports no other package, as do `theme` (the tokens and their contrast maths) and `react` (generic hooks). Only the host imports the MapLibre adapter, and no SDK package imports the host. The host also imports `core` and `theme` directly, which the picture leaves out.
 
 ## Layers and dependency rules
 
@@ -166,7 +166,7 @@ MapLibre GL JS is the only map engine, and the ui never imports it. The adapter 
 
 A data layer is typed data: a `LayerDefinition` in `packages/web/src/layers/definitions/`, one file each, collected with `import.meta.glob`. Nothing in the code branches on a layer id, a provider or a response shape.
 
-A layer's path from file to map, for a feed layer (`createServices()` passes the catalogue and `FetchLayerSource` to the ui). A tile or vector layer has no load step: `MapDataLayers` hands the adapter its source, and the engine requests the tiles.
+A layer's path from file to map, for a feed layer, with arrows in the order things happen. `createServices()` passes the catalogue and `FetchLayerSource` to the ui. A tile or vector layer has no load step: `MapDataLayers` hands the adapter its source, and the engine requests the tiles.
 
 ```mermaid
 flowchart TD
