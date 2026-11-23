@@ -35,7 +35,6 @@ export function runSettingsStoreContract(
         theme: "system",
         units: "metric",
         zoomButtons: null,
-        saveData: null,
         projection: "flat",
         basemapId: null,
         lastView: null,
@@ -73,7 +72,6 @@ export function runSettingsStoreContract(
         theme: "dark",
         units: "imperial",
         zoomButtons: true,
-        saveData: true,
         projection: "globe",
         basemapId: "osm",
         lastView,
@@ -84,7 +82,6 @@ export function runSettingsStoreContract(
         theme: "dark",
         units: "imperial",
         zoomButtons: true,
-        saveData: true,
         projection: "globe",
         basemapId: "osm",
         lastView,
@@ -93,7 +90,6 @@ export function runSettingsStoreContract(
       });
       store.set({
         zoomButtons: null,
-        saveData: null,
         basemapId: null,
         lastView: null,
         tourSeen: null,
@@ -102,7 +98,6 @@ export function runSettingsStoreContract(
       expect(store.get().language).toBeNull();
       expect(store.get().basemapId).toBeNull();
       expect(store.get().zoomButtons).toBeNull();
-      expect(store.get().saveData).toBeNull();
       expect(store.get().lastView).toBeNull();
       expect(store.get().tourSeen).toBeNull();
     });

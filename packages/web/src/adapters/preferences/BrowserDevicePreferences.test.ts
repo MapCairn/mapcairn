@@ -4,10 +4,7 @@ import type { DevicePreferencesValue } from "@mapcairn/core";
 import { runDevicePreferencesContract } from "@mapcairn/core/contracts";
 import { describe, expect, it, vi } from "vitest";
 import type { MediaQueryLike } from "../shared/mediaQuery";
-import {
-  BrowserDevicePreferences,
-  type NetworkInformationLike,
-} from "./BrowserDevicePreferences";
+import { BrowserDevicePreferences } from "./BrowserDevicePreferences";
 
 const REDUCED_MOTION = "(prefers-reduced-motion: reduce)";
 const FINE_POINTER = "(hover: hover) and (pointer: fine)";
@@ -33,28 +30,6 @@ class FakeMediaQuery implements MediaQueryLike {
   set(matches: boolean): void {
     this.matches = matches;
     this.fire();
-  }
-  fire(): void {
-    for (const listener of [...this.#listeners]) {
-      listener();
-    }
-  }
-}
-
-/** A `navigator.connection` whose values and change events a test drives. */
-class FakeConnection implements NetworkInformationLike {
-  saveData: boolean | undefined = false;
-  effectiveType: string | undefined = "4g";
-  readonly #listeners = new Set<() => void>();
-
-  addEventListener(_type: "change", listener: () => void): void {
-    this.#listeners.add(listener);
-  }
-  removeEventListener(_type: "change", listener: () => void): void {
-    this.#listeners.delete(listener);
-  }
-  get listenerCount(): number {
-    return this.#listeners.size;
   }
   fire(): void {
     for (const listener of [...this.#listeners]) {
@@ -98,7 +73,6 @@ function setup(languages: readonly string[] | null = ["af-ZA", "en"]) {
     reducedMotion: new FakeMediaQuery(false),
     finePointer: new FakeMediaQuery(true),
   };
-  const connection = new FakeConnection();
   const network = new FakeNetwork();
   const window = {
     matchMedia: vi.fn((query: string) => {
@@ -113,29 +87,21 @@ function setup(languages: readonly string[] | null = ["af-ZA", "en"]) {
   };
   const preferences = new BrowserDevicePreferences({
     getWindow: () => window,
-    getConnection: () => connection,
     getLanguages: () => languages ?? undefined,
     getOnline: () => network.onLine,
     getEvents: () => network,
   });
-  return { queries, connection, network, window, preferences };
+  return { queries, network, window, preferences };
 }
 
 runDevicePreferencesContract("BrowserDevicePreferences", () => {
-  const { queries, connection, network, preferences } = setup();
+  const { queries, network, preferences } = setup();
   return {
     preferences,
     controls: {
       set(patch: Partial<DevicePreferencesValue>) {
         if (patch.online !== undefined && network.onLine !== patch.online) {
           network.set(patch.online);
-        }
-        if (
-          patch.saveData !== undefined &&
-          connection.saveData !== patch.saveData
-        ) {
-          connection.saveData = patch.saveData;
-          connection.fire();
         }
         if (patch.reducedMotion !== undefined) {
           setIfChanged(queries.reducedMotion, patch.reducedMotion);
@@ -161,7 +127,6 @@ describe("BrowserDevicePreferences", () => {
     expect(preferences.get()).toEqual({
       reducedMotion: false,
       finePointer: true,
-      saveData: false,
       languages: ["af-ZA", "en"],
       online: true,
     });
@@ -276,86 +241,11 @@ describe("BrowserDevicePreferences", () => {
       expect(preferences.get()).toEqual({
         reducedMotion: false,
         finePointer: false,
-        saveData: false,
         languages: [],
         online: true,
       });
       expect(() => preferences.subscribe(() => undefined)()).not.toThrow();
     }
-  });
-
-  describe("save data", () => {
-    it("is on when the browser asks to save data", () => {
-      const { connection, preferences } = setup();
-      connection.saveData = true;
-      expect(preferences.get().saveData).toBe(true);
-    });
-
-    it("is on for a very slow connection, and off for a faster one", () => {
-      const { connection, preferences } = setup();
-      for (const [effectiveType, expected] of [
-        ["slow-2g", true],
-        ["2g", true],
-        ["3g", false],
-        ["4g", false],
-        [undefined, false],
-      ] as const) {
-        connection.effectiveType = effectiveType;
-        expect(preferences.get().saveData, String(effectiveType)).toBe(
-          expected,
-        );
-      }
-    });
-
-    it("is off where the browser has no connection information, as on iOS", () => {
-      for (const getConnection of [
-        () => undefined,
-        () => ({}),
-        () => {
-          throw new Error("blocked");
-        },
-      ]) {
-        const preferences = new BrowserDevicePreferences({
-          getWindow: () => undefined,
-          getConnection,
-        });
-        expect(preferences.get().saveData).toBe(false);
-        expect(() => preferences.subscribe(() => undefined)()).not.toThrow();
-      }
-    });
-
-    it("notifies when the connection changes, once, and only while subscribed", () => {
-      const { connection, preferences } = setup();
-      expect(connection.listenerCount).toBe(0);
-      const seen: DevicePreferencesValue[] = [];
-      const stop = preferences.subscribe((value) => seen.push(value));
-      expect(connection.listenerCount).toBe(1);
-      connection.fire();
-      expect(seen).toHaveLength(0);
-      connection.effectiveType = "2g";
-      connection.fire();
-      expect(seen).toHaveLength(1);
-      expect(seen[0]?.saveData).toBe(true);
-      stop();
-      expect(connection.listenerCount).toBe(0);
-    });
-
-    it("reads navigator.connection by default", () => {
-      const original = Object.getOwnPropertyDescriptor(navigator, "connection");
-      Object.defineProperty(navigator, "connection", {
-        configurable: true,
-        value: { saveData: true },
-      });
-      try {
-        expect(new BrowserDevicePreferences().get().saveData).toBe(true);
-      } finally {
-        if (original) {
-          Object.defineProperty(navigator, "connection", original);
-        } else {
-          Reflect.deleteProperty(navigator, "connection");
-        }
-      }
-    });
   });
 
   describe("online", () => {
@@ -418,6 +308,5 @@ describe("BrowserDevicePreferences", () => {
     const value = new BrowserDevicePreferences().get();
     expect(typeof value.reducedMotion).toBe("boolean");
     expect(typeof value.finePointer).toBe("boolean");
-    expect(typeof value.saveData).toBe("boolean");
   });
 });

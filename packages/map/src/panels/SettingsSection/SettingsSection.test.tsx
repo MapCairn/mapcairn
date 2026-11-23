@@ -28,7 +28,6 @@ const DEFAULT_PRIVACY_NOTE = EN_GB_CATALOGUE["settings.privacy.default"];
 
 interface Options {
   readonly finePointer?: boolean;
-  readonly saveData?: boolean;
   readonly persistent?: boolean;
   readonly initial?: Partial<Settings>;
   readonly props?: SettingsSectionProps;
@@ -40,7 +39,6 @@ interface Options {
 
 function renderSettings({
   finePointer = true,
-  saveData = false,
   persistent = true,
   initial,
   props,
@@ -52,7 +50,6 @@ function renderSettings({
   const settings = new MemorySettingsStore({ persistent, initial });
   const preferences = new FakeDevicePreferences({
     finePointer,
-    saveData,
     languages: browserLanguages,
   });
   const services = createFakeServices({
@@ -495,42 +492,6 @@ describe("map shape", () => {
   });
 });
 
-const saveDataSwitch = () => screen.getByRole("switch", { name: "Save data" });
-
-describe("save data", () => {
-  it("is a switch with a one-line explanation of what it changes", () => {
-    renderSettings();
-    expect(saveDataSwitch()).toBe(screen.getByTestId("save-data-switch"));
-    expect(saveDataSwitch()).toHaveAccessibleDescription(
-      "Shows map names instead of previews and leaves out heavy map layers.",
-    );
-  });
-
-  it("is off while nothing is stored and the device sends no signal", () => {
-    renderSettings();
-    expect(saveDataSwitch()).toHaveAttribute("aria-checked", "false");
-  });
-
-  it("starts on when the device asks to save data and nothing is stored", () => {
-    renderSettings({ saveData: true });
-    expect(saveDataSwitch()).toHaveAttribute("aria-checked", "true");
-  });
-
-  it("shows an explicit stored choice over the device signal", () => {
-    renderSettings({ saveData: true, initial: { saveData: false } });
-    expect(saveDataSwitch()).toHaveAttribute("aria-checked", "false");
-  });
-
-  it("stores an explicit choice when toggled, so it keeps winning", () => {
-    const { settings } = renderSettings({ saveData: true });
-    fireEvent.click(saveDataSwitch());
-    expect(settings.get().saveData).toBe(false);
-    expect(saveDataSwitch()).toHaveAttribute("aria-checked", "false");
-    fireEvent.click(saveDataSwitch());
-    expect(settings.get().saveData).toBe(true);
-  });
-});
-
 describe("zoom buttons", () => {
   it("is a switch with the explanation as its description", () => {
     renderSettings();
@@ -719,8 +680,6 @@ describe("message catalogue", () => {
         "settings.mapShape.globe",
         "settings.zoomButtons.label",
         "settings.zoomButtons.description",
-        "settings.saveData.label",
-        "settings.saveData.description",
         "settings.privacy.heading",
         "settings.privacy.link",
       ]),

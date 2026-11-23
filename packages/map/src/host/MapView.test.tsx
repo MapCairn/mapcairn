@@ -245,7 +245,7 @@ describe("mounting and accessibility", () => {
     expect(help).toContain("Arrow keys: Die Karte verschieben.");
   });
 
-  it("mounts the adapter into a child element with the initial view, basemap, motion preference and Save data", async () => {
+  it("mounts the adapter into a child element with the initial view, basemap, motion preference and projection", async () => {
     const mount = vi.spyOn(FakeAdapter.prototype, "mount");
     const { host, adapter, latest } = await setup();
     expect(mount).toHaveBeenCalledTimes(1);
@@ -260,7 +260,6 @@ describe("mounting and accessibility", () => {
       view: VIEW,
       basemap: FAKE_RASTER_BASEMAP,
       reducedMotion: false,
-      saveData: false,
       projection: "flat",
     });
     expect(adapter().keyboardEnabled).toBe(false);
@@ -818,7 +817,7 @@ describe("basemap changes", () => {
     const setBasemap = vi.spyOn(adapter(), "setBasemap");
     rerender({ basemap: other });
     await settle();
-    expect(setBasemap).toHaveBeenCalledWith(other, { saveData: false });
+    expect(setBasemap).toHaveBeenCalledWith(other);
     expect(services.fakes.maps).toHaveLength(1);
     expect(latest().maxZoom).toBe(10);
   });
@@ -865,7 +864,7 @@ describe("basemap changes", () => {
     rerender({ basemap: third });
     await settle();
     expect(services.fakes.maps).toHaveLength(1);
-    expect(setBasemap.mock.calls.at(-1)).toEqual([third, { saveData: false }]);
+    expect(setBasemap.mock.calls.at(-1)).toEqual([third]);
   });
 
   it("applies a basemap chosen while the engine was still mounting", async () => {
@@ -878,9 +877,7 @@ describe("basemap changes", () => {
     rerender({ basemap: FAKE_VECTOR_BASEMAP });
     await held.release(0);
     expect(held.adapters).toHaveLength(1);
-    expect(setBasemap).toHaveBeenCalledWith(FAKE_VECTOR_BASEMAP, {
-      saveData: false,
-    });
+    expect(setBasemap).toHaveBeenCalledWith(FAKE_VECTOR_BASEMAP);
   });
 
   it("ignores a superseded basemap swap", async () => {
@@ -1156,7 +1153,7 @@ describe("engine errors", () => {
     // Choosing the failed basemap again tries it again.
     rerender({ basemap: other });
     await settle();
-    expect(setBasemap).toHaveBeenCalledWith(other, { saveData: false });
+    expect(setBasemap).toHaveBeenCalledWith(other);
   });
 
   it("ignores a superseded basemap swap that fails late", async () => {
@@ -1282,9 +1279,7 @@ describe("tile errors", () => {
       latest().retry();
     });
     await settle();
-    expect(setBasemap).toHaveBeenCalledWith(FAKE_RASTER_BASEMAP, {
-      saveData: false,
-    });
+    expect(setBasemap).toHaveBeenCalledWith(FAKE_RASTER_BASEMAP);
     expect(latest().tileError).toBe(false);
   });
 
@@ -1540,105 +1535,6 @@ describe("Map shape", () => {
     expect(latest()).not.toBe(before);
   });
 });
-
-describe("Save data", () => {
-  /** A vector basemap that leaves a layer out in Save data mode. */
-  const WITH_RELIEF = {
-    ...FAKE_VECTOR_BASEMAP,
-    id: "with-relief",
-    saveDataOmitLayers: ["relief"],
-  };
-
-  it("mounts the engine in Save data mode when the device asks for it", async () => {
-    const services = createFakeServices();
-    services.fakes.preferences.set({ saveData: true });
-    const { adapter } = await setup({ basemap: WITH_RELIEF }, services);
-    expect(adapter().saveData).toBe(true);
-  });
-
-  it("lets a stored choice win over the device in both directions", async () => {
-    const asking = createFakeServices();
-    asking.fakes.preferences.set({ saveData: true });
-    asking.fakes.settings.set({ saveData: false });
-    expect((await setup({}, asking)).adapter().saveData).toBe(false);
-    const quiet = createFakeServices();
-    quiet.fakes.settings.set({ saveData: true });
-    expect((await setup({}, quiet)).adapter().saveData).toBe(true);
-  });
-
-  it("redraws a basemap that leaves layers out when Save data is switched, without remounting", async () => {
-    const mount = vi.spyOn(FakeAdapter.prototype, "mount");
-    const { adapter, services } = await setup({ basemap: WITH_RELIEF });
-    const setBasemap = vi.spyOn(adapter(), "setBasemap");
-    act(() => {
-      services.fakes.settings.set({ saveData: true });
-    });
-    await settle();
-    expect(setBasemap).toHaveBeenCalledTimes(1);
-    expect(setBasemap).toHaveBeenLastCalledWith(WITH_RELIEF, {
-      saveData: true,
-    });
-    act(() => {
-      services.fakes.settings.set({ saveData: false });
-    });
-    await settle();
-    expect(setBasemap).toHaveBeenCalledTimes(2);
-    expect(setBasemap).toHaveBeenLastCalledWith(WITH_RELIEF, {
-      saveData: false,
-    });
-    expect(mount).toHaveBeenCalledTimes(1);
-  });
-
-  it("applies a Save data change made while the engine was still mounting", async () => {
-    const held = heldFactory();
-    const services = createFakeServices({ createMapAdapter: held.factory });
-    await setup({ basemap: WITH_RELIEF }, services);
-    const setBasemap = vi.spyOn(held.adapters[0] as FakeAdapter, "setBasemap");
-    act(() => {
-      services.fakes.settings.set({ saveData: true });
-    });
-    await held.release(0);
-    expect(held.adapters[0]?.saveData).toBe(true);
-    expect(setBasemap).toHaveBeenCalledWith(WITH_RELIEF, { saveData: true });
-  });
-
-  it("does not redraw a basemap with nothing to leave out", async () => {
-    const { adapter, services } = await setup({ basemap: FAKE_RASTER_BASEMAP });
-    const setBasemap = vi.spyOn(adapter(), "setBasemap");
-    act(() => {
-      services.fakes.settings.set({ saveData: true });
-    });
-    await settle();
-    expect(setBasemap).not.toHaveBeenCalled();
-  });
-
-  it("passes Save data to every later swap and to a retry", async () => {
-    const services = createFakeServices();
-    services.fakes.settings.set({ saveData: true });
-    const { adapter, rerender, latest } = await setup(
-      { basemap: FAKE_RASTER_BASEMAP },
-      services,
-    );
-    const setBasemap = vi.spyOn(adapter(), "setBasemap");
-    rerender({ basemap: WITH_RELIEF });
-    await settle();
-    expect(setBasemap).toHaveBeenLastCalledWith(WITH_RELIEF, {
-      saveData: true,
-    });
-    act(() => {
-      adapter().simulateTileError();
-    });
-    act(() => {
-      latest().retry();
-    });
-    await settle();
-    expect(setBasemap).toHaveBeenCalledTimes(2);
-    expect(setBasemap).toHaveBeenLastCalledWith(WITH_RELIEF, {
-      saveData: true,
-    });
-  });
-});
-
 describe("message catalogue", () => {
   it("asks for the region's name and role description by key", async () => {
     const { services } = await setup();

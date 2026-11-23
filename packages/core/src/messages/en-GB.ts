@@ -28,9 +28,6 @@ export const EN_GB_CATALOGUE: Record<MessageKey, string> = {
   "settings.zoomButtons.label": "Show zoom buttons",
   "settings.zoomButtons.description":
     "On by default with a mouse, off on touch screens.",
-  "settings.saveData.label": "Save data",
-  "settings.saveData.description":
-    "Shows map names instead of previews and leaves out heavy map layers.",
   "settings.notSaved": "Changes will not be remembered on this device.",
   "settings.privacy.heading": "Privacy",
   "settings.privacy.link": "Read the privacy policy",
@@ -347,7 +344,6 @@ export const EN_GB_CATALOGUE: Record<MessageKey, string> = {
   "panels.basemap.groupLabel": "Basemap",
   "panels.basemap.tryAgain": "Try again",
   "panels.basemap.unavailable": "Not available right now",
-  "panels.basemap.usesMoreData": "Uses more data",
   "panels.shapes.title": "Shapes",
   "panels.shapes.empty":
     "Nothing drawn yet. Choose Draw shapes on the map to start.",
@@ -840,7 +836,7 @@ export const EN_GB_CATALOGUE: Record<MessageKey, string> = {
     "The site sets no cookies. Your settings are kept in local storage on your device instead, as described below.",
   "privacy.storage.heading": "Local storage",
   "privacy.storage.body":
-    "Your browser's {localStorage} keeps your settings: your light or dark theme (under the key {themeKey}), your units, which language you chose, whether the zoom buttons show, whether Save data is on, whether the map is flat or a globe, your chosen basemap, where the map was last left, and whether you have answered the first-visit tour (a version number under {tourKey}). The other keys start with {keyPrefix}. The tour itself sends nothing; a layer you turn on during it loads from its provider as described below. These stay on your device and are never sent to a server. Where your browser reports a data saver or a very slow connection, the page reads that locally to choose the default for Save data. Nothing about it is sent anywhere. The documentation pages under {docsPath} read the same theme key and also keep your light or dark choice under {docsThemeKey}, the key their framework uses; like the others it stays on your device.",
+    "Your browser's {localStorage} keeps your settings: your light or dark theme (under the key {themeKey}), your units, which language you chose, whether the zoom buttons show, whether the map is flat or a globe, your chosen basemap, where the map was last left, and whether you have answered the first-visit tour (a version number under {tourKey}). The other keys start with {keyPrefix}. The tour itself sends nothing; a layer you turn on during it loads from its provider as described below. These stay on your device and are never sent to a server. The documentation pages under {docsPath} read the same theme key and also keep your light or dark choice under {docsThemeKey}, the key their framework uses; like the others it stays on your device.",
   "privacy.analytics.heading": "Analytics",
   "privacy.analytics.body":
     "This site uses Cloudflare Web Analytics for aggregate page-view counts. It is cookieless, does not fingerprint visitors, does not track you across sites and stores no personal data. Requests are made to {scriptHost} and {beaconHost}.",

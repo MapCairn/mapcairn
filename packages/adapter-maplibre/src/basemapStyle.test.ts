@@ -15,7 +15,6 @@ import {
   applyZoomLimits,
   composeHybrid,
   IMAGERY_ID,
-  omitSaveDataLayers,
   styleFor,
 } from "./basemapStyle";
 
@@ -194,41 +193,6 @@ describe("composeHybrid", () => {
   });
 });
 
-describe("omitSaveDataLayers", () => {
-  const withOmitted: BasemapDefinition = {
-    ...FAKE_VECTOR_BASEMAP,
-    saveDataOmitLayers: ["relief", "missing"],
-  };
-
-  it("removes the named layers and the source only they drew from while Save data is on", () => {
-    const map = labelStyle();
-    omitSaveDataLayers(map.asMap(), withOmitted, true);
-    expect(ids(map)).not.toContain("relief");
-    expect(ids(map)).toContain("roads");
-    expect([...map.sources]).toEqual(["planet"]);
-  });
-
-  it("keeps a source that a remaining layer still draws from", () => {
-    const map = labelStyle();
-    omitSaveDataLayers(
-      map.asMap(),
-      { ...FAKE_VECTOR_BASEMAP, saveDataOmitLayers: ["roads"] },
-      true,
-    );
-    expect(ids(map)).not.toContain("roads");
-    expect([...map.sources]).toContain("planet");
-  });
-
-  it("removes nothing while Save data is off, or with no basemap", () => {
-    const map = labelStyle();
-    const before = ids(map);
-    omitSaveDataLayers(map.asMap(), withOmitted, false);
-    omitSaveDataLayers(map.asMap(), undefined, true);
-    expect(ids(map)).toEqual(before);
-    expect([...map.sources]).toEqual(["planet", "relief-source"]);
-  });
-});
-
 describe("applyZoomLimits", () => {
   const limits: BasemapDefinition = {
     ...FAKE_VECTOR_BASEMAP,
@@ -274,7 +238,7 @@ describe("a basemap's id", () => {
     FAKE_RASTER_BASEMAP,
     FAKE_VECTOR_BASEMAP,
     FAKE_HYBRID_BASEMAP,
-  ].map((basemap) => ({ ...basemap, saveDataOmitLayers: ["relief", "roads"] }));
+  ];
   const anyBasemap = fc.constantFrom(...FAKES);
   // The ids the site's own basemaps use are tried as well as random text,
   // because a branch on one of them is what a random string would not find.
@@ -299,19 +263,6 @@ describe("a basemap's id", () => {
         composeHybrid(original.asMap(), basemap);
         composeHybrid(renamed.asMap(), { ...basemap, id });
         expect(renamed.calls).toEqual(original.calls);
-        expect(ids(renamed)).toEqual(ids(original));
-        expect([...renamed.sources]).toEqual([...original.sources]);
-      }),
-    );
-  });
-
-  it("does not change what omitSaveDataLayers removes", () => {
-    fc.assert(
-      fc.property(anyBasemap, anyId, fc.boolean(), (basemap, id, saveData) => {
-        const original = labelStyle();
-        const renamed = labelStyle();
-        omitSaveDataLayers(original.asMap(), basemap, saveData);
-        omitSaveDataLayers(renamed.asMap(), { ...basemap, id }, saveData);
         expect(ids(renamed)).toEqual(ids(original));
         expect([...renamed.sources]).toEqual([...original.sources]);
       }),

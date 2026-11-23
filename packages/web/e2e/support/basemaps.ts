@@ -28,9 +28,7 @@ export const DEFAULT_VECTOR_BASEMAP_NAME = "Bright";
 export const DEFAULT_VECTOR_BASEMAP_BACKGROUND = "rgb(248, 244, 240)";
 
 /**
- * Liberty, the default before Bright. Its style lists a shaded-relief layer to
- * leave out in Save data mode. The Save data specs replace its style with a
- * small one that holds such a layer (`save-data.spec.ts`).
+ * Liberty, the default before Bright.
  */
 export const LIBERTY_BASEMAP_ID = "liberty";
 
