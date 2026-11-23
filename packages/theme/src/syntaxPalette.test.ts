@@ -12,7 +12,7 @@ import {
 /** WCAG 2.2 AA for text. */
 const AA_TEXT = 4.5;
 /** The most chroma a "muted" syntax hue may have. */
-const MAX_MUTED_CHROMA = 0.13;
+const MAX_MUTED_CHROMA = 0.12;
 /** The fewest distinct hues across the syntax roles, so it is not one colour. */
 const MIN_HUES = 5;
 
