@@ -7,7 +7,7 @@ description: What counts as public in the SDK packages, how it is reported and w
 
 # The public API
 
-This page is for a developer who depends on the SDK packages and wants to know what they can rely on, and for a contributor who changes them. By the end you will know what counts as public across the six packages (`@mapcairn/core`, `@mapcairn/map`, `@mapcairn/react`, `@mapcairn/theme`, the MapLibre adapter `@mapcairn/adapter-maplibre` and the umbrella `@mapcairn/sdk` that re-exports them), how a change to it is found in review, and how a change is classed for a release. The first four have been public since the `0.1.0-rc.1` release candidate (`docs/plans/0014-sdk-release.md`) and the adapter and the umbrella join them in `0.1.0-rc.3` (`docs/plans/0016-adapter-maplibre-package.md`, `docs/plans/0015-sdk-umbrella-package.md`); this guide is the rule the release scripts and reviewers use.
+This page is for a developer who depends on the SDK packages and wants to know what they can rely on, and for a contributor who changes them. By the end you will know what counts as public across the six packages (`@mapcairn/core`, `@mapcairn/map`, `@mapcairn/react`, `@mapcairn/theme`, the MapLibre adapter `@mapcairn/adapter-maplibre` and the umbrella `@mapcairn/sdk` that re-exports them), how a change to it is found in review, and how a change is classed for a release. The first four have been public since the `0.1.0-rc.1` release candidate (`docs/plans/0014-sdk-release.md`) and the adapter and the umbrella join them in `0.1.0-rc.3`; this guide is the rule the release scripts and reviewers use.
 
 Checked against `@mapcairn/sdk` %sdkVersion%, the version in this repository.
 
