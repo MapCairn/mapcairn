@@ -12,6 +12,7 @@ import {
   findMissingFocusRings,
   inspectControls,
 } from "./support/a11y";
+import { layoutTolerance } from "./support/layout";
 
 /*
  * The product page at `/`: no map code, no third-party request, the old map
@@ -428,6 +429,7 @@ test.describe("the product page", () => {
   for (const width of [320, 360, 390, 430, 1440]) {
     test(`keeps every header link a 44 px target with 8 px to its neighbour at ${width}px`, async ({
       page,
+      browserName,
     }) => {
       await page.setViewportSize({ width, height: 700 });
       const product = new ProductPage(page);
@@ -446,7 +448,9 @@ test.describe("the product page", () => {
       for (const [index, box] of boxes.entries()) {
         const next = boxes[index + 1];
         if (box && next) {
-          expect(next.x - (box.x + box.width)).toBeGreaterThanOrEqual(8);
+          expect(next.x - (box.x + box.width)).toBeGreaterThanOrEqual(
+            8 - layoutTolerance(browserName),
+          );
         }
       }
     });
@@ -1446,6 +1450,7 @@ test.describe("the product page", () => {
 
   test("puts each group's heading closer to what it heads than the groups are to each other", async ({
     page,
+    browserName,
   }) => {
     const product = new ProductPage(page);
     await product.goto();
@@ -1463,7 +1468,9 @@ test.describe("the product page", () => {
     for (const { text, after } of headings) {
       expect(after, `${text}: gap after`).toBeGreaterThan(0);
       // tokens.space.xs is 8 px; groups and benefits are tokens.space.xl, 32 px, apart.
-      expect(after, `${text}: close to what it heads`).toBeLessThanOrEqual(8);
+      expect(after, `${text}: close to what it heads`).toBeLessThanOrEqual(
+        8 + layoutTolerance(browserName),
+      );
     }
   });
 

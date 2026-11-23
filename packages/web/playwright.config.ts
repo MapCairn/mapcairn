@@ -32,13 +32,6 @@ const WEBKIT_SPECS =
 // more specs shows it is worth the time.
 const FIREFOX_SPECS = /(app-shell|basemap|keyboard|sheet|product)\.spec\.ts$/;
 
-// Differences the first Firefox run found, left out until each is fixed (#601):
-// Firefox rounds layout to 1/60 px, so two spacing checks read 7.99998 and
-// 8.00004 against 8, and the page crashes in the credits axe test over a
-// basemap. Each pattern is one test title.
-const FIREFOX_KNOWN_FAILURES =
-  /(44 px target with 8 px to its neighbour|closer to what it heads|axe violation over .* with the sheet and the credits open)/;
-
 // The Firefox project is opt-in: it runs where MAPCAIRN_E2E_FIREFOX is set,
 // which is the advisory `firefox` job in .github/workflows/playwright.yml and
 // a local `MAPCAIRN_E2E_FIREFOX=1 npm run test:e2e -- --project=firefox`.
@@ -47,7 +40,6 @@ const firefoxProjects = process.env.MAPCAIRN_E2E_FIREFOX
       {
         name: "firefox",
         testMatch: FIREFOX_SPECS,
-        grepInvert: FIREFOX_KNOWN_FAILURES,
         use: { ...devices["Desktop Firefox"] },
       },
     ]
