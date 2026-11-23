@@ -17,7 +17,9 @@ export interface ThemeSourceControls {
 
 /** One theme source under test, with its controls. */
 export interface ThemeSourceSubject {
+  /** The theme source under test. */
   readonly source: ThemeSource;
+  /** How the contract scripts it. */
   readonly controls: ThemeSourceControls;
 }
 

@@ -144,6 +144,7 @@ export function computeEndStackMaxHeight(input: {
 
 /** Whether to show the zoom buttons, and whether height alone hid them. */
 export interface ZoomButtonVisibility {
+  /** Whether the zoom buttons are shown. */
   readonly show: boolean;
   /** True when the device default would show them but the stack is too short. */
   readonly yieldedToHeight: boolean;

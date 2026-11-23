@@ -17,6 +17,7 @@ export interface UrlStateControls {
 export interface UrlStateSubject {
   /** A url state over an address with no shareable state. */
   readonly url: UrlState;
+  /** How the contract scripts the address, such as settling a debounced write. */
   readonly controls: UrlStateControls;
 }
 

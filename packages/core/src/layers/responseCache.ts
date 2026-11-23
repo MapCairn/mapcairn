@@ -4,6 +4,7 @@ import { LayerError } from "../ports/errors";
 
 /** What a request returns to the cache: a value and how long it stays fresh. */
 export interface CachedResponse<T> {
+  /** The response that was cached. */
   readonly value: T;
   /** Seconds the value may be reused. 0 keeps nothing. */
   readonly maxAgeSeconds: number;

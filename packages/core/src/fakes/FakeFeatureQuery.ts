@@ -88,6 +88,7 @@ function abortedError(): FeatureQueryError {
  * - `calls` records what the ui asked.
  */
 export class FakeFeatureQuery implements FeatureQuery {
+  /** Every request the ui made, in order, including ones that were refused or failed. */
   readonly calls: FeatureQueryRequest[] = [];
 
   #hits: readonly SelectionHit[] = [];
@@ -128,6 +129,7 @@ export class FakeFeatureQuery implements FeatureQuery {
     };
   }
 
+  /** Checks the request, then answers as scripted: the first `limit` of the scripted hits in the layers asked about, a held, failed or aborted query, or no hits when nothing is scripted. */
   within(request: FeatureQueryRequest): Promise<readonly SelectionHit[]> {
     this.calls.push(request);
     return abortable(

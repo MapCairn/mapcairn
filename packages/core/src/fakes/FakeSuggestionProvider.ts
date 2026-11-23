@@ -12,7 +12,9 @@ import {
 
 /** A recorded call to {@link FakeSuggestionProvider.suggest}. */
 export interface RecordedSuggestCall {
+  /** The query as it was passed, before trimming. */
   readonly query: string;
+  /** The options that were passed, if any. */
   readonly options: SuggestOptions | undefined;
 }
 
@@ -35,6 +37,7 @@ export type HeldSuggestCall = HeldCall<readonly SearchResult[]>;
  * - `suggestCalls` records what the ui asked.
  */
 export class FakeSuggestionProvider implements SuggestionProvider {
+  /** Every `suggest` call, in order, with its query and options. */
   readonly suggestCalls: RecordedSuggestCall[] = [];
 
   readonly #byQuery = new Map<string, readonly SearchResult[]>();
@@ -69,6 +72,7 @@ export class FakeSuggestionProvider implements SuggestionProvider {
     return deferred;
   }
 
+  /** Answers with the results scripted for the trimmed query, or the default results. A blank query resolves to an empty list without using any script. */
   suggest(
     query: string,
     options?: SuggestOptions,

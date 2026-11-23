@@ -24,7 +24,9 @@ export interface FileOpenerControls {
 
 /** One file opener under test, with its controls. */
 export interface FileOpenerSubject {
+  /** The file opener under test. */
   readonly opener: FileOpener;
+  /** How the contract scripts it. */
   readonly controls: FileOpenerControls;
 }
 

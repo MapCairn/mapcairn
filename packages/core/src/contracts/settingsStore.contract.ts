@@ -16,6 +16,7 @@ export interface SettingsStoreControls {
 export interface SettingsStoreSubject {
   /** A store over fresh, empty storage. */
   readonly store: SettingsStore;
+  /** How the contract scripts the store, such as making storage unavailable. */
   readonly controls: SettingsStoreControls;
 }
 

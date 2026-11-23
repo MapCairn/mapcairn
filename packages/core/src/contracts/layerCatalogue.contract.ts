@@ -18,7 +18,9 @@ export interface LayerCatalogueControls {
 
 /** One layer catalogue under test, with its controls. */
 export interface LayerCatalogueSubject {
+  /** The layer catalogue under test. */
   readonly catalogue: LayerCatalogue;
+  /** How the contract scripts it. */
   readonly controls: LayerCatalogueControls;
 }
 

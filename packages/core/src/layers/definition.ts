@@ -35,6 +35,7 @@ export interface LayerAttribution {
 export interface SegmentedOption {
   /** The value used in templates and the permalink: lowercase letters, digits, `.`, `_` and `-`. */
   readonly value: string;
+  /** The option's name. */
   readonly label: DefinitionText;
 }
 
@@ -43,6 +44,7 @@ export interface SegmentedOption {
  * that goes stale. `{ daysAgo: 1 }` is yesterday.
  */
 export interface RelativeDate {
+  /** How many days before today. Zero is today. */
   readonly daysAgo: number;
 }
 
@@ -55,7 +57,9 @@ export type DateBound = string | RelativeDate;
  * disabled control keeps its value but shows as unavailable.
  */
 export interface ControlCondition {
+  /** The id of the control to watch, in the same layer. */
   readonly control: string;
+  /** The values of that control that enable this one. */
   readonly in: readonly string[];
 }
 
@@ -63,30 +67,41 @@ export interface ControlCondition {
 export interface ControlBase {
   /** Unique inside the layer. Lowercase letters, digits and hyphens, starting with a letter. */
   readonly id: string;
+  /** The control's name, shown beside it. */
   readonly label: DefinitionText;
   /** Optional one-line help under the control. */
   readonly description?: DefinitionText;
+  /** Makes the control usable only while another control has one of some values. */
   readonly enabledWhen?: ControlCondition;
 }
 
 /** A choice of a few values, drawn as a segmented control. */
 export interface SegmentedControlDefinition extends ControlBase {
+  /** Tells a segmented control from the other kinds. */
   readonly kind: "segmented";
+  /** The choices, in the order they are drawn. */
   readonly options: readonly SegmentedOption[];
+  /** The value of the option chosen until the person picks another. */
   readonly default: string;
 }
 
 /** An on and off choice. Its value is the string `true` or `false`. */
 export interface SwitchControlDefinition extends ControlBase {
+  /** Tells a switch from the other control kinds. */
   readonly kind: "switch";
+  /** Whether it starts on. */
   readonly default: boolean;
 }
 
 /** A calendar day, bounded on both sides. Its value is `YYYY-MM-DD`. */
 export interface DateControlDefinition extends ControlBase {
+  /** Tells a date control from the other kinds. */
   readonly kind: "date";
+  /** The earliest day that can be chosen. */
   readonly min: DateBound;
+  /** The latest day that can be chosen. */
   readonly max: DateBound;
+  /** The day chosen until the person picks another. */
   readonly default: DateBound;
 }
 
@@ -95,6 +110,7 @@ export interface DateControlDefinition extends ControlBase {
  * `{ minutesAgo: 360 }` is six hours ago, rounded down to the control's step.
  */
 export interface RelativeTime {
+  /** How many minutes before now. Zero is now. */
   readonly minutesAgo: number;
 }
 
@@ -113,11 +129,15 @@ export type DateTimeBound = string | RelativeTime;
  * slots that are not out yet off the list.
  */
 export interface DateTimeControlDefinition extends ControlBase {
+  /** Tells a date and time control from the other kinds. */
   readonly kind: "datetime";
   /** Minutes between slots. A whole number that divides a day, such as 30. */
   readonly stepMinutes: number;
+  /** The earliest moment that can be chosen. */
   readonly min: DateTimeBound;
+  /** The latest moment that can be chosen. */
   readonly max: DateTimeBound;
+  /** The moment chosen until the person picks another. */
   readonly default: DateTimeBound;
 }
 
@@ -126,7 +146,9 @@ export interface DateTimeControlDefinition extends ControlBase {
  * such as `0.8`. It never changes a URL, so it costs no data.
  */
 export interface OpacityControlDefinition extends ControlBase {
+  /** Tells an opacity control from the other kinds. */
   readonly kind: "opacity";
+  /** The opacity used until the person changes it, 0.1 to 1. */
   readonly default: number;
 }
 
@@ -136,11 +158,15 @@ export interface OpacityControlDefinition extends ControlBase {
  * control, or tune how a layer is drawn, which costs no data.
  */
 export interface RangeControlDefinition extends ControlBase {
+  /** Tells a range control from the other kinds. */
   readonly kind: "range";
+  /** The lowest value the slider allows. */
   readonly min: number;
+  /** The highest value the slider allows. */
   readonly max: number;
   /** The smallest change the slider makes. Positive. */
   readonly step: number;
+  /** The value used until the person changes it. */
   readonly default: number;
   /** Appended to the shown value, such as ` px`. */
   readonly unit?: LayerTemplate;
@@ -163,7 +189,9 @@ export type LayerControlDefinition =
 export interface DerivedVariable {
   /** The variable name used in templates. */
   readonly id: string;
+  /** The ids of the controls whose values are joined, in order, to make the lookup key. */
   readonly from: readonly string[];
+  /** Maps each joined key, such as `day|false`, to the value the variable takes. */
   readonly table: Readonly<Record<string, string>>;
 }
 
@@ -173,25 +201,33 @@ export interface DerivedVariable {
  * `id` and `title` are required.
  */
 export interface FieldMap {
+  /** The path to a value that identifies the feature, unique in the feed. */
   readonly id: string;
+  /** The path to the value used as the feature's name. */
   readonly title: string;
+  /** Any further decoded field a template or style reads, by name, with its path. */
   readonly [field: string]: string;
 }
 
 /** Keeps the features whose decoded `field` equals one of `in`. */
 export interface FeatureFilter {
+  /** The decoded field to test. */
   readonly field: string;
+  /** The values that keep a feature. A feature whose field equals none of them is dropped. */
   readonly in: readonly (string | number)[];
 }
 
 /** A feed: one JSON document of point features, fetched when the layer is on. */
 export interface FeedSource {
+  /** Tells a feed from a query source. */
   readonly kind: "feed";
   /** A URL template over control values and derived variables. */
   readonly url: string;
   /** The name of a registered decoder, such as `geojson`. */
   readonly decoder: string;
+  /** Where each decoded field is read from in a raw feature. */
   readonly fields: FieldMap;
+  /** Drops features that do not match, before they are drawn or listed. */
   readonly filter?: FeatureFilter;
   /**
    * The least time, in seconds (at most 3600), a response is reused in this
@@ -203,12 +239,14 @@ export interface FeedSource {
 
 /** Raster tiles drawn as an overlay, such as WMTS imagery or a WMS map. */
 export interface TileSource {
+  /** Tells a raster tile source from the other source kinds. */
   readonly kind: "tiles";
   /**
    * A URL template over control values. `{z}`, `{x}`, `{y}` and
    * `{bbox-epsg-3857}` are left for the map engine to fill.
    */
   readonly tiles: string;
+  /** The tiles' size in pixels, 256 or 512. */
   readonly tileSize: 256 | 512;
   /** The deepest tile level the service has; the engine scales beyond it. */
   readonly maxzoom: number;
@@ -234,10 +272,15 @@ export interface TileSource {
  *   draws the first ones and says to zoom in.
  */
 export interface QuerySource {
+  /** Tells a query from a feed. */
   readonly kind: "query";
+  /** A URL template over the view's box and the control values. */
   readonly url: string;
+  /** The name of the registered decoder that reads the response. */
   readonly decoder: string;
+  /** Where each decoded field is read from in a raw feature. */
   readonly fields: FieldMap;
+  /** Drops features that do not match, before they are drawn or listed. */
   readonly filter?: FeatureFilter;
   /** The most features drawn at once, 1 to 5000. */
   readonly maxFeatures: number;
@@ -250,6 +293,7 @@ export interface QuerySource {
  * stay in the tiles, so a layer of this kind has a key but no cards or list.
  */
 export interface VectorTileSource {
+  /** Tells a vector tile source from the other source kinds. */
   readonly kind: "vector-tiles";
   /** A URL template over control values. `{z}`, `{x}` and `{y}` are left for the engine. */
   readonly tiles: string;
@@ -267,6 +311,7 @@ export type PaletteSlot = string;
 
 /** Marker radius by value: the radius of the last stop at or below the value. */
 export interface SizeStops {
+  /** The numeric field the radius is read from. */
   readonly field: string;
   /** Pairs of `[minimum value, radius in pixels]`, ascending. */
   readonly stops: readonly (readonly [number, number])[];
@@ -276,16 +321,23 @@ export interface SizeStops {
 
 /** One category of a categorical style. */
 export interface StyleCategory {
+  /** The field value this category matches. */
   readonly value: string | number;
+  /** The legend's entry. */
   readonly label: DefinitionText;
+  /** The palette slot the matching points are drawn in. */
   readonly colour: PaletteSlot;
+  /** The marker shape for this category, overriding the style's. */
   readonly shape?: MarkerShape;
 }
 
 /** Colour by category, for alert levels and kinds. */
 export interface CategoryColour {
+  /** Tells a category colour rule from the other rules. */
   readonly kind: "category";
+  /** The decoded field whose value picks the category. */
   readonly field: string;
+  /** The categories, each with a value, a label and a colour. */
   readonly categories: readonly StyleCategory[];
   /** Used for a value no category names. */
   readonly other: {
@@ -296,7 +348,9 @@ export interface CategoryColour {
 
 /** Colour by ordered value ranges, using an ordered (ordinal) palette. */
 export interface StepColour {
+  /** Tells a stepped rule from the other colour rules. */
   readonly kind: "steps";
+  /** The numeric field the steps are read from. */
   readonly field: string;
   /** Ascending minimums; the first applies to everything below the second. */
   readonly steps: readonly {
@@ -308,8 +362,11 @@ export interface StepColour {
 
 /** One colour for every feature. */
 export interface FixedColour {
+  /** Tells a fixed colour from the other rules. */
   readonly kind: "fixed";
+  /** The palette slot every feature is drawn in. */
   readonly colour: PaletteSlot;
+  /** The legend's entry for that colour. */
   readonly label: DefinitionText;
 }
 
@@ -334,29 +391,41 @@ export interface ShapeMarks {
 
 /** One category of a polygon or line style. */
 export interface ShapeCategory extends ShapeMarks {
+  /** The field value this category matches. */
   readonly value: string | number;
+  /** The legend's entry. */
   readonly label: DefinitionText;
+  /** The palette slot the matching features are drawn in. */
   readonly colour: PaletteSlot;
 }
 
 /** One value range of a polygon or line style, from explicit stops. */
 export interface ShapeStep extends ShapeMarks {
+  /** The lowest value this class holds. */
   readonly min: number;
+  /** The legend's entry. */
   readonly label: DefinitionText;
+  /** The palette slot the class is drawn in. */
   readonly colour: PaletteSlot;
 }
 
 /** One colour for every polygon or line. */
 export interface ShapeFixedColour extends ShapeMarks {
+  /** Tells a fixed colour from the other shape colour rules. */
   readonly kind: "fixed";
+  /** The palette slot every shape is drawn in. */
   readonly colour: PaletteSlot;
+  /** The legend's entry for that colour. */
   readonly label: DefinitionText;
 }
 
 /** Colour by category: a field's value picks the class. */
 export interface ShapeCategoryColour {
+  /** Tells a category rule from the other shape colour rules. */
   readonly kind: "category";
+  /** The tile property or decoded field whose value picks the category. */
   readonly field: string;
+  /** The categories, each with a value, a label and a colour. */
   readonly categories: readonly ShapeCategory[];
   /** Used for a value no category names. */
   readonly other: ShapeMarks & {
@@ -367,7 +436,9 @@ export interface ShapeCategoryColour {
 
 /** Graduated colour from explicit stops (class breaks). */
 export interface ShapeStepColour {
+  /** Tells a stepped rule from the other shape colour rules. */
   readonly kind: "steps";
+  /** The numeric field the steps are read from. */
   readonly field: string;
   /** Ascending minimums; the first applies to everything below the second. */
   readonly steps: readonly ShapeStep[];
@@ -380,9 +451,13 @@ export interface ShapeStepColour {
  * values above `max` in the last.
  */
 export interface ShapeIntervalColour {
+  /** Tells an equal-interval rule from the other shape colour rules. */
   readonly kind: "intervals";
+  /** The numeric field the classes are made from. */
   readonly field: string;
+  /** The lower end of the range the classes divide. Values below it fall in the first class. */
   readonly min: number;
+  /** The upper end of the range the classes divide. Values above it fall in the last class. */
   readonly max: number;
   /** One ordered palette colour per class, lowest first. Two to seven classes. */
   readonly ramp: readonly PaletteSlot[];
@@ -390,7 +465,9 @@ export interface ShapeIntervalColour {
   readonly unit?: LayerTemplate;
   /** Optional marks, one per class (lowest first), so each class has a second signal. */
   readonly patterns?: readonly FillPattern[];
+  /** Optional dashing, one per class, lowest first. */
   readonly dashes?: readonly LineDash[];
+  /** Optional stroke widths in pixels, one per class, lowest first. */
   readonly widths?: readonly number[];
 }
 
@@ -421,8 +498,11 @@ export interface ShapeLabel<T extends LayerTemplate = string> {
  *   outline is the palette's ink, so the shape reads on any fill.
  */
 export interface ShapeStyle<T extends LayerTemplate = string> {
+  /** Always `shapes`; tells a shape style from a point style. */
   readonly kind: "shapes";
+  /** Whether the style draws polygons (`area`) or lines (`line`). */
   readonly geometry: "area" | "line";
+  /** The rule that picks each shape's colour. */
   readonly colour: ShapeColour;
   /** Fill opacity of polygons, 0.1 to 1. Defaults to 0.55. */
   readonly fillOpacity?: number;
@@ -433,6 +513,7 @@ export interface ShapeStyle<T extends LayerTemplate = string> {
   readonly width?: number;
   /** Dashing of the outline or line. Defaults to `solid`. A class's own `dash` wins. */
   readonly dash?: LineDash;
+  /** A template for the text drawn on each shape, over the decoded fields or tile properties. */
   readonly label?: ShapeLabel<T>;
 }
 
@@ -441,6 +522,7 @@ export type FeedShapeStyle = ShapeStyle<LayerTemplate>;
 
 /** How a feed's points are drawn, and so what its legend says. */
 export interface PointStyle {
+  /** The rule that picks each point's colour. */
   readonly colour: CategoryColour | StepColour | FixedColour;
   /** Defaults to a fixed radius of 6 pixels. */
   readonly size?: SizeStops;
@@ -458,6 +540,7 @@ export interface DetailSource {
   readonly urlField: string;
   /** The only `https` origins the URL may have. */
   readonly origins: readonly string[];
+  /** The name of the registered decoder that reads the detail response. */
   readonly decoder: string;
   /** How the polygons and lines are drawn. */
   readonly colour: PaletteSlot;
@@ -471,13 +554,17 @@ export interface DetailSource {
 export interface ListSort {
   /** Lowercase letters, digits and hyphens. */
   readonly id: string;
+  /** The option's name. */
   readonly label: DefinitionText;
+  /** The decoded field the list is ordered by. */
   readonly field: string;
+  /** `asc` lists the lowest first and `desc` the highest. */
   readonly direction: "asc" | "desc";
 }
 
 /** What a feature's card shows. Templates read decoded fields. */
 export interface CardSpec {
+  /** The card's heading, a template over the feature's decoded fields. */
   readonly title: LayerTemplate;
   /** One line each, such as `{depthKm|km} deep`. Lines whose fields are all missing are left out. */
   readonly lines: readonly LayerTemplate[];
@@ -500,6 +587,7 @@ export interface ListSpec {
 export interface LayerDefinitionBase {
   /** Lowercase letters, digits and hyphens, starting with a letter. Used in the permalink. */
   readonly id: string;
+  /** The layer's name in the list and the key. */
   readonly name: DefinitionText;
   /** One sentence on what the layer shows. */
   readonly description: DefinitionText;
@@ -507,10 +595,13 @@ export interface LayerDefinitionBase {
   readonly group: DefinitionText;
   /** Roughly how much data turning the layer on costs, such as `about 30 KB`. */
   readonly dataCost: DefinitionText;
+  /** The credits that are shown while the layer is on. */
   readonly attribution: readonly LayerAttribution[];
   /** Shown on every card, for example that alerts are automatic estimates. */
   readonly disclaimer?: DefinitionText;
+  /** What the person can adjust, such as a date or a time window. */
   readonly controls: readonly LayerControlDefinition[];
+  /** URL variables computed from control values. */
   readonly variables?: readonly DerivedVariable[];
 }
 
@@ -522,10 +613,15 @@ export interface LayerDefinitionBase {
 export interface FeedLayerDefinition<
   S extends PointStyle | FeedShapeStyle = PointStyle | FeedShapeStyle,
 > extends LayerDefinitionBase {
+  /** Where the features come from: a whole feed or a query over the view. */
   readonly source: FeedSource | QuerySource;
+  /** How the features are drawn, and so what the legend says. */
   readonly style: S;
+  /** What a feature's card shows. */
   readonly card: CardSpec;
+  /** How the loaded features are listed. */
   readonly list: ListSpec;
+  /** A second source fetched on request for one feature, such as its affected area. */
   readonly detail?: DetailSource;
   /** Shown when the feed has no features, such as `No volcano alerts right now`. */
   readonly emptyText: DefinitionText;
@@ -584,6 +680,7 @@ export interface IdentifySource {
  * service for features, which open a card (the block's `card`).
  */
 export interface TileLayerDefinition extends LayerDefinitionBase {
+  /** Where the raster tiles come from. */
   readonly source: TileSource;
   /** What the colours on the overlay mean, if anything. */
   readonly legend?: readonly {
@@ -600,6 +697,7 @@ export interface TileLayerDefinition extends LayerDefinitionBase {
 
 /** A raster tile layer that answers a tap. */
 export interface IdentifiableLayerDefinition extends TileLayerDefinition {
+  /** How a tap on the layer finds features. */
   readonly identify: IdentifySource;
 }
 
@@ -632,7 +730,9 @@ export interface HeatmapSpec {
  * the colours mean.
  */
 export interface HeatmapLayerDefinition extends LayerDefinitionBase {
+  /** Where the points come from: a whole feed or a query over the view. */
   readonly source: FeedSource | QuerySource;
+  /** How the density is drawn. */
   readonly heatmap: HeatmapSpec;
   /** Shown when the feed has no points. */
   readonly emptyText: DefinitionText;
@@ -649,14 +749,19 @@ export interface VectorShapeLayer {
   readonly style: ShapeStyle;
   /** Visible from and to these normalised zoom levels. */
   readonly minzoom?: number;
+  /** The normalised zoom from which the layer is hidden. */
   readonly maxzoom?: number;
 }
 
 /** One layer of a vector tile source whose points are drawn as a heatmap. */
 export interface VectorHeatmapLayer {
+  /** The layer's name inside the tiles. */
   readonly sourceLayer: string;
+  /** How the density is drawn. */
   readonly heatmap: HeatmapSpec;
+  /** The lowest normalised zoom at which the layer is drawn. */
   readonly minzoom?: number;
+  /** The normalised zoom from which the layer is hidden. */
   readonly maxzoom?: number;
 }
 
@@ -669,10 +774,13 @@ export type VectorSourceLayer = VectorShapeLayer | VectorHeatmapLayer;
  * layer is the widest any source layer needs.
  */
 export interface VectorTileLayerDefinition extends LayerDefinitionBase {
+  /** Where the vector tiles come from. */
   readonly source: VectorTileSource;
+  /** The layers of the tiles that are drawn, each with its own style and zoom window. */
   readonly sourceLayers: readonly VectorSourceLayer[];
   /** The layer is visible from `minzoom` up to, but not including, `maxzoom` (normalised zoom levels), as the engine hides a layer from its `maxzoom`. */
   readonly minzoom?: number;
+  /** The normalised zoom from which the layer is hidden. */
   readonly maxzoom?: number;
 }
 

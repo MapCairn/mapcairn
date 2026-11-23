@@ -27,11 +27,14 @@ export class FakeLayerCatalogue implements LayerCatalogue {
     this.#store = createCatalogueStore(readyState(Object.freeze([...layers])));
   }
 
+  /** The state now, which `setLayers` and `setState` change. The same object is returned until then. */
   readonly getState = (): CatalogueState => this.#store.getState();
 
+  /** Calls the listener after each change. Returns the function that unsubscribes. An arrow property, so it works unbound. */
   readonly subscribe = (listener: () => void): (() => void) =>
     this.#store.subscribe(listener);
 
+  /** Counts the call in `refreshes` and changes nothing; a test decides what a refresh does by calling `setState`. */
   readonly refresh = (): Promise<void> => {
     this.refreshes += 1;
     return Promise.resolve();

@@ -51,8 +51,11 @@ export type RecordedLayerRequest<T> = T & { readonly url: string };
  * place.
  */
 export class FakeLayerSource implements LayerSource {
+  /** Every `load` request, in order, with the URL a real source would have fetched. */
   readonly requests: RecordedLayerRequest<LayerLoadRequest>[] = [];
+  /** Every `loadDetail` request, in order, with the URL a real source would have fetched. */
   readonly detailRequests: RecordedLayerRequest<LayerDetailRequest>[] = [];
+  /** Every `identify` request that was accepted, in order, with the URL a real source would have fetched. */
   readonly identifyRequests: RecordedLayerRequest<LayerIdentifyRequest>[] = [];
 
   readonly #outcomes = new Map<string, Outcome>();
@@ -126,6 +129,7 @@ export class FakeLayerSource implements LayerSource {
     };
   }
 
+  /** Answers from `setFeatures`, or rejects as `fail` or `hold` scripts. A layer with no features scripted rejects as `empty`. */
   async load(request: LayerLoadRequest): Promise<readonly LayerFeature[]> {
     const { definition, controls, now, signal, area } = request;
     for (const url of feedUrls(definition, controls, now, area)) {
@@ -143,6 +147,7 @@ export class FakeLayerSource implements LayerSource {
     return outcome.features;
   }
 
+  /** Answers from `setDetail`. A detail URL outside the definition's declared origins is refused as `invalid`. */
   async loadDetail(
     request: LayerDetailRequest,
   ): Promise<readonly LayerFeature[]> {
@@ -160,6 +165,7 @@ export class FakeLayerSource implements LayerSource {
     return shapes;
   }
 
+  /** Answers from `setIdentified`, resolving to an empty list for a layer that was not scripted. */
   async identify(
     request: LayerIdentifyRequest,
   ): Promise<readonly LayerFeature[]> {

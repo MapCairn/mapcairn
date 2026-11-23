@@ -19,8 +19,11 @@ export interface LayersUrlState {
 
 /** The shareable parts of the app state. Every field is optional. */
 export interface UrlStateValue {
+  /** Where the map is. */
   readonly view?: ViewState;
+  /** The id of the basemap shown. */
   readonly basemapId?: string;
+  /** Which data layers are on, and their controls. */
   readonly layers?: LayersUrlState;
   /**
    * Drawn shapes in the compact link encoding (`encodeShapes`). Untrusted
@@ -37,7 +40,9 @@ export interface UrlStateValue {
  * debounced inside the real adapter. Parsing and serialising live in core.
  */
 export interface UrlState {
+  /** The shareable state the address holds now. A part that is missing or unreadable is left out. */
   read(): UrlStateValue;
+  /** Replaces the shareable state in the address. It does not merge with what is there. */
   write(value: UrlStateValue): void;
   /**
    * The full address that would show `value`: this page's address with its

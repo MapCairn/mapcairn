@@ -96,9 +96,13 @@ export const CONTRACT_OTHER_IDENTIFY_LAYER: IdentifiableLayerDefinition = {
 
 /** A point the contract asks a source to return. */
 export interface ContractPoint {
+  /** The point's id. */
   readonly id: string;
+  /** The point's title. */
   readonly title: string;
+  /** Longitude in degrees. */
   readonly lng: number;
+  /** Latitude in degrees. */
   readonly lat: number;
 }
 
@@ -141,7 +145,9 @@ export interface LayerSourceControls {
 
 /** One layer source under test, with its controls. */
 export interface LayerSourceSubject {
+  /** The layer source under test. */
   readonly source: LayerSource;
+  /** How the contract scripts it. */
   readonly controls: LayerSourceControls;
 }
 

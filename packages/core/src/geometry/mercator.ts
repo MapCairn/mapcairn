@@ -15,7 +15,9 @@ const DEGREES = Math.PI / 180;
 
 /** A position in Web Mercator (EPSG:3857), in metres. */
 export interface WebMercatorPoint {
+  /** The distance from the left edge of the world, in pixels at the zoom it was made for. */
   readonly x: number;
+  /** The distance from the top edge of the world, in pixels at the zoom it was made for. */
   readonly y: number;
 }
 

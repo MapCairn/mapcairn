@@ -7,6 +7,7 @@ import type { ResolvedTheme } from "./settings";
  * applied. The ui combines it with the stored choice through the core resolver.
  */
 export interface ThemeSource {
+  /** The theme the operating system prefers now. */
   getSystemTheme(): ResolvedTheme;
   /** Calls the listener when the system preference changes. Returns the unsubscribe function. */
   subscribe(listener: (theme: ResolvedTheme) => void): () => void;

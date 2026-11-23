@@ -24,7 +24,9 @@ export interface FileSaverControls {
 
 /** One file saver under test, with its controls. */
 export interface FileSaverSubject {
+  /** The file saver under test. */
   readonly files: FileSaver;
+  /** How the contract scripts it. */
   readonly controls: FileSaverControls;
 }
 
