@@ -1,0 +1,44 @@
+name: Stale
+
+# Marks issues and pull requests that have had no activity for a long time, so they are
+# easy to tell from live work. It only adds a `stale` label and one short comment (the
+# action marks nothing without a message) and never closes anything: days-before-close
+# is -1. The action creates the `stale` label on first use. New activity removes it.
+# Exempt: issues labelled `plan`, issues with a milestone, anything assigned, and Release
+# and Dependabot pull requests. Each run handles a few items, oldest first.
+on:
+  schedule:
+    - cron: "17 5 * * 1"
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: stale
+  cancel-in-progress: false
+
+jobs:
+  stale:
+    name: Mark stale issues and pull requests
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      issues: write # the label and comment on an issue
+      pull-requests: write # the label and comment on a pull request
+    steps:
+      - name: Mark stale
+        uses: actions/stale@4391f3da665fdf50b6810c1a66712fb9ba21aa93 # v11.0.0
+        with:
+          days-before-issue-stale: 90
+          days-before-pr-stale: 30
+          days-before-close: -1
+          stale-issue-label: stale
+          stale-pr-label: stale
+          stale-issue-message: "This issue has had no activity for 90 days, so it has been labelled stale. A comment removes the label. Nothing is closed automatically."
+          stale-pr-message: "This pull request has had no activity for 30 days, so it has been labelled stale. A comment or a push removes the label. Nothing is closed automatically."
+          exempt-issue-labels: plan
+          exempt-pr-labels: release,dependencies
+          exempt-all-milestones: true
+          exempt-all-assignees: true
+          ascending: true
+          operations-per-run: 20
