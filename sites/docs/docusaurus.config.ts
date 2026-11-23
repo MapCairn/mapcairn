@@ -88,6 +88,7 @@ const config: Config = {
             "./src/css/generated/infima.css",
             "./src/css/generated/syntax.css",
             "./src/css/custom.css",
+            "./src/css/generated/design-tokens.css",
           ],
         },
         sitemap: { changefreq: null, priority: null },

@@ -3,6 +3,8 @@ build
 src/css/generated
 docs/generated
 docs/roadmap.md
+# The visual design page, written by scripts/generateDesignTokens.ts from @mapcairn/theme.
+docs/design-visual.md
 # The API reference, written by scripts/generateApi.ts.
 docs/api
 # The changelog pages, written by scripts/generateChangelog.ts from CHANGELOG.md.

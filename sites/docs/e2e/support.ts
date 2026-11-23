@@ -33,8 +33,9 @@ export interface AuditedPage {
 /**
  * The pages audited: Get started, a task page, an API page for a function and
  * one for a type, the roadmap, the Architecture overview, two of its parts (one
- * with many tables, one with a diagram), a Design system part, the extending
- * guide (a diagram) and the 404 page (which the static server answers for an
+ * with many tables, one with a diagram), a Design system part, the visual
+ * design page (both themes drawn at once, whatever the reader chose), the
+ * extending guide (a diagram) and the 404 page (which the static server answers for an
  * unknown address).
  */
 export const AUDITED_PAGES: readonly AuditedPage[] = [
@@ -50,6 +51,7 @@ export const AUDITED_PAGES: readonly AuditedPage[] = [
     path: "/docs/architecture/data-layers/",
   },
   { name: "Design part", path: "/docs/design/tokens/" },
+  { name: "Design tokens, visually", path: "/docs/design/visual-tokens/" },
   { name: "Extend the SDK", path: "/docs/guides/extending/" },
   { name: "404", path: "/docs/this-page-does-not-exist/" },
 ];

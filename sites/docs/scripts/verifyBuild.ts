@@ -17,6 +17,7 @@ import {
   inlineStyleAttributes,
   scriptBytesFor,
 } from "./builtSite";
+import { designTokensFindings } from "./designTokensChecks";
 import { docsMissingFromSidebar, sidebarDocIds } from "./docChecks";
 import {
   EXPECTED_INLINE_SCRIPTS,
@@ -109,7 +110,8 @@ function searchIndexSize(build: string): number {
  * the pages no longer carry, a page without its Markdown copy or a place in
  * the llms files (`markdownChecks.ts`), a package with no API reference
  * section, a roadmap page that is missing or incomplete
- * (`roadmapChecks.ts`), `pages.json` or `api.json` missing or without a
+ * (`roadmapChecks.ts`), a visual design page that is missing or shows one
+ * theme (`designTokensChecks.ts`), `pages.json` or `api.json` missing or without a
  * page of the sidebar (`machineDataChecks.ts`), and a page over the script
  * budget.
  * @param build - The build folder.
@@ -193,6 +195,7 @@ export function verifyBuild(
   findings.push(...machineDataFindings(build, pages, SITE_ORIGIN, BASE_URL));
   findings.push(...missingApiSections(build, apiSections));
   findings.push(...roadmapFindings(build));
+  findings.push(...designTokensFindings(build));
   const budget = scriptBudgetFor(apiPageCount(build));
   const bytes = scriptBytesFor(build, BASE_URL, BUDGET_PAGE);
   if (bytes > budget) {

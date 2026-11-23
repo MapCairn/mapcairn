@@ -49,6 +49,45 @@ const GUIDE = parseDocSource(
   "---\ntitle: The guide\ndescription: A guide.\n---\n\n# The guide\n\nBody.\n",
 );
 
+describe("copyText decorative elements", () => {
+  const page = parseDocSource(
+    "swatches",
+    [
+      "---",
+      "title: Swatches",
+      "description: Swatches.",
+      "---",
+      "",
+      '<div className="sample" aria-hidden="true">Text on surface</div>',
+      "",
+      "| Role | Value |",
+      "| --- | --- |",
+      '| <span className="chip" aria-hidden="true"></span> `text` | `oklch(0.2 0 0)` |',
+      "",
+      'A <b>visible</b> tag and <i aria-hidden="true">hidden</i> one stay or go.',
+      "",
+      "```html",
+      '<div aria-hidden="true">kept in code</div>',
+      "```",
+      "",
+    ].join("\n"),
+  );
+
+  it("leaves out an element marked aria-hidden, and a line that held only one, so the copy keeps the text the page gives", () => {
+    const copy = copyText(page, [page], CONTEXT);
+    expect(copy).not.toContain("Text on surface");
+    expect(copy).toContain("| `text` | `oklch(0.2 0 0)` |");
+    expect(copy).toContain("A <b>visible</b> tag and one stay or go.");
+    expect(copy).not.toContain("<span");
+  });
+
+  it("keeps an aria-hidden element inside a code fence", () => {
+    expect(copyText(page, [page], CONTEXT)).toContain(
+      '<div aria-hidden="true">kept in code</div>',
+    );
+  });
+});
+
 describe("copyText layout tags", () => {
   it("drops lines that hold only HTML tags and the blank lines after them, and keeps tags in code", () => {
     const page = parseDocSource(

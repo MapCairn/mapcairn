@@ -56,7 +56,7 @@ export const REPOSITORY_DOCS: readonly RepositoryDoc[] = [
       "The tokens, the layout slots and the accessibility contracts the interface keeps, and what the lint checks.",
     slug: "/design",
     intro:
-      "This page is for a developer who changes or themes the interface. By the end you will know the tokens, the layout slots, the accessibility contracts every component keeps and what the lint checks.",
+      "This page is for a developer who changes or themes the interface. By the end you will know the tokens, the layout slots, the accessibility contracts every component keeps and what the lint checks. To see the colours, type scale and spacing drawn in both themes, with their contrast ratios, open [Design tokens, visually](../design-visual.md).",
   },
 ];
 
