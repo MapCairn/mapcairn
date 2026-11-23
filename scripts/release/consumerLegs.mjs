@@ -84,7 +84,7 @@ export function yarnSettings() {
  * `resolutions`, so each SDK package resolves to its tarball, and corepack
  * reads the pinned `packageManager`.
  *
- * @param {{ overrides: Record<string, string> } & Record<string, unknown>} manifest
+ * @param {Record<string, any>} manifest
  *   The consumer manifest.
  * @returns {Record<string, unknown>}
  */

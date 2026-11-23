@@ -272,7 +272,9 @@ export function runHook(raw, env = {}, options = {}) {
       projectDir: env.CLAUDE_PROJECT_DIR,
       ...options,
     });
-    return decision.allow ? { code: 0 } : { code: 2, message: decision.reason };
+    return "reason" in decision
+      ? { code: 2, message: decision.reason }
+      : { code: 0 };
   } catch (error) {
     const why = error instanceof Error ? error.message : String(error);
     return {
