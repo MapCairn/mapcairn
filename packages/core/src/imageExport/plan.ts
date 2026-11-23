@@ -65,8 +65,9 @@ export interface RequestedImage {
  *   is not a finite, positive or on-planet number (latitudes within the Web
  *   Mercator limit, longitudes within -180 to 180, except the east of a box
  *   across the antimeridian, which may be up to 360 degrees past its west),
- *   or leaves under one pixel, and of kind `too-large` for an image over {@link MAX_IMAGE_SIDE_PX} on a
- *   side or {@link MAX_IMAGE_PIXELS} in all. It throws before any engine work.
+ *   or leaves under one pixel, and of kind `too-large` for an image over
+ *   {@link MAX_IMAGE_SIDE_PX} on a side or {@link MAX_IMAGE_PIXELS} in all. It
+ *   throws before any engine work.
  */
 export function planRequestedImage(
   options: MapImageOptions,
@@ -169,7 +170,6 @@ function isBox({ south, west, north, east }: Bounds): boolean {
     isLatitude(south) &&
     isLatitude(north) &&
     isLongitude(west) &&
-    Number.isFinite(east) &&
     south < north &&
     west < east &&
     east - west <= FULL_WORLD_DEGREES

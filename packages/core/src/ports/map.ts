@@ -363,7 +363,8 @@ export interface MapImageOptions {
    * short form, with its west inside -180 to 180 and its east past 180 (the
    * box of a Fiji-sized view is `west: 178.44`, `east: 180.1`), at most 360
    * degrees past its west. The long form, with its west beyond its east, is
-   * `invalid`. A box the map cannot frame
+   * `invalid`, and so is a west below -180 or above 180. A very wide box can
+   * also be `invalid` from the framing check below. A box the map cannot frame
    * at the requested size (below the basemap's lowest zoom, or one it would
    * have to crop to fit) is `invalid` too, and so is any box on a globe for
    * now (a centre and zoom is drawn on either). What `getBounds()` gives for a

@@ -262,6 +262,23 @@ describe("planRequestedImage", () => {
       { view: { bounds: { south: 5, west: 0, north: 4, east: 1 } } },
     ],
     [
+      "a box whose east is infinite",
+      {
+        view: {
+          bounds: {
+            south: 0,
+            west: 0,
+            north: 1,
+            east: Number.POSITIVE_INFINITY,
+          },
+        },
+      },
+    ],
+    [
+      "a box whose east is not a number",
+      { view: { bounds: { south: 0, west: 0, north: 1, east: Number.NaN } } },
+    ],
+    [
       "a box with a coordinate that is not a number",
       { view: { bounds: { south: 0, west: Number.NaN, north: 4, east: 1 } } },
     ],
