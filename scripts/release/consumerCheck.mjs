@@ -888,9 +888,9 @@ function checkYarn(app, manifest) {
 
 /**
  * Installs with Bun, when Bun is already on the path, and renders with it:
- * `bun` runs the same script that Node runs. Bun is never installed for this,
- * and a missing Bun is the only thing that skips the leg. This leg has not
- * been run yet.
+ * `bun` runs the same script that Node runs. The check never installs Bun
+ * itself, and a missing Bun is the only thing that skips the leg. The CI
+ * `SDK packages` job installs it (see `.github/workflows/ci.yml`).
  *
  * @param {string} app The folder to install into.
  * @returns {string} The line for the report.
