@@ -17,7 +17,7 @@ Example: a grouped pull request raises `react` in a development range and in `pa
 
 ## 2. Check the age
 
-The rule is 3 days, never 7 (`.npmrc` sets `min-release-age=3`; the Dependabot cooldown is 3). For each version the pull request installs, read its publish date: `npm view <package>@<version> time --json` and take the entry for that version, or `npm view <package> time.<version>`. A version younger than 3 days does not merge without the maintainer.
+The rule is 3 days, never 7 (`.npmrc` sets `min-release-age=3`; the Dependabot cooldown is 3). For each version the pull request installs, read its publish date: `npm view <package>@<version> time --json` and take the entry for that version, or `npm view <package> time.<version>`. Queries for `dist-tags` and `author` were denied by mistake until the deny patterns were narrowed, and Claude Code allows them now. A version younger than 3 days does not merge without the maintainer.
 
 One exception: a fix to a known vulnerability (a Dependabot or code scanning alert, or an advisory) may bypass the rule for that one package, with `--min-release-age-exclude=<package>` (`AGENTS.md`). Confirm the alert or advisory exists, prefer the newest patched version already 3 days old, say in the pull request that the exception was used and why, and never use `--min-release-age=0` or edit `.npmrc`. Any other package or non-security upgrade goes to the maintainer first; an agent never decides it alone.
 
