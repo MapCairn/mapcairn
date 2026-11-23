@@ -932,3 +932,56 @@ blockquote {
   text-decoration: underline;
   text-underline-offset: 0.2em;
 }
+
+/*
+ * A diagram drawn at build time from a Mermaid block (plugins/flowchart). It
+ * shrinks to the column, but not below 34rem, where its text is about 11px;
+ * a narrower screen scrolls the box sideways instead. The colours are the
+ * tokens', so both themes follow the site's.
+ */
+.flowchart {
+  overflow-x: auto;
+  margin-block-end: var(--mc-space-md);
+}
+
+.flowchart-svg {
+  display: block;
+  margin-inline: auto;
+  max-width: 100%;
+  min-width: 34rem;
+  height: auto;
+}
+
+.flowchart-group {
+  fill: var(--mc-color-surface-raised);
+  stroke: var(--mc-color-hairline);
+}
+
+.flowchart-node {
+  fill: var(--mc-color-surface);
+  stroke: var(--mc-color-text-muted);
+}
+
+.flowchart-edge {
+  fill: none;
+  stroke: var(--mc-color-text-muted);
+}
+
+.flowchart-arrow {
+  fill: var(--mc-color-text-muted);
+}
+
+.flowchart-text,
+.flowchart-title {
+  fill: var(--mc-color-text);
+  font-size: var(--mc-type-small-size);
+  dominant-baseline: central;
+}
+
+.flowchart-text {
+  text-anchor: middle;
+}
+
+.flowchart-title {
+  font-weight: var(--mc-type-weight-semibold);
+}
