@@ -51,6 +51,7 @@ export interface DrawOverlayProps {
   readonly hoveredHandle?: string | null;
   /** The position under the pointer, for the dashed preview of the next edge. */
   readonly hover?: LatLng;
+  /** Sets `data-testid` on the overlay. */
   readonly testId?: string;
 }
 

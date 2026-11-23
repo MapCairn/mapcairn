@@ -78,6 +78,7 @@ export const MAX_OUTLINE_POINTS = 400;
 
 /** One ring or line of a feature, ready to draw as a path. */
 export interface FeatureOutline {
+  /** The vertices, in order. */
   readonly points: readonly LatLng[];
   /** True for a polygon ring, whose path closes. */
   readonly closed: boolean;

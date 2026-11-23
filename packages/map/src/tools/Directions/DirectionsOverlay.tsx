@@ -18,6 +18,7 @@ export interface DirectionsOverlayProps {
    * is the middle of the part of the map the panel leaves free.
    */
   readonly showCrosshair: boolean;
+  /** Sets `data-testid` on the overlay. */
   readonly testId?: string;
 }
 

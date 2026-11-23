@@ -7,6 +7,7 @@ import * as styles from "./Layers.css";
 
 /** Props for {@link LayerKey}. */
 export interface LayerKeyProps {
+  /** The layer whose legend to draw. */
   readonly definition: LayerDefinition;
   /** The list's accessible name, such as `Key for Earthquakes`. */
   readonly label: string;
