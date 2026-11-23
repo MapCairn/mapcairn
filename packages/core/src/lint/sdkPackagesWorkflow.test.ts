@@ -95,12 +95,15 @@ describe("the SDK packages job in ci.yml", () => {
     expect(group).toContain("github.event.action == 'edited'");
   });
 
-  it("is the only workflow that runs on an edit, so no other cancels a run on one", () => {
+  it("is the only workflow with a required check that runs on an edit, so no other cancels a run on one", () => {
     const folder = path.join(REPO, ".github/workflows");
     const editing = readdirSync(folder).filter((file) =>
       /\bedited\b/.test(withoutComments(read(`.github/workflows/${file}`))),
     );
-    expect(editing).toEqual(["ci.yml"]);
+    // The title check reads the live title and has a concurrency group of its
+    // own, so an edit cancelling its older run costs nothing; it is not a
+    // required check that a cancelled run could leave missing.
+    expect(editing).toEqual(["ci.yml", "pr-title.yml"]);
   });
 
   describe("the step that decides whether to run", () => {
