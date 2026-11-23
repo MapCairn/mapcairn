@@ -76,6 +76,33 @@ const NPM_LAUNCHERS = [
   "corepack npm",
 ];
 
+/** Ways npm runs itself or takes a global flag before the command. */
+const WRAPPED_NPM_LAUNCHERS = [
+  "npm exec npm",
+  "npm exec -- npm",
+  "npm x npm",
+  "npm --json",
+  "npm --prefix=.",
+  "npm -w x",
+  "npm -C dir",
+  "npm explore pkg -- npm",
+  "npm explore pkg npm",
+  "npx npm",
+  "npx -y npm",
+  "npx --yes npm",
+];
+
+/**
+ * Read-only registry queries whose field name is also a command name
+ * (`dist-tags`, `author`). Claude Code's list must not deny them.
+ */
+const REGISTRY_QUERIES = [
+  "npm view @mapcairn/core dist-tags --json",
+  "npm view @mapcairn/core author",
+  "npm view @mapcairn/core time --json",
+  "npm view @mapcairn/core version peerDependencies license --json",
+];
+
 /** Publishes started through another launcher, a workspace runner or a pinned npx. */
 const LAUNCHED_PUBLISH = [
   ...pinnedNpx("publish"),
@@ -304,12 +331,30 @@ describe("Claude Code, .claude/settings.json", () => {
     expect(missing).toEqual([]);
   });
 
+  it("denies every command through npm's own wrappers and global flags in both shells, bare or with arguments", () => {
+    const missing: string[] = [];
+    for (const shell of ["Bash", "PowerShell"]) {
+      const patterns = innerPatterns(rules, shell);
+      for (const name of NAMES) {
+        for (const launcher of WRAPPED_NPM_LAUNCHERS) {
+          for (const tail of ["", " @mapcairn/core --tag next"]) {
+            const command = `${launcher} ${name}${tail}`;
+            if (!listDenies(patterns, command, true)) {
+              missing.push(`${shell}(${command})`);
+            }
+          }
+        }
+      }
+    }
+    expect(missing).toEqual([]);
+  });
+
   it("leaves the release skill's commands and the checks alone", () => {
     for (const shell of ["Bash", "PowerShell"]) {
-      for (const command of ALLOWED_COMMANDS) {
+      for (const command of [...ALLOWED_COMMANDS, ...REGISTRY_QUERIES]) {
         expect(
           listDenies(innerPatterns(rules, shell), command, true),
-          command,
+          `${shell}: ${command}`,
         ).toBe(false);
       }
     }
