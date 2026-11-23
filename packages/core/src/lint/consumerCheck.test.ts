@@ -12,6 +12,8 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
+  BUNDLE_CEILINGS,
+  bundleSizeProblems,
   CHROME_LANDMARKS,
   consumerManifest,
   ENGINE_FREE_BUILDS,
@@ -567,6 +569,51 @@ describe("engineGraphProblems", () => {
     expect(
       engineGraphProblems(passing.filter((entry) => entry.name !== "client")),
     ).toEqual(expect.arrayContaining([expect.stringContaining("client")]));
+  });
+});
+
+describe("bundleSizeProblems", () => {
+  const within = (name: string) => ({
+    name,
+    gzipBytes: BUNDLE_CEILINGS[name],
+  });
+  const passing = Object.keys(BUNDLE_CEILINGS).map(within);
+
+  it("budgets the client bundle through the root and through the adapter subpath", () => {
+    expect(Object.keys(BUNDLE_CEILINGS)).toEqual([
+      "client",
+      "client via the subpath",
+    ]);
+  });
+
+  it("passes a build exactly at its ceiling", () => {
+    expect(bundleSizeProblems(passing)).toEqual([]);
+  });
+
+  it("names a build one byte over its ceiling, with both figures", () => {
+    const over = passing.map((entry) =>
+      entry.name === "client"
+        ? { ...entry, gzipBytes: BUNDLE_CEILINGS.client + 1 }
+        : entry,
+    );
+    const problems = bundleSizeProblems(over);
+    expect(problems).toHaveLength(1);
+    expect(problems[0]).toContain("client");
+    expect(problems[0]).toContain(String(BUNDLE_CEILINGS.client + 1));
+    expect(problems[0]).toContain(String(BUNDLE_CEILINGS.client));
+  });
+
+  it("fails when a budgeted build is missing, or measured nothing", () => {
+    expect(bundleSizeProblems([])).toHaveLength(2);
+    expect(
+      bundleSizeProblems(passing.map((entry) => ({ ...entry, gzipBytes: 0 }))),
+    ).toHaveLength(2);
+  });
+
+  it("keeps the subpath's ceiling above the root's, because it holds the engine too", () => {
+    expect(BUNDLE_CEILINGS["client via the subpath"]).toBeGreaterThan(
+      BUNDLE_CEILINGS.client,
+    );
   });
 });
 
