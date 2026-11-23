@@ -6,12 +6,11 @@ import { dirname, join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { createRequestHandler, type ServerBuild } from "react-router";
 import { describe, expect, it } from "vitest";
+import { workerBundleRoot } from "./workerBundleRoot";
 
 const webRoot = join(dirname(fileURLToPath(import.meta.url)), "..");
-const chunkDirectory = join(
-  webRoot,
-  ".cloudflare/output/v1/workers/default/bundle/assets/js",
-);
+const bundleRoot = workerBundleRoot(webRoot);
+const chunkDirectory = bundleRoot ? join(bundleRoot, "assets/js") : "";
 
 /**
  * The pages to render and how many inline scripts, outside the router's
