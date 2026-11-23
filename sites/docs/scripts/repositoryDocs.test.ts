@@ -17,6 +17,32 @@ import {
 
 const BLOB = "https://github.com/MapCairn/mapcairn/blob/main/";
 
+/**
+ * Pages outside the generated folder that a generated page may link: the
+ * visual design page, which `generateDesignTokens.ts` writes and the sidebar lists.
+ */
+const OTHER_GENERATED_PAGES = ["../design-visual.md"];
+
+/** Each link between generated pages (`page -> target`) whose target is not a page made. */
+function linksToMissingPages(files: ReadonlyMap<string, string>): string[] {
+  const missing: string[] = [];
+  for (const [name, text] of files) {
+    for (const [, target = ""] of text.matchAll(
+      /\]\(([^)\s#]+\.md)(?:#[^)]*)?\)/g,
+    )) {
+      const resolved = posix.join(posix.dirname(name), target);
+      const outside =
+        target.startsWith("http") ||
+        target.includes("guides/") ||
+        OTHER_GENERATED_PAGES.includes(target);
+      if (!outside && !files.has(resolved)) {
+        missing.push(`${name} -> ${target}`);
+      }
+    }
+  }
+  return missing;
+}
+
 const COPY_CONTEXT: CopyContext = {
   origin: "https://mapcairn.timothybrits.co.za",
   baseUrl: "/docs/",
@@ -392,21 +418,22 @@ describe("the documents rendered on the site", () => {
   });
 
   it("leave no link between the documents pointing at a page that was not made", () => {
-    const names = new Set(real.files.keys());
-    for (const [name, text] of real.files) {
-      for (const [, target = ""] of text.matchAll(
-        /\]\(([^)\s#]+\.md)(?:#[^)]*)?\)/g,
-      )) {
-        if (target.startsWith("http") || target.includes("guides/")) {
-          continue;
-        }
-        const resolved = posix.join(posix.dirname(name), target);
-        // A page outside the generated folder, such as the visual design page, is not made here.
-        if (resolved.startsWith("..")) {
-          continue;
-        }
-        expect(names.has(resolved)).toBe(true);
-      }
-    }
+    expect(linksToMissingPages(real.files)).toEqual([]);
+  });
+
+  it("find a link to a page that is not made, such as a mistyped one", () => {
+    const files = new Map([
+      ["design.md", "See [it](../design-visul.md) and [that](tokens/x.md)."],
+      ["design/tokens.md", "Back to [overview](../design.md)."],
+    ]);
+    expect(linksToMissingPages(files)).toEqual([
+      "design.md -> ../design-visul.md",
+      "design.md -> tokens/x.md",
+    ]);
+  });
+
+  it("allow a link out of the generated folder only to the visual design page, which the sidebar lists", () => {
+    expect(OTHER_GENERATED_PAGES).toEqual(["../design-visual.md"]);
+    expect(sidebarDocIds(sidebar)).toContain("design-visual");
   });
 });

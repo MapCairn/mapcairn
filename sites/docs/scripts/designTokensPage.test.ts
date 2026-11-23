@@ -67,6 +67,51 @@ describe("contrastRows", () => {
   });
 });
 
+describe("contrastRows, against ratios known independently of the maths", () => {
+  const white = "#ffffff";
+  const fixed = {
+    ...source,
+    themeValues: {
+      ...source.themeValues,
+      dark: {
+        ...source.themeValues.dark,
+        colour: {
+          ...source.themeValues.dark.colour,
+          pageBackground: white,
+          surface: white,
+          text: "#000000",
+          // #777777 on white is 4.48:1, the figure contrast checkers give for it.
+          textMuted: "#777777",
+        },
+      },
+    },
+  };
+
+  it("measures black on white as 21:1 and mid grey on white as 4.48:1 in the dark theme", () => {
+    const rows = contrastRows(fixed, "dark");
+    const ratioOf = (label: string): number | undefined =>
+      rows.find((row) => row.label === label)?.ratio;
+    expect(ratioOf("Text on surface")).toBeCloseTo(21, 4);
+    expect(ratioOf("Muted text on surface")).toBeCloseTo(4.48, 2);
+  });
+
+  it("lists exactly the pairs the page promises, in order", () => {
+    expect(contrastRows(source, "light").map(({ label }) => label)).toEqual([
+      "Text on surface",
+      "Muted text on surface",
+      "Accent on surface",
+      "Error text on surface",
+      "Text on selected tint",
+      "Error text on error tint",
+      "Text on accent",
+      "Text on page",
+      "Muted text on page",
+      "Control edge on surface",
+      "Focus ring on surface",
+    ]);
+  });
+});
+
 describe("syntaxRows", () => {
   it("measures every role of the palette on the code background", () => {
     const rows = syntaxRows(source, "dark");
@@ -85,6 +130,13 @@ describe("ratioText and verdict", () => {
     expect(verdict(4.499, TEXT_RATIO)).toBe("Fail");
     expect(verdict(4.5, TEXT_RATIO)).toBe("Pass");
   });
+
+  it("does not lose a hundredth to floating-point error", () => {
+    expect(ratioText(12.34)).toBe("12.34:1");
+    expect(ratioText(1.15)).toBe("1.15:1");
+    expect(ratioText(0.29)).toBe("0.29:1");
+    expect(ratioText(4.5)).toBe("4.50:1");
+  });
 });
 
 describe("buildDesignTokensPage", () => {
@@ -99,9 +151,65 @@ describe("buildDesignTokensPage", () => {
     expect(parsed.permalink).toBe("/design/visual-tokens/");
   });
 
+  it("imports nothing: a page's own stylesheet import is injected by script, which the policy would block", () => {
+    expect(page).not.toMatch(/^import /m);
+  });
+
   it("shows both themes at once, each in its own scope", () => {
     expect(page).toContain('data-theme="light"');
     expect(page).toContain('data-theme="dark"');
+  });
+
+  describe("in each themed block", () => {
+    const blocks = page
+      .split('<section className="dt-theme" data-theme="')
+      .slice(1)
+      .map((text) => ({
+        theme: text.slice(0, text.indexOf('"')) as "light" | "dark",
+        text,
+      }));
+    const other = { light: "dark", dark: "light" } as const;
+    const valuesOf = (theme: "light" | "dark"): string[] => [
+      ...Object.values(source.themeValues[theme].colour),
+      ...Object.values(source.syntaxPalette[theme]),
+    ];
+
+    it("has three blocks for each theme", () => {
+      expect(blocks.filter(({ theme }) => theme === "light")).toHaveLength(3);
+      expect(blocks.filter(({ theme }) => theme === "dark")).toHaveLength(3);
+    });
+
+    it("names its own theme in its headings and the other's nowhere", () => {
+      for (const { theme, text } of blocks) {
+        expect(text, theme).toContain(`, ${theme} theme`);
+        expect(text, theme).not.toContain(`, ${other[theme]} theme`);
+      }
+    });
+
+    it("holds only the values of its own theme", () => {
+      for (const { theme, text } of blocks) {
+        const own = new Set(valuesOf(theme));
+        const foreign = valuesOf(other[theme]).filter((v) => !own.has(v));
+        expect(foreign.length).toBeGreaterThan(10);
+        for (const value of foreign) {
+          expect(text, `${theme} block holds ${value}`).not.toContain(
+            `\`${value}\``,
+          );
+        }
+      }
+    });
+
+    it("holds the contrast rows of its own theme", () => {
+      for (const { theme, text } of blocks.filter(({ text: t }) =>
+        t.includes("Contrast of the pairs"),
+      )) {
+        for (const row of contrastRows(source, theme)) {
+          expect(text).toContain(
+            `| ${row.label} | ${row.use} | ${ratioText(row.ratio)} |`,
+          );
+        }
+      }
+    });
   });
 
   it("lists every colour role of both themes with its value", () => {

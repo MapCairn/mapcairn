@@ -165,10 +165,19 @@ export function syntaxRows(source: ThemeSource, theme: Theme): SyntaxRow[] {
   }));
 }
 
-/** The ratio as text, cut to two decimals so a figure never rounds up past a limit it does not reach. */
+/**
+ * The ratio as text, cut to two decimals so a figure never rounds up past a
+ * limit it does not reach. The hundredths are read from a value rounded to
+ * eight decimals first, so a product such as `1.15 * 100`, which is
+ * 114.99999999999999, does not lose a hundredth.
+ */
 export function ratioText(ratio: number): string {
   const HUNDRED = 100;
-  return `${(Math.floor(ratio * HUNDRED) / HUNDRED).toFixed(2)}:1`;
+  const NOISE_DIGITS = 6;
+  const hundredths = Math.floor(
+    Number((ratio * HUNDRED).toFixed(NOISE_DIGITS)),
+  );
+  return `${(hundredths / HUNDRED).toFixed(2)}:1`;
 }
 
 /** `Pass` or `Fail` for a ratio against a limit, a word so the result never rests on colour. */
