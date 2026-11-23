@@ -13,7 +13,8 @@
  * under "Next" (a numbered item or a `-` bullet), an item that does not link
  * exactly one milestone, or a missing section. Later has no cap. A linked
  * milestone or issue that is closed is only a warning, so one closing never
- * fails an unrelated pull request.
+ * fails an unrelated pull request. So is a "Last reviewed" date more than 60
+ * days old.
  *
  * Issue states come from one read, `gh issue list`, and milestones from one
  * more, `gh api` on the milestones of the project. When `gh` is missing, not
@@ -33,6 +34,9 @@ const MAX_ITEMS = new Map([
 const ISSUE_LIMIT = 1000;
 const MILESTONE_PAGE_SIZE = 100;
 const GH_TIMEOUT_MS = 30_000;
+const MS_PER_DAY = 86_400_000;
+/** The roadmap is reviewed at least yearly; a review older than this earns a warning so it is not forgotten. */
+const STALE_REVIEW_DAYS = 60;
 const ROADMAP_PATH = new URL("../ROADMAP.md", import.meta.url);
 const SECTIONS = ["Now", "Next", "Later"];
 /** An issue reference, but not part of a longer word, a path, an HTML entity such as `&#39;` or a longer number. */
@@ -153,6 +157,28 @@ const ITEM_SHAPE = /^\s*(?:\d+\.|-)\s+\*\*([\s\S]*?)\.\*\*\s*([\s\S]*)$/;
 const MILESTONE_LINK = /\[([^\]]+)\]\(([^)\s]*\/milestone\/(\d+))\)/;
 /** The line that dates the last review of the file. */
 const LAST_REVIEWED = /^_Last reviewed: (\d{4}-\d{2}-\d{2})\b/m;
+
+/**
+ * Warns when the roadmap has not been reviewed for a while.
+ *
+ * @param {string} markdown The text of `ROADMAP.md`.
+ * @param {Date} today The day to measure from.
+ * @returns {string | null} The warning, or null when there is no "Last reviewed" date, it is in the future or it is at most 60 days old.
+ */
+export function staleReviewWarning(markdown, today) {
+  const reviewed = LAST_REVIEWED.exec(markdown)?.[1];
+  if (reviewed === undefined) {
+    return null;
+  }
+  const days = Math.floor(
+    (today.getTime() - new Date(`${reviewed}T00:00:00Z`).getTime()) /
+      MS_PER_DAY,
+  );
+  if (days <= STALE_REVIEW_DAYS) {
+    return null;
+  }
+  return `warning: ROADMAP.md was last reviewed on ${reviewed}, ${days} days ago; review it and update "Last reviewed"`;
+}
 
 /**
  * One ranked milestone of the roadmap.
@@ -392,6 +418,7 @@ export function readMilestoneStates(runGh) {
  * @param {string} input.roadmapText The text of `ROADMAP.md`.
  * @param {Map<number, string> | null} input.states The issue states, or null when they could not be read.
  * @param {Map<number, string> | null} input.milestones The milestone states, or null when they could not be read.
+ * @param {Date} [input.today] The day to measure the age of the review from; the review age is not checked when it is left out.
  * @param {(line: string) => void} input.log Receives the notices and the warnings.
  * @param {(line: string) => void} input.error Receives the errors.
  * @returns {number} The exit code: 1 when there is an error, otherwise 0.
@@ -400,6 +427,7 @@ export function runRoadmapCheck({
   roadmapText,
   states,
   milestones,
+  today,
   log,
   error,
 }) {
@@ -414,6 +442,10 @@ export function runRoadmapCheck({
     );
   }
   const result = checkRoadmap(roadmapText, states, milestones);
+  const stale = today && staleReviewWarning(roadmapText, today);
+  if (stale) {
+    result.warnings.push(stale);
+  }
   for (const warning of result.warnings) {
     log(`roadmap check: ${warning}`);
   }
@@ -437,6 +469,7 @@ if (isEntryPoint(import.meta.url)) {
       roadmapText: readFileSync(ROADMAP_PATH, "utf8"),
       states,
       milestones,
+      today: new Date(),
       log: console.log,
       error: console.error,
     }),

@@ -9,6 +9,7 @@ import {
   readIssueStates,
   readMilestoneStates,
   runRoadmapCheck,
+  staleReviewWarning,
   // @ts-expect-error The scripts are dependency-free JavaScript with JSDoc types.
 } from "../../../../scripts/roadmap-check.mjs";
 
@@ -609,6 +610,57 @@ describe("parseRoadmap", () => {
     expect(() => parseRoadmap("# Roadmap")).toThrow(/Priorities/);
     expect(() => parseRoadmap(roadmap(["#1, #1"], [], []))).toThrow(
       /listed more than once/,
+    );
+  });
+});
+
+describe("staleReviewWarning", () => {
+  const reviewed = (date: string) =>
+    `# Roadmap\n\n_Last reviewed: ${date}. Yearly._`;
+  const today = new Date("2026-11-23T10:00:00Z");
+
+  it("is silent when the file was reviewed within 60 days", () => {
+    expect(staleReviewWarning(reviewed("2026-09-24"), today)).toBeNull();
+    expect(staleReviewWarning(reviewed("2026-11-23"), today)).toBeNull();
+  });
+
+  it("warns, with the date and the age, once the review is more than 60 days old", () => {
+    expect(staleReviewWarning(reviewed("2026-09-23"), today)).toBe(
+      'warning: ROADMAP.md was last reviewed on 2026-09-23, 61 days ago; review it and update "Last reviewed"',
+    );
+  });
+
+  it("says nothing when there is no date, or the date is in the future", () => {
+    expect(staleReviewWarning("# Roadmap", today)).toBeNull();
+    expect(staleReviewWarning(reviewed("2027-01-01"), today)).toBeNull();
+  });
+});
+
+describe("runRoadmapCheck review age", () => {
+  const stale = roadmap([item(11)], [item(12)], [item(13)]).replace(
+    "# Roadmap",
+    "# Roadmap\n\n_Last reviewed: 2026-01-01. Yearly._",
+  );
+  const milestones = new Map([
+    [11, "OPEN"],
+    [12, "OPEN"],
+    [13, "OPEN"],
+  ]);
+
+  it("prints the stale review as a warning and still exits 0", () => {
+    const out: string[] = [];
+    const code = runRoadmapCheck({
+      roadmapText: stale,
+      states: open(1),
+      milestones,
+      today: new Date("2026-11-23T00:00:00Z"),
+      log: (line: string) => out.push(line),
+      error: () => undefined,
+    });
+    expect(code).toBe(0);
+    expect(out).toHaveLength(1);
+    expect(out[0]).toMatch(
+      /^roadmap check: warning: ROADMAP.md was last reviewed on 2026-01-01/,
     );
   });
 });

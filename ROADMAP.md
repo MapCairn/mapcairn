@@ -1,6 +1,6 @@
 # Roadmap
 
-_Last reviewed: 2026-11-22. Reviewed every year, and sooner when a decision below changes._
+_Last reviewed: 2026-11-23. Reviewed every year, and sooner when a decision below changes._
 
 This is what MapCairn intends to do over the next twelve months, and what it will not do. Everything under "Intentions" is a plan or an idea, not a promise and not a delivery date. Nothing in it is built unless a status says so. The project has one volunteer maintainer (see [`GOVERNANCE.md`](GOVERNANCE.md)), so the order can change and some items may not happen. The [open issues](https://github.com/MapCairn/mapcairn/issues) are the detailed plan and hold the current state of each item, and [`docs/plans/`](docs/plans/README.md) holds the written plans for large changes.
 
@@ -8,26 +8,38 @@ This is what MapCairn intends to do over the next twelve months, and what it wil
 
 MapCairn aims to give a team everything it needs to build an industry-grade GIS application or platform. That means capabilities comparable to the established commercial mapping and GIS development kits, delivered as an open-source SDK that is accessible by default, private by design, and built from parts that can each be adopted on their own. The reference site shows the parts working together; it stays small and public, and it does not adopt a capability just because the SDK offers it.
 
+Decided on 2026-11-23: everything on this roadmap works towards the 1.0.0 release of the SDK packages, and work that 1.0.0 does not need is ranked after it. The packages are on npm at `0.x`, where a minor release may break the public API ([what counts as the public API](https://mapcairn.timothybrits.co.za/docs/guides/public-api/)). After 1.0.0 a breaking change needs a new major version. 1.0.0 needs:
+
+- **A stable public API.** The ways of using the SDK without React, the selection port and the theming hook are settled, each export tagged `@beta` is stabilised or removed, and every member of the API catalogue has a description.
+- **Documentation.** A generated API reference, a getting-started page for each way to use the SDK, and a review of every README as an adopter would read it.
+- **Accessibility.** Announcements confirmed with a screen reader, the custom element checked with the main front-end frameworks, and the mobile navigation menu fixed.
+- **Privacy and terms.** The credit wording on the reference site matches each provider's terms, and the privacy position in [`PRIVACY.md`](PRIVACY.md) does not change.
+- **Assurance.** The packed packages checked as a consumer would use them, including an upgrade from the last published release, and the OpenSSF Best Practices silver badge.
+
 ## Priorities
 
 The order the work is done in, as GitHub milestones. A milestone is an outcome a person can name and a release note could carry. Everything smaller stays in [GitHub Issues](https://github.com/MapCairn/mapcairn/issues), grouped by its milestone, and is not listed here, so this list does not change when an issue is filed or closed and does not repeat status. A position is a plan, not a promise. The documentation site shows these three lists at `/docs/roadmap`, built from this file with the issue counts of each milestone.
 
-Each item gives the track, the milestone, the outcome and, where one exists, the tracker issue that defines it. **SDK** is the goal in "Direction": what a team needs to build an application on MapCairn. **Site** is what visitors to the reference site see. Now holds at most three milestones and Next at most six; Later holds milestones only and has no cap. The order was set on 2026-11-14 by weighing three things: finish what is half built, open the way for other teams to embed the map early, and do the work that touches every component (language support) while the code base is young. The capability matrix, [Capability matrix](https://mapcairn.timothybrits.co.za/docs/guides/capability-matrix/), says what each milestone adds.
+Each item gives the track, the milestone, the outcome and, where one exists, the tracker issue that defines it. **SDK** is the goal in "Direction": what a team needs to build an application on MapCairn. **Site** is what visitors to the reference site see. Now holds at most three milestones and Next at most six; Later holds milestones only and has no cap. The order was set on 2026-11-14 by weighing three things: finish what is half built, open the way for other teams to embed the map early, and do the work that touches every component (language support) while the code base is young. On 2026-11-23 it was reset around 1.0.0: Now and Next hold what 1.0.0 needs, in the order that lets the public API settle first, and Later holds what waits until after it, in its earlier order. The capability matrix, [Capability matrix](https://mapcairn.timothybrits.co.za/docs/guides/capability-matrix/), says what each milestone adds.
 
 A milestone leaves this list in the pull request that closes its last issue. A new issue takes a milestone when one fits; only a new milestone is proposed for this list, ranked last in its section until the maintainer moves it. `npm run roadmap:check`, which `npm run lint` runs, fails on a linked milestone or issue that does not exist or is listed twice, on more than three items in Now or six in Next and on a missing section, and warns about a closed one: remove it, and update "Last reviewed" when you do.
 
 ### Now
 
-1. **Site, [Selection](https://github.com/MapCairn/mapcairn/milestone/5) ([#49](https://github.com/MapCairn/mapcairn/issues/49)).** Visitors can select several features on the map and work with the selection.
+1. **Site, [Selection](https://github.com/MapCairn/mapcairn/milestone/5) ([#49](https://github.com/MapCairn/mapcairn/issues/49)).** Visitors can select several features on the map and work with the selection. It adds a public port and hook that should be settled before the API is declared stable.
 2. **SDK, [Embeddable SDK](https://github.com/MapCairn/mapcairn/milestone/6) ([#51](https://github.com/MapCairn/mapcairn/issues/51)).** A team can embed the map in its own application without copying the reference host. The product page was redesigned under this milestone ([#642](https://github.com/MapCairn/mapcairn/issues/642)): it leads with the playground and answers the licence, the cost and how ready the SDK is in the open. A documentation site, served at `/docs/` on the reference site, is built under it too ([#199](https://github.com/MapCairn/mapcairn/issues/199), [plan 0017](docs/plans/0017-documentation-site.md)). Next in this milestone is using the SDK without React, either as the headless core and MapLibre adapter packages or through a framework-neutral mount function and a custom element, with each way checked in CI against the packed packages ([#672](https://github.com/MapCairn/mapcairn/issues/672)).
+3. **SDK, [First release](https://github.com/MapCairn/mapcairn/milestone/8) ([#1](https://github.com/MapCairn/mapcairn/issues/1)).** All six SDK packages have been on npm since 0.1.0 (2026-11-21), with provenance. What is left towards 1.0.0 is generated API documentation and the OpenSSF Best Practices silver badge ([#4](https://github.com/MapCairn/mapcairn/issues/4)).
 
 ### Next
 
-1. **SDK, [First release](https://github.com/MapCairn/mapcairn/milestone/8) ([#1](https://github.com/MapCairn/mapcairn/issues/1)).** All six SDK packages have been on npm since 0.1.0 (2026-11-21), with provenance. What is left is generated API documentation and the OpenSSF Best Practices silver badge ([#4](https://github.com/MapCairn/mapcairn/issues/4)).
-2. **Site, [Layer controls](https://github.com/MapCairn/mapcairn/milestone/9).** Visitors can order, filter, cluster and explore layers and their features.
+1. **SDK, [Maintenance](https://github.com/MapCairn/mapcairn/milestone/14) ([#146](https://github.com/MapCairn/mapcairn/issues/146)).** The checks 1.0.0 relies on pass: announcements are confirmed with a screen reader, the browser tests also run in Firefox ([#601](https://github.com/MapCairn/mapcairn/issues/601)) and every member of the public API has a description ([#701](https://github.com/MapCairn/mapcairn/issues/701)). The rest of the milestone is upkeep that is not ranked here.
+2. **Site, [Open data layers](https://github.com/MapCairn/mapcairn/milestone/1) ([#657](https://github.com/MapCairn/mapcairn/issues/657)).** The credit wording beside the product page map pictures is checked against the provider terms.
 
 ### Later
 
+These wait until after 1.0.0 and are ranked in the order they are meant to be done. Each is meant to be added without a breaking change to the stable API.
+
+- **Site, [Layer controls](https://github.com/MapCairn/mapcairn/milestone/9).** Visitors can order, filter, cluster and explore layers and their features.
 - **SDK, [Large data](https://github.com/MapCairn/mapcairn/milestone/10).** The map stays fast on very large layers, with tile archives and measured tile budgets.
 - **SDK, [Drawing, styling and geometry](https://github.com/MapCairn/mapcairn/milestone/3).** Draw and edit tools, area and line styling, new layer kinds and geometry helpers.
 - **Site, [Output and printing](https://github.com/MapCairn/mapcairn/milestone/11).** Visitors can export the map as an image and print it.
@@ -38,7 +50,7 @@ A milestone leaves this list in the pull request that closes its last issue. A n
 
 What an industry-grade application needs, and what MapCairn has, partly has or lacks today, is in the [capability matrix](https://mapcairn.timothybrits.co.za/docs/guides/capability-matrix/).
 
-Statuses are "proposed" (written down, not started) and "in progress" (work has begun, nothing finished that you can rely on). Items for the SDK do not change the reference site unless the maintainer decides so, in the open, with a plan.
+Which of these come before 1.0.0 is set in "Priorities" above. Statuses are "proposed" (written down, not started) and "in progress" (work has begun, nothing finished that you can rely on). Items for the SDK do not change the reference site unless the maintainer decides so, in the open, with a plan.
 
 | Theme                    | What it covers                                                                                                                                                                                                                                                             | Status                                                                          | Tracking                                                                                                                                                                                                                                                                              |
 | ------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
