@@ -6,13 +6,7 @@ import type {
   LatLng,
   PixelPoint,
 } from "@mapcairn/core";
-import {
-  distanceMetres,
-  EARTH_RADIUS_METRES,
-  mercatorProject,
-  mercatorUnproject,
-  pngHeader,
-} from "@mapcairn/core";
+import { mercatorProject, mercatorUnproject, pngHeader } from "@mapcairn/core";
 
 /** Test-only width of the fake engine's viewport, in pixels. */
 export const FAKE_VIEWPORT_WIDTH = 800;
@@ -561,15 +555,36 @@ export class FakeMapLibreMap {
   }
   /** What the style (or `setProjection`) last asked for. A test sets it to stand in for a style's own `projection`. */
   projection: { type: string } = { type: "mercator" };
-  /** The engine's horizon test: on a globe, a place over a quarter of the way round from the centre is hidden. */
-  readonly _camera = {
-    transform: {
-      isLocationOccluded: (lngLat: { lng: number; lat: number }): boolean =>
-        this.projection.type === "globe" &&
-        distanceMetres(this.center, { lat: lngLat.lat, lng: lngLat.lng }) >
-          (Math.PI / 2) * EARTH_RADIUS_METRES,
-    },
-  };
+  /**
+   * The camera as MapLibre 6.19 keeps it for the horizon test: on a globe, the
+   * plane that clips the far side, which is every place over a quarter of the
+   * way round from the centre. A flat map has no plane.
+   */
+  get _camera(): {
+    projectedCamera:
+      | { projection: "mercator" }
+      | {
+          projection: "vertical-perspective";
+          clippingPlane: [number, number, number, number];
+        };
+  } {
+    if (this.projection.type !== "globe") {
+      return { projectedCamera: { projection: "mercator" } };
+    }
+    const lambda = (this.center.lng * Math.PI) / 180;
+    const phi = (this.center.lat * Math.PI) / 180;
+    return {
+      projectedCamera: {
+        projection: "vertical-perspective",
+        clippingPlane: [
+          Math.sin(lambda) * Math.cos(phi),
+          Math.sin(phi),
+          Math.cos(lambda) * Math.cos(phi),
+          0,
+        ],
+      },
+    };
+  }
   setProjection(projection: { type: string }): this {
     this.record("setProjection", [projection]);
     this.projection = projection;
