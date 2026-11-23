@@ -45,6 +45,7 @@ const ignore: Announce = () => undefined;
 
 /** Props for {@link LiveRegionProvider}. */
 export interface LiveRegionProviderProps {
+  /** The app, whose components announce through `useAnnounce`. */
   readonly children?: ReactNode;
 }
 

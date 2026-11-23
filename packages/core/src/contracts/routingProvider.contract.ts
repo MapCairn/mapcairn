@@ -130,7 +130,7 @@ async function failureKind(promise: Promise<unknown>): Promise<string> {
 }
 
 /**
- * Runs the shared behavioural suite for a {@link RoutingProvider}. Every test
+ * Runs the shared behavioural suite for a `RoutingProvider`. Every test
  * calls `create` for a fresh subject.
  */
 export function runRoutingProviderContract(

@@ -325,7 +325,7 @@ function buildProblems({ paths, targets, readFile, sourceExists }) {
  *
  * @param {{
  *   manifest: Record<string, any>,
- *   listing: { size: number, files: { path: string }[] },
+ *   listing: { size: number, unpackedSize?: number, files: { path: string }[] },
  *   ceiling: number,
  *   readFile: (file: string) => string | undefined,
  *   sourceExists: (source: string) => boolean,
@@ -433,7 +433,7 @@ export function parseTarList(listing) {
  * Finds the one tarball of each package among file names.
  *
  * @param {string[]} fileNames
- * @param {string[]} [folderNames] The package folder names, such as `core`.
+ * @param {readonly string[]} [folderNames] The package folder names, such as `core`.
  * @returns {Record<string, string>} Each folder name and its tarball's file name.
  * @throws {Error} When a package has none or more than one.
  */

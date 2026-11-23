@@ -37,7 +37,7 @@ function clampLatitude(lat: number): number {
  * edge of the world square rather than infinity. Longitude is not wrapped:
  * a longitude past 180 degrees lands in the next world copy, and projects
  * back to the same value.
- * @throws {GeometryError} `invalid` when a coordinate is not finite.
+ * @throws `GeometryError` of kind `invalid` when a coordinate is not finite.
  */
 export function wgs84ToWebMercator(position: LatLng): WebMercatorPoint {
   assertFinite(position.lat, position.lng, "A position's coordinates");
@@ -54,7 +54,7 @@ export function wgs84ToWebMercator(position: LatLng): WebMercatorPoint {
 /**
  * Converts a Web Mercator point (EPSG:3857) to a WGS 84 position
  * (EPSG:4326). The latitude is clamped to ±{@link MAX_MERCATOR_LATITUDE}.
- * @throws {GeometryError} `invalid` when a coordinate is not finite.
+ * @throws `GeometryError` of kind `invalid` when a coordinate is not finite.
  */
 export function webMercatorToWgs84(point: WebMercatorPoint): LatLng {
   assertFinite(point.x, point.y, "A point's coordinates");

@@ -84,10 +84,13 @@ export const UNDO_TIMEOUT_MS = 10_000;
 
 /** One layer as the ui shows it. */
 export interface DataLayerState {
+  /** The layer as the host defined it: its name, source, style, controls and legend. */
   readonly definition: LayerDefinition;
+  /** Whether the person has turned the layer on. */
   readonly enabled: boolean;
   /** Every control's value, resolved against the definition. */
   readonly controls: ControlValues;
+  /** What the layer is doing, such as loading, ready or failed (see `LayerStatus`). */
   readonly status: LayerStatus;
   /** The loaded features, in the order the provider sent them. */
   readonly features: readonly LayerFeature[];
@@ -99,15 +102,21 @@ export interface DataLayerState {
 
 /** The feature whose card is open, with its layer. */
 export interface SelectedFeature {
+  /** The layer the feature belongs to, with its state. */
   readonly layer: DataLayerState;
+  /** The loaded feature. */
   readonly feature: LayerFeature;
 }
 
 /** A feature's affected area, loaded on request. */
 export interface DetailState {
+  /** The layer the feature belongs to. */
   readonly layerId: string;
+  /** The feature whose affected area this is. */
   readonly featureId: string;
+  /** `loading` while the provider answers, `shown` once the shapes are there, `error` when the request failed. */
   readonly status: "loading" | "shown" | "error";
+  /** The shapes to draw. Empty until `status` is `shown`. */
   readonly shapes: readonly LayerFeature[];
 }
 
@@ -144,6 +153,7 @@ export interface DataLayers {
    * only the host refreshes a catalogue that is working.
    */
   retryCatalogue(): void;
+  /** The feature whose card is open, or null when none is. */
   readonly selected: SelectedFeature | null;
   /**
    * The features a tap or the keyboard found together, when there were
@@ -151,6 +161,7 @@ export interface DataLayers {
    * offers a way back to it while it is.
    */
   readonly choices: readonly SelectedFeature[] | null;
+  /** The affected area of the open card's feature, while it loads or is shown, or null. */
   readonly detail: DetailState | null;
   /** Grows each time opening a card asks for it to take focus (a tap on the map). */
   readonly focusRequest: number;
@@ -173,6 +184,7 @@ export interface DataLayers {
   readonly credits: readonly LayerAttribution[];
   /** The clock the hook uses, for relative times in cards and lists. */
   readonly now: () => number;
+  /** Turns a layer on or off. An unknown id, or a layer already in that state, is ignored. Turning a layer off closes its open card and list of choices. */
   setEnabled(id: string, enabled: boolean): void;
   /**
    * Turns several layers off as one change: one state update, so one redraw
@@ -200,8 +212,11 @@ export interface DataLayers {
   holdUndo(by: UndoHolder): void;
   /** Ends `by`'s hold; once none is left the countdown starts again, in full. */
   releaseUndo(by: UndoHolder): void;
+  /** Sets one of a layer's controls (a date, a range, a choice) to a value, resolved against the definition. The value is kept while the layer is off. */
   setControl(id: string, controlId: string, value: string): void;
+  /** Chooses how a layer's list is ordered, by the id of one of the sort options in its definition. */
   setSort(id: string, sortId: string): void;
+  /** Loads a layer again after its load failed. It has no effect on a layer that loaded. */
   retry(id: string): void;
   /**
    * Records that a tile layer has had tiles asked for and none has loaded for
@@ -305,7 +320,9 @@ export interface DataLayers {
    * level to zoom to when the zoom is outside it.
    */
   setView(area: Bounds, zoom: number): void;
+  /** Asks the layer's provider for the affected area of a loaded feature, replacing any area already shown or being fetched. An unknown layer or feature is ignored. */
   showDetail(layerId: string, featureId: string): void;
+  /** Closes the affected area and cancels its request if it is still running. */
   hideDetail(): void;
 }
 

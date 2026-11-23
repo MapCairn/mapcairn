@@ -27,6 +27,7 @@ export interface EndStackDirections {
   readonly active: boolean;
   /** The id of the sheet or panel that Directions opens. */
   readonly controls: string;
+  /** Opens the directions panel, or closes it when `active`. */
   readonly onToggle: () => void;
 }
 
@@ -34,6 +35,7 @@ export interface EndStackDirections {
 export interface EndStackProps {
   /** Map bearing in degrees clockwise from north. */
   readonly bearing: number;
+  /** Turns the map back to north. The compass button that calls it is shown only while the bearing is not zero. */
   readonly onResetBearing: () => void;
   /**
    * The sheet or panel that Map options opens is the open surface. False
@@ -43,14 +45,17 @@ export interface EndStackProps {
   readonly mapOptionsOpen: boolean;
   /** The id of the sheet or panel that Map options opens. */
   readonly mapOptionsControls: string;
+  /** Opens or closes the Map options sheet or panel. */
   readonly onMapOptions: () => void;
   /** The settings sheet or panel (Settings and Help) is open. */
   readonly settingsOpen: boolean;
   /** The id of the sheet or panel that Settings opens. */
   readonly settingsControls: string;
+  /** Opens or closes the settings sheet or panel. */
   readonly onSettings: () => void;
   /** Measuring is on. */
   readonly measuring: boolean;
+  /** Turns measuring on or off. */
   readonly onMeasure: () => void;
   /**
    * The Directions button, between Measure and Locate me. Leave it out and
@@ -62,13 +67,19 @@ export interface EndStackProps {
    * Measure and Locate me; without it the button is left out.
    */
   readonly drawing?: boolean;
+  /** Turns drawing on or off. Leaving it out hides the Draw shapes button. */
   readonly onDraw?: () => void;
   /** A location request is in progress. Presses are ignored meanwhile. */
   readonly locating: boolean;
+  /** Asks for the person's location. Called only from a press, because the browser may prompt. */
   readonly onLocate: () => void;
+  /** False at the maximum zoom, which disables the Zoom in button. */
   readonly canZoomIn: boolean;
+  /** False at the minimum zoom, which disables the Zoom out button. */
   readonly canZoomOut: boolean;
+  /** Zooms the map in one step. */
   readonly onZoomIn: () => void;
+  /** Zooms the map out one step. */
   readonly onZoomOut: () => void;
 }
 

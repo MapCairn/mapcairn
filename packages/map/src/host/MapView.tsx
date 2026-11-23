@@ -120,6 +120,7 @@ export interface MapViewProps {
    * render; put hooks in the components it returns, not in the function.
    */
   readonly chrome?: (map: ReactNode) => ReactNode;
+  /** Sets `data-testid` on the map region. */
   readonly testId?: string;
 }
 

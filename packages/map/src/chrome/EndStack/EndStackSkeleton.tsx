@@ -15,20 +15,31 @@ import * as styles from "./EndStack.css";
 
 /** The names of the controls {@link EndStackSkeleton} draws, in the host's default language. */
 export interface EndStackSkeletonCopy {
+  /** The name of the group of controls. */
   readonly controls: string;
+  /** The Map options button's name. */
   readonly mapOptions: string;
+  /** The Measure button's name. */
   readonly measure: string;
+  /** The Directions button's name, used only when the skeleton draws it. */
   readonly directions: string;
+  /** The Draw shapes button's name, used only when the skeleton draws it. */
   readonly draw: string;
+  /** The Locate me button's name. */
   readonly locate: string;
+  /** The Settings button's name. */
   readonly settings: string;
+  /** The name of the group of zoom buttons. */
   readonly zoomControls: string;
+  /** The Zoom in button's name. */
   readonly zoomIn: string;
+  /** The Zoom out button's name. */
   readonly zoomOut: string;
 }
 
 /** Props for {@link EndStackSkeleton}. */
 export interface EndStackSkeletonProps {
+  /** The names of the controls, read before the page has loaded its messages. */
   readonly copy: EndStackSkeletonCopy;
   /** Shows the Directions button, as the live stack does when the host offers directions. */
   readonly directions?: boolean;

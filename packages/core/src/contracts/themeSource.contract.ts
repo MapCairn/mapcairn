@@ -24,7 +24,7 @@ export interface ThemeSourceSubject {
 }
 
 /**
- * Runs the shared behavioural suite for a {@link ThemeSource}. Every test
+ * Runs the shared behavioural suite for a `ThemeSource`. Every test
  * calls `create` for a fresh subject.
  */
 export function runThemeSourceContract(

@@ -7,6 +7,7 @@ import * as styles from "./overlays.css";
 export interface MapOverlayLayerProps {
   /** SVG overlays such as `PinMarker` and `MeasureOverlay`. */
   readonly children?: ReactNode;
+  /** Sets `data-testid` on the layer. */
   readonly testId?: string;
 }
 

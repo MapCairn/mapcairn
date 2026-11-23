@@ -12,7 +12,9 @@ const SHAPE_REACH = 1.15;
 
 /** Props for {@link MarkerGlyph}. */
 export interface MarkerGlyphProps {
+  /** The marker's shape: circle, square, triangle or diamond. */
   readonly shape: MarkerShape;
+  /** The palette slot the marker is filled with. */
   readonly colour: PaletteSlot;
   /** The radius the map draws it at, in CSS pixels. */
   readonly radius: number;

@@ -38,7 +38,7 @@ import { runUrlStateContract } from "./urlState.contract";
 
 /**
  * Every key of `Services`, kept by hand. The `satisfies` clause rejects a
- * name that is not a service, and {@link PortsAreExhaustive} rejects a service
+ * name that is not a service, and `PortsAreExhaustive` rejects a service
  * missing from this list, so adding a service without updating the list is a
  * type error.
  */
@@ -157,7 +157,7 @@ export interface PortEntry<K extends PortName> {
   readonly runContract: PortContractRunners[K];
 }
 
-/** One {@link PortEntry} for every port. A missing port is a type error. */
+/** One `PortEntry` for every port. A missing port is a type error. */
 export type PortRegistry = { readonly [K in PortName]: PortEntry<K> };
 
 /**

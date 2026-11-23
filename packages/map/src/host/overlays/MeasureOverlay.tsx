@@ -24,6 +24,7 @@ export interface MeasureOverlayProps {
   readonly mode: "distance" | "area";
   /** The point under the pointer, drawn as a dashed preview to the last point. */
   readonly hover?: LatLng;
+  /** Sets `data-testid` on the overlay. */
   readonly testId?: string;
 }
 

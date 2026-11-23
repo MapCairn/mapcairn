@@ -14,6 +14,11 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
+  BUILD_SCRIPTS,
+  hashBuildScripts,
+  // @ts-expect-error The scripts are dependency-free JavaScript with JSDoc types.
+} from "../../../../scripts/buildInputs.mjs";
+import {
   entryPointsOf,
   isExternal,
   stylesheetOf,
@@ -25,6 +30,7 @@ import {
   newestSharedInput,
   SDK_BUILD_ORDER,
   sdkDependenciesOf,
+  stampedScriptsHash,
   stampTime,
   // @ts-expect-error The scripts are dependency-free JavaScript with JSDoc types.
 } from "../../../../scripts/buildSdk.mjs";
@@ -32,6 +38,14 @@ import {
 const SECOND = 1000;
 
 let scratch = "";
+
+/** Writes a build stamp as a finished build writes it, `seconds` after the epoch. */
+function stamp(relative: string, seconds: number): void {
+  const target = path.join(scratch, relative);
+  mkdirSync(path.dirname(target), { recursive: true });
+  writeFileSync(target, hashBuildScripts());
+  utimesSync(target, seconds, seconds);
+}
 
 /** Writes a file and sets its modified time to `seconds` after the epoch. */
 function write(relative: string, seconds: number): void {
@@ -113,32 +127,78 @@ describe("newestInput", () => {
 
 describe("newestSharedInput", () => {
   it("is the newest of the files every package build reads", () => {
-    for (const [file, seconds] of [
-      ["tsconfig.base.json", 10],
-      ["package-lock.json", 80],
-      ["scripts/buildSdk.mjs", 20],
-      ["scripts/buildPackage.mjs", 30],
-      ["scripts/entryPoint.mjs", 40],
-    ] as const) {
-      write(file, seconds);
-    }
+    write("tsconfig.base.json", 10);
+    write("package-lock.json", 80);
     expect(newestSharedInput(scratch)).toBe(80 * SECOND);
   });
 
-  it("counts each of the five files", () => {
-    const files = [
-      "tsconfig.base.json",
-      "package-lock.json",
-      "scripts/buildSdk.mjs",
-      "scripts/buildPackage.mjs",
-      "scripts/entryPoint.mjs",
-    ];
+  it("counts each of the two files", () => {
+    const files = ["tsconfig.base.json", "package-lock.json"];
     for (const newest of files) {
       for (const file of files) {
         write(file, file === newest ? 99 : 5);
       }
       expect(newestSharedInput(scratch), newest).toBe(99 * SECOND);
     }
+  });
+
+  it("leaves the build scripts to their content hash, so a checkout that touches them rebuilds nothing", () => {
+    write("tsconfig.base.json", 10);
+    write("package-lock.json", 10);
+    for (const script of BUILD_SCRIPTS) {
+      write(script, 99);
+    }
+    expect(newestSharedInput(scratch)).toBe(10 * SECOND);
+  });
+});
+
+describe("hashBuildScripts", () => {
+  function writeScripts(content: string, seconds: number): void {
+    for (const script of BUILD_SCRIPTS) {
+      const target = path.join(scratch, script);
+      mkdirSync(path.dirname(target), { recursive: true });
+      writeFileSync(target, content);
+      utimesSync(target, seconds, seconds);
+    }
+  }
+
+  it("lists every script the build runs, including the ones it imports", () => {
+    expect(BUILD_SCRIPTS).toEqual(
+      expect.arrayContaining([
+        "scripts/buildSdk.mjs",
+        "scripts/buildPackage.mjs",
+        "scripts/buildInputs.mjs",
+        "scripts/entryPoint.mjs",
+        "scripts/shareDeclarations.mjs",
+      ]),
+    );
+  });
+
+  it("is the same for the same content, whatever the modified time", () => {
+    writeScripts("a", 10);
+    const first = hashBuildScripts(scratch);
+    writeScripts("a", 90);
+    expect(hashBuildScripts(scratch)).toBe(first);
+  });
+
+  it("changes when any one script's content changes", () => {
+    writeScripts("a", 10);
+    const before = hashBuildScripts(scratch);
+    for (const script of BUILD_SCRIPTS) {
+      writeScripts("a", 10);
+      writeFileSync(path.join(scratch, script), "b");
+      expect(hashBuildScripts(scratch), script).not.toBe(before);
+    }
+  });
+
+  it("does not mistake one script's text moved into another for no change", () => {
+    const [first, second] = BUILD_SCRIPTS;
+    writeScripts("", 10);
+    writeFileSync(path.join(scratch, first), "ab");
+    const joined = hashBuildScripts(scratch);
+    writeFileSync(path.join(scratch, first), "a");
+    writeFileSync(path.join(scratch, second), "b");
+    expect(hashBuildScripts(scratch)).not.toBe(joined);
   });
 });
 
@@ -163,13 +223,12 @@ describe("isStale", () => {
     expect(isStale(scratch)).toBe(true);
   });
 
-  it("is stale when the build script is newer than the build", () => {
+  it("is stale when the stamp was written by other build scripts", () => {
     write("package.json", 10);
     write("src/a.ts", 10);
-    // The build script is a real file with a recent time, so a stamp from the
-    // start of the epoch is older than it although the package's own files
-    // are older still.
-    write("dist/.built", 40);
+    // `write` fills the stamp with "x", which is not the scripts' hash, and
+    // dates it in the future so only the hash can make the package stale.
+    write("dist/.built", Math.floor(Date.now() / SECOND) + 60);
     expect(isStale(scratch)).toBe(true);
   });
 
@@ -177,8 +236,8 @@ describe("isStale", () => {
     write("package.json", 10);
     write("src/a.ts", 10);
     const future = Math.floor(Date.now() / SECOND) + 60;
-    write("dist/.built", future);
-    write("dependency/dist/.built", future + 30);
+    stamp("dist/.built", future);
+    stamp("dependency/dist/.built", future + 30);
     expect(isStale(scratch, [path.join(scratch, "dependency")])).toBe(true);
   });
 
@@ -186,15 +245,15 @@ describe("isStale", () => {
     write("package.json", 10);
     write("src/a.ts", 10);
     const future = Math.floor(Date.now() / SECOND) + 60;
-    write("dist/.built", future);
-    write("dependency/dist/.built", future - 30);
+    stamp("dist/.built", future);
+    stamp("dependency/dist/.built", future - 30);
     expect(isStale(scratch, [path.join(scratch, "dependency")])).toBe(false);
   });
 
   it("is stale when a dependency has no finished build", () => {
     write("package.json", 10);
     write("src/a.ts", 10);
-    write("dist/.built", Math.floor(Date.now() / SECOND) + 60);
+    stamp("dist/.built", Math.floor(Date.now() / SECOND) + 60);
     expect(isStale(scratch, [path.join(scratch, "dependency")])).toBe(true);
   });
 
@@ -202,7 +261,7 @@ describe("isStale", () => {
     write("package.json", 10);
     write("src/a.ts", 10);
     write("src/a.test.ts", 90);
-    write("dist/.built", Math.floor(Date.now() / SECOND) + 60);
+    stamp("dist/.built", Math.floor(Date.now() / SECOND) + 60);
     expect(isStale(scratch)).toBe(false);
   });
 });
@@ -215,6 +274,17 @@ describe("stampTime", () => {
   it("is the time the build finished", () => {
     write("dist/.built", 40);
     expect(stampTime(scratch)).toBe(40 * SECOND);
+  });
+});
+
+describe("stampedScriptsHash", () => {
+  it("is missing for a package that was never built", () => {
+    expect(stampedScriptsHash(scratch)).toBeUndefined();
+  });
+
+  it("is the hash the build wrote into the stamp", () => {
+    stamp("dist/.built", 40);
+    expect(stampedScriptsHash(scratch)).toBe(hashBuildScripts());
   });
 });
 

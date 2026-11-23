@@ -247,7 +247,7 @@ export function isInSrgbGamut(colour: string): boolean {
  * number or percentage, the argument count must be right, and an `oklch()`
  * hue may be plain or in degrees (other angle units are refused). Components
  * outside their range are clamped as CSS does. OKLCH colours that fall outside the gamut are clipped per channel; use
- * {@link isInSrgbGamut} to keep tokens from relying on that.
+ * `isInSrgbGamut` to keep tokens from relying on that.
  * @throws When the string is not in a supported syntax.
  */
 export function parseColour(colour: string): Rgba {

@@ -174,7 +174,7 @@ function keys(hits: readonly SelectionHit[]): string[] {
 }
 
 /**
- * Runs the shared behavioural suite for a {@link FeatureQuery}. Every test
+ * Runs the shared behavioural suite for a `FeatureQuery`. Every test
  * calls `create` for a fresh subject.
  */
 export function runFeatureQueryContract(

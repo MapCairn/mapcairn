@@ -51,7 +51,7 @@ async function rejection(promise: Promise<unknown>): Promise<unknown> {
 }
 
 /**
- * Runs the shared behavioural suite for a {@link FileOpener}. Every test
+ * Runs the shared behavioural suite for a `FileOpener`. Every test
  * calls `create` for a fresh subject.
  */
 export function runFileOpenerContract(

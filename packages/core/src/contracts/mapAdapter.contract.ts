@@ -141,7 +141,7 @@ const CENTRE: LatLng = { lat: -33.9, lng: 18.4 };
 const NO_ANIMATION = { animate: false } as const;
 
 /**
- * Runs the shared behavioural suite for a {@link MapAdapter}. Every test calls
+ * Runs the shared behavioural suite for a `MapAdapter`. Every test calls
  * `create` for a fresh, unmounted subject, so tests never share state.
  * A real adapter passes the same suite with its own controls.
  */
@@ -1299,6 +1299,22 @@ export function runMapAdapterContract(
               { width: 1280, height: 960 },
             ],
             [{ view: { bounds: BOX } }, { width, height }],
+            // A Fiji-sized box across the antimeridian, in the short form
+            // with its east past 180.
+            [
+              {
+                size: { width: 400, height: 300 },
+                view: {
+                  bounds: {
+                    south: -18.2,
+                    west: 178.44,
+                    north: -16.7,
+                    east: 180.1,
+                  },
+                },
+              },
+              { width: 400, height: 300 },
+            ],
             [
               {
                 pixelRatio: 2,
@@ -1366,7 +1382,8 @@ export function runMapAdapterContract(
             { pixelRatio: -1 },
             { view: { center: CENTRE, zoom: Number.NaN } },
             { view: { bounds: { south: 1, west: 0, north: 0, east: 1 } } },
-            // A box across the antimeridian is not drawn yet.
+            // The long form of a box across the antimeridian (west past east)
+            // is not drawn; the short form, with east past 180, is.
             { view: { bounds: { south: 0, west: 170, north: 1, east: -170 } } },
             // Nor is a view beyond what the flat map can show.
             { view: { center: { lat: 89, lng: 0 }, zoom: 3 } },

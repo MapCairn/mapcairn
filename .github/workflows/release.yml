@@ -1,11 +1,15 @@
 name: Release
 
-# A run is named by its mode and version, so that an approval in the list of
-# pending deployments is read as a publish. Only a real publish ever waits for
-# one: the dry run of a rehearsal is in the `rehearse` job, which has no
-# environment and no OIDC token. The mode is a constrained choice and `decide`
-# validates the version; the name is display only.
-run-name: Release ${{ inputs.mode || 'publish' }} ${{ inputs.version || github.sha }}
+# A dispatched run is named by its mode and version, so that an approval in
+# the list of pending deployments is read as a publish. Only a real publish
+# ever waits for one: the dry run of a rehearsal is in the `rehearse` job, which
+# has no environment and no OIDC token. A push run has no version input, and
+# the name is then a single space: GitHub treats a name that is only whitespace
+# as unset and shows the commit subject, `chore(release): v<version> (#<n>)`,
+# so the run says which release it is and not a commit hash. The mode is a
+# constrained choice and `decide` validates the version; the name is display
+# only, and no step reads it or the commit message.
+run-name: ${{ inputs.version && format('Release {0} {1}', inputs.mode, inputs.version) || ' ' }}
 
 # Releases the SDK packages (plan 0014, docs/guides/releasing.md). One
 # workflow, four jobs, and one environment (`npm`). npm's trusted-publisher

@@ -37,7 +37,7 @@ const FAILURES: readonly ClipboardContractFailure[] = [
 ];
 
 /**
- * Runs the shared behavioural suite for a {@link ClipboardPort}. Every test
+ * Runs the shared behavioural suite for a `ClipboardPort`. Every test
  * calls `create` for a fresh subject.
  */
 export function runClipboardContract(

@@ -499,12 +499,12 @@ function readPair(text: string, words: Words): LatLng | null {
  * Other scripts and locales are read too: digits of any script, the Unicode
  * minus and other dashes, Arabic and full-width separators and white space
  * such as the narrow no-break space are rewritten as ASCII first, and
- * bidirectional marks are dropped (see {@link normaliseCoordinateText}). A
+ * bidirectional marks are dropped (see `normaliseCoordinateText`). A
  * thousands separator is read as white space, since no coordinate has a
  * digit group.
  *
  * A comma is a decimal mark in two layouts only, and only in text with no
- * decimal point (see {@link withDecimalCommas}): values separated by a
+ * decimal point (see `withDecimalCommas`): values separated by a
  * semicolon (`26,2041; 28,0473`), or by white space with a comma in every
  * number and no other comma (`26,2041 28,0473`). A comma between digits is
  * never a thousands separator, so `26,28` and `1,234` alone are not

@@ -182,7 +182,7 @@ async function rejection(promise: Promise<unknown>): Promise<LayerError> {
 }
 
 /**
- * Runs the shared behavioural suite for a {@link LayerSource}. Every test
+ * Runs the shared behavioural suite for a `LayerSource`. Every test
  * calls `create` for a fresh subject.
  */
 export function runLayerSourceContract(

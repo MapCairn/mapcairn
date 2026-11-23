@@ -22,6 +22,10 @@ const REPOSITORY_ROOT = fileURLToPath(new URL("../../..", import.meta.url));
 export const MEMBER_DESCRIPTION_PACKAGES: readonly string[] = [
   "@mapcairn/adapter-maplibre",
   "@mapcairn/core",
+  "@mapcairn/map",
+  "@mapcairn/react",
+  "@mapcairn/sdk",
+  "@mapcairn/theme",
   "@mapcairn/react",
   "@mapcairn/sdk",
   "@mapcairn/theme",

@@ -35,6 +35,7 @@ export interface UseLocateOptions {
 
 /** What {@link useLocate} returns. */
 export interface UseLocate {
+  /** Whether a request is idle, running, has found a fix or failed. */
   readonly state: LocateState;
   /** The latest fix. Set only while `state` is `found`. */
   readonly fix: LocationFix | null;

@@ -102,7 +102,8 @@ export function stepDone(
  * this version, storage will remember the answer, and the address carries no
  * shared view, layers or shapes (a person following a link wants the map they
  * were sent). A link with only a basemap still gets the offer.
- * @param input.link - The address state read once at start.
+ * @param input - The fields, by name:
+ *   - `link`: The address state read once at start.
  */
 export function shouldOfferTour(input: {
   readonly seen: number | null;

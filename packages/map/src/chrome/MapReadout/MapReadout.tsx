@@ -29,6 +29,7 @@ export const SCALE_BAR_IDLE_MS = 2000;
 
 /** Props for {@link ScaleBar}. */
 export interface ScaleBarProps {
+  /** Whether the bar is labelled in metric or imperial units. */
   readonly units: UnitSystem;
 }
 

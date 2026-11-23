@@ -11,9 +11,13 @@ import type { DataLayerState } from "./useDataLayers";
 
 /** A selected reference whose feature can be shown, with the definition of the layer that holds it. */
 export interface ShownSelection {
+  /** Always `shown`; tells it from a {@link HiddenSelection}. */
   readonly status: "shown";
+  /** The layer and feature ids that were selected. */
   readonly ref: FeatureRef;
+  /** The definition of the layer that holds the feature. */
   readonly definition: LayerDefinition;
+  /** The loaded feature. */
   readonly feature: LayerFeature;
 }
 
@@ -22,7 +26,9 @@ export interface ShownSelection {
  * not in the catalogue or not selectable. It stays selected and counts.
  */
 export interface HiddenSelection {
+  /** Always `not-shown`; tells it from a {@link ShownSelection}. */
   readonly status: "not-shown";
+  /** The layer and feature ids that were selected. */
   readonly ref: FeatureRef;
 }
 

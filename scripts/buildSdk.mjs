@@ -4,6 +4,7 @@ import { spawnSync } from "node:child_process";
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { hashBuildScripts } from "./buildInputs.mjs";
 import { STAMP_FILE } from "./buildPackage.mjs";
 import { isEntryPoint } from "./entryPoint.mjs";
 import { BUILT_SDK_PACKAGES } from "./sdkPackages.mjs";
@@ -21,14 +22,11 @@ export const SDK_BUILD_ORDER = BUILT_SDK_PACKAGES;
 /** Files that cannot change what a package builds. */
 const NOT_BUILD_INPUT = /\.(test\.[cm]?[jt]sx?|snap\.html)$/;
 
-/** Files at the repository root, and the build scripts, that every package build reads. */
-const SHARED_INPUTS = [
-  "tsconfig.base.json",
-  "package-lock.json",
-  "scripts/buildSdk.mjs",
-  "scripts/buildPackage.mjs",
-  "scripts/entryPoint.mjs",
-];
+/**
+ * Files at the repository root that every package build reads, compared by
+ * time. The build scripts are compared by content instead (`hashBuildScripts`).
+ */
+const SHARED_INPUTS = ["tsconfig.base.json", "package-lock.json"];
 
 /**
  * The time of the newest file a package build reads: its sources without
@@ -78,6 +76,22 @@ export function stampTime(folder) {
 }
 
 /**
+ * The hash of the build scripts a package's last build ran with, which the
+ * build writes into its stamp.
+ *
+ * @param {string} folder The package folder.
+ * @returns {string | undefined} The hash, or `undefined` when there is no
+ *   finished build.
+ */
+export function stampedScriptsHash(folder) {
+  try {
+    return readFileSync(path.join(folder, "dist", STAMP_FILE), "utf8");
+  } catch {
+    return undefined;
+  }
+}
+
+/**
  * The SDK packages a manifest depends on, in build order.
  *
  * @param {{ dependencies?: Record<string, string>, peerDependencies?: Record<string, string> }} manifest
@@ -92,8 +106,8 @@ export function sdkDependenciesOf(manifest) {
 
 /**
  * Whether a package must be built: it has no finished build, something it is
- * built from is newer than that build, or an SDK package it depends on was
- * built after it (a package's declarations and stylesheet follow its
+ * built from is newer than that build, the build scripts have other content
+ * than when it was built, or an SDK package it depends on was built after it (a package's declarations and stylesheet follow its
  * dependencies' `dist`).
  *
  * @param {string} folder The package folder.
@@ -110,6 +124,7 @@ export function isStale(folder, dependencyFolders = []) {
   return (
     stamp < newestInput(folder) ||
     stamp < newestSharedInput() ||
+    stampedScriptsHash(folder) !== hashBuildScripts() ||
     dependencyStamps.some((built) => built === undefined || built > stamp)
   );
 }
