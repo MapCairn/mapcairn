@@ -39,7 +39,8 @@ const FENCE = /^\s*(?:```|~~~)/;
 const LINK = /\]\(([^)\s]+)\)/g;
 const NPM_RUN = /npm run ([\w:.-]+)/;
 const WORKSPACE_FLAG = /(?:-w|--workspace[= ])\s*(\S+)/;
-const WORKSPACE_MANIFEST = /^(?:packages|examples)\/[^/]+\/package\.json$/;
+const WORKSPACE_MANIFEST =
+  /^(?:packages|examples|sites)\/[^/]+\/package\.json$/;
 /** The most references printed; the rest are counted. */
 const MAX_PRINTED = 50;
 const MAX_GIT_OUTPUT_BYTES = 1 << 26;
