@@ -72,7 +72,7 @@ import {
   yarnSettings,
   yarnSkipped,
 } from "./consumerLegs.mjs";
-import { isolatedEnvironment, runNpm } from "./npm.mjs";
+import { isolatedEnvironment, parsePackListing, runNpm } from "./npm.mjs";
 import { findTarballs, PACKAGES } from "./packCheck.mjs";
 import { readmeQuickstart } from "./quickstartLeg.mjs";
 import { SDK_NAMES } from "./workspaces.mjs";
@@ -642,7 +642,7 @@ function packTarballs(destination) {
     if (result.status !== 0) {
       throw new Error(`npm pack failed for ${name}:\n${result.stderr}`);
     }
-    tarballs[name] = JSON.parse(result.stdout)[0].filename;
+    tarballs[name] = parsePackListing(result.stdout).filename;
   }
   return tarballs;
 }
