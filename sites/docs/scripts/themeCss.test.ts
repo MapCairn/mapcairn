@@ -2,7 +2,18 @@
 // Copyright MapCairn contributors
 import { tokens } from "@mapcairn/theme";
 import { describe, expect, it } from "vitest";
-import { buildThemeCss } from "./themeCss";
+import { buildThemeCss, buildThemeRule } from "./themeCss";
+
+describe("buildThemeRule", () => {
+  it("writes the same variables under any selector, so a block with its own theme reads its own values", () => {
+    const rule = buildThemeRule(tokens, ".block");
+    expect(rule.startsWith(".block {")).toBe(true);
+    expect(rule).toContain(`--mc-color-text: ${tokens.color.text};`);
+    expect(buildThemeCss(tokens)).toContain(
+      rule.split("\n").slice(1).join("\n"),
+    );
+  });
+});
 
 describe("buildThemeCss", () => {
   const css = buildThemeCss(tokens);

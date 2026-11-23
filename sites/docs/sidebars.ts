@@ -103,7 +103,7 @@ export const sidebar: SidebarEntry[] = [
   {
     type: "category",
     label: "Architecture and design",
-    items: generatedSidebar(),
+    items: [...generatedSidebar(), "design-visual"],
   },
   {
     type: "category",

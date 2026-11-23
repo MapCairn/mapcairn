@@ -37,6 +37,12 @@ const HAS_SCHEME = /^(?:[a-z][a-z0-9+.-]*:|\/\/)/i;
 const MARKDOWN_PAGE = /\.mdx?$/;
 /** A line that holds nothing but HTML tags, such as the wrapper a page puts around its blocks. */
 const TAGS_ONLY = /^\s*(?:<\/?[A-Za-z][^>]*>\s*)+$/;
+/**
+ * One element marked `aria-hidden` that holds no other element, with the space
+ * after it: a drawing that a reader of the page does not get, so the copy leaves it out.
+ */
+const DECORATIVE =
+  /<([a-z][\w-]*)\b[^<>]*\baria-hidden="true"[^<>]*>[^<]*<\/\1>\s?/gi;
 
 /** The folder part of a page id, with its trailing slash, or "". */
 function folderOf(id: string): string {
@@ -134,8 +140,9 @@ function resolveTarget(
 /**
  * The Markdown copy of a page: the version token resolved, every link
  * absolute (a link to another page points at that page's copy), lines that
- * hold only HTML tags (the wrappers a page uses for its layout) dropped, and
- * fenced code left as written. It carries no site chrome because it is written from
+ * hold only HTML tags (the wrappers a page uses for its layout) dropped,
+ * elements marked `aria-hidden` (drawings that the page's tables describe)
+ * left out, and fenced code left as written. It carries no site chrome because it is written from
  * the source, not the HTML.
  * @param page - The page.
  * @param pages - Every page, to resolve links between them.
@@ -150,11 +157,14 @@ export function copyText(
   let afterDropped = false;
   const lines: string[] = [];
   const source = page.body.split(SDK_VERSION_TOKEN).join(context.version);
-  for (const line of source.split("\n")) {
-    if (FENCE.test(line)) {
+  for (const raw of source.split("\n")) {
+    if (FENCE.test(raw)) {
       inFence = !inFence;
     }
-    const drop = !inFence && !FENCE.test(line) && TAGS_ONLY.test(line);
+    const line = inFence || FENCE.test(raw) ? raw : raw.replace(DECORATIVE, "");
+    const emptied = line !== raw && line.trim() === "";
+    const drop =
+      emptied || (!inFence && !FENCE.test(line) && TAGS_ONLY.test(line));
     const blankAfterDrop: boolean = afterDropped && line.trim() === "";
     afterDropped = drop || blankAfterDrop;
     if (!drop && !blankAfterDrop) {

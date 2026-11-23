@@ -80,6 +80,15 @@ function builtSite(
     join(root, "roadmap.md"),
     `${PRIORITY_NOT_SCHEDULE}\n## Now\n## Next\n## Later\n`,
   );
+  mkdirSync(join(root, "design", "visual-tokens"), { recursive: true });
+  writeFileSync(
+    join(root, "design", "visual-tokens", "index.html"),
+    `<section class="dt-theme" data-theme="light"></section><section class="dt-theme" data-theme="dark"></section>Pass`,
+  );
+  writeFileSync(
+    join(root, "design", "visual-tokens.md"),
+    "#### Contrast of the pairs, light theme\n\n| Pair | Used as | Ratio | 4.5:1 | 3:1 |\n",
+  );
   for (const [path, body] of Object.entries(files)) {
     mkdirSync(join(root, path, ".."), { recursive: true });
     writeFileSync(join(root, path), body);
@@ -151,6 +160,14 @@ describe("verifyBuild", () => {
     rmSync(join(root, "roadmap"), { recursive: true });
     expect(verifyBuild(root, [ONE], []).join("\n")).toContain(
       "roadmap page was not built",
+    );
+  });
+
+  it("reports a visual design page that was not built", () => {
+    const root = builtSite("<script>one()</script>");
+    rmSync(join(root, "design"), { recursive: true });
+    expect(verifyBuild(root, [ONE], []).join("\n")).toContain(
+      "design tokens page was not built",
     );
   });
 

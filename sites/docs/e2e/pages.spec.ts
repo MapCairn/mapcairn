@@ -82,6 +82,38 @@ for (const width of [320, 390]) {
   }
 }
 
+for (const width of [320, 390]) {
+  for (const theme of ["light", "dark"] as const) {
+    test(`the visual design page fits the column at ${width} px and draws both themes, whichever one is chosen (${theme})`, async ({
+      page,
+    }) => {
+      await prepare(page, theme, width);
+      await open(page, "/docs/design/visual-tokens/");
+      const drawn = await page.evaluate(() => ({
+        overflows:
+          document.documentElement.scrollWidth >
+          document.documentElement.clientWidth,
+        backgrounds: [
+          ...document.querySelectorAll<HTMLElement>(".dt-theme"),
+        ].map((block): [string, string] => [
+          block.dataset.theme ?? "",
+          getComputedStyle(block).backgroundColor,
+        ]),
+      }));
+      expect(drawn.overflows).toBe(false);
+      const colourOf = (name: string): Set<string> =>
+        new Set(
+          drawn.backgrounds
+            .filter(([blockTheme]) => blockTheme === name)
+            .map(([, colour]) => colour),
+        );
+      expect(colourOf("light").size).toBe(1);
+      expect(colourOf("dark").size).toBe(1);
+      expect([...colourOf("light")][0]).not.toBe([...colourOf("dark")][0]);
+    });
+  }
+}
+
 test("each roadmap card's link names its milestone", async ({ page }) => {
   await open(page, "/docs/roadmap/");
   const links = page.getByRole("link", { name: /^View .+ on GitHub$/ });
