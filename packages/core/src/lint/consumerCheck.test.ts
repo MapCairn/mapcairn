@@ -394,14 +394,14 @@ describe("pnpm", () => {
     expect(pnpmSkipped({})).not.toMatch(/^::/);
   });
 
-  it("writes strict peers, no automatic peers, a seven day release age and the tarballs", () => {
+  it("writes strict peers, no automatic peers, a three day release age and the tarballs", () => {
     expect(
       pnpmSettings({ "@mapcairn/core": "file:../tarballs/core.tgz" }),
     ).toBe(
       [
         "strictPeerDependencies: true",
         "autoInstallPeers: false",
-        "minimumReleaseAge: 10080",
+        "minimumReleaseAge: 4320",
         "overrides:",
         '  "@mapcairn/core": "file:../tarballs/core.tgz"',
         "",

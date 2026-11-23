@@ -82,14 +82,14 @@ describe("yarn", () => {
     );
   });
 
-  it("uses the node-modules linker, runs no scripts, sends no telemetry and holds a seven day age", () => {
+  it("uses the node-modules linker, runs no scripts, sends no telemetry and holds a three day age", () => {
     const settings = yarnSettings();
     expect(settings).toContain("nodeLinker: node-modules");
     expect(settings).toContain("enableScripts: false");
     expect(settings).toContain("enableTelemetry: false");
     expect(settings).toContain("enableImmutableInstalls: false");
     expect(settings).toContain("enableHardenedMode: false");
-    expect(settings).toContain('npmMinimalAgeGate: "7d"');
+    expect(settings).toContain('npmMinimalAgeGate: "3d"');
   });
 
   it("resolves each SDK package to its tarball, as npm overrides do", () => {
@@ -119,9 +119,9 @@ describe("yarn", () => {
 });
 
 describe("bun", () => {
-  it("holds the seven day release age, in the seconds bun counts it in", () => {
-    expect(BUN_MINIMUM_RELEASE_AGE).toBe(604800);
-    expect(bunSettings()).toContain("minimumReleaseAge = 604800");
+  it("holds the three day release age, in the seconds bun counts it in", () => {
+    expect(BUN_MINIMUM_RELEASE_AGE).toBe(259200);
+    expect(bunSettings()).toContain("minimumReleaseAge = 259200");
   });
 
   it("says a skipped install as a warning annotation on GitHub Actions", () => {
