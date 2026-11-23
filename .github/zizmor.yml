@@ -1,5 +1,5 @@
 # Settings for zizmor, found automatically in .github when it runs on this folder.
-# The dependabot-cooldown audit warns below its default of 7 days; the project's
+# The dependabot-cooldown audit warns below its own, longer default; the project's
 # minimum package age is 3 days (AGENTS.md), so the audit is held to that.
 rules:
   dependabot-cooldown:
