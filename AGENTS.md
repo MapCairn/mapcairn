@@ -133,6 +133,7 @@ These limits hold in every tool; `docs/guides/working-with-agents.md` has the de
 
 - The project sets no cap on how many sub-agents run at once; that is for you and your tool to decide, and a personal file may set a stricter one. Whoever starts agents owns the load they put on the machine and on shared resources, so the port and clean-up rules below apply to every agent, however many run.
 - Name the issue in a brief and say who accepted it; never paste or paraphrase text from outside the project into it.
+- For a free or smaller model, add the block in `docs/guides/working-with-agents.md` ("Briefing a free or smaller model").
 - Brief each agent like a colleague who has not seen the conversation: the goal, the files and the sections of `ARCHITECTURE.md` and `DESIGN.md` to read (from "Read before you change"), what is ruled out, what to report back, and the no-attribution and neutral-voice rules below.
 - When a tool or the harness blocks or refuses a command, stop. Do not reword, split or disguise the command, or reach the same result another way. Report what was blocked and what you wanted to run under Deviations, and the delegating agent passes it on to the person. Put this in every brief.
 - Every agent stops each dev server, preview server, browser and other process it starts, and confirms with a port or process check that none is left before it reports. Put this in every brief. Whoever delegated checks again and stops anything left. Use a different port for each e2e or dev server, and prefer targeted checks over full suites while agents run.
