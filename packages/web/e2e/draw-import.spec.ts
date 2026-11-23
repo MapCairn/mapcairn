@@ -29,6 +29,24 @@ const LATITUDE_FIRST_FILE = {
   buffer: Buffer.from("POINT (-33.8688 151.2093)"),
 };
 
+/** The zoom, latitude and longitude in an address's `#map=` part. */
+function hashView(url: string): { zoom: number; lat: number; lng: number } {
+  const match = /#map=(-?[\d.]+)\/(-?[\d.]+)\/(-?[\d.]+)/.exec(url);
+  if (!match) {
+    return { zoom: Number.NaN, lat: Number.NaN, lng: Number.NaN };
+  }
+  return {
+    zoom: Number(match[1]),
+    lat: Number(match[2]),
+    lng: Number(match[3]),
+  };
+}
+
+/** How far a longitude in -180 to 180 is from the antimeridian, in degrees. */
+function distanceFromAntimeridian(lng: number): number {
+  return 180 - Math.abs(lng);
+}
+
 /** Presses the Import button and answers the picker with `files`. */
 async function importFrom(
   page: Page,
@@ -125,6 +143,34 @@ test.describe("draw import", () => {
     await expect(mapPage.drawShapes).toHaveCount(3);
     // The sheet takes part of the screen, so the centre sits a little off the shapes.
     await expect.poll(() => page.url()).toMatch(/#map=[\d.]+\/48\./);
+  });
+
+  test("fits the map to shapes across the antimeridian by the short way, in the real engine", async ({
+    page,
+    mapPage,
+  }) => {
+    await mapPage.goto(FAR_AWAY);
+    await mapPage.mapOptionsButton.click();
+    await expect(mapPage.shapesSection).toBeVisible();
+    // Suva and Taveuni: 2.7 degrees of longitude apart, across the line.
+    await importFrom(page, {
+      name: "fiji.wkt",
+      mimeType: "text/plain",
+      buffer: Buffer.from("POINT (178.44 -18.14)\nPOINT (-179.9 -16.8)"),
+    });
+
+    await expect(page.getByTestId("shapes-import-feedback")).toHaveText(
+      "2 shapes imported.",
+    );
+    // The long way round would frame the world (zoom 2 or less, centred near
+    // longitude 0); the short way is a close view centred near 180.
+    await expect
+      .poll(() => distanceFromAntimeridian(hashView(page.url()).lng))
+      .toBeLessThan(3);
+    const view = hashView(page.url());
+    expect(view.zoom).toBeGreaterThan(5);
+    expect(view.lat).toBeGreaterThan(-19);
+    expect(view.lat).toBeLessThan(-16);
   });
 
   test("imports the rest of a WKT file around a geometry and a line it cannot use", async ({
