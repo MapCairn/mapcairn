@@ -17,8 +17,8 @@ const SIZE_NOTE =
 /** What each lane means, in one line under its heading. */
 const LANE_NOTES = new Map([
   ["Now", "Work under way. These run in parallel."],
-  ["Next", "Queued behind Now, in this order."],
-  ["Later", "Milestones that wait for room in Next."],
+  ["Next", "Needed for 1.0.0, queued behind Now, in this order."],
+  ["Later", "Waits until after 1.0.0, in this order."],
 ]);
 
 /** A link whose target is a path in the repository rather than an address. */
