@@ -73,11 +73,46 @@ describe("custom.css", () => {
     );
   });
 
-  it("names only token aliases that the generated stylesheet defines", async () => {
-    const { tokens } = await import("@mapcairn/theme");
+  it("colours every syntax role from its palette property, on the classes the highlighter writes", () => {
+    const classes: Record<string, string[]> = {
+      keyword: ["keyword", "tag", "atrule", "important"],
+      string: ["string", "char", "attr-value", "regex", "inserted"],
+      number: ["number", "boolean", "constant", "symbol", "deleted"],
+      comment: ["comment", "prolog", "doctype", "cdata"],
+      function: ["function", "builtin"],
+      "class-name": ["class-name", "selector"],
+      property: ["property", "attr-name"],
+      punctuation: ["punctuation"],
+      operator: ["operator", "entity", "url", "variable"],
+    };
+    for (const [role, names] of Object.entries(classes)) {
+      const rule = RULES.match(
+        new RegExp(`([^{}]*)\\{[^}]*color:\\s*var\\(--mc-syntax-${role}\\)`),
+      );
+      expect(rule, role).not.toBeNull();
+      for (const name of names) {
+        expect(rule?.[1], `${role}: ${name}`).toContain(`.token.${name}`);
+      }
+    }
+  });
+
+  it("draws a highlighted line on the accent tint, whose contrast the palette test checks", () => {
+    expect(RULES).toMatch(
+      /--docusaurus-highlighted-code-line-bg:\s*var\(--mc-color-accent-tint\)/,
+    );
+  });
+
+  it("names only token aliases that the generated stylesheets define", async () => {
+    const { tokens, tokenValues } = await import("@mapcairn/theme");
     const { buildThemeCss } = await import("../../scripts/themeCss");
+    const { buildSyntaxCss } = await import("../../scripts/syntaxCss");
     const defined = new Set(
-      [...buildThemeCss(tokens).matchAll(/(--mc-[\w-]+):/g)].map((m) => m[1]),
+      [
+        ...buildThemeCss(tokens).matchAll(/(--mc-[\w-]+):/g),
+        ...buildSyntaxCss(tokenValues.syntaxPalette).matchAll(
+          /(--mc-[\w-]+):/g,
+        ),
+      ].map((m) => m[1]),
     );
     const used = [...RULES.matchAll(/var\((--mc-[\w-]+)\)/g)].map((m) => m[1]);
     expect(used.length).toBeGreaterThan(20);

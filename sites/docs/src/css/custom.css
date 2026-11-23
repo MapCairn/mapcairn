@@ -478,23 +478,71 @@ code {
   color: var(--mc-color-accent);
 }
 
-.token.comment,
-.token.prolog,
-.token.punctuation {
-  color: var(--mc-color-text-muted);
+/*
+ * Syntax: each role has its own muted hue (generated/syntax.css, from the
+ * SDK's syntaxPalette, whose test holds each to 4.5:1 on the code block and on
+ * a highlighted line). Code is the one place hues beyond the accent appear.
+ * The framework's highlighted line is a dark grey by default, which the
+ * palette is not checked against, so it takes the accent tint.
+ */
+:root {
+  --docusaurus-highlighted-code-line-bg: var(--mc-color-accent-tint);
 }
 
 .token.keyword,
-.token.function,
 .token.tag,
-.token.selector,
-.token.builtin,
-.token.class-name {
-  color: var(--mc-color-accent);
-  font-weight: var(--mc-type-weight-semibold);
+.token.atrule,
+.token.important {
+  color: var(--mc-syntax-keyword);
 }
 
-.token.comment {
+.token.string,
+.token.char,
+.token.attr-value,
+.token.regex,
+.token.inserted {
+  color: var(--mc-syntax-string);
+}
+
+.token.number,
+.token.boolean,
+.token.constant,
+.token.symbol,
+.token.deleted {
+  color: var(--mc-syntax-number);
+}
+
+.token.function,
+.token.builtin {
+  color: var(--mc-syntax-function);
+}
+
+.token.class-name,
+.token.selector {
+  color: var(--mc-syntax-class-name);
+}
+
+.token.property,
+.token.attr-name {
+  color: var(--mc-syntax-property);
+}
+
+.token.punctuation {
+  color: var(--mc-syntax-punctuation);
+}
+
+.token.operator,
+.token.entity,
+.token.url,
+.token.variable {
+  color: var(--mc-syntax-operator);
+}
+
+.token.comment,
+.token.prolog,
+.token.doctype,
+.token.cdata {
+  color: var(--mc-syntax-comment);
   font-style: italic;
 }
 
