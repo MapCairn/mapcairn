@@ -174,7 +174,7 @@ jobs:
           npm ci
 
       - name: Run the Firefox project
-        run: npm run test:e2e -w @mapcairn/web -- --project=firefox
+        run: npm run test:e2e -w @mapcairn/web -- --project=firefox --max-failures=2
 
       - name: Upload Playwright test results
         if: failure()

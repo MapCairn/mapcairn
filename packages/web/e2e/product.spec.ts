@@ -12,7 +12,7 @@ import {
   findMissingFocusRings,
   inspectControls,
 } from "./support/a11y";
-import { layoutTolerance } from "./support/layout";
+import { layoutTolerance } from "./support/layoutTolerance";
 
 /*
  * The product page at `/`: no map code, no third-party request, the old map
