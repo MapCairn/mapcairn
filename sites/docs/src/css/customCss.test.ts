@@ -55,6 +55,14 @@ describe("custom.css", () => {
     );
   });
 
+  it("colours every class a drawn diagram carries, and scrolls it sideways before its text gets too small", () => {
+    for (const name of ["group", "node", "edge", "arrow", "text", "title"]) {
+      expect(RULES, name).toMatch(new RegExp(`\\.flowchart-${name}\\b`));
+    }
+    expect(RULES).toMatch(/\.flowchart\s*{[^}]*overflow-x:\s*auto/);
+    expect(RULES).toMatch(/\.flowchart-svg\s*{[^}]*min-width:/);
+  });
+
   it("lines the roadmap lanes up on shared rows", () => {
     expect(RULES).toMatch(/grid-template-rows:\s*subgrid/);
   });

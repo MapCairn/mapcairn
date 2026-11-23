@@ -4,12 +4,10 @@ import { existsSync, readdirSync, statSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
+import { workerBundleRoot } from "./workerBundleRoot";
 
 const webRoot = join(dirname(fileURLToPath(import.meta.url)), "..");
-const bundleRoot = join(
-  webRoot,
-  ".cloudflare/output/v0/workers/default/bundle",
-);
+const bundleRoot = workerBundleRoot(webRoot) ?? "";
 
 /**
  * A ceiling for the whole bundle directory. The bundle is about 2.5 MB without

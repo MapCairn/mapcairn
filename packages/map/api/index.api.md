@@ -1692,9 +1692,6 @@ export function useReverseAddress(input: LatLng): ReverseAddress;
 export function useRoutingProvider(): RoutingProvider | undefined;
 
 // @public
-export function useSaveData(): boolean;
-
-// @public
 export interface UseSearch {
     readonly clear: () => void;
     readonly query: string;

@@ -22,3 +22,11 @@ export function parseRoadmap(markdown: string): {
   }[];
   readonly reviewed: string | null;
 };
+
+/**
+ * Reads every issue of the project with one `gh` call: upper-case state by
+ * issue number, or null when `gh` failed or its answer was unusable.
+ */
+export function readIssueStates(
+  runGh: (args: string[]) => { status: number | null; stdout: string },
+): Map<number, string> | null;

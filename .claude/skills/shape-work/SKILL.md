@@ -39,7 +39,7 @@ Answer each in one line. One that fails stops the work or changes the scope.
 - **The maintainer's decisions.** A dataset, a runtime dependency in an SDK package, anything whose terms an SDK package would carry, the licence, `PRIVACY.md`, `SECURITY.md`. State the question; do not settle it.
 - **Privacy.** What leaves the device, to which origin, and when; what is stored; what is written into a shared link (a link is pasted, logged and kept by whoever receives it). A new origin means a CSP change and, for the reference site, `PRIVACY.md`.
 - **Data terms.** The provider's terms allow this use, commercial use for anything an SDK package ships, and the attribution is shown and listed in `ATTRIBUTIONS.md`.
-- **Cost on a slow connection.** Requests per action, bytes on the first view, Save data, and the load on public providers nobody pays for.
+- **Cost on a slow connection.** Requests per action, bytes on the first view, and the load on public providers nobody pays for.
 - **Access.** A keyboard and a single-tap route for every gesture, what a screen reader hears, WCAG 2.2 AA in both themes.
 - **Language.** Copy through the message catalogue in English and Afrikaans, right-to-left layout, longer text.
 - **Embedding.** It works in a host that lacks the optional services and the reference host's adapters, and it renders on the server.

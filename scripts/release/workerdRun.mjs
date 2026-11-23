@@ -8,8 +8,9 @@
  *
  *   node scripts/release/workerdRun.mjs <path to the built Worker module>
  *
- * Miniflare is the one the Cloudflare Vite plugin already installs for the
- * reference host; this script adds no dependency. It listens on 127.0.0.1
+ * Miniflare is a root devDependency, pinned exactly (it is a prerelease), so
+ * this script does not rely on the Cloudflare Vite plugin's copy being
+ * hoisted. It listens on 127.0.0.1
  * only (set explicitly below), on a port the system picks, for one request.
  */
 import path from "node:path";

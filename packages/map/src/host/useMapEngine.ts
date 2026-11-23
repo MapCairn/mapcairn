@@ -5,7 +5,6 @@ import {
   type MapAdapter,
   type MapClickEvent,
   MapEngineError,
-  omittedLayers,
   type ViewState,
 } from "@mapcairn/core";
 import { useLatestRef } from "@mapcairn/react";
@@ -17,12 +16,7 @@ import {
   useRef,
   useState,
 } from "react";
-import {
-  useMapAdapterFactory,
-  usePreferences,
-  useSaveData,
-  useSettings,
-} from "../services";
+import { useMapAdapterFactory, usePreferences, useSettings } from "../services";
 import type { MapContextValue } from "./MapContext";
 
 /** Zoom differences below this count as equal when deciding whether a limit is reached. */
@@ -76,15 +70,6 @@ export interface UseMapEngineOptions {
  */
 export type MapEngineState = Omit<MapContextValue, "onUserZoom">;
 
-/**
- * Identifies what the engine was last asked to draw: the basemap and the
- * layers it leaves out. A change of Save data redraws only a basemap whose
- * key changes with it.
- */
-function drawKey(basemap: BasemapDefinition, saveData: boolean): string {
-  return `${basemap.id}|${omittedLayers(basemap, saveData).join(",")}`;
-}
-
 /** Turns any mount or basemap failure into the typed engine error. */
 function toEngineError(reason: unknown): MapEngineError {
   if (reason instanceof MapEngineError) {
@@ -102,10 +87,6 @@ function toEngineError(reason: unknown): MapEngineError {
  * basemaps on it with `setBasemap`, and tracks view, loading and errors.
  *
  * @remarks
- * - Save data (`useSaveData`) goes to the adapter on mount and on every swap.
- *   Switching it redraws the current basemap on the same engine, but only
- *   when that basemap lists layers to leave out (`saveDataOmitLayers`); for
- *   any other it changes nothing the engine draws, so nothing reloads.
  * - The engine gets a fresh element, created here and appended to the slot,
  *   so React never renders into or reclasses engine DOM.
  * - The engine mounts once, and again only after a failed mount is retried.
@@ -138,8 +119,6 @@ export function useMapEngine(options: UseMapEngineOptions): MapEngineState {
   const { reducedMotion } = usePreferences();
   const latest = useLatestRef(options);
   const reducedMotionRef = useLatestRef(reducedMotion);
-  const saveData = useSaveData();
-  const saveDataRef = useLatestRef(saveData);
   const { projection } = useSettings().settings;
   const projectionRef = useLatestRef(projection);
   /** The shape the engine was last given, so only a change redraws the overlays. */
@@ -149,8 +128,8 @@ export function useMapEngine(options: UseMapEngineOptions): MapEngineState {
   const viewRef = useRef(options.initialView);
   const frameRef = useRef(0);
   const appliedBasemapRef = useRef<BasemapDefinition | null>(null);
-  /** The {@link drawKey} of the last basemap the engine was asked to draw. */
-  const appliedKeyRef = useRef("");
+  /** The id of the last basemap the engine was asked to draw. */
+  const appliedIdRef = useRef("");
   /** The basemap the engine last loaded: what a failed swap leaves on screen. */
   const loadedBasemapRef = useRef<BasemapDefinition | null>(null);
   const basemapTokenRef = useRef(0);
@@ -194,13 +173,13 @@ export function useMapEngine(options: UseMapEngineOptions): MapEngineState {
     (target: MapAdapter, next: BasemapDefinition) => {
       basemapTokenRef.current += 1;
       const token = basemapTokenRef.current;
-      appliedKeyRef.current = drawKey(next, saveDataRef.current);
+      appliedIdRef.current = next.id;
       const isCurrent = () =>
         token === basemapTokenRef.current && adapterRef.current === target;
       cycleErrorRef.current = false;
       setError(null);
       setLoaded(false);
-      target.setBasemap(next, { saveData: saveDataRef.current }).then(
+      target.setBasemap(next).then(
         () => {
           if (isCurrent()) {
             loadedBasemapRef.current = next;
@@ -218,7 +197,7 @@ export function useMapEngine(options: UseMapEngineOptions): MapEngineState {
           // Set by the mount, which always finishes before the first swap.
           const kept = loadedBasemapRef.current as BasemapDefinition;
           appliedBasemapRef.current = kept;
-          appliedKeyRef.current = drawKey(kept, saveDataRef.current);
+          appliedIdRef.current = kept.id;
           // The kept basemap was already drawn; the adapter reports its
           // reload through `loading`.
           setLoaded(true);
@@ -227,7 +206,7 @@ export function useMapEngine(options: UseMapEngineOptions): MapEngineState {
         },
       );
     },
-    [adapterRef, latest, saveDataRef],
+    [adapterRef, latest],
   );
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: `attempt` is the trigger; the basemap is read from `latest` so a basemap change never remounts the engine.
@@ -238,8 +217,6 @@ export function useMapEngine(options: UseMapEngineOptions): MapEngineState {
       return;
     }
     const target = latest.current.basemap;
-    // What this mount is asked for, not what Save data is by the time it ends.
-    const mountedSaveData = saveDataRef.current;
     const mountedProjection = projectionRef.current;
     const next = createAdapter();
     const element = document.createElement("div");
@@ -323,7 +300,6 @@ export function useMapEngine(options: UseMapEngineOptions): MapEngineState {
         view: viewRef.current,
         basemap: target,
         reducedMotion: reducedMotionRef.current,
-        saveData: mountedSaveData,
         projection: mountedProjection,
       })
       .then(
@@ -333,7 +309,7 @@ export function useMapEngine(options: UseMapEngineOptions): MapEngineState {
           }
           adapterRef.current = next;
           appliedBasemapRef.current = target;
-          appliedKeyRef.current = drawKey(target, mountedSaveData);
+          appliedIdRef.current = target.id;
           loadedBasemapRef.current = target;
           drawnProjectionRef.current = mountedProjection;
           next.setKeyboardEnabled(false);
@@ -381,7 +357,6 @@ export function useMapEngine(options: UseMapEngineOptions): MapEngineState {
     adapterRef,
     latest,
     reducedMotionRef,
-    saveDataRef,
     projectionRef,
     scheduleView,
     writeZoom,
@@ -392,13 +367,13 @@ export function useMapEngine(options: UseMapEngineOptions): MapEngineState {
       !adapter ||
       adapterRef.current !== adapter ||
       !appliedBasemapRef.current ||
-      appliedKeyRef.current === drawKey(basemap, saveData)
+      appliedIdRef.current === basemap.id
     ) {
       return;
     }
     appliedBasemapRef.current = basemap;
     applyBasemap(adapter, basemap);
-  }, [adapter, adapterRef, applyBasemap, basemap, saveData]);
+  }, [adapter, adapterRef, applyBasemap, basemap]);
 
   useEffect(() => {
     adapter?.setAnimationEnabled(!reducedMotion);

@@ -991,7 +991,6 @@ describe("the default basemap follows the theme", () => {
     await settle();
     expect(setBasemap).toHaveBeenCalledWith(
       expect.objectContaining({ id: "fiord" }),
-      { saveData: false },
     );
     expect(services.fakes.url.read().basemapId).toBe("fiord");
     expect(services.fakes.settings.get().basemapId).toBeNull();
@@ -1038,7 +1037,6 @@ describe("basemaps", () => {
     expect(services.fakes.settings.get().basemapId).toBe("osm");
     expect(setBasemap).toHaveBeenCalledWith(
       expect.objectContaining({ id: "osm", name: "basemap.osm.name" }),
-      { saveData: false },
     );
     expect(services.fakes.maps).toHaveLength(1);
     await vi.waitFor(() =>
@@ -1147,7 +1145,6 @@ describe("basemaps", () => {
       expect(screen.queryByTestId("tile-error")).toBeNull();
       expect(setBasemap).toHaveBeenCalledWith(
         expect.objectContaining({ id: "positron" }),
-        { saveData: false },
       );
 
       fireEvent.click(
