@@ -8,7 +8,7 @@ import { describe, expect, it } from "vitest";
 const webRoot = join(dirname(fileURLToPath(import.meta.url)), "..");
 const bundleRoot = join(
   webRoot,
-  ".cloudflare/output/v0/workers/default/bundle",
+  ".cloudflare/output/v1/workers/default/bundle",
 );
 
 /**

@@ -10,7 +10,7 @@ import { describe, expect, it } from "vitest";
 const webRoot = join(dirname(fileURLToPath(import.meta.url)), "..");
 const chunkDirectory = join(
   webRoot,
-  ".cloudflare/output/v0/workers/default/bundle/assets/js",
+  ".cloudflare/output/v1/workers/default/bundle/assets/js",
 );
 
 /**

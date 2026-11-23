@@ -97,4 +97,4 @@ For a free or smaller model, also:
 
 - Give it one or two small issues per prompt, not a long list, and tell it to work only in its own worktree.
 - Before you assign `visual-check` work, check the model can read images (`visual-check` says how).
-- For the small tier, `docs/guides/working-with-agents.md` says when to use it and how to brief it.
+- For the small tier, `docs/guides/working-with-agents.md` says when to use it and how to brief it. Its section "Briefing a free or smaller model" has a block of checkable lines to add to the brief, including `Fixes` against `Part of`.

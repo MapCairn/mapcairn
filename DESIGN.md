@@ -207,7 +207,7 @@ Outside core, other browser APIs are allowed in components and hooks. A search o
 - Runtime type checks: `instanceof Element` and `instanceof Node` (`packages/map/src/chrome/MapReadout/MapReadout.tsx`, `Attribution.tsx`, `DrawToolbar.tsx`).
 - The WebMCP call `document.modelContext` (`packages/react/src/hooks/useModelContextTool.ts`).
 
-No reason is recorded for where this boundary falls; the message on each denied entry gives its own reason.
+Reading the clock, making blob URLs and calling `document.modelContext` are allowed there on purpose (`ARCHITECTURE.md`, "Layers and dependency rules"); for the rest, no reason is recorded for where this boundary falls. The message on each denied entry gives its own reason.
 
 The code quality rules in `biome.jsonc`, all errors:
 

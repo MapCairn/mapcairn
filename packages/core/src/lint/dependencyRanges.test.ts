@@ -78,4 +78,12 @@ describe("third-party dependency ranges", () => {
       .map(({ manifest, name, range }) => `${manifest}: ${name}@${range}`);
     expect(wrong).toEqual([]);
   });
+
+  it("declares Miniflare, which the workerd consumer leg imports, at the root", () => {
+    const root = thirdPartyEntries().filter(
+      ({ manifest, name }) =>
+        manifest === "package.json" && name === "miniflare",
+    );
+    expect(root.map(({ section }) => section)).toEqual(["devDependencies"]);
+  });
 });
