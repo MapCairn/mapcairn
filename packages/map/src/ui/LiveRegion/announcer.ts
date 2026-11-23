@@ -23,7 +23,7 @@ export interface AnnounceOptions {
 export type AnnounceText = (message: string, options?: AnnounceOptions) => void;
 
 /**
- * Sends a message to the one app-wide announcer: text, or a {@link Message}
+ * Sends a message to the one app-wide announcer: text, or a `Message`
  * (a key and its parameters) that is formatted with the active catalogue
  * just before it is queued.
  */

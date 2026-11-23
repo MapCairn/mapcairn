@@ -9,7 +9,7 @@ import type { Announce, AnnounceOptions } from "./announcer";
 
 /**
  * For tests that replace `useAnnounce` with a spy: an `announce` that hands
- * the spy a {@link Message} as its English text, as the live region would
+ * the spy a `Message` as its English text, as the live region would
  * say it, and every message to `onMessage` as it was given, so a test can
  * assert on the key and parameters as well as on the words.
  */

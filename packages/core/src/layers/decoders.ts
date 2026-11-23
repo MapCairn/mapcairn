@@ -130,7 +130,7 @@ export const geojsonDecoder: Decoder = (raw, fields) => {
  * feed, detail and identify functions do, so a host that reads a response of
  * its own gets the same typed refusal.
  *
- * @param prepare Reshapes `raw` for the decoder. It runs inside the same
+ * @param prepare - Reshapes `raw` for the decoder. It runs inside the same
  *   guard as the decoder, so a response that breaks it is refused too. It
  *   leaves `raw` as it is by default.
  * @throws `LayerError` `invalid` when no decoder has that name, or when

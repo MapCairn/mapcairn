@@ -9,7 +9,7 @@ export interface CatalogueView {
   readonly skipped: number;
   /** Where a refresh of the list has got to. `idle` unless `ready`. */
   readonly refresh: CatalogueRefresh;
-  /** Whether the last attempt to load failed (see {@link loadFailed}), so Try again has something to do. */
+  /** Whether the last attempt to load failed (see `loadFailed`), so Try again has something to do. */
   readonly failed: boolean;
   /**
    * True when the catalogue was not ready at mount, so its list arrived or

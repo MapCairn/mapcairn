@@ -37,7 +37,7 @@ const FILE: SavedFile = {
 };
 
 /**
- * Runs the shared behavioural suite for a {@link FileSaver}. Every test calls
+ * Runs the shared behavioural suite for a `FileSaver`. Every test calls
  * `create` for a fresh subject.
  */
 export function runFileSaverContract(
