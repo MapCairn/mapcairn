@@ -96,10 +96,16 @@ describe("release.yml", () => {
     ]);
   });
 
-  it("names each run by its mode and version, so an approval cannot be mistaken for a rehearsal", () => {
+  it("names a dispatched run by its mode and version, and lets a push run keep the commit subject GitHub shows, so a run is read by its release and not a hash", () => {
     expect(CLEAN).toMatch(
-      /^run-name: Release \$\{\{ inputs\.mode \|\| 'publish' \}\} \$\{\{ inputs\.version \|\| github\.sha \}\}$/m,
+      /^run-name: \$\{\{ inputs\.version && format\('Release \{0\} \{1\}', inputs\.mode, inputs\.version\) \|\| ' ' \}\}$/m,
     );
+    expect(CLEAN).not.toMatch(/run-name:.*github\.sha/);
+  });
+
+  it("uses the version input only for display in the run name: no step reads the commit message or the run name", () => {
+    expect(CLEAN).not.toMatch(/head_commit/);
+    expect(CLEAN).not.toMatch(/github\.run_name/);
   });
 
   it("runs on a push to main that changes the changelog, and on a dispatch that defaults to a rehearsal", () => {
