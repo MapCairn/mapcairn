@@ -21,7 +21,7 @@
  *
  * Everything happens in a temporary folder outside the repository, which is
  * removed at the end. It installs from the registry, so it needs a network;
- * the repository's `.npmrc` (the seven-day minimum age) is copied there, and
+ * the repository's `.npmrc` (the three-day minimum age) is copied there, and
  * the versions of third-party tools come from the root lockfile, which this
  * repository has already installed and tested.
  *
@@ -64,6 +64,7 @@ import {
   corepackCliPath,
   INSTALL_TIMEOUT,
   miniflareAvailable,
+  PNPM_MINIMUM_RELEASE_AGE,
   playwrightAvailable,
   publishedLegSkip,
   WORKERD_TIMEOUT,
@@ -142,9 +143,6 @@ export const LANDMARKS = [
   { name: "the zoom in button", pattern: /aria-label="Zoom in"/ },
   { name: "the attribution", pattern: /OpenStreetMap|Attribution/i },
 ];
-
-/** Seven days, in the minutes pnpm counts a release age in. */
-const PNPM_MINIMUM_RELEASE_AGE = 7 * 24 * 60;
 
 /** The characters of a page a failure message shows. */
 const EXCERPT = 1500;
@@ -693,7 +691,7 @@ function builtCss(folder) {
 /**
  * The settings pnpm reads from `pnpm-workspace.yaml`: a missing peer
  * dependency fails the install, none is added automatically, a release must
- * be seven days old (pnpm counts the age in minutes), and an SDK package
+ * be three days old (pnpm counts the age in minutes), and an SDK package
  * resolves to its tarball, since none is on the registry yet.
  *
  * @param {Record<string, string>} overrides Package name to `file:` spec.
@@ -1340,7 +1338,7 @@ function checkMixed({ root, packed, published, versions }) {
  * installs that version of the four packages from the registry instead of
  * packing the repository's, skips the pnpm install, and audits the
  * signatures of what it installed. The Yarn and Bun installs are skipped
- * for the published packages too, because their seven-day release age would
+ * for the published packages too, because their three-day release age would
  * refuse a release made today; with `tarballs` they run on the tarballs.
  *
  * @param {{ published?: string | null, tarballs?: string | null }} [options] `tarballs` is a folder of the four packed tarballs to check, copied so the originals are untouched; without it the packages are packed here.
