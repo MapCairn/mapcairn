@@ -32,10 +32,9 @@ const WEBKIT_SPECS =
 // more specs shows it is worth the time.
 const FIREFOX_SPECS = /(app-shell|basemap|keyboard|sheet|product)\.spec\.ts$/;
 
-// A CI runner has no GPU, and Firefox then blocks WebGL ("AllowWebgl2:false
-// restricts context creation", FEATURE_FAILURE_WEBGL_EXHAUSTED_DRIVERS), so
-// MapLibre cannot start. These preferences let it use software rendering, the
-// way Chromium does with SwiftShader.
+// Preferences that ask Firefox for software WebGL. Whether they are needed
+// under Xvfb in CI is not yet checked; headless Firefox without them gets no
+// WebGL context on the runner.
 const FIREFOX_SOFTWARE_WEBGL = {
   "webgl.disabled": false,
   "webgl.force-enabled": true,

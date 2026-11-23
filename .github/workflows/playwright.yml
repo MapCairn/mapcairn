@@ -173,32 +173,11 @@ jobs:
         run: |
           npm ci
 
-      - name: Probe WebGL in Firefox
-        continue-on-error: true
-        working-directory: packages/web
-        run: |
-          cat > /tmp/probe.mjs <<'EOF'
-          import { firefox } from "@playwright/test";
-          const browser = await firefox.launch({ headless: false, firefoxUserPrefs: { "webgl.disabled": false, "webgl.force-enabled": true, "webgl.enable-webgl2": true, "webgl.out-of-process": false, "gfx.webrender.software": true } });
-          const page = await browser.newPage();
-          page.on("console", (m) => console.log("console:", m.text()));
-          await page.goto("about:blank");
-          console.log(JSON.stringify(await page.evaluate(() => {
-            const out = {};
-            for (const kind of ["webgl2", "webgl"]) {
-              const c = document.createElement("canvas").getContext(kind);
-              out[kind] = c ? c.getParameter(c.RENDERER) : null;
-            }
-            return out;
-          })));
-          await browser.close();
-          EOF
-          cp /tmp/probe.mjs ./probe.mjs
-          LIBGL_ALWAYS_SOFTWARE=1 xvfb-run -a node probe.mjs || true
-          rm probe.mjs
-
+      # The runner has no GPU, so headless Firefox gets no WebGL context and
+      # MapLibre cannot start. Headed under Xvfb with software GL (llvmpipe) it
+      # does.
       - name: Run the Firefox project
-        run: LIBGL_ALWAYS_SOFTWARE=1 xvfb-run -a npm run test:e2e -w @mapcairn/web -- --project=firefox --headed --max-failures=2
+        run: LIBGL_ALWAYS_SOFTWARE=1 xvfb-run -a npm run test:e2e -w @mapcairn/web -- --project=firefox --headed
 
       - name: Upload Playwright test results
         if: failure()
