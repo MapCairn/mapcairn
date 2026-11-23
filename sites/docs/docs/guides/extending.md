@@ -53,7 +53,7 @@ What is tested: the README's whole `main.tsx` compiled as an outside app writes 
 
 ### Server and Worker builds that import the adapter
 
-A host that renders on a server, or builds a Worker, and imports `@mapcairn/sdk/adapter-maplibre` from code that build follows may bundle the map engine into the server or Worker build. It runs nothing there, and it is large: a Worker build of a file that imports the adapter measured 1,538 kB of JavaScript, almost all of it the engine (`docs/plans/0016-adapter-maplibre-package.md`). Import the subpath only in code that runs in the browser (a client-only module or a dynamic import behind it), and keep the root `@mapcairn/sdk` for the code both sides share: the root never imports the adapter or the engine. The reference host does this with the `keepBrowserEngineOutOfWorker` plugin in `packages/web/vite.config.ts`.
+A host that renders on a server, or builds a Worker, and imports `@mapcairn/sdk/adapter-maplibre` from code that build follows may bundle the map engine into the server or Worker build. It runs nothing there, and it is large: a Worker build of a file that imports the adapter measured 1,538 kB of JavaScript, almost all of it the engine. Import the subpath only in code that runs in the browser (a client-only module or a dynamic import behind it), and keep the root `@mapcairn/sdk` for the code both sides share: the root never imports the adapter or the engine. The reference host does this with the `keepBrowserEngineOutOfWorker` plugin in `packages/web/vite.config.ts`.
 
 ## Theme the SDK with your own colours
 

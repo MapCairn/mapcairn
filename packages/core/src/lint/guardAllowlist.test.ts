@@ -631,7 +631,9 @@ describe("what the allowlist refuses", () => {
     );
 
     it("reads the .git file on disk when no reader is given", () => {
-      const root = realpathSync(mkdtempSync(path.join(tmpdir(), "guard-")));
+      const root = realpathSync.native(
+        mkdtempSync(path.join(tmpdir(), "guard-")),
+      );
       try {
         const zone = path.join(root, ".claude", "worktrees");
         mkdirSync(path.join(zone, "real"), { recursive: true });

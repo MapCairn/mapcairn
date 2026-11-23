@@ -87,7 +87,7 @@ Inputs and pull request text reach scripts only through `env`, and `verifyReleas
 
 ### A package npm does not have yet
 
-A package that has never been on npm cannot be published by the `npm` job. npm lets a trusted publisher be linked only on the settings page of an existing package, so a first upload has no OIDC credential to use, and the job holds no token and never will. A release that adds a package (the umbrella, `@mapcairn/sdk`, in plan 0015) therefore needs one human step, and the workflow handles it this way:
+A package that has never been on npm cannot be published by the `npm` job. npm lets a trusted publisher be linked only on the settings page of an existing package, so a first upload has no OIDC credential to use, and the job holds no token and never will. A release that adds a package (the umbrella, `@mapcairn/sdk`, in `0.1.0-rc.3`) therefore needs one human step, and the workflow handles it this way:
 
 - The `npm` job reads the registry for each package separately (`verifyRelease.mjs package-state` prints `published`, `missing` or `new`), all of them before anything is published, and an error annotation names each `new` package as soon as it is found. It skips a package whose version is on npm, publishes the ones npm already has, and leaves a `new` one alone.
 - When it has handled the others, it fails, with an error annotation for each `new` package that says it is not on npm yet, why, and what to do. The run is red until the step is done. It does not skip the package with a notice, because a green run would hide that the release is not complete, and it does not stop before the others, because a package that npm has needs its version and nothing is gained by holding it back.
