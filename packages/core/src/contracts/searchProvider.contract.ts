@@ -33,7 +33,9 @@ export interface SearchProviderControls {
 
 /** One search provider under test, with its controls. */
 export interface SearchProviderSubject {
+  /** The search provider under test. */
   readonly provider: SearchProvider;
+  /** How the contract scripts it. */
   readonly controls: SearchProviderControls;
 }
 

@@ -19,7 +19,9 @@ export interface FeatureSelectionControls {
 
 /** One feature selection under test, with its controls. */
 export interface FeatureSelectionSubject {
+  /** The feature selection under test. */
   readonly selection: FeatureSelection;
+  /** How the contract scripts it. */
   readonly controls: FeatureSelectionControls;
 }
 

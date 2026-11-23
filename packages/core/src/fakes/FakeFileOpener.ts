@@ -27,6 +27,7 @@ interface Waiting {
  * whether a picker is open. It rejects only with `FileOpenError`.
  */
 export class FakeFileOpener implements FileOpener {
+  /** The options of every `open` call, in order. */
   readonly opens: FileOpenOptions[] = [];
 
   #failure: FakeFileOpenFailure | null = null;
@@ -47,6 +48,7 @@ export class FakeFileOpener implements FileOpener {
     this.#failure = null;
   }
 
+  /** Waits, as a real picker does, until `choose` or `cancel` settles it. It rejects at once when `failWith("unsupported")` is scripted. */
   open(options: FileOpenOptions): Promise<OpenedFile> {
     this.opens.push(options);
     this.#settle((waiting) => waiting.reject(new FileOpenError("cancelled")));

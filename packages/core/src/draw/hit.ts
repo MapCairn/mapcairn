@@ -27,8 +27,11 @@ export const HANDLE_HIT_RADIUS_TOUCH_PX = 22;
 
 /** A handle that has been placed on the screen. */
 export interface ProjectedHandle {
+  /** The handle's id. */
   readonly id: string;
+  /** The handle's position in pixels. */
   readonly point: PixelPoint;
+  /** What the handle stands for. */
   readonly kind: MapEditHandleKind;
 }
 

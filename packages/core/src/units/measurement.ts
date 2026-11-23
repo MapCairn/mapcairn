@@ -23,7 +23,9 @@ export type AreaUnit = "m2" | "ha" | "km2" | "ft2" | "ac" | "mi2";
 
 /** A rounded measurement and the unit it is in. */
 export interface MeasurementReading<Unit extends string> {
+  /** The measurement, rounded for reading. */
   readonly value: number;
+  /** The unit the value is in. */
   readonly unit: Unit;
 }
 

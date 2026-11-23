@@ -51,6 +51,7 @@ export type FocusTarget =
  *   example) is active.
  */
 export interface SurfaceState {
+  /** Which surface is open: none, the sheet, search, or the measure, draw, pin or directions tool. */
   readonly surface: SurfaceKind;
   /** The sheet's detent. Meaningful only while `surface` is `"sheet"`. */
   readonly sheetDetent: SheetDetent;

@@ -1,5 +1,8 @@
 # `@mapcairn/adapter-maplibre`
 
+[![npm version](https://img.shields.io/npm/v/@mapcairn/adapter-maplibre)](https://www.npmjs.com/package/@mapcairn/adapter-maplibre)
+[![GitHub Release](https://img.shields.io/github/v/release/MapCairn/mapcairn)](https://github.com/MapCairn/mapcairn/releases)
+
 The MapLibre GL JS adapter for MapCairn's `MapAdapter` port, and the styles that fit the engine into the map region. It is the one place in the SDK that imports a map engine: `@mapcairn/map` draws the interface and asks a `MapAdapter` for the map, and this package is the adapter that draws it with MapLibre. It builds on [`@mapcairn/core`](https://github.com/MapCairn/mapcairn/tree/main/packages/core) and [`@mapcairn/theme`](https://github.com/MapCairn/mapcairn/tree/main/packages/theme) only.
 
 Most apps should install [`@mapcairn/sdk`](https://github.com/MapCairn/mapcairn/tree/main/packages/sdk) instead, which has this package already: it re-exports it at `@mapcairn/sdk/adapter-maplibre`, and its root stays free of the map engine. Install `@mapcairn/adapter-maplibre` on its own as the advanced option, for a host that wants fewer dependencies.

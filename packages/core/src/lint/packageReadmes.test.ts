@@ -124,6 +124,18 @@ describe.each(BUILT_SDK_PACKAGES)("the README of @mapcairn/%s", (name) => {
     expect(readme.split("\n")[0]).toBe(`# \`${packageName}\``);
   });
 
+  it("shows the npm version badge of this package and the GitHub Release badge under the title, each linking to its page", () => {
+    const [, blank, npmBadge, releaseBadge, afterBadges] = readme.split("\n");
+    expect(blank).toBe("");
+    expect(npmBadge).toBe(
+      `[![npm version](https://img.shields.io/npm/v/${packageName})](https://www.npmjs.com/package/${packageName})`,
+    );
+    expect(releaseBadge).toBe(
+      "[![GitHub Release](https://img.shields.io/github/v/release/MapCairn/mapcairn)](https://github.com/MapCairn/mapcairn/releases)",
+    );
+    expect(afterBadges).toBe("");
+  });
+
   it.skipIf(!SDK_PACKAGES.includes(name))(
     "installs the package with npm, pnpm and yarn, side by side",
     () => {

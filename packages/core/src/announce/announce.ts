@@ -92,7 +92,9 @@ export interface IdentifyReport {
 
 /** What to say about one tap, and how urgently. */
 export interface IdentifyAnnouncement {
+  /** What to say. */
   readonly message: Message;
+  /** `assertive` interrupts what is being read; `polite` waits for it. */
   readonly priority: "polite" | "assertive";
 }
 

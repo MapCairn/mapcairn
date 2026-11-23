@@ -24,7 +24,9 @@ import type { UrlState } from "./url";
  * React context. Components never import an adapter, and reach a browser service only through a port.
  */
 export interface Services {
+  /** Makes the map adapter the map view mounts. */
   readonly createMapAdapter: MapAdapterFactory;
+  /** Finds places by name. */
   readonly search: SearchProvider;
   /**
    * Suggests places while the person types. Optional: a host that supplies
@@ -33,8 +35,11 @@ export interface Services {
    * privacy text must say so.
    */
   readonly suggestions?: SuggestionProvider;
+  /** Finds the device's position. */
   readonly location: LocationProvider;
+  /** Remembers settings between visits. */
   readonly settings: SettingsStore;
+  /** Copies text, such as a link. */
   readonly clipboard: ClipboardPort;
   /** Offers a file the ui built, such as exported shapes, as a download. */
   readonly fileSaver: FileSaver;
@@ -44,10 +49,13 @@ export interface Services {
    * must not require it.
    */
   readonly fileOpener?: FileOpener;
+  /** Reads and writes the shareable state in the address. */
   readonly url: UrlState;
+  /** Reads the system colour scheme and applies the theme shown. */
   readonly theme: ThemeSource;
   /** Formats every piece of user-facing text for the active language. */
   readonly messages: MessageCatalogue;
+  /** Reports the device's preferences, such as reduced motion. */
   readonly preferences: DevicePreferences;
   /**
    * The data layers on offer, and whether they have loaded. A host with fixed
