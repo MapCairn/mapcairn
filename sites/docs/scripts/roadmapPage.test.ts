@@ -132,6 +132,13 @@ describe("buildRoadmapPage", () => {
     expect(page()).toContain("Work under way. These run in parallel.");
   });
 
+  it("says Now and Next are what 1.0.0 needs and Later waits until after it", () => {
+    expect(page()).toContain(
+      "Needed for 1.0.0, queued behind Now, in this order.",
+    );
+    expect(page()).toContain("Waits until after 1.0.0, in this order.");
+  });
+
   it("says so for a milestone with no issues, with no bar, and for one the counts miss", () => {
     const text = page();
     expect(card(text, "Layer controls")).toContain("No issues yet.");
