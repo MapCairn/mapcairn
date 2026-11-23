@@ -127,7 +127,7 @@ function freshnessOf(result: CountsResult): string {
 /**
  * The text of the roadmap page: a docs page whose source is Markdown with a
  * few plain elements for the cards, so the build gives it a search entry, a
- * Markdown copy and an `llms-full.txt` entry like any other page. The copy
+ * Markdown copy and a place in the `llms-full` files like any other page. The copy
  * drops the elements and keeps the text.
  * @param roadmap - The ranked list from `ROADMAP.md`.
  * @param result - The issue counts and where they came from.

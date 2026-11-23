@@ -8,7 +8,8 @@ import {
   type CopyContext,
   copyText,
   type DocPage,
-  llmsFullTxt,
+  llmsFullFiles,
+  llmsFullIndexTxt,
   llmsTxt,
   parseDocSource,
   robotsTxt,
@@ -27,7 +28,7 @@ export function readDocPages(docsDir: string): DocPage[] {
 
 /**
  * Writes the agent-facing files into a finished build: a Markdown copy of
- * every page, `llms.txt`, `llms-full.txt` and `robots.txt`, and, in each
+ * every page, `llms.txt`, the `llms-full-<area>` files, an `llms-full.txt` that only points to them, and `robots.txt`, and, in each
  * page's head, a link to its copy. All static files: nothing negotiates on a
  * request header.
  * @param outDir - The build folder.
@@ -53,7 +54,13 @@ export function writeMarkdownFiles(
     );
   }
   writeFileSync(join(outDir, "llms.txt"), llmsTxt(pages, context));
-  writeFileSync(join(outDir, "llms-full.txt"), llmsFullTxt(pages, context));
+  writeFileSync(
+    join(outDir, "llms-full.txt"),
+    llmsFullIndexTxt(pages, context),
+  );
+  for (const file of llmsFullFiles(pages, context)) {
+    writeFileSync(join(outDir, file.name), file.text);
+  }
   writeFileSync(join(outDir, "robots.txt"), robotsTxt(context));
 }
 

@@ -143,8 +143,7 @@ function linkSections(): string {
 ## Docs
 
 - [Documentation site](${SITE_URL}${DOCS_PATH}): the SDK's documentation, built at deploy time from Markdown, with no third party.
-- [Documentation index](${SITE_URL}${DOCS_PATH}llms.txt): every documentation page as a plain Markdown file, with a one-line description.
-- [Documentation full text](${SITE_URL}${DOCS_PATH}llms-full.txt): the whole text of every documentation page in one file.
+- [Documentation index](${SITE_URL}${DOCS_PATH}llms.txt): every documentation page as a plain Markdown file, with a one-line description and its size, and the documentation's full text split by area into files of a bounded size.
 - [Documentation pages as data](${SITE_URL}${DOCS_PATH}pages.json): every page with its title, address, description, headings and Markdown, as JSON.
 - [API catalogue as data](${SITE_URL}${DOCS_PATH}api.json): every export of the SDK packages with its signature and first sentence, as JSON.
 ${docs}

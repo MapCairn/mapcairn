@@ -2,8 +2,13 @@
 // Copyright MapCairn contributors
 import { describe, expect, it } from "vitest";
 import {
+  areaOf,
   copyText,
-  llmsFullTxt,
+  isListedInIndex,
+  LLMS_FULL_CEILING,
+  LLMS_INDEX_CEILING,
+  llmsFullFiles,
+  llmsFullIndexTxt,
   llmsTxt,
   parseDocSource,
   robotsTxt,
@@ -155,26 +160,39 @@ describe("copyText", () => {
 });
 
 describe("the llms files and robots.txt", () => {
-  it("llms.txt lists the pages in the order given, with their descriptions and copy links", () => {
+  it("llms.txt lists the pages in the order given, with their descriptions, copy links and sizes", () => {
     const text = llmsTxt([GUIDE, HOME], CONTEXT);
     expect(
       text.startsWith("# Example documentation\n\n> Docs for the example"),
     ).toBe(true);
+    const size = Buffer.byteLength(copyText(GUIDE, [GUIDE, HOME], CONTEXT));
     expect(text).toContain(
-      "- [The guide](https://example.test/docs/guides/x.md): A guide.",
+      `- [The guide](https://example.test/docs/guides/x.md): A guide. (${size} bytes)`,
     );
-    expect(text.indexOf("The guide")).toBeLessThan(text.indexOf("Get started"));
+    expect(text.indexOf("- [The guide]")).toBeLessThan(
+      text.indexOf("- [Get started]"),
+    );
   });
 
-  it("llms-full.txt holds the whole copy of every page in order", () => {
+  it("llms.txt lists each full-text file with its size and page count", () => {
     const pages = [HOME, GUIDE];
-    const full = llmsFullTxt(pages, CONTEXT);
-    for (const page of pages) {
-      expect(full).toContain(copyText(page, pages, CONTEXT).trim());
-    }
-    expect(full.indexOf("# Get started")).toBeLessThan(
-      full.indexOf("# The guide"),
+    const text = llmsTxt(pages, CONTEXT);
+    const [file] = llmsFullFiles(pages, CONTEXT);
+    expect(text).toContain(
+      `- [llms-full-guides.txt](https://example.test/docs/llms-full-guides.txt): guides (Get started to The guide), 2 pages, ${file?.bytes} bytes`,
     );
+  });
+
+  it("llms-full.txt holds no page content and names each area file with its size", () => {
+    const pages = [HOME, GUIDE];
+    const [file] = llmsFullFiles(pages, CONTEXT);
+    const text = llmsFullIndexTxt(pages, CONTEXT);
+    expect(text).toContain("https://example.test/docs/llms.txt");
+    expect(text).toContain(
+      `- [llms-full-guides.txt](https://example.test/docs/llms-full-guides.txt): guides (Get started to The guide), 2 pages, ${file?.bytes} bytes`,
+    );
+    expect(text).not.toContain("npm install");
+    expect(text).not.toContain("Body.");
   });
 
   it("robots.txt blocks nothing and names the sitemap", () => {
@@ -182,5 +200,164 @@ describe("the llms files and robots.txt", () => {
     expect(text).toContain("User-agent: *\nAllow: /");
     expect(text).not.toMatch(/^Disallow:/m);
     expect(text).toContain("Sitemap: https://example.test/docs/sitemap.xml");
+  });
+});
+
+/** A page of the given id whose body is `size` characters of one letter. */
+function pageOf(id: string, size = 10): ReturnType<typeof parseDocSource> {
+  return parseDocSource(
+    id,
+    `---\ntitle: ${id}\ndescription: About ${id}.\n---\n\n${"a".repeat(size)}\n`,
+  );
+}
+
+describe("areaOf and isListedInIndex", () => {
+  it("names the package, the generated document, the changelog or the guides", () => {
+    expect(areaOf("api/core/ClipboardPort")).toBe("core");
+    expect(areaOf("api/adapter-maplibre/index")).toBe("adapter-maplibre");
+    expect(areaOf("api/index")).toBe("guides");
+    expect(areaOf("generated/architecture")).toBe("architecture");
+    expect(areaOf("generated/design")).toBe("design");
+    expect(areaOf("changelog/0.2.0")).toBe("changelog");
+    expect(areaOf("tasks/add-a-layer")).toBe("guides");
+    expect(areaOf("get-started")).toBe("guides");
+  });
+
+  it("lists every page but the members of the API reference", () => {
+    expect(isListedInIndex("guides/embed-a-map")).toBe(true);
+    expect(isListedInIndex("api/index")).toBe(true);
+    expect(isListedInIndex("api/core/index")).toBe(true);
+    expect(isListedInIndex("api/core/ClipboardPort")).toBe(false);
+    expect(isListedInIndex("api/core/contracts/index")).toBe(false);
+  });
+});
+
+describe("llmsFullFiles", () => {
+  it("holds every page once, in order, in a file for its area", () => {
+    const pages = [
+      pageOf("get-started"),
+      pageOf("api/core/index"),
+      pageOf("api/map/index"),
+      pageOf("api/core/A"),
+      pageOf("generated/design"),
+    ];
+    const files = llmsFullFiles(pages, CONTEXT);
+    expect(files.map((file) => file.name)).toEqual([
+      "llms-full-guides.txt",
+      "llms-full-core.txt",
+      "llms-full-map.txt",
+      "llms-full-design.txt",
+    ]);
+    expect(files.flatMap((file) => file.pages.map((page) => page.id))).toEqual([
+      "get-started",
+      "api/core/index",
+      "api/core/A",
+      "api/map/index",
+      "generated/design",
+    ]);
+    const core = files[1];
+    expect(core?.text).toContain("# Example documentation");
+    expect(core?.text).toContain("The core pages of the documentation.");
+    expect(core?.bytes).toBe(Buffer.byteLength(core?.text ?? ""));
+  });
+
+  it("splits an area that is over the ceiling into numbered files, none over it", () => {
+    const pages = Array.from({ length: 12 }, (_, index) =>
+      pageOf(`api/core/P${index}`, 400),
+    );
+    const files = llmsFullFiles(pages, CONTEXT, 2_000);
+    expect(files.length).toBeGreaterThan(1);
+    expect(files.map((file) => file.name)).toEqual(
+      files.map((_, index) => `llms-full-core-${index + 1}.txt`),
+    );
+    for (const file of files) {
+      expect(file.parts).toBe(files.length);
+      expect(file.bytes).toBeLessThanOrEqual(2_000);
+    }
+    expect(files.flatMap((file) => file.pages)).toHaveLength(12);
+  });
+
+  it("gives a page larger than the ceiling a file of its own", () => {
+    const pages = [pageOf("a", 10), pageOf("b", 5_000), pageOf("c", 10)];
+    const files = llmsFullFiles(pages, CONTEXT, 2_000);
+    expect(files.map((file) => file.pages.map((page) => page.id))).toEqual([
+      ["a"],
+      ["b"],
+      ["c"],
+    ]);
+  });
+
+  it("writes exactly the head, the copies joined by a rule, and one closing newline", () => {
+    const pages = [GUIDE, HOME];
+    const [file] = llmsFullFiles(pages, CONTEXT);
+    const copies = pages.map((page) =>
+      copyText(page, pages, CONTEXT).trimEnd(),
+    );
+    expect(file?.text).toBe(
+      `# Example documentation\n\n> Docs for the example\n\nThe guides pages of the documentation. Every file and the size of each is listed in https://example.test/docs/llms.txt.\n\n${copies[0]}\n\n---\n\n${copies[1]}\n`,
+    );
+    expect(file?.pages.map((page) => page.id)).toEqual([
+      "guides/x",
+      "get-started",
+    ]);
+  });
+
+  it("counts bytes, not characters, for a page with an em dash and Afrikaans letters", () => {
+    const page = parseDocSource(
+      "guides/af",
+      "---\ntitle: Afrikaans\ndescription: Dit werk — ê en ë.\n---\n\nDie môre — ê ë ï.\n",
+    );
+    const [file] = llmsFullFiles([page], CONTEXT);
+    expect(file?.text.length).toBeLessThan(Buffer.byteLength(file?.text ?? ""));
+    expect(file?.bytes).toBe(Buffer.byteLength(file?.text ?? ""));
+    const listed = Buffer.byteLength(copyText(page, [page], CONTEXT));
+    expect(llmsTxt([page], CONTEXT)).toContain(`(${listed} bytes)`);
+  });
+
+  it("keeps a file whose size is exactly the ceiling whole and splits one byte over", () => {
+    const pages = [pageOf("api/core/A", 300), pageOf("api/core/B", 300)];
+    const [whole] = llmsFullFiles(pages, CONTEXT, Number.MAX_SAFE_INTEGER);
+    const size = whole?.bytes ?? 0;
+    expect(llmsFullFiles(pages, CONTEXT, size)).toHaveLength(1);
+    expect(llmsFullFiles(pages, CONTEXT, size - 1)).toHaveLength(2);
+  });
+
+  it("puts every page in exactly one file and no file but a single page over the ceiling", () => {
+    const pages = [
+      ...Array.from({ length: 9 }, (_, index) =>
+        pageOf(`api/core/P${index}`, 250 + index * 40),
+      ),
+      pageOf("api/core/Huge", 4_000),
+      pageOf("get-started", 100),
+    ];
+    const files = llmsFullFiles(pages, CONTEXT, 1_500);
+    const ids = files.flatMap((file) => file.pages.map((page) => page.id));
+    expect([...ids].sort()).toEqual(pages.map((page) => page.id).sort());
+    for (const file of files) {
+      if (file.pages.length > 1) {
+        expect(Buffer.byteLength(file.text)).toBeLessThanOrEqual(1_500);
+      }
+    }
+    expect(files.some((file) => file.pages.length > 1)).toBe(true);
+  });
+
+  it("keeps the ceiling at a size a small context can read", () => {
+    expect(LLMS_FULL_CEILING).toBe(150_000);
+  });
+});
+
+describe("llms.txt size", () => {
+  it("stays small however many API pages there are, and under the ceiling", () => {
+    const pages = [
+      pageOf("get-started"),
+      pageOf("api/core/index"),
+      ...Array.from({ length: 2_000 }, (_, index) =>
+        pageOf(`api/core/E${index}`, 300),
+      ),
+    ];
+    const text = llmsTxt(pages, CONTEXT);
+    expect(text).not.toContain("api/core/E0.md");
+    expect(text).toContain("api/core.md");
+    expect(Buffer.byteLength(text)).toBeLessThan(LLMS_INDEX_CEILING);
   });
 });
