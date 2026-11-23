@@ -82,9 +82,9 @@ describe("validateLayerDefinition", () => {
     );
   });
 
-  it("accepts a definition that carries no layer-level data cost", () => {
+  it("accepts a definition that still carries the removed layer-level data cost", () => {
     const definition = copy(SAMPLE_FEED_LAYER);
-    delete definition.dataCost;
+    definition.dataCost = "about 30 KB";
     expect(problems(definition)).toEqual([]);
   });
 

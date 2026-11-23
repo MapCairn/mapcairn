@@ -3,6 +3,7 @@
   "name": "Sample lines",
   "description": "Lines from a sample feed, drawn by kind.",
   "group": "Samples",
+  "dataCost": "about 10 KB",
   "attribution": [
     {
       "text": "Sample lines provider"

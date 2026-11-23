@@ -3,6 +3,7 @@
   "name": "Sample rain",
   "description": "Half-hourly sample rain, about six hours behind.",
   "group": "Imagery",
+  "dataCost": "about 100 KB per screen",
   "attribution": [
     {
       "text": "Sample rain provider"
