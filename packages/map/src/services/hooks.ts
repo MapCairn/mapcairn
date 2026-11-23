@@ -161,7 +161,7 @@ export function useLanguageLoad(): LanguageLoad | undefined {
 }
 
 /**
- * Formats a core {@link Message} (a key and its parameters) with the active
+ * Formats a core `Message` (a key and its parameters) with the active
  * catalogue, for text a component shows or hands on as a string. The function
  * is stable while the catalogue is.
  */
