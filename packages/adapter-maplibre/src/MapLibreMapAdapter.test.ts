@@ -1969,6 +1969,16 @@ describe("MapLibreMapAdapter", () => {
       expect(map.projection).toEqual({ type: "mercator" });
     });
 
+    it("asks the engine for a new shape once, because each call re-tiles the view", async () => {
+      const { adapter, map } = await mounted();
+      map.fire("style.load");
+      const before = map.callsOf("setProjection").length;
+      adapter.setProjection("globe");
+      expect(map.callsOf("setProjection")).toHaveLength(before + 1);
+      adapter.setProjection("flat");
+      expect(map.callsOf("setProjection")).toHaveLength(before + 2);
+    });
+
     it("holds a shape chosen while a style is loading until the style has loaded", async () => {
       const { adapter, map } = await mounted();
       void adapter.setBasemap(DARK);
