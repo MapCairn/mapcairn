@@ -67,10 +67,10 @@ describe("the capture subjects", () => {
   it("open the playground over the subject's view with the basemap of the theme, in the address the playground writes", () => {
     const hero = captureSubject("hero");
     expect(captureAddress(hero, "light")).toBe(
-      "#map=13.00/-33.93650/18.40700&basemap=bright",
+      "#map=13.00/-33.97000/18.48000&basemap=bright",
     );
     expect(captureAddress(hero, "dark")).toBe(
-      "#map=13.00/-33.93650/18.40700&basemap=fiord",
+      "#map=13.00/-33.97000/18.48000&basemap=fiord",
     );
   });
 
@@ -118,7 +118,7 @@ describe("the capture subjects", () => {
 
   it("say in each picture's description the length it measures", () => {
     for (const { id } of CAPTURE_SUBJECTS) {
-      expect(measuredReadout(id)).toBe("3.42 km");
+      expect(measuredReadout(id)).toBe("3.37 km");
       expect(PLATES[id].description).toContain(measuredReadout(id));
     }
   });
