@@ -1,0 +1,40 @@
+name: Pull request description
+
+# Warns when a pull request description has no `Fixes #n` or `Part of #n` line or no
+# `Checks` section (AGENTS.md, "Issues and pull requests"). It never fails the pull
+# request and posts no comment: each finding is a warning annotation and a line in the
+# job summary. Dependabot and Release pull requests are skipped.
+#
+# Security: this runs on `pull_request` with a read-only token, and the title, body and
+# labels reach the script through the environment, so they are data and never part of
+# a shell command. The check is in scripts/prBodyCheck.mjs.
+on:
+  pull_request:
+    types: [opened, edited, reopened]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pr-body-check-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    name: Check the description
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Check out the scripts
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          sparse-checkout: scripts
+
+      - name: Check the description
+        run: node scripts/prBodyCheck.mjs
+        env:
+          PR_AUTHOR: ${{ github.event.pull_request.user.login }}
+          PR_LABELS: ${{ join(github.event.pull_request.labels.*.name, ',') }}
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          PR_BODY: ${{ github.event.pull_request.body }}
