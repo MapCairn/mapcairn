@@ -19,12 +19,15 @@ name: Workflow security lint
 # the version by hand, to a release at least three days old, and keep the two jobs
 # equal. To run the same zizmor locally (the three-day date is today minus three days):
 #   uvx --exclude-newer <YYYY-MM-DD> zizmor@1.32.0 .github
+# Both read the settings in `.github/zizmor.yml` (the dependabot-cooldown audit is held
+# to the three-day package age instead of its default of seven).
 on:
   pull_request:
     paths:
       - ".github/workflows/**"
       - ".github/actions/**"
       - ".github/dependabot.yml"
+      - ".github/zizmor.yml"
   push:
     branches: [main]
   schedule:
