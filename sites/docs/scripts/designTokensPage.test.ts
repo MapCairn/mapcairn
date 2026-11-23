@@ -331,7 +331,7 @@ describe("buildDesignTokensCss", () => {
   it("writes each specimen's declarations from the same data the page lists", () => {
     expect(css).toMatch(
       new RegExp(
-        `\\.dt-button--primary \\{[^}]*background: ${tokens.color.accent.replace(/[()]/g, "\\$&")};`,
+        `\\.dt-button--primary \\{[^}]*background: ${tokens.color.accent.replace(/[\\()]/g, "\\$&")};`,
       ),
     );
     expect(css).toContain(`outline: ${focusRing.outline};`);
