@@ -15,7 +15,7 @@ Checked against `@mapcairn/sdk` %sdkVersion%, the version in this repository. Th
 
 A layer is data, not code: a definition with an id, a name, a source, the credit and what the person can adjust. Nothing in the SDK names a layer or a provider. The browser asks the provider directly, and only after the layer is turned on, so a layer that is never switched on costs nothing.
 
-There are tile, feed, vector tile, heatmap and query layers. A tile layer is the simplest and is the one used here; [Extending MapCairn](../guides/extending.md#add-a-data-layer) shows the other kinds, with a definition for each.
+There are tile, feed, vector tile, heatmap and query layers. A tile layer is the simplest and is the one used here; [Layer definitions](../guides/layer-definitions.md) shows the other kinds, with a definition for each.
 
 ## Define the layer and give it to the services
 
@@ -163,6 +163,6 @@ The map and the other layers keep working while one layer fails.
 
 ## Next steps
 
-- [Extending MapCairn](../guides/extending.md#add-a-data-layer) shows the other kinds of layer, with a definition for each.
+- [Layer definitions](../guides/layer-definitions.md) shows the other kinds of layer, with a definition for each.
 - [Troubleshooting](../troubleshooting.md) explains a layer definition that is refused.
 - [Draw and edit shapes](draw-shapes.md) lets people add their own shapes over the layers.

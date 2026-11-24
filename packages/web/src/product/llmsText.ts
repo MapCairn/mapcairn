@@ -71,7 +71,12 @@ const DOCUMENTS: readonly (readonly [string, string, string])[] = [
   [
     "Embedding and extending",
     docsPage("guides/extending"),
-    "embedding the SDK in an app, and adding basemaps, layers, search and routing providers and adapters",
+    "embedding the SDK in an app, and adding basemaps, search and routing providers and adapters",
+  ],
+  [
+    "Layer definitions",
+    docsPage("guides/layer-definitions"),
+    "what a data layer definition holds, with a working example for each kind of layer",
   ],
   [
     "Serving layers",

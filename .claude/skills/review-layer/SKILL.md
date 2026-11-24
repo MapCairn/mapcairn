@@ -45,7 +45,7 @@ Run `review-security` for anything beyond the layer's own origins. Layer-specifi
 
 **Text, definition and tests**
 
-- Every word a person reads is a `MessageKey`, a host `{ key, text }` or a plain string (`sites/docs/docs/guides/extending.md`), with Afrikaans in `packages/web/src/i18n/af.ts` or `afDefinitionTexts.ts`. Each new key is also added to `EXPECTED_PLACEHOLDERS` in `packages/core/src/lint/messages.test.ts` (same paragraph of `extending.md`). Typecheck holds `af.ts` complete and `messages.test.ts` finds an Afrikaans value left in English; do not approve Afrikaans wording or mark it reviewed.
+- Every word a person reads is a `MessageKey`, a host `{ key, text }` or a plain string (`sites/docs/docs/guides/layer-definitions.md`), with Afrikaans in `packages/web/src/i18n/af.ts` or `afDefinitionTexts.ts`. Each new key is also added to `EXPECTED_PLACEHOLDERS` in `packages/core/src/lint/messages.test.ts` (same paragraph of `extending.md`). Typecheck holds `af.ts` complete and `messages.test.ts` finds an Afrikaans value left in English; do not approve Afrikaans wording or mark it reviewed.
 - A new layer is a new file picked up by `import.meta.glob`. A `switch` or `if` on a layer id, provider or response shape in code is a finding. A feed has a recorded fixture with a `manifest.json` count and nothing personal in it. A new provider kind rather than a new definition is a port change: `ARCHITECTURE.md` ("Adding an adapter") and `design-solution`.
 - Documents: `ATTRIBUTIONS.md`, `PRIVACY.md` with `PrivacyPage.tsx`, the guides and `sites/docs/docs/guides/capability-matrix.md` where a row is now true or false. Check each statement with `review-docs`.
 

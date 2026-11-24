@@ -121,7 +121,7 @@ x: attribution: must be a non-empty list
 x: source.tiles: must be an https URL template
 ```
 
-Fix each line. The path after the id (`attribution`, `source.tiles`) is the field. [Extending MapCairn](guides/extending.md#add-a-data-layer) has a definition that passes. A host whose layers can be wrong without stopping the app uses `createRuntimeLayerCatalogue`, which leaves out a failing layer and reports why.
+Fix each line. The path after the id (`attribution`, `source.tiles`) is the field. [Layer definitions](guides/layer-definitions.md) has a definition that passes. A host whose layers can be wrong without stopping the app uses `createRuntimeLayerCatalogue`, which leaves out a failing layer and reports why.
 
 ### `The basemap id "<id>" is used twice.`
 
