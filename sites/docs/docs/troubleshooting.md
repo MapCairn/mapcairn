@@ -7,7 +7,7 @@ description: The error messages the SDK throws and reports, what causes each, an
 
 # Troubleshooting
 
-Find the message your app shows when the map does not start or the SDK stops with an error, what causes it and what to change. Each message is quoted as the code writes it, so search the page for the words you see; a part that depends on your app is shown as `...` or in angle brackets. Each entry says how the message reaches you: _thrown_ is an exception or a rejected promise, _reported_ is a callback on `MapView`, and _logged_ is a line in the browser console. A test keeps the quoted messages equal to the strings in the packages' source.
+Find the message your app shows when the map does not start or the SDK stops with an error, what causes it and what to change. Each message is quoted as the code writes it, so search the page for the words you see; a part that depends on your app is shown as `...` or in angle brackets. Each entry says how the message reaches you: _thrown_ is an exception or a rejected promise, _reported_ is a callback on `MapView`, and _logged_ is a line in the browser console. A test keeps the quoted messages equal to the strings in the packages' source. The messages come from `@mapcairn/core`, `@mapcairn/map`, `@mapcairn/react` and `@mapcairn/adapter-maplibre`, which the umbrella package re-exports.
 
 ## The map does not start
 
@@ -37,7 +37,7 @@ Thrown by `mount` when the first basemap fails, and reported through `onEngineEr
 
 Cause: the visitor is offline, the style address is wrong, the provider is down, or `connect-src` in your policy does not list the provider's origin.
 
-Fix: open the style address from the basemap's definition in a browser. If it loads there, the policy is the cause: add the origin to `connect-src` and `img-src`. `onBasemapUnavailable` is called when every tile of the basemap failed, so your app can offer another one, and the catalogue has `panels.basemap.unavailable` ("Not available right now") for a basemap that cannot be chosen.
+Fix: open the style address from the basemap's definition in a browser. If it loads there, the policy is the cause: add the origin to `connect-src` and `img-src`. `onBasemapError` is called when a change of `basemap` could not load, with the basemap the map kept drawing, and `onBasemapUnavailable` when every tile of the basemap failed, so your app can offer another one, and the catalogue has `panels.basemap.unavailable` ("Not available right now") for a basemap that cannot be chosen.
 
 ### `The map engine stopped working: its worker failed.`
 

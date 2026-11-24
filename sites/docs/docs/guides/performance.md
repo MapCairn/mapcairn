@@ -37,11 +37,19 @@ Two things to know when you read an audit of your own host:
 - Byte counts overstate transfer. The local preview server and, for the installed Chrome used here, Cloudflare's edge send script and style bodies uncompressed (`x-content-encoding-over-network`), while other clients receive zstd or Brotli (`react-vendor` is 219 KB raw and 71 KB as zstd). A change that only saves bytes looks larger in the audit than it is.
 - Stylesheets block the first paint. Four do: the shared component sheet (60 KB raw, 7.7 KB compressed), root, home and the error page's sheet (under 1 KB, loaded because the root error boundary imports it). All but the last are needed to draw the server-rendered skeleton, and the production CSP forbids inlining them.
 
+## Ground rules
+
+Improve the Lighthouse scores where the cause is real, and stop where the remaining gains would need tricks.
+
+- Fix measured causes only, one change at a time, with before and after numbers. A change that does not move the numbers is reverted.
+- Do not defer content a visitor needs to hide its cost, remove a feature, or change what visitors see.
+- Do not change how the audit is served or throttled, and do not lower a threshold.
+
 ## What was tried
 
-Fix measured causes only, one change at a time, with before and after numbers. A change that does not move the numbers is reverted. Neither change below was kept.
+Neither change below was kept.
 
-1. **Engine preload.** `MapAdapterFactory` gained an optional `preload`, called at the top of the app's first render, so `maplibre-gl` downloaded while the chrome rendered. A first comparison, taken an hour apart on a shared machine, suggested observed LCP fell from 5.1 s to 3.7 s. Interleaved on one machine (main, change, main, change; 3 mobile runs each), it was 3.6 s (2.9 to 4.1) against 3.3 s (2.9 to 3.9) in the clean round. On the CI runner, performance was 39, 41 and 40 with the change against 33, 42 and 42 on `main`. The scores moved by a point or two either way, and TBT could not fall from starting a download earlier.
+1. **Engine preload.** The engine's `import("maplibre-gl")` starts in the map's mount effect, which runs only after the whole app has rendered, so the download and the first render run one after the other. `MapAdapterFactory` gained an optional `preload`, called at the top of the app's first render, so `maplibre-gl` downloaded while the chrome rendered. A first comparison, taken an hour apart on a shared machine, suggested observed LCP fell from 5.1 s to 3.7 s. Interleaved on one machine (main, change, main, change; 3 mobile runs each), it was 3.6 s (2.9 to 4.1) against 3.3 s (2.9 to 3.9) in the clean round. On the CI runner, performance was 39, 41 and 40 with the change against 33, 42 and 42 on `main`. The scores moved by a point or two either way, and TBT could not fall from starting a download earlier.
 2. **Hydrating inside `startTransition`**, as React Router's default client entry does. FCP did not move, and mobile LCP (21.5 s) and TBT (7.9 s) were no better.
 
 What is left is the engine itself, the first view's tiles and glyphs, and byte savings the audit overstates. A real gain would need a different design, such as showing the tour card before the map has loaded, which plan 0004 rules out, or a lighter engine, which is out of scope.
