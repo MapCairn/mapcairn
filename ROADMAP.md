@@ -32,7 +32,7 @@ A milestone leaves this list in the pull request that closes its last issue. A n
 
 ### Next
 
-1. **SDK, [Maintenance](https://github.com/MapCairn/mapcairn/milestone/14) ([#146](https://github.com/MapCairn/mapcairn/issues/146)).** The checks 1.0.0 relies on pass: announcements are confirmed with a screen reader, the browser tests also run in Firefox ([#601](https://github.com/MapCairn/mapcairn/issues/601)) and every member of the public API has a description ([#701](https://github.com/MapCairn/mapcairn/issues/701)). The rest of the milestone is upkeep that is not ranked here.
+1. **SDK, [Maintenance](https://github.com/MapCairn/mapcairn/milestone/14) ([#146](https://github.com/MapCairn/mapcairn/issues/146)).** The checks 1.0.0 relies on pass: announcements are confirmed with a screen reader and every member of the public API has a description ([#701](https://github.com/MapCairn/mapcairn/issues/701)). The rest of the milestone is upkeep that is not ranked here.
 2. **Site, [Open data layers](https://github.com/MapCairn/mapcairn/milestone/1) ([#657](https://github.com/MapCairn/mapcairn/issues/657)).** The credit wording beside the product page map pictures is checked against the provider terms.
 
 ### Later
