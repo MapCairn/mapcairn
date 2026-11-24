@@ -31,7 +31,8 @@ export interface AuditedPage {
 }
 
 /**
- * The pages audited: Get started, a task page, an API page for a function and
+ * The pages audited: Get started, a task page, a task page with a long code
+ * sample, an API page for a function and
  * one for a type, the roadmap, the Architecture overview, two of its parts (one
  * with many tables, one with a diagram), a Design system part, the visual
  * design page (both themes drawn at once, whatever the reader chose), the
@@ -42,6 +43,10 @@ export interface AuditedPage {
 export const AUDITED_PAGES: readonly AuditedPage[] = [
   { name: "Get started", path: "/docs/" },
   { name: "task page", path: "/docs/tasks/choose-a-basemap/" },
+  {
+    name: "task page with a long sample",
+    path: "/docs/tasks/follow-the-system-theme/",
+  },
   { name: "API function", path: "/docs/api/core/addStop/" },
   { name: "API type", path: "/docs/api/core/ClipboardPort/" },
   { name: "roadmap", path: "/docs/roadmap/" },

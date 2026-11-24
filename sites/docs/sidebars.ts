@@ -72,6 +72,7 @@ export const sidebar: SidebarEntry[] = [
       "tasks/add-a-layer",
       "tasks/draw-shapes",
       "tasks/theme-the-interface",
+      "tasks/follow-the-system-theme",
       "tasks/translate-the-interface",
       "tasks/host-on-a-server-rendered-page",
     ],
