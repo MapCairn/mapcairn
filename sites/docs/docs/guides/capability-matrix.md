@@ -206,7 +206,7 @@ For clustering and tile archives see [#183] and [#192]. The reference site's Lig
 | Untrusted text read in bounded, linear time              | has              | the WKT, shape file, coordinate and link readers, with property-based tests               | none                 |
 | A strict Content Security Policy on the reference site   | has              | `packages/web/public/_headers`                                                            | none                 |
 | A check that every SDK dependency allows commercial use  | has              | `scripts/sdkLicences.mjs` and `scripts/sdkLicences.allowlist.json`, run by `npm run lint` | none                 |
-| Reporting channel and assurance case                     | has              | `SECURITY.md`, `docs/assurance-case.md`                                                   | OpenSSF silver: [#4] |
+| Reporting channel and assurance case                     | has              | `.github/SECURITY.md`, `docs/assurance-case.md`                                           | OpenSSF silver: [#4] |
 
 ## Developer experience
 

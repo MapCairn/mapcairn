@@ -147,7 +147,7 @@ export const LICENCE_GUIDE_LINK: InlineLink = {
 /** How to report a vulnerability, and what the project supports. */
 export const SECURITY_LINK: InlineLink = {
   text: "Security",
-  href: `${REPOSITORY_BLOB}/SECURITY.md`,
+  href: `${REPOSITORY_BLOB}/.github/SECURITY.md`,
 };
 
 /** Where questions are asked and answered in public. */

@@ -114,7 +114,7 @@ const ALLOWED_PAGES: ReadonlyArray<readonly [string, string]> = [
     "the release notes: what changed and what to change on upgrade",
   ],
   [
-    "https://github.com/MapCairn/mapcairn/blob/main/SECURITY.md",
+    "https://github.com/MapCairn/mapcairn/blob/main/.github/SECURITY.md",
     "the security policy: how to report a vulnerability",
   ],
   [

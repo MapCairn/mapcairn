@@ -43,7 +43,7 @@ When unsure, call it "unconfirmed" and say what would settle it.
 ## 6. What to do next
 
 - Search for a duplicate (`gh issue list --state all --search "<words>"`), then use the `create-issue` skill: plain facts, the title and count of the issue, the commit, the route and the header seen, and no URL, address or agent string from a report.
-- Never change remote state: do not deploy or run a deploy script, retry or cancel a build, purge a cache, mark an issue resolved or ignored, change a zone or Worker setting, or delete anything (`AGENTS.md`). Hand the maintainer the exact step and say why. The maintainer settles `PRIVACY.md`, `SECURITY.md` and the licence.
+- Never change remote state: do not deploy or run a deploy script, retry or cancel a build, purge a cache, mark an issue resolved or ignored, change a zone or Worker setting, or delete anything (`AGENTS.md`). Hand the maintainer the exact step and say why. The maintainer settles `PRIVACY.md`, `.github/SECURITY.md` and the licence.
 - If a fix is a code change, take it through `pick-up-issue` as a separate piece of work.
 
 ## 7. Report

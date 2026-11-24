@@ -68,7 +68,7 @@ Using the SDK, even unmodified, as a dependency of a closed-source product you d
 
 ## Contributing
 
-To contribute code, documentation or other material you agree to the contributor licence agreement. [`CONTRIBUTING.md`](https://github.com/MapCairn/mapcairn/blob/main/CONTRIBUTING.md) says how, and [`CLA.md`](https://github.com/MapCairn/mapcairn/blob/main/CLA.md) is the agreement; it uses the family name "AGPL-3.0" where this guide says `AGPL-3.0-only`. You keep the copyright in what you contribute. Section 5 of the agreement promises the project stays available under the AGPL-3.0 or another OSI-approved licence for as long as it is published.
+To contribute code, documentation or other material you agree to the contributor licence agreement. [`CONTRIBUTING.md`](https://github.com/MapCairn/mapcairn/blob/main/.github/CONTRIBUTING.md) says how, and [`CLA.md`](https://github.com/MapCairn/mapcairn/blob/main/CLA.md) is the agreement; it uses the family name "AGPL-3.0" where this guide says `AGPL-3.0-only`. You keep the copyright in what you contribute. Section 5 of the agreement promises the project stays available under the AGPL-3.0 or another OSI-approved licence for as long as it is published.
 
 ## What this guide is unsure about
 
