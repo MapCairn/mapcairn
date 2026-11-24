@@ -2,8 +2,8 @@
 // Copyright MapCairn contributors
 import { tokens } from "@mapcairn/theme";
 
-/** The custom property a `var(--name)` token reference points at. */
-function propertyOf(reference: string): string[] {
+/** The custom property a `var(--name)` token reference points at, or none. */
+function propertyOf(reference: string): string | readonly string[] {
   return /^var\((--[\w-]+)\)$/.exec(reference)?.[1] ?? [];
 }
 

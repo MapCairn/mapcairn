@@ -4,12 +4,13 @@ import {
   type ContrastFinding,
   checkThemeContrast,
   type InvalidColour,
+  type InvalidColourReason,
   type ThemeColours,
   type ThemeContrastCheck,
   type ThemeOverride,
 } from "./checkThemeContrast";
 import { compositeOver, parseColour, toHex } from "./contrast";
-import { type InvalidThemeFieldReason, readFontFamily } from "./fontFamily";
+import { readFontFamily } from "./fontFamily";
 import { surfaceBlurSupported, tokens } from "./tokens.css";
 import {
   colourRoleNames,
@@ -67,28 +68,16 @@ export interface ThemeStylesheetRefused {
    * missing, as in {@link checkThemeContrast}.
    */
   findings: ContrastFinding[];
-  /** The colours and keys that could not be used, and why. */
+  /**
+   * The colours and keys that could not be used, and why. A `fontFamily` that
+   * could not be used is listed here with the role `fontFamily` and no theme:
+   * the reason is `malformed` when it is not a string and `unparseable` when
+   * it is anything but a list of family names (see
+   * {@link ThemeOverride.fontFamily}).
+   */
   invalid: InvalidColour[];
-  /** The font, and why it could not be used. Empty when it was fine or not set. */
-  invalidFields: InvalidThemeField[];
   /** True when `scope` is not `:root`, `#id` or `.class`, or could not be read. */
   invalidScope: boolean;
-}
-
-/** A field other than a colour that was refused, so nothing was written. */
-export interface InvalidThemeField {
-  /** The field of the override. */
-  field: "fontFamily";
-  /** The value as the host supplied it. */
-  value: unknown;
-  /**
-   * Why: it is not a string, it is too long, it holds a character outside
-   * letters, numbers, space, comma, quote, hyphen, underscore and full stop
-   * (so braces, semicolons, `url()`, `var()`, comments and newlines all
-   * land here), it is not a list of family names, or it is a reserved word
-   * such as `inherit`.
-   */
-  reason: InvalidThemeFieldReason;
 }
 
 /** The result of {@link createThemeStylesheet}. */
@@ -294,7 +283,7 @@ function renderTheme(
 /** The font as the override gave it: the list to write, or why it was refused. */
 interface FontReading {
   family: string | undefined;
-  invalidFields: InvalidThemeField[];
+  invalid: InvalidColour[];
 }
 
 /**
@@ -308,19 +297,18 @@ function readFont(override: unknown): FontReading {
       ? (override as { fontFamily?: unknown }).fontFamily
       : undefined;
   if (value === undefined) {
-    return { family: undefined, invalidFields: [] };
+    return { family: undefined, invalid: [] };
   }
   const reading = readFontFamily(value);
   if (!reading.ok) {
+    const reason: InvalidColourReason =
+      reading.reason === "not-a-string" ? "malformed" : "unparseable";
     return {
       family: undefined,
-      invalidFields: [{ field: "fontFamily", value, reason: reading.reason }],
+      invalid: [{ theme: null, role: "fontFamily", value, reason }],
     };
   }
-  return {
-    family: `${reading.value}, ${sdkFontFamily}`,
-    invalidFields: [],
-  };
+  return { family: `${reading.value}, ${sdkFontFamily}`, invalid: [] };
 }
 
 /** The rule that sets the typeface once for the scope, in every theme. */
@@ -339,16 +327,8 @@ function refused(
   findings: ContrastFinding[],
   invalid: InvalidColour[],
   invalidScope: boolean,
-  invalidFields: InvalidThemeField[] = [],
 ): ThemeStylesheetRefused {
-  return {
-    ok: false,
-    css: undefined,
-    findings,
-    invalid,
-    invalidFields,
-    invalidScope,
-  };
+  return { ok: false, css: undefined, findings, invalid, invalidScope };
 }
 
 /**
@@ -378,8 +358,8 @@ function refused(
  * `fontFamily` is written once for the scope, outside those conditions, since
  * a typeface does not change with the theme or with high contrast. It must be
  * a list of plain family names and generic families; anything else refuses the
- * override with the reason in `invalidFields`. The SDK's own stack follows the
- * list as its fallback. The host loads the font file: it must be same-origin
+ * override, listed in `invalid`. The SDK's own stack follows the list as its
+ * fallback. The host loads the font file: it must be same-origin
  * or allowed by the host's `font-src`, and the stylesheet must be linked,
  * because a strict policy blocks an inline `<style>`. How wide a font is
  * cannot be known here, so the layout holds instead: the browser tests put a
@@ -401,17 +381,9 @@ export function createThemeStylesheet(
   try {
     const initial = checkThemeContrast(override);
     const font = readFont(override);
-    if (
-      initial.invalid.length > 0 ||
-      font.invalidFields.length > 0 ||
-      scope === undefined
-    ) {
-      return refused(
-        initial.findings,
-        initial.invalid,
-        scope === undefined,
-        font.invalidFields,
-      );
+    const invalid = [...initial.invalid, ...font.invalid];
+    if (invalid.length > 0 || scope === undefined) {
+      return refused(initial.findings, invalid, scope === undefined);
     }
     return create(override, scope, font.family);
   } catch {

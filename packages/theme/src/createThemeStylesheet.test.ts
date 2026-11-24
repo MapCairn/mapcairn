@@ -73,7 +73,7 @@ function passed(result: ThemeStylesheet): { css: string } {
   if (!result.ok) {
     const failing = result.findings.filter((finding) => !finding.passes);
     throw new Error(
-      `refused: ${JSON.stringify({ failing, invalid: result.invalid, invalidFields: result.invalidFields, invalidScope: result.invalidScope })}`,
+      `refused: ${JSON.stringify({ failing, invalid: result.invalid, invalidScope: result.invalidScope })}`,
     );
   }
   return result;
@@ -725,28 +725,20 @@ describe("createThemeStylesheet", () => {
 
         expect(result.ok).toBe(false);
         expect(result.css).toBeUndefined();
-        if (!result.ok) {
-          expect(result.invalidFields).toEqual([
-            { field: "fontFamily", value, reason: expect.any(String) },
-          ]);
-          expect(result.invalid).toEqual([]);
-        }
+        expect(!result.ok && result.invalid).toEqual([
+          { theme: null, role: "fontFamily", value, reason: "unparseable" },
+        ]);
       },
     );
 
-    it("names the reason it refused", () => {
-      const reasonFor = (fontFamily: unknown): unknown => {
-        const result = createThemeStylesheet({ fontFamily } as ThemeOverride, {
-          scope: ".brand",
-        });
-        return result.ok ? undefined : result.invalidFields[0]?.reason;
-      };
+    it("reports a value that is not a string as malformed", () => {
+      const result = createThemeStylesheet({ fontFamily: 42 } as never, {
+        scope: ".brand",
+      });
 
-      expect(reasonFor(42)).toBe("not-a-string");
-      expect(reasonFor("a".repeat(513))).toBe("too-long");
-      expect(reasonFor("Inter;")).toBe("forbidden-character");
-      expect(reasonFor("Inter,")).toBe("malformed");
-      expect(reasonFor("unset")).toBe("reserved-keyword");
+      expect(!result.ok && result.invalid).toEqual([
+        { theme: null, role: "fontFamily", value: 42, reason: "malformed" },
+      ]);
     });
 
     it("reports a refused font together with a refused colour and scope", () => {
@@ -756,21 +748,21 @@ describe("createThemeStylesheet", () => {
       );
 
       expect(result.ok).toBe(false);
-      if (!result.ok) {
-        expect(result.invalidFields).toHaveLength(1);
-        expect(result.invalid).toHaveLength(1);
-        expect(result.invalidScope).toBe(true);
-      }
+      expect(!result.ok && result.invalid.map((entry) => entry.role)).toEqual([
+        "accent",
+        "fontFamily",
+      ]);
+      expect(!result.ok && result.invalidScope).toBe(true);
     });
 
-    it("has no invalid fields when a refusal is only about colour", () => {
+    it("lists no font when a refusal is only about colour", () => {
       const result = createThemeStylesheet(
         { fontFamily: brandFont, colour: { light: { accent: "#ffff00" } } },
         { scope: ".brand" },
       );
 
       expect(result.ok).toBe(false);
-      expect(!result.ok && result.invalidFields).toEqual([]);
+      expect(!result.ok && result.invalid).toEqual([]);
     });
 
     it("refuses a font whose getter throws, without throwing", () => {

@@ -4,8 +4,8 @@
 /** The longest font-family list accepted, in characters. */
 export const MAX_FONT_FAMILY_LENGTH = 512;
 
-/** Why a field other than a colour could not be used. */
-export type InvalidThemeFieldReason =
+/** Why a font-family list could not be used. */
+export type FontFamilyRefusal =
   | "not-a-string"
   | "too-long"
   | "forbidden-character"
@@ -15,7 +15,7 @@ export type InvalidThemeFieldReason =
 /** The result of reading a font-family list. */
 export type FontFamilyReading =
   | { ok: true; value: string }
-  | { ok: false; reason: InvalidThemeFieldReason };
+  | { ok: false; reason: FontFamilyRefusal };
 
 /**
  * The only characters a list may hold: letters, marks and numbers in any

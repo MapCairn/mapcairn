@@ -25,13 +25,11 @@ export type {
 } from "./contrastPairs";
 export {
   createThemeStylesheet,
-  type InvalidThemeField,
   type ThemeStylesheet,
   type ThemeStylesheetCreated,
   type ThemeStylesheetOptions,
   type ThemeStylesheetRefused,
 } from "./createThemeStylesheet";
-export type { InvalidThemeFieldReason } from "./fontFamily";
 export { mapOverlayTokens } from "./mapOverlayTokens";
 export {
   blur,
