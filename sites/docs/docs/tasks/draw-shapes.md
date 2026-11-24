@@ -7,9 +7,9 @@ description: Add the draw tool to a map so people can place points, lines, areas
 
 # Draw and edit shapes
 
-This page is for a developer whose map already shows, as in [Get started](../get-started.md), and who wants people to draw on it. By the end the map will take clicks as the corners of a shape, draw it with handles to edit it, and have a toolbar and a sheet of shapes with undo, delete and export.
+Let people draw on the map from [Get started](../get-started.md): clicks become the corners of a shape, which has handles to edit it, with a toolbar and a sheet of shapes that offers undo, delete and export.
 
-Checked against `@mapcairn/sdk` %sdkVersion%, the version in this repository. The code uses [`useDraw`](../api/map/useDraw-function.md), [`DrawToolbar`](../api/map/DrawToolbar.md), [`DrawOverlay`](../api/map/DrawOverlay.md), [`DrawMapBindings`](../api/map/DrawMapBindings.md), [`ShapesSection`](../api/map/ShapesSection.md), [`Sheet`](../api/map/Sheet.md) and [`MapOverlayLayer`](../api/map/MapOverlayLayer.md).
+The code uses [`useDraw`](../api/map/useDraw-function.md), [`DrawToolbar`](../api/map/DrawToolbar.md), [`DrawOverlay`](../api/map/DrawOverlay.md), [`DrawMapBindings`](../api/map/DrawMapBindings.md), [`ShapesSection`](../api/map/ShapesSection.md), [`Sheet`](../api/map/Sheet.md) and [`MapOverlayLayer`](../api/map/MapOverlayLayer.md).
 
 ## How the pieces fit
 
@@ -164,7 +164,7 @@ The reference host's `App.tsx` is the full version, with the tool opened from a 
 - **An import file cannot be used.** `draw.importFeedback` holds the outcome. A refusal says why: "The file is empty.", "This is not GeoJSON, WKT or a CSV of shapes from this map. Choose a .geojson, .json, .wkt, .txt or .csv file.", "The WKT could not be read, so none of the file was imported.", or that the file is too large or holds too many shapes or points. A file that is partly usable imports what it can and says what it skipped, such as "2 skipped: 1 with edges that cross, 1 with too few points."
 - **Export and import need services you supply.** The fakes in Get started do not save or open real files, so Export gives the person nothing and Import waits for a file that never comes. Provide a `fileSaver`, a `fileOpener` and a clipboard adapter of your own, as [What you provide](#what-you-provide) says.
 
-## Next steps
+## Related
 
 - [Extending MapCairn](../guides/extending.md#add-an-adapter) says how to supply an adapter for a port, such as the file opener, and check it with the port's contract suite.
 - [Troubleshooting](../troubleshooting.md) lists the messages from the map when it cannot start.

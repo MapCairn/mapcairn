@@ -7,9 +7,7 @@ description: The Content-Security-Policy a page that hosts the SDK needs, direct
 
 # A content security policy for a host
 
-This page is for a developer who hosts a page that embeds the SDK under a strict Content Security Policy. By the end you will have a policy that allows what the map needs, and know why each directive is there. The map engine, MapLibre GL JS, loads styles, tiles and images from the origins its definitions name, fetches its label glyphs like other data, and runs a worker; a host's own adapters fetch from the providers its definitions name. A strict policy must allow every one of those origins and still let the engine work.
-
-Checked against `@mapcairn/sdk` %sdkVersion%, the version in this repository.
+A strict Content Security Policy for a page that embeds the SDK, with the reason for each directive. The map engine, MapLibre GL JS, loads styles, tiles and images from the origins its definitions name, fetches its label glyphs like other data, and runs a worker; a host's own adapters fetch from the providers its definitions name. A strict policy must allow every one of those origins and still let the engine work.
 
 The reference host is the worked example. Its policy is `packages/web/public/_headers` for responses served straight from static assets, and `packages/web/src/constants/securityHeaders.ts` for everything else; a test keeps the two in step. The architecture behind the adapter is in [`ARCHITECTURE.md`](https://github.com/MapCairn/mapcairn/blob/main/ARCHITECTURE.md) ("The map adapter"), and adding the basemaps, layers and adapters a policy names is in [Extending MapCairn](extending.md).
 

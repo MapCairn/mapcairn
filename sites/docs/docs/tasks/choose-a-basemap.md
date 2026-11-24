@@ -7,9 +7,9 @@ description: Let people pick a basemap, show its credits, and offer only the bas
 
 # Choose a basemap
 
-This page is for a developer whose map already shows, as in [Get started](../get-started.md), and who wants people to choose the basemap, or wants to limit the choice. By the end the map will have a basemap picker and the credits that the basemap's provider asks for, and you will know how to change which basemaps are offered.
+Give the map from [Get started](../get-started.md) a basemap picker and the credits each basemap's provider asks for, and change which basemaps it offers.
 
-Checked against `@mapcairn/sdk` %sdkVersion%, the version in this repository. The code uses [`useBasemaps`](../api/map/useBasemaps.md), [`BasemapPicker`](../api/map/BasemapPicker.md), [`Attribution`](../api/map/Attribution.md), [`defaultBasemapFor`](../api/core/defaultBasemapFor.md) and [`createBasemapCatalogue`](../api/core/createBasemapCatalogue.md).
+The code uses [`useBasemaps`](../api/map/useBasemaps.md), [`BasemapPicker`](../api/map/BasemapPicker.md), [`Attribution`](../api/map/Attribution.md), [`defaultBasemapFor`](../api/core/defaultBasemapFor.md) and [`createBasemapCatalogue`](../api/core/createBasemapCatalogue.md).
 
 ## What a basemap is
 
@@ -157,7 +157,7 @@ A basemap can fail to load, and a provider can be down. `MapView` tells your app
 
 The English catalogue has words for both: `app.banner.basemapFailed` ("That basemap could not be loaded.") and `app.banner.basemapUnavailable` ("{name} is not available right now."). The picker cannot be empty, because a catalogue needs at least one basemap, and a catalogue that is built wrong stops the app at start-up with a message that [Troubleshooting](../troubleshooting.md) explains.
 
-## Next steps
+## Related
 
 - [Extending MapCairn](../guides/extending.md#add-a-basemap) says how to define a basemap of your own.
 - [Troubleshooting](../troubleshooting.md) lists the messages a failed basemap logs.

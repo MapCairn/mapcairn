@@ -7,9 +7,9 @@ description: Render the page on the server with a placeholder where the map goes
 
 # Host the map on a server-rendered page
 
-This page is for a developer whose pages are rendered on a server (a React framework, or your own `renderToString` code) and who wants a map on one of them. By the end the server will send the page with a placeholder where the map goes, with no browser-only code run on the server, and the browser will replace the placeholder with the map once the page has hydrated.
+Put the map on a page that a server renders, whether with a React framework or your own `renderToString` code: the server sends a placeholder where the map goes, runs no browser-only code, and the browser swaps in the map once the page has hydrated.
 
-Checked against `@mapcairn/sdk` %sdkVersion%, the version in this repository. The code uses [`ServicesProvider`](../api/map/ServicesProvider.md), [`MapView`](../api/map/MapView.md), [`ChromeSkeleton`](../api/map/ChromeSkeleton.md), [`chromeSkeletonCopy`](../api/map/chromeSkeletonCopy-function.md) and [`useMessages`](../api/map/useMessages.md).
+The code uses [`ServicesProvider`](../api/map/ServicesProvider.md), [`MapView`](../api/map/MapView.md), [`ChromeSkeleton`](../api/map/ChromeSkeleton.md), [`chromeSkeletonCopy`](../api/map/chromeSkeletonCopy-function.md) and [`useMessages`](../api/map/useMessages.md).
 
 ## What runs where
 
@@ -167,7 +167,7 @@ Rendering the map itself on the server, or producing a map image where no one is
 - **The page's script never runs.** The server's placeholder stays, with `aria-busy="true"`. Put a `<noscript>` note beside it that says the map needs script.
 - **A hydration mismatch.** React reports it in the console when the server's markup and the first client render differ. Keep browser-only code, such as stored settings or `window`, inside what `ClientOnly` renders after hydration.
 
-## Next steps
+## Related
 
 - [Content Security Policy](../guides/content-security-policy.md) has the policy and the nonce a streaming server needs.
 - [Troubleshooting](../troubleshooting.md) covers a blank map and the engine's messages.

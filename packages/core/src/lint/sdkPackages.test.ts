@@ -165,15 +165,12 @@ describe("the workflows that name the SDK packages", () => {
       read(".github/workflows/repeatable-build.yml"),
     );
     const loops = loopLists(workflow, "package");
-    expect(loops).toHaveLength(4);
+    expect(loops).toHaveLength(5);
     for (const loop of loops) {
       expect(loop).toEqual(LIST);
     }
-    const removal = workflow
-      .split("\n")
-      .find((line) => line.includes("rm -rf packages/web/.cloudflare"));
-    expect(removal?.split(" ").filter((arg) => arg.endsWith("/dist"))).toEqual(
-      LIST.map((name) => `packages/${name}/dist`),
+    expect(workflow).toMatch(
+      /for package in [a-z -]+; do\n\s+rm -rf "packages\/\$\{package\}\/dist"\n\s+done/,
     );
   });
 
