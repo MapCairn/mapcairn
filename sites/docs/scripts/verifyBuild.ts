@@ -26,12 +26,16 @@ import {
 import { machineDataFindings } from "./machineDataChecks";
 import { markdownFindings } from "./markdownChecks";
 import type { DocPage } from "./markdownCopies";
+import { noticeFindings } from "./noticeChecks";
 import { roadmapFindings } from "./roadmapChecks";
 import { SDK_VERSION } from "./sdkVersion";
 import { TARGETED_CLASSES } from "./targetedClasses";
 
 const SITE = fileURLToPath(new URL("..", import.meta.url));
 const BUILD = join(SITE, "build");
+
+/** The repository's attributions document, which publishes the bundled notices. */
+const ATTRIBUTIONS_FILE = join(SITE, "..", "..", "ATTRIBUTIONS.md");
 
 /**
  * The most gzip-compressed script, in bytes, a documentation page may load
@@ -113,18 +117,21 @@ function searchIndexSize(build: string): number {
  * (`roadmapChecks.ts`), a visual design page that is missing or shows one
  * theme (`designTokensChecks.ts`), `pages.json` or `api.json` missing or without a
  * page of the sidebar (`machineDataChecks.ts`), and a page over the script
- * budget.
+ * budget, and a bundler that writes licence notice files or an
+ * `ATTRIBUTIONS.md` that lacks a bundled notice (`noticeChecks.ts`).
  * @param build - The build folder.
  * @param expected - The inline scripts the pages may carry.
  * @param pages - The pages that must have a Markdown copy.
  * @param apiSections - The packages whose API reference section the build must
  *   hold, by folder name under `packages/`.
+ * @param attributions - The text of `ATTRIBUTIONS.md`.
  */
 export function verifyBuild(
   build: string,
   expected: readonly ExpectedInlineScript[] = EXPECTED_INLINE_SCRIPTS,
   pages: readonly DocPage[] = readDocPages(join(SITE, "docs")),
   apiSections: readonly string[] = [],
+  attributions: string = readFileSync(ATTRIBUTIONS_FILE, "utf8"),
 ): Finding[] {
   const findings: Finding[] = [];
   const allowed = new Set(expected.map(({ hash }) => hash));
@@ -196,6 +203,7 @@ export function verifyBuild(
   findings.push(...missingApiSections(build, apiSections));
   findings.push(...roadmapFindings(build));
   findings.push(...designTokensFindings(build));
+  findings.push(...noticeFindings(build, attributions));
   const budget = scriptBudgetFor(apiPageCount(build));
   const bytes = scriptBytesFor(build, BASE_URL, BUDGET_PAGE);
   if (bytes > budget) {

@@ -38,7 +38,13 @@ const config: Config = {
   baseUrlIssueBanner: false,
   future: {
     v4: { removeLegacyPostBuildHeadAttribute: true },
-    faster: { ssgWorkerThreads: true },
+    // rspack builds the site faster than webpack with the same output, but
+    // writes no `*.LICENSE.txt` files; `ATTRIBUTIONS.md` carries the notices.
+    faster: {
+      ssgWorkerThreads: true,
+      rspackBundler: true,
+      rspackPersistentCache: true,
+    },
   },
   // No namespace suffix on storage keys, so the framework's choice is stored
   // under the plain `theme` key that `src/themeBridge.ts` writes to.
