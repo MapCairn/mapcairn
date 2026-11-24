@@ -7,9 +7,9 @@ description: Switch between light and dark, follow the system setting, and give 
 
 # Theme the interface
 
-This page is for a developer whose map already shows, as in [Get started](../get-started.md), and who wants the interface to follow the system's light or dark setting, let people choose, and use the brand's own colours. By the end the map will have a light, dark and system choice that changes the interface and the basemap together, and you will have a stylesheet that recolours the interface and refuses colours that are too faint to read.
+Make the interface from [Get started](../get-started.md) follow the system's light or dark setting, let people choose between light, dark and system (the basemap changes with it), and recolour it with a stylesheet that refuses colours too faint to read.
 
-Checked against `@mapcairn/sdk` %sdkVersion%, the version in this repository. The code uses [`ThemeSource`](../api/core/ThemeSource.md), [`useTheme`](../api/map/useTheme-function.md), [`defaultBasemapFor`](../api/core/defaultBasemapFor.md) and [`createThemeStylesheet`](../api/theme/createThemeStylesheet.md).
+The code uses [`ThemeSource`](../api/core/ThemeSource.md), [`useTheme`](../api/map/useTheme-function.md), [`defaultBasemapFor`](../api/core/defaultBasemapFor.md) and [`createThemeStylesheet`](../api/theme/createThemeStylesheet.md).
 
 ## How the theme works
 
@@ -162,7 +162,7 @@ Link the file after the SDK's own stylesheets, and put the class from `scope` on
 - **No `matchMedia`.** The `PageThemeSource` above reads `window`, so build it only in the browser. On a server, give the services a source that reports `light` and applies nothing, and set `data-theme` from a script before the first paint.
 - **Contrast modes.** In high-contrast and forced-colours modes the SDK keeps its own values and skips your theme.
 
-## Next steps
+## Related
 
 - [Extending MapCairn](../guides/extending.md#theme-the-sdk-with-your-own-colours) lists the colour roles and the rules about scope.
 - [Troubleshooting](../troubleshooting.md) covers a blank or unstyled map.

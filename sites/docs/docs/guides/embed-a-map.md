@@ -7,9 +7,7 @@ description: What each part of the Get started app does, what a strict Content S
 
 # Embed a map
 
-This page explains the parts of the app from [Get started](../get-started.md), for a developer who has it running and wants to know what each part is for or to change it. The files are on that page and are not repeated here.
-
-Checked against `@mapcairn/sdk` %sdkVersion%, the version in this repository.
+What each part of the app from [Get started](../get-started.md) is for, and what to change to make it your own. The files are on that page and are not repeated here.
 
 ## What each part does
 

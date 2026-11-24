@@ -7,9 +7,7 @@ description: Serve a MapCairn build, or a page that hosts the SDK, from IIS with
 
 # Serving the SDK from IIS and server-rendered pages
 
-This page is for a developer at a company that runs IIS, and possibly ASP.NET Core or classic ASP.NET MVC, with no Node on the server. By the end you will have a MapCairn map in a page that a Windows web server serves, including a page the server renders for each request, such as a Razor page. The architecture behind the SDK is in [ARCHITECTURE.md](https://github.com/MapCairn/mapcairn/blob/main/ARCHITECTURE.md), the policy a page needs is in [Content Security Policy](content-security-policy.md), and the app side of embedding is in [Extending MapCairn](extending.md#embed-the-sdk-in-an-app-of-your-own).
-
-Checked against `@mapcairn/sdk` %sdkVersion%, the version in this repository.
+Put a MapCairn map in a page that IIS serves, with no Node on the server, including a page the server renders for each request, such as a Razor page. The architecture behind the SDK is in [ARCHITECTURE.md](https://github.com/MapCairn/mapcairn/blob/main/ARCHITECTURE.md), the policy a page needs is in [Content Security Policy](content-security-policy.md), and the app side of embedding is in [Extending MapCairn](extending.md#embed-the-sdk-in-an-app-of-your-own).
 
 **What was checked.** This guide was written on 2026-11-20 on a machine with no Windows, IIS or ASP.NET. Every IIS and ASP.NET claim was checked against the Microsoft Learn page linked beside it, and none was run. The `web.config` and Razor samples are taken from those pages' shapes and were not loaded by a server. The build claims were checked by running the build, as "What was tested" says. A claim without a link and without a file named beside it is a recommendation, not a finding.
 
@@ -66,7 +64,7 @@ If you cannot read the manifest, serve fixed file names and revalidate them inst
 
 This section is for IIS serving the files itself, which is the case for classic ASP.NET MVC and for static files in a plain site. For ASP.NET Core, read "ASP.NET Core" below first.
 
-A `web.config` can appear at the site, application, virtual directory or physical path level, and its settings override the server defaults ([introduction to `applicationHost.config`](https://learn.microsoft.com/en-us/iis/get-started/planning-your-iis-architecture/introduction-to-applicationhostconfig)). The same page says most IIS sections are locked by default and that an administrator unlocks one with a `location` element and `overrideMode="Allow"`. Which of the sections below are locked on your server was not checked: if a setting in a `web.config` has no effect or the site reports a configuration lock, ask the server's administrator to unlock the section.
+A `web.config` can appear at the site, application, virtual directory or physical path level, and its settings override the server defaults ([introduction to `applicationHost.config`](https://learn.microsoft.com/en-us/iis/get-started/planning-your-iis-architecture/introduction-to-applicationhostconfig)). The same page says most IIS sections are locked by default and that an administrator allows one to be overridden with a `location` element and `overrideMode="Allow"`. Which of the sections below are locked on your server was not checked: if a setting in a `web.config` has no effect or the site reports a configuration lock, ask the server's administrator to allow the section to be overridden.
 
 ### Media types
 

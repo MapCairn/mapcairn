@@ -7,11 +7,9 @@ description: What a data layer definition holds, a minimal working example, and 
 
 # Layer definitions
 
-This page is for a developer who wants the map to show a data layer of their own. By the end you will have written a definition, checked it, and know which keys each kind of layer takes. The first working map is in [Get started](../get-started.md).
+Write a definition for a data layer of your own, check it, and see which keys each kind of layer takes. The first working map is in [Get started](../get-started.md).
 
 Related guides: [Add a layer](../tasks/add-a-layer.md) gives a definition to the services and turns it on, [Serving layers to MapCairn](serving-layers.md) says which kind fits which server and what each costs it, and [Add to the reference site](add-to-the-reference-site.md#add-a-data-layer) is for a layer in this repository.
-
-Checked against `@mapcairn/sdk` %sdkVersion%, the version in this repository.
 
 ## What a definition holds
 

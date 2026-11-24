@@ -7,9 +7,7 @@ description: Add a language to the interface, wire your own messages, and handle
 
 # Translate the SDK
 
-This page is for a developer who builds an interface with the SDK in a language other than British English, or in more than one. By the end you will know how the interface's text is organised, how to check a translation, and how to handle plurals, direction and fonts, without forking a component. For a first translation, start with [Translate the interface](../tasks/translate-the-interface.md), which changes the search box's words and offers two languages step by step. British English (`en-GB`) is the source language and the SDK's default. The ports are described in [ARCHITECTURE.md](https://github.com/MapCairn/mapcairn/blob/main/ARCHITECTURE.md) ("The message catalogue" and "The language setting"). To add a language to the reference site in this repository, follow [Add to the reference site](add-to-the-reference-site.md#add-a-language).
-
-Checked against `@mapcairn/sdk` %sdkVersion%, the version in this repository.
+How the interface's text is organised, how to check a translation, and how to handle plurals, direction and fonts in a language other than British English, or in more than one, without forking a component. For a first translation, start with [Translate the interface](../tasks/translate-the-interface.md), which changes the search box's words and offers two languages step by step. British English (`en-GB`) is the source language and the SDK's default. The ports are described in [ARCHITECTURE.md](https://github.com/MapCairn/mapcairn/blob/main/ARCHITECTURE.md) ("The message catalogue" and "The language setting"). To add a language to the reference site in this repository, follow [Add to the reference site](add-to-the-reference-site.md#add-a-language).
 
 ## What is supported
 
