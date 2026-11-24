@@ -10,7 +10,12 @@ import {
   surfaceBlurSupported,
   tokens,
 } from "./tokens.css";
-import { nonLatinLanguages, typeScale, zLayerOrder } from "./tokenValues";
+import {
+  fontFamily,
+  nonLatinLanguages,
+  typeScale,
+  zLayerOrder,
+} from "./tokenValues";
 import { zLayer } from "./zLayer";
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -104,6 +109,25 @@ describe("emitted CSS", () => {
   it("declares light on :root and dark behind an attribute", () => {
     expect(css).toContain(':root, [data-theme="light"] {');
     expect(css).toContain('[data-theme="dark"] {');
+  });
+
+  it("ships the metric-matched fallback face that the font stack names, with no font file", () => {
+    const face = /@font-face \{([^}]*)\}/.exec(css)?.[1] ?? "";
+    const family = /font-family: "?([^";]+)"?;/.exec(face)?.[1];
+    expect(family).toBe("IBM Plex Sans Fallback");
+    expect(fontFamily.split(", ")[1]).toBe(`"${family}"`);
+    expect(face).toContain('local("Arial")');
+    expect(face).toContain('local("Liberation Sans")');
+    expect(face).not.toMatch(/url\(/);
+    for (const descriptor of [
+      "size-adjust: 101.1663%",
+      "ascent-override: 101.3184%",
+      "descent-override: 27.183%",
+      "line-gap-override: 0%",
+    ]) {
+      expect(face).toContain(descriptor);
+    }
+    expect(css.match(/@font-face/g)).toHaveLength(1);
   });
 
   it("follows the OS dark preference only when no attribute is set", () => {

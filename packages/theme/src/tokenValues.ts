@@ -572,7 +572,7 @@ export const fontWeight = { regular: "400", semibold: "600" } as const;
 
 /**
  * The font stack: the self-hosted variable face, its metric-matched fallback
- * (declared in `packages/web/src/fonts/fonts.css`) and then system fonts that
+ * (declared in `tokens.css`, from `tokens.css.ts`) and then system fonts that
  * also cover non-Latin place names.
  */
 export const fontFamily =
