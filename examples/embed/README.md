@@ -2,12 +2,16 @@
 
 A one-page Vite and React app that uses the SDK the way an outside app does: it imports `@mapcairn/core`, `@mapcairn/map`, `@mapcairn/react` and `@mapcairn/theme` by package name and nothing else from this repository. It runs on the SDK's fakes, so it requests nothing and loads no map engine. Its search runs over a few invented places held in memory. [Extending MapCairn](https://mapcairn.timothybrits.co.za/docs/guides/extending/) says what an app of your own provides.
 
-It builds against the packages' `dist` (each script builds them first with `npm run build:sdk`) and needs no vanilla-extract plugin: `src/main.tsx` imports `@mapcairn/theme/tokens.css` and `@mapcairn/map/styles.css`, and `src/page.css` is a plain stylesheet whose rules (a box model, the page height) change no primitive, so it needs no cascade layer (see the extending guide for an app whose base styles do).
+It builds against the packages' `dist` (each script builds them first with `npm run build:sdk`) and needs no vanilla-extract plugin: `src/main.tsx` imports `@mapcairn/theme/tokens.css` and `@mapcairn/map/styles.css`, and `src/page.css` is a plain stylesheet whose rules (a box model, the page height, the grid that holds the two maps) change no primitive, so it needs no cascade layer (see the extending guide for an app whose base styles do).
 
 ```bash
 npm run dev -w @mapcairn/example-embed
 npm test -w @mapcairn/example-embed
 ```
+
+## Two themed maps
+
+The page shows two maps, each inside a wrapper with its own class (`map-pine` and `map-heather`), with a different accent colour and typeface. `src/exampleThemes.ts` holds the two themes and calls `createThemeStylesheet` once for each, with the class as its scope, and joins the results into one stylesheet. `src/themeStylesheetPlugin.ts` serves that text as `example-themes.css`, in the dev server and in the build, and links it after the SDK's stylesheet. It is a file, never an inline `<style>`, so a policy with `style-src 'self'` allows it, and a theme below WCAG 2.2 AA fails the build with an error. The faces are families a device already has, so no font file is loaded. `src/exampleThemes.test.ts` fails if the stylesheet stops holding the rules of either scope. Light and dark stay one choice for the whole page: the SDK reads `data-theme` from the document element, so both maps follow it together.
 
 ## Layers
 

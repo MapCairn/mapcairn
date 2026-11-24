@@ -6,6 +6,7 @@ import {
   render,
   screen,
   waitFor,
+  within,
 } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ExampleApp } from "./ExampleApp";
@@ -44,17 +45,19 @@ afterEach(cleanup);
 describe("ExampleApp feature selection", () => {
   it("offers the selected set on the fakes' store, so a host can see it", async () => {
     render(<ExampleApp />);
+    const pine = within(screen.getByRole("region", { name: "Pine map" }));
 
-    expect((await screen.findByTestId("selection-probe")).textContent).toBe(
+    expect((await pine.findByTestId("selection-probe")).textContent).toBe(
       "0 selected of 200",
     );
-    expect(screen.getByRole("button", { name: "Add probe" })).toBeTruthy();
+    expect(pine.getByRole("button", { name: "Add probe" })).toBeTruthy();
   });
 
   it("selects through that store and tells the live region once", async () => {
     render(<ExampleApp />);
+    const pine = within(screen.getByRole("region", { name: "Pine map" }));
 
-    fireEvent.click(await screen.findByRole("button", { name: "Add probe" }));
+    fireEvent.click(await pine.findByRole("button", { name: "Add probe" }));
 
     // The example's catalogue skips one definition, which is said first, so
     // the selection message waits for the announcer's next window.

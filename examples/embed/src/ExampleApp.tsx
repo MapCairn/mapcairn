@@ -43,10 +43,9 @@ import { useModelContextTool } from "@mapcairn/react";
 import { type ReactNode, useState } from "react";
 import { CAIRNS_LAYER } from "./cairnsLayer";
 import { createExampleServices } from "./exampleServices";
+import { EXAMPLE_THEMES, type ExampleTheme } from "./exampleThemes";
 import { showResult } from "./showResult";
 
-const MAP_ID = "example-map";
-const SHEET_ID = "example-sheet";
 const PRIVACY_NOTE =
   "This example runs on the SDK's scripted fakes. Search looks only at a short list of invented places held in the page, and nothing is sent to any service.";
 const INITIAL_VIEW: ViewState = {
@@ -60,8 +59,11 @@ type OpenSheet = "map-options" | "settings" | null;
 
 /**
  * The whole example: the services and the app-wide providers (services, the
- * one announcer and tooltips) around the map. The services are built once
- * per mount, never at module scope.
+ * one announcer and tooltips) around two maps. The services are built once
+ * per mount, never at module scope, and both maps share them. Each map sits in
+ * a wrapper that carries the class its theme is scoped to
+ * (`exampleThemes.ts`); `data-theme` is read from the document element, which
+ * the one theme setting writes, so light and dark are one choice for the page.
  */
 export function ExampleApp() {
   const [services] = useState(createExampleServices);
@@ -69,7 +71,17 @@ export function ExampleApp() {
     <ServicesProvider services={services}>
       <LiveRegionProvider>
         <TooltipProvider>
-          <ExampleMap />
+          <div className="maps">
+            {EXAMPLE_THEMES.map((theme) => (
+              <section
+                key={theme.className}
+                aria-label={`${theme.title} map`}
+                className={`themed-map ${theme.className}`}
+              >
+                <ExampleMap theme={theme} />
+              </section>
+            ))}
+          </div>
         </TooltipProvider>
       </LiveRegionProvider>
     </ServicesProvider>
@@ -85,11 +97,18 @@ interface ExampleState {
   readonly setMeasuring: (measuring: boolean) => void;
   readonly pin: LatLng | null;
   readonly setPin: (pin: LatLng | null) => void;
+  readonly sheetId: string;
   readonly basemapId: string;
   readonly setBasemapId: (id: string) => void;
 }
 
-function ExampleMap() {
+interface ExampleMapProps {
+  /** The theme whose wrapper this map sits in; its class names the map and its sheet. */
+  readonly theme: ExampleTheme;
+}
+
+function ExampleMap({ theme }: ExampleMapProps) {
+  const mapId = theme.className;
   const { settings } = useSettings();
   const catalogue = useBasemaps();
   const { resolved } = useTheme();
@@ -112,13 +131,14 @@ function ExampleMap() {
     setMeasuring,
     pin,
     setPin,
+    sheetId: `${mapId}-sheet`,
     basemapId: basemap.id,
     setBasemapId,
   };
 
   useModelContextTool({
-    name: "show-cairns",
-    description: "Turns on the example's Cairns layer.",
+    name: `show-cairns-${mapId}`,
+    description: `Turns on the Cairns layer in the ${theme.title} map.`,
     inputSchema: {
       type: "object",
       properties: {},
@@ -133,7 +153,7 @@ function ExampleMap() {
   return (
     <SelectionProvider selection={selection}>
       <MapView
-        id={MAP_ID}
+        id={mapId}
         initialView={INITIAL_VIEW}
         basemap={basemap}
         cursor={measuring ? "crosshair" : "grab"}
@@ -212,10 +232,10 @@ function ChromeSlots({ state, background }: ExampleChromeProps) {
           bearing={map.view.bearing}
           onResetBearing={() => map.adapter?.resetBearing()}
           mapOptionsOpen={open === "map-options"}
-          mapOptionsControls={SHEET_ID}
+          mapOptionsControls={state.sheetId}
           onMapOptions={() => toggle("map-options")}
           settingsOpen={open === "settings"}
-          settingsControls={SHEET_ID}
+          settingsControls={state.sheetId}
           onSettings={() => toggle("settings")}
           measuring={measuring}
           onMeasure={() =>
@@ -247,7 +267,7 @@ function ChromeSlots({ state, background }: ExampleChromeProps) {
       }
       sheet={
         <Sheet
-          id={SHEET_ID}
+          id={state.sheetId}
           open={open !== null}
           title={open === "settings" ? "Settings and help" : "Map options"}
           detent={detent}
