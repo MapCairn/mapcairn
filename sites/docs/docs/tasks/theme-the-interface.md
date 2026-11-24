@@ -130,7 +130,7 @@ The choice is a setting, so the settings service keeps it between visits when it
 
 ## Use your own colours
 
-`createThemeStylesheet` makes a stylesheet that gives the interface your colours, and refuses a theme that falls below WCAG 2.2 AA. It covers the interface's colour roles in light and dark and, optionally, the font family. It does not change the page background, the colours drawn on the map or the data palette. Run it in your build or a script, and serve the file it returns:
+`createThemeStylesheet` makes a stylesheet that gives the interface your colours, and refuses a theme that falls below WCAG 2.2 AA. It covers the interface's colour roles in light and dark and, optionally, the font family and the corner shape. It does not change the page background, the colours drawn on the map or the data palette. Run it in your build or a script, and serve the file it returns:
 
 ```ts check
 import { createThemeStylesheet } from "@mapcairn/sdk";
@@ -156,7 +156,7 @@ export function brandStylesheet(): string {
 
 Link the file after the SDK's own stylesheets, and put the class from `scope` on an element around the map. It is a plain stylesheet, so a policy with `style-src 'self'` allows it. The result of a refused theme lists every pair of colours it checked and says which failed.
 
-`fontFamily` takes plain family names and generic families; anything else is refused and listed in `invalid` as `fontFamily`, and the SDK's own stack follows your list as the fallback. You load the font yourself: the file must be on your own origin or allowed by your `font-src`, and the stylesheet must be linked, because a strict policy blocks an inline `<style>`. [Extending MapCairn](../guides/extending.md#theme-the-sdk-with-your-own-colours) has the full list of colour roles and the rules about scope, high-contrast modes and tooltips.
+`fontFamily` takes plain family names and generic families; anything else is refused and listed in `invalid` as `fontFamily` (`invalid[].value` echoes the refused text, so treat it as untrusted if you show it), and the SDK's own stack follows your list as the fallback. You load the font yourself: the file must be on your own origin or allowed by your `font-src`, and the stylesheet must be linked, because a strict policy blocks an inline `<style>`. `shape` takes `"square"`, `"default"` or `"round"` and sets the corners of the pill, sheet, controls and inner shapes; circles stay circles and the search pill stays a pill. [Extending MapCairn](../guides/extending.md#theme-the-sdk-with-your-own-colours) has the full list of colour roles and the rules about scope, high-contrast modes and tooltips.
 
 ## When it goes wrong
 

@@ -226,6 +226,30 @@ describe("Tooltip inside a scoped host theme", () => {
     );
   });
 
+  it("gives the portalled bubble the corner radii its trigger sees", () => {
+    const radii = Object.values(tokens.radius).map(propertyOf);
+    setup(
+      <Tooltip content="Shortcut: plus">
+        <button
+          type="button"
+          ref={(node) => {
+            for (const radius of radii) {
+              node?.style.setProperty(radius, "2px");
+            }
+          }}
+        >
+          Zoom in
+        </button>
+      </Tooltip>,
+    );
+    act(() => {
+      trigger().focus();
+    });
+    for (const radius of radii) {
+      expect(bubble().style.getPropertyValue(radius), radius).toBe("2px");
+    }
+  });
+
   it("sets nothing when the trigger sees no host colours", () => {
     setup(
       <Tooltip content="Shortcut: plus">

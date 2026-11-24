@@ -122,6 +122,7 @@ export interface ThemeOverride {
         dark?: Partial<ThemeColours>;
     };
     fontFamily?: string;
+    shape?: "square" | "default" | "round";
 }
 
 // @public

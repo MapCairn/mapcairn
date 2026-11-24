@@ -251,16 +251,20 @@ test.describe("a generated host theme", () => {
     expectColour(dark.surface, SAGE.dark.surface);
   });
 
-  test("gives a tooltip the font family of its scope", async ({ page }) => {
+  test("gives a tooltip the font family and corners of its scope", async ({
+    page,
+  }) => {
     await openGuide(page);
     await applyThemes(page);
     await openTooltip(page);
 
     await expect(bubble(page)).toBeVisible();
-    const family = await bubble(page).evaluate(
-      (element) => getComputedStyle(element).fontFamily,
-    );
+    const { family, radius } = await bubble(page).evaluate((element) => ({
+      family: getComputedStyle(element).fontFamily,
+      radius: getComputedStyle(element).borderTopLeftRadius,
+    }));
     expect(family).toMatch(/^"?Sage Test"?,/);
+    expect(radius).toBe("2px");
     await expect(page.locator(`.host-sage [data-side]`)).toHaveCount(0);
   });
 
