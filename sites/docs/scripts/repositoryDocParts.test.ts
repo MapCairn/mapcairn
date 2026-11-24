@@ -8,6 +8,7 @@ import {
   PART_CEILING,
   slugifyHeading,
   splitDocument,
+  splitPreamble,
 } from "./repositoryDocParts";
 
 const SOURCE = [
@@ -266,6 +267,47 @@ describe("headingsOf", () => {
       { level: 2, text: "A b", id: "a-b" },
       { level: 3, text: "C d", id: "c-d" },
     ]);
+  });
+});
+
+describe("splitPreamble", () => {
+  const preamble = [
+    "\nOpening line.\n",
+    "\n### First note\n\nFirst text.\n\n#### Deeper\n\nDeeper text.\n",
+    "\n```md\n### Not a heading\n```\n",
+    "\n### Second note\n\nSecond text.\n",
+  ].join("");
+
+  it("keeps the text before the first third-level heading and cuts a note at each one", () => {
+    const { lead, notes } = splitPreamble(preamble);
+    expect(lead).toBe("\nOpening line.\n\n");
+    expect(notes.map((note) => note.title)).toEqual([
+      "First note",
+      "Second note",
+    ]);
+    expect(notes[0]?.markdown).toContain("#### Deeper");
+    expect(notes[0]?.markdown).toContain("### Not a heading");
+    expect(notes.map((note) => note.stem)).toEqual([
+      "first-note",
+      "second-note",
+    ]);
+  });
+
+  it("loses no text and repeats none", () => {
+    const { lead, notes } = splitPreamble(preamble);
+    expect(lead + notes.map((note) => note.markdown).join("")).toBe(preamble);
+  });
+
+  it("gives a note a stem that none of the taken ones has", () => {
+    const { notes } = splitPreamble("\n### Tokens\n\nx\n", ["tokens"]);
+    expect(notes[0]?.stem).toBe("tokens-notes");
+  });
+
+  it("has no notes in a preamble without a third-level heading", () => {
+    expect(splitPreamble("\nJust text.\n")).toEqual({
+      lead: "\nJust text.\n",
+      notes: [],
+    });
   });
 });
 
