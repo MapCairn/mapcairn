@@ -346,7 +346,7 @@ describe("README.md", () => {
 
   it("names the licence AGPL-3.0-only as the manifests do, in the badge and in the other documents that state it", () => {
     expect(README).toContain("[![Licence: AGPL-3.0-only]");
-    for (const doc of ["CONTRIBUTING.md", "GOVERNANCE.md"]) {
+    for (const doc of [".github/CONTRIBUTING.md", ".github/GOVERNANCE.md"]) {
       const text = readFileSync(path.join(REPO, doc), "utf8");
       expect(
         text.replace("the AGPL-3.0 or another OSI-approved licence", ""),
@@ -354,7 +354,7 @@ describe("README.md", () => {
       ).not.toMatch(/AGPL-3\.0(?!-only)/);
     }
     const contributing = readFileSync(
-      path.join(REPO, "CONTRIBUTING.md"),
+      path.join(REPO, ".github/CONTRIBUTING.md"),
       "utf8",
     );
     expect(contributing).toContain(

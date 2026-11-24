@@ -271,7 +271,7 @@ npm install
 npm run dev
 ```
 
-`npm run dev` serves the playground on port 5173. `npm run dev -w @mapcairn/example-embed` runs the example app instead, and `npm run dev -w @mapcairn/docs` serves the documentation site on port 4410. [`CONTRIBUTING.md`](CONTRIBUTING.md) lists the checks.
+`npm run dev` serves the playground on port 5173. `npm run dev -w @mapcairn/example-embed` runs the example app instead, and `npm run dev -w @mapcairn/docs` serves the documentation site on port 4410. [`CONTRIBUTING.md`](.github/CONTRIBUTING.md) lists the checks.
 
 ## How it is checked
 
@@ -323,16 +323,16 @@ The [documentation site](https://mapcairn.timothybrits.co.za/docs/) is built fro
 | [`docs/guides/working-with-agents.md`](docs/guides/working-with-agents.md)                            | Using a coding agent on this repository: what each one reads and how to start                                      |
 | [`docs/guides/personal-preferences.md`](docs/guides/personal-preferences.md)                          | Keeping your own working style for a coding agent in a git-ignored file, not in the shared rules                   |
 | [`docs/plans/`](docs/plans/README.md)                                                                 | Numbered plans for work not yet built                                                                              |
-| [`GOVERNANCE.md`](GOVERNANCE.md)                                                                      | The maintainer role, how decisions are made, and what is not yet covered                                           |
+| [`GOVERNANCE.md`](.github/GOVERNANCE.md)                                                              | The maintainer role, how decisions are made, and what is not yet covered                                           |
 | [`ROADMAP.md`](ROADMAP.md)                                                                            | What the project intends to do in the next twelve months, and what it will not do                                  |
 | [`docs/assurance-case.md`](docs/assurance-case.md)                                                    | Security requirements, trust boundaries, threat model and the evidence for each                                    |
 | [`AGENTS.md`](AGENTS.md)                                                                              | Working rules for people and AI changing the code                                                                  |
 
 ## Contributing, security and conduct
 
-Ask a question in [Discussions](https://github.com/MapCairn/mapcairn/discussions), and report a bug or propose a change in the [issue tracker](https://github.com/MapCairn/mapcairn/issues). Report a security problem privately, as [`SECURITY.md`](SECURITY.md) explains, not in an issue.
+Ask a question in [Discussions](https://github.com/MapCairn/mapcairn/discussions), and report a bug or propose a change in the [issue tracker](https://github.com/MapCairn/mapcairn/issues). Report a security problem privately, as [`SECURITY.md`](.github/SECURITY.md) explains, not in an issue.
 
-See [`CONTRIBUTING.md`](CONTRIBUTING.md) for checks and conventions, [`GOVERNANCE.md`](GOVERNANCE.md) for who decides what, [`ROADMAP.md`](ROADMAP.md) for what is planned and what is not, [`SECURITY.md`](SECURITY.md) for private vulnerability reporting (with the [assurance case](docs/assurance-case.md)) and [`CODE_OF_CONDUCT.md`](CODE_OF_CONDUCT.md) for community expectations.
+See [`CONTRIBUTING.md`](.github/CONTRIBUTING.md) for checks and conventions, [`GOVERNANCE.md`](.github/GOVERNANCE.md) for who decides what, [`ROADMAP.md`](ROADMAP.md) for what is planned and what is not, [`SECURITY.md`](.github/SECURITY.md) for private vulnerability reporting (with the [assurance case](docs/assurance-case.md)), [`CODE_OF_CONDUCT.md`](.github/CODE_OF_CONDUCT.md) for community expectations and [`ACCESSIBILITY.md`](.github/ACCESSIBILITY.md) for what the project commits to on accessibility, how it checks it and what is not yet done.
 
 Everyone is welcome to use the coding agent they prefer, and the same rules in [`AGENTS.md`](AGENTS.md) apply to all of them. [`docs/guides/working-with-agents.md`](docs/guides/working-with-agents.md) lists what Claude Code, Codex, OpenCode, GitHub Copilot, Antigravity, Cursor and Qwen Code read, as checked against their documentation, how to start, and what has not been tried.
 

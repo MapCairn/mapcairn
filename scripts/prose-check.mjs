@@ -77,12 +77,8 @@ export function isChecked(path) {
 export const EVERGREEN_EXEMPTIONS = {
   "PRIVACY.md": "a legal document: its revised date is part of its content",
   "CLA.md": "a legal document: its terms carry their own dates",
-  "SECURITY.md": "a legal document: its policy dates are part of its content",
-  "GOVERNANCE.md": "carries a last-updated date that readers rely on",
   "ATTRIBUTIONS.md":
     "provider terms quote dated data, such as the first day a tile service answers",
-  "docs/assurance-case.md":
-    "carries a last-updated date, and cites the dated sources it rests on",
 };
 
 /** The root documents, besides the READMEs and the guides, that are held to the evergreen rule. */
@@ -91,6 +87,12 @@ const EVERGREEN_ROOT_DOCUMENTS = new Set([
   "ARCHITECTURE.md",
   "DESIGN.md",
   "ROADMAP.md",
+  "docs/assurance-case.md",
+  ".github/ACCESSIBILITY.md",
+  ".github/CODE_OF_CONDUCT.md",
+  ".github/CONTRIBUTING.md",
+  ".github/GOVERNANCE.md",
+  ".github/SECURITY.md",
 ]);
 
 /** A line that states when a document was last reviewed or updated: the date is the content. */

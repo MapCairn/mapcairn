@@ -280,6 +280,12 @@ describe("isEvergreen", () => {
     "ARCHITECTURE.md",
     "DESIGN.md",
     "ROADMAP.md",
+    "docs/assurance-case.md",
+    ".github/ACCESSIBILITY.md",
+    ".github/CODE_OF_CONDUCT.md",
+    ".github/CONTRIBUTING.md",
+    ".github/GOVERNANCE.md",
+    ".github/SECURITY.md",
     "docs/guides/releasing.md",
     "sites/docs/docs/guides/performance.md",
   ])("holds %s to it", (file) => {
@@ -295,7 +301,7 @@ describe("isEvergreen", () => {
     "PRIVACY.md",
     "CLA.md",
     "ATTRIBUTIONS.md",
-    "docs/assurance-case.md",
+    ".github/pull_request_template.md",
     "packages/core/src/lint/proseCheck.test.ts",
   ])("leaves %s out", (file) => {
     expect(isEvergreen(file)).toBe(false);

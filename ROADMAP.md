@@ -2,7 +2,7 @@
 
 _Last reviewed: 2026-11-24. Reviewed every year, and sooner when a decision below changes._
 
-This is what MapCairn intends to do over the next twelve months, and what it will not do. Everything under "Intentions" is a plan or an idea, not a promise and not a delivery date. Nothing in it is built unless a status says so. The project has one volunteer maintainer (see [`GOVERNANCE.md`](GOVERNANCE.md)), so the order can change and some items may not happen. The [open issues](https://github.com/MapCairn/mapcairn/issues) are the detailed plan and hold the current state of each item, and [`docs/plans/`](docs/plans/README.md) holds the written plans for large changes.
+This is what MapCairn intends to do over the next twelve months, and what it will not do. Everything under "Intentions" is a plan or an idea, not a promise and not a delivery date. Nothing in it is built unless a status says so. The project has one volunteer maintainer (see [`GOVERNANCE.md`](.github/GOVERNANCE.md)), so the order can change and some items may not happen. The [open issues](https://github.com/MapCairn/mapcairn/issues) are the detailed plan and hold the current state of each item, and [`docs/plans/`](docs/plans/README.md) holds the written plans for large changes.
 
 ## Direction
 
@@ -60,9 +60,9 @@ These wait until after 1.0.0 and are ranked in the order they are meant to be do
 | Code health              | A smaller app hook                                                                                                                                                       | proposed                                                                        | [#25](https://github.com/MapCairn/mapcairn/issues/25)                                                                                                                                                                                                                                 |
 | Publishing and assurance | The OpenSSF Best Practices silver badge                                                                                                                                  | in progress                                                                     | [#4](https://github.com/MapCairn/mapcairn/issues/4)                                                                                                                                                                                                                                   |
 
-Further items, such as new open data layers, are added as plans or issues when someone proposes them, and each new dataset is a separate, explicitly scoped decision with its provenance, publication rights and privacy reviewed first (see [`CONTRIBUTING.md`](CONTRIBUTING.md)).
+Further items, such as new open data layers, are added as plans or issues when someone proposes them, and each new dataset is a separate, explicitly scoped decision with its provenance, publication rights and privacy reviewed first (see [`CONTRIBUTING.md`](.github/CONTRIBUTING.md)).
 
-Still wanted and not yet possible: a second trusted person with access, so the project can continue if the maintainer is unavailable. See [`GOVERNANCE.md`](GOVERNANCE.md).
+Still wanted and not yet possible: a second trusted person with access, so the project can continue if the maintainer is unavailable. See [`GOVERNANCE.md`](.github/GOVERNANCE.md).
 
 ## Non-goals
 

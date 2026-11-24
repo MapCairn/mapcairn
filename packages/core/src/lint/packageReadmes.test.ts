@@ -252,7 +252,7 @@ describe.each(BUILT_SDK_PACKAGES)("the README of @mapcairn/%s", (name) => {
     const targets = linkTargets(readme);
     expect(readme).toContain("AGPL-3.0-only");
     expect(targets).toContain(`${REPOSITORY_FILES}packages/${name}/LICENSE`);
-    expect(targets).toContain(`${REPOSITORY_FILES}CONTRIBUTING.md`);
+    expect(targets).toContain(`${REPOSITORY_FILES}.github/CONTRIBUTING.md`);
     expect(targets).toContain(`${REPOSITORY_FILES}CHANGELOG.md`);
   });
 
@@ -291,7 +291,7 @@ describe.each(BUILT_SDK_PACKAGES)("the README of @mapcairn/%s", (name) => {
     const section = readme.slice(readme.indexOf("## Contributing and changes"));
     const targets = linkTargets(section);
     expect(targets).toContain(DISCUSSIONS);
-    expect(targets).toContain(`${REPOSITORY_FILES}SECURITY.md`);
+    expect(targets).toContain(`${REPOSITORY_FILES}.github/SECURITY.md`);
     expect(section).toMatch(/privately/);
     expect(section).toMatch(/not in an issue/);
   });

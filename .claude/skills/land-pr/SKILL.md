@@ -5,7 +5,7 @@ description: "Open, review and land a MapCairn pull request with the gh CLI: wri
 
 # Land a pull request
 
-`AGENTS.md` and `CONTRIBUTING.md` are the authority; this is the procedure. Changes reach `main` only through a pull request. Never push to `main` and never skip a hook (`--no-verify`).
+`AGENTS.md` and `.github/CONTRIBUTING.md` are the authority; this is the procedure. Changes reach `main` only through a pull request. Never push to `main` and never skip a hook (`--no-verify`).
 
 Unless you ran `gh repo set-default MapCairn/mapcairn` (see `pick-up-issue`), add `--repo MapCairn/mapcairn` to every `gh pr` and `gh issue` command here, so a fork is never mistaken for the project.
 

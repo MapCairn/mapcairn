@@ -94,7 +94,7 @@ describe("isChecked", () => {
     "sites/docs/docs/guides/extending.md",
     "AGENTS.md",
     "CLAUDE.md",
-    "CONTRIBUTING.md",
+    ".github/CONTRIBUTING.md",
     "lefthook.yml",
     "package.json",
   ])("checks %s", (file) => {

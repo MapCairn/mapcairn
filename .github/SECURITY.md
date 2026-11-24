@@ -6,12 +6,12 @@ _Last updated: 2026-11-11_
 
 MapCairn is server-rendered on Cloudflare Workers. There is no database, no
 accounts and no authentication. The only data accepted from users is the
-automatic error report described in [`PRIVACY.md`](PRIVACY.md), which is
+automatic error report described in [`PRIVACY.md`](../PRIVACY.md), which is
 written to Cloudflare's logs and not stored anywhere else. Everything else
 the Worker serves is either rendered HTML or a static asset (JS, CSS, fonts
 and images).
 
-The security surface is small. [`docs/assurance-case.md`](docs/assurance-case.md) sets out the trust boundaries, the threats considered at each, and why the project believes its security requirements are met. Reports are most useful when they concern:
+The security surface is small. [`docs/assurance-case.md`](../docs/assurance-case.md) sets out the trust boundaries, the threats considered at each, and why the project believes its security requirements are met. Reports are most useful when they concern:
 
 - Cross-site scripting or other injection in the web app (`packages/web`)
 - Abuse of the error-report endpoint (`packages/web/src/routes/log-error.ts`)
@@ -27,7 +27,7 @@ The security surface is small. [`docs/assurance-case.md`](docs/assurance-case.md
 - Production pages are served with a Content Security Policy that allows no `unsafe-inline` source, and with headers that stop framing and downgrades.
 - You cannot expect control over the third-party providers, a service level, or fixes for old versions.
 
-The full list, with the evidence for each point and the known residual risks, is in [`docs/assurance-case.md`](docs/assurance-case.md).
+The full list, with the evidence for each point and the known residual risks, is in [`docs/assurance-case.md`](../docs/assurance-case.md).
 
 ## Supported versions
 
@@ -79,6 +79,6 @@ The following are not treated as vulnerabilities in this project:
 
 The project maps geography, not people. Do not open issues or pull requests that
 introduce personally identifying information, household-level data, or any data
-whose licence does not permit publication. See [`ATTRIBUTIONS.md`](ATTRIBUTIONS.md)
-for the sources currently in use and [`PRIVACY.md`](PRIVACY.md) for what the
+whose licence does not permit publication. See [`ATTRIBUTIONS.md`](../ATTRIBUTIONS.md)
+for the sources currently in use and [`PRIVACY.md`](../PRIVACY.md) for what the
 deployed site does and does not collect.

@@ -5,9 +5,9 @@ description: "Review a MapCairn change for security and privacy risk: threat-mod
 
 # Review security
 
-The project's security position is in `SECURITY.md` and `docs/assurance-case.md` (trust boundaries, threats and the evidence for each counter), and its privacy position in `PRIVACY.md`. This skill checks a change against them. It does not repeat CodeQL, zizmor, Dependency review or TruffleHog: run or read their results first, and spend your time on what a scanner cannot decide, such as whether a parser is right and whether a workflow does what its author thinks.
+The project's security position is in `.github/SECURITY.md` and `docs/assurance-case.md` (trust boundaries, threats and the evidence for each counter), and its privacy position in `PRIVACY.md`. This skill checks a change against them. It does not repeat CodeQL, zizmor, Dependency review or TruffleHog: run or read their results first, and spend your time on what a scanner cannot decide, such as whether a parser is right and whether a workflow does what its author thinks.
 
-Changes to `SECURITY.md`, `PRIVACY.md` and `packages/web/src/app/PrivacyPage.tsx` stay the maintainer's (`AGENTS.md`, "Ask the maintainer first"). A review may recommend one, never make it, and never proposes a weaker CSP, a new tracker or a wider data flow as the fix.
+Changes to `.github/SECURITY.md`, `PRIVACY.md` and `packages/web/src/app/PrivacyPage.tsx` stay the maintainer's (`AGENTS.md`, "Ask the maintainer first"). A review may recommend one, never make it, and never proposes a weaker CSP, a new tracker or a wider data flow as the fix.
 
 Example: a pull request reads a new `?share=` parameter. Section 2 lists the link as untrusted, section 3 finds the value is passed to a regular expression with nested quantifiers, and the finding reads `packages/core/src/urlHash/example.ts:31 - high - a crafted link of 5,000 characters takes seconds to match and freezes the tab. Fix: bound the length first and read it with a linear parse`.
 

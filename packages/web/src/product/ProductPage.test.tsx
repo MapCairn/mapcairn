@@ -63,7 +63,7 @@ const FOOTER_REPOSITORY_PAGES = [
   ["Documentation", "/docs/"],
   ["Release notes", `${REPO}/releases`],
   ["Licence guide", LICENCE_GUIDE_PATH],
-  ["Security", `${REPO}/blob/main/SECURITY.md`],
+  ["Security", `${REPO}/blob/main/.github/SECURITY.md`],
   ["Discussions", `${REPO}/discussions`],
 ] as const;
 
