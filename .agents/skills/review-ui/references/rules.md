@@ -51,7 +51,7 @@ A rule marked "(lint)" is enforced by the harmony scanner (`npm run lint:harmony
 - **P1** A long list is capped or windowed, as the feature list shows 50 rows and "Show all". No unbounded `.map()` over data a provider returns.
 - **P2** No layout read (`getBoundingClientRect`, `offsetWidth`, `scrollTop`) during render. Read in an effect or with `ResizeObserver`, and batch reads before writes. `MapChrome`'s measurements are the deliberate exception.
 - **P3** Prefer uncontrolled inputs where nothing else needs the value. A controlled input (the search combobox is one) must be cheap on every keystroke.
-- **P4** Fonts and app CSS come in as module imports so the build applies fallback metrics, not as a hand-written preload. A new tile or geocoder origin is allowed in `packages/web/public/_headers` and `packages/web/src/constants/securityHeaders.ts`.
+- **P4** Fonts and app CSS come in as module imports, not as a hand-written preload, and the metric-matched fallback face is declared once, in the theme's `tokens.css`, never again in an app. A new tile or geocoder origin is allowed in `packages/web/public/_headers` and `packages/web/src/constants/securityHeaders.ts`.
 
 ## State and navigation
 
