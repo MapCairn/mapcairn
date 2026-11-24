@@ -20,13 +20,13 @@ Example: the layer guide says to import a name that the installed package does n
 
 ## 2. Install
 
-Use the install line in `sites/docs/docs/guides/embed-a-map.md` ("Install"): `npm install @mapcairn/sdk react react-dom maplibre-gl`, in a project set up as that guide says. It installs the published version, so read that version from `npm view @mapcairn/sdk version` only if your permissions allow it; if the command is denied, do not retry or reword it, and read the version from the installed `package.json` or from the registry page the root `README.md` links (https://www.npmjs.com/package/@mapcairn/sdk). If the newest version is younger than 3 days, `min-release-age` refuses it: stop and report that, and do not lower the age. Report the installed version beside the commit you read, because the guides describe the version in the repository (the page says which, "Checked against `@mapcairn/sdk`"), and a difference is a finding of its own.
+Use the install line in `sites/docs/docs/get-started.md` ("Install"): `npm install @mapcairn/sdk react react-dom maplibre-gl`, in a project set up as that guide says. It installs the published version, so read that version from `npm view @mapcairn/sdk version` only if your permissions allow it; if the command is denied, do not retry or reword it, and read the version from the installed `package.json` or from the registry page the root `README.md` links (https://www.npmjs.com/package/@mapcairn/sdk). If the newest version is younger than 3 days, `min-release-age` refuses it: stop and report that, and do not lower the age. Report the installed version beside the commit you read, because the guides describe the version in the repository (the page says which, "Checked against `@mapcairn/sdk`"), and a difference is a finding of its own.
 
 ## 3. The four tasks
 
 Do them in order, each from the document named, using only what it and the pages it links say. After each, build and type-check as the guide does (`npm run build` in your project, and `npx --no-install tsc --noEmit` if it has a `tsconfig.json`). Look at the map in a browser only if your caller gave you one; otherwise say "not drawn".
 
-1. Render a map: `sites/docs/docs/guides/embed-a-map.md`, "The three files", then the README of `packages/sdk` for the install block.
+1. Render a map: `sites/docs/docs/get-started.md`, "Write the three files", then the README of `packages/sdk` for the install block.
 2. Add a data layer: `sites/docs/docs/guides/extending.md`, "Add a data layer".
 3. Swap or add a basemap: `extending.md`, "Add a basemap".
 4. Translate one string: `sites/docs/docs/guides/translate-the-sdk.md`, "Use one language of your own" (and "Check a catalogue" if it names a check you can run).

@@ -151,7 +151,11 @@ Printed once for each missing key. Your translation does not hold the key, so th
 
 The `numberingSystem` option of `createMessageCatalogue` is not three to eight letters or digits, such as `latn`. The option is ignored. Correct the value.
 
-## Build and type errors
+## Install and build errors
+
+### `npm install` stops with ENOVERSIONS
+
+`npm error code ENOVERSIONS` and `No versions available for @mapcairn/sdk` right after a release mean your npm has `min-release-age` set (in `.npmrc` or on the command line) and every published version is younger than it. Wait until the newest release is old enough, or run that one install with `--min-release-age=0`. The setting is a protection you chose, so keep it for your other installs.
 
 ### TS2307 on the worker import, TS2882 on a CSS import
 
