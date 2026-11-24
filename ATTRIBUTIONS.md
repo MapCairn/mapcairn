@@ -89,6 +89,25 @@ Maps are drawn with [MapLibre GL JS](https://maplibre.org), which is licensed un
 
 The documentation site is built with [Docusaurus](https://docusaurus.io), which is licensed under the MIT licence.
 
+### Notices for code bundled into the documentation site
+
+The documentation site is built with rspack, which writes no `*.LICENSE.txt` files and leaves no `@license` comments in the scripts. The notices for the MIT-licensed code those scripts bundle are published here instead, so the site's scripts no longer carry them. `npm run build -w @mapcairn/docs` fails if the build writes notice files again (the list may then be out of date) or if this section loses a copyright line below.
+
+| Code                                                                   | Copyright                                          |
+| ---------------------------------------------------------------------- | -------------------------------------------------- |
+| [React](https://react.dev), React DOM, `scheduler` and the JSX runtime | Copyright (c) Meta Platforms, Inc. and affiliates. |
+| `react-is`                                                             | Copyright (c) Facebook, Inc. and its affiliates.   |
+| `regenerator-runtime`                                                  | Copyright (c) 2014-present, Facebook, Inc.         |
+| [NProgress](https://github.com/rstacruz/nprogress)                     | Copyright (c) 2013-2014 Rico Sta. Cruz             |
+
+Each is licensed under the MIT licence:
+
+> Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
+>
+> The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+>
+> THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
 ## Fonts and icons
 
 [IBM Plex Sans](https://github.com/IBM/plex) is self-hosted through the `@fontsource-variable/ibm-plex-sans` package, under the SIL Open Font License 1.1.
