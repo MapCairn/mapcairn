@@ -151,7 +151,7 @@ Decided on 2026-11-24. An export that is going away is deprecated first, so a ho
 
 The pull request that removes it without notice says which exception applies and why.
 
-What is enforced: only the marker on the removal. The step "Check that a breaking API change is marked in the pull request title", in the `build` job of `.github/workflows/ci.yml` (`scripts/apiBreakingCheck.mjs`), warns when the reports show a likely breaking change and neither the `!` nor the footer is there. No check requires a `@deprecated` tag before a removal or counts the minor releases between them; the reviewer does, from the report diff and the tags in the last release. The maintainer decided on 2026-11-24 that no such check is added.
+What is enforced: only the marker on the removal. The step "Check that a breaking API change is marked in the pull request title", in the `build` job of `.github/workflows/ci.yml` (`scripts/apiBreakingCheck.mjs`), fails when the reports show a likely breaking change and neither the `!` nor the footer is there. No check requires a `@deprecated` tag before a removal or counts the minor releases between them; the reviewer does, from the report diff and the tags in the last release. The maintainer decided on 2026-11-24 that no such check is added.
 
 ## How a change is classed for a release
 
