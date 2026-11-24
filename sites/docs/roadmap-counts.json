@@ -1,5 +1,5 @@
 {
-  "fetchedAt": "2026-11-23T18:17:21.971Z",
+  "fetchedAt": "2026-11-24T03:15:49.816Z",
   "milestones": {
     "1": {
       "open": 1,
@@ -54,8 +54,8 @@
       "closed": 0
     },
     "14": {
-      "open": 17,
-      "closed": 174
+      "open": 16,
+      "closed": 184
     }
   }
 }
