@@ -66,6 +66,19 @@ jobs:
           PR_LABELS: ${{ join(github.event.pull_request.labels.*.name, ',') }}
           BASE_REF: ${{ github.base_ref }}
         run: node scripts/apiBreakingCheck.mjs
+      - name: Warn when the pull request lowers the quality bar
+        if: github.event_name == 'pull_request'
+        # Reads `git diff` from the base branch, which needs the full history
+        # fetched above, and only warns. The description and base branch reach
+        # the script through the environment, never through the shell script
+        # text. Release and Dependabot pull requests are skipped inside it.
+        env:
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          PR_BODY: ${{ github.event.pull_request.body }}
+          PR_AUTHOR: ${{ github.event.pull_request.user.login }}
+          PR_LABELS: ${{ join(github.event.pull_request.labels.*.name, ',') }}
+          BASE_REF: ${{ github.base_ref }}
+        run: node scripts/qualityBarCheck.mjs
       - run: npm run typecheck
       - run: npm run test:coverage
       - name: Upload coverage report
