@@ -12,6 +12,7 @@ import {
   leaveState,
   waitForStableLayout,
 } from "./support/states";
+import { smallTargetsByState, targetNames } from "./support/targets";
 
 /*
  * The layout contract for a host's font (DESIGN.md, Tokens). `createThemeStylesheet` cannot know
@@ -88,29 +89,6 @@ async function openMap(
   await scriptSearch(page);
   await mapPage.goto();
   await waitForStableLayout(page);
-}
-
-/**
- * The targets in a report without their sizes: a wide font makes a link wider,
- * and the report is about which targets are small, not how wide they are.
- */
-function targetNames(report: readonly string[]): readonly string[] {
-  return report.map((entry) => entry.replace(/ is \d+x\d+$/, ""));
-}
-
-/** The targets under 44 pixels in each chrome state, as the page has them now. */
-async function smallTargetsByState(
-  page: Page,
-  mapPage: MapPage,
-): Promise<Map<string, readonly string[]>> {
-  const found = new Map<string, readonly string[]>();
-  for (const state of CHROME_STATES) {
-    await enterState(mapPage, state);
-    await waitForStableLayout(page);
-    found.set(state, targetNames((await inspectControls(page)).under44));
-    await leaveState(mapPage, state);
-  }
-  return found;
 }
 
 /** Puts the wide face on the page through the generated stylesheet and waits for the layout to settle. */

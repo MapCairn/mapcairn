@@ -37,10 +37,19 @@ export interface ThemeOverride {
    * the fallback.
    */
   fontFamily?: string;
+  /**
+   * The corner style of the pill, the sheet, the controls and the inner
+   * shapes: `square`, `default` (the SDK's own) or `round`. Circular shapes
+   * stay circular, and the round preset keeps the search pill a pill. Like
+   * `fontFamily`, it does not change a contrast, so
+   * {@link checkThemeContrast} leaves it alone and
+   * {@link createThemeStylesheet} reads it, refusing any other value.
+   */
+  shape?: "square" | "default" | "round";
 }
 
 /** Keys of an override that are not colours: they are not checked here, and not unknown. */
-const NON_COLOUR_KEYS: ReadonlySet<string> = new Set(["fontFamily"]);
+const NON_COLOUR_KEYS: ReadonlySet<string> = new Set(["fontFamily", "shape"]);
 
 /** The measured contrast of one pair, in one theme, over one backdrop. */
 export interface ContrastFinding {

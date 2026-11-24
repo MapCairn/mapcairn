@@ -9,20 +9,21 @@ function propertyOf(reference: string): string | readonly string[] {
 
 /**
  * The custom properties a host's generated theme sets, read from the built
- * contract: the colours and the font family.
+ * contract: the colours, the font family and the corner radii.
  */
 const THEME_PROPERTIES: readonly string[] = [
   ...Object.values(tokens.color),
   tokens.type.family,
+  ...Object.values(tokens.radius),
 ].flatMap(propertyOf);
 
 /**
- * Copies the colours and font family `source` sees onto `target`, an element
- * that renders elsewhere in the document, such as content in a portal under
- * `body`.
+ * Copies the colours, font family and corner radii `source` sees onto
+ * `target`, an element that renders elsewhere in the document, such as
+ * content in a portal under `body`.
  *
  * A host scopes its generated theme to an element it owns, so a portal
- * outside that element would show the SDK's own colours and font. The
+ * outside that element would show the SDK's own colours, font and corners. The
  * computed value already accounts for the scope, the page theme and the
  * high-contrast and forced-colours modes (where the host theme is not
  * applied), so copying it keeps the portalled element in step with its

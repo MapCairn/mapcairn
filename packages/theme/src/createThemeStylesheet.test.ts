@@ -604,6 +604,184 @@ describe("createThemeStylesheet", () => {
     });
   });
 
+  describe("shape", () => {
+    const radiusRoles = ["pill", "sheet", "control", "inner"] as const;
+    const radiusNames = radiusRoles.map((role) => nameOf(tokens.radius[role]));
+
+    it.each(["square", "round"] as const)(
+      "writes the four radii of the %s preset once for the scope, outside the high-contrast conditions",
+      (shape) => {
+        const { css } = passed(
+          createThemeStylesheet({ shape }, { scope: ".brand" }),
+        );
+        const [rule, ...others] = readRules(css);
+
+        expect(others).toEqual([]);
+        expect(rule?.selector).toBe(":root .brand");
+        expect(rule?.conditions).toEqual([]);
+        expect(Object.keys(rule?.declarations ?? {}).sort()).toEqual(
+          [...radiusNames].sort(),
+        );
+        expect(css).not.toContain("@media");
+      },
+    );
+
+    it("makes square corners smaller and round corners larger than the default, in the same order of size", () => {
+      const radii = (shape: "square" | "round"): number[] => {
+        const { css } = passed(
+          createThemeStylesheet({ shape }, { scope: ".brand" }),
+        );
+        const declarations = readRules(css)[0]?.declarations ?? {};
+        return radiusNames.map((name) =>
+          Number.parseFloat(declarations[name] ?? ""),
+        );
+      };
+      const base = radiusRoles.map((role) =>
+        Number.parseFloat(tokenValues.radius[role]),
+      );
+
+      for (const [index, value] of radii("square").entries()) {
+        expect(value, radiusRoles[index]).toBeLessThan(base[index] ?? 0);
+      }
+      for (const [index, value] of radii("round").entries()) {
+        expect(value, radiusRoles[index]).toBeGreaterThanOrEqual(
+          base[index] ?? 0,
+        );
+      }
+    });
+
+    it("keeps the pill a pill in the round preset: no larger than half its height", () => {
+      const { css } = passed(
+        createThemeStylesheet({ shape: "round" }, { scope: ".brand" }),
+      );
+      const pill = readRules(css)[0]?.declarations[nameOf(tokens.radius.pill)];
+
+      expect(pill).toBe(tokenValues.radius.pill);
+      expect(Number.parseFloat(pill ?? "") * 2).toBeLessThanOrEqual(
+        Number.parseFloat(tokenValues.size.control) * 16,
+      );
+    });
+
+    it("never writes the circular role, so a circle stays a circle", () => {
+      for (const shape of ["square", "round"] as const) {
+        const { css } = passed(
+          createThemeStylesheet({ shape }, { scope: ".brand" }),
+        );
+
+        expect(css).not.toContain(nameOf(tokens.radius.round));
+      }
+    });
+
+    it("writes nothing for the default preset", () => {
+      expect(
+        createThemeStylesheet({ shape: "default" }, { scope: ".brand" }),
+      ).toEqual(expect.objectContaining({ ok: true, css: "" }));
+    });
+
+    it("raises the specificity for the root scope", () => {
+      const { css } = passed(
+        createThemeStylesheet({ shape: "round" }, { scope: ":root" }),
+      );
+
+      expect(readRules(css).map((rule) => rule.selector)).toEqual([
+        ":root:root",
+      ]);
+    });
+
+    it("writes the font and the shape in one rule, beside the colours", () => {
+      const { css } = passed(
+        createThemeStylesheet(
+          { ...brand, fontFamily: "Inter", shape: "square" },
+          { scope: "#map" },
+        ),
+      );
+      const plain = readRules(css).filter(
+        (rule) => rule.conditions.length === 0,
+      );
+
+      expect(plain).toHaveLength(1);
+      expect(Object.keys(plain[0]?.declarations ?? {}).sort()).toEqual(
+        [...radiusNames, nameOf(tokens.type.family)].sort(),
+      );
+      expect(readRules(css).length).toBeGreaterThan(1);
+    });
+
+    it("leaves the colour findings as they are", () => {
+      const withShape = createThemeStylesheet(
+        { ...brand, shape: "round" },
+        { scope: "#map" },
+      );
+
+      expect(withShape.findings).toEqual(
+        createThemeStylesheet(brand, { scope: "#map" }).findings,
+      );
+    });
+
+    it.each([
+      "pill",
+      "Round",
+      "",
+      " square",
+      "__proto__",
+      "constructor",
+      "round; } body { display: none",
+      "url(x)",
+    ])("refuses %j as unparseable and writes no CSS", (value) => {
+      const result = createThemeStylesheet({ shape: value } as never, {
+        scope: ".brand",
+      });
+
+      expect(result.ok).toBe(false);
+      expect(result.css).toBeUndefined();
+      expect(!result.ok && result.invalid).toEqual([
+        { theme: null, role: "shape", value, reason: "unparseable" },
+      ]);
+    });
+
+    it.each([42, null, {}, ["round"], true])(
+      "refuses %j as malformed",
+      (value) => {
+        const result = createThemeStylesheet({ shape: value } as never, {
+          scope: ".brand",
+        });
+
+        expect(!result.ok && result.invalid).toEqual([
+          { theme: null, role: "shape", value, reason: "malformed" },
+        ]);
+      },
+    );
+
+    it("skips a shape set to undefined", () => {
+      expect(
+        createThemeStylesheet({ shape: undefined }, { scope: ".brand" }),
+      ).toEqual(expect.objectContaining({ ok: true, css: "" }));
+    });
+
+    it("reports a refused shape and a refused font together", () => {
+      const result = createThemeStylesheet(
+        { shape: "oval", fontFamily: "x;" } as never,
+        { scope: ".brand" },
+      );
+
+      expect(!result.ok && result.invalid.map((entry) => entry.role)).toEqual([
+        "fontFamily",
+        "shape",
+      ]);
+    });
+
+    it("refuses a shape whose getter throws, without throwing", () => {
+      const override = {
+        get shape(): string {
+          throw new Error("boom");
+        },
+      };
+
+      expect(
+        createThemeStylesheet(override as never, { scope: ".brand" }).ok,
+      ).toBe(false);
+    });
+  });
+
   describe("fontFamily", () => {
     const familyName = nameOf(tokens.type.family);
     const brandFont = '"Brand Sans", system-ui, sans-serif';

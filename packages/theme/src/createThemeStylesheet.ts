@@ -11,6 +11,7 @@ import {
 } from "./checkThemeContrast";
 import { compositeOver, parseColour, toHex } from "./contrast";
 import { readFontFamily } from "./fontFamily";
+import { readShape, SHAPE_RADIUS_ROLES } from "./shape";
 import { surfaceBlurSupported, tokens } from "./tokens.css";
 import {
   colourRoleNames,
@@ -43,7 +44,7 @@ export interface ThemeStylesheetCreated {
   ok: true;
   /**
    * The stylesheet text, to serve as a same-origin file. It is empty when the
-   * override sets no colour and no font.
+   * override sets no colour, font or shape.
    */
   css: string;
   /**
@@ -280,47 +281,95 @@ function renderTheme(
   return rules;
 }
 
-/** The font as the override gave it: the list to write, or why it was refused. */
-interface FontReading {
-  family: string | undefined;
+/** The declarations the non-colour fields write, or why one was refused. */
+interface StaticReading {
+  declarations: string[];
   invalid: InvalidColour[];
 }
 
+/** One field of an override that may be anything, or `undefined` when it has none. */
+function fieldOf(override: unknown, key: "fontFamily" | "shape"): unknown {
+  return typeof override === "object" && override !== null
+    ? (override as Record<string, unknown>)[key]
+    : undefined;
+}
+
+function refusedField(
+  role: "fontFamily" | "shape",
+  value: unknown,
+  reason: InvalidColourReason,
+): StaticReading {
+  return {
+    declarations: [],
+    invalid: [{ theme: null, role, value, reason }],
+  };
+}
+
 /**
- * Reads `fontFamily` from an override that may be anything. The list is
- * written with the SDK's own stack after it, so a face the host's font lacks
- * falls back to the SDK's choice rather than the browser's default.
+ * Reads `fontFamily`. The list is written with the SDK's own stack after it,
+ * so a face the host's font lacks falls back to the SDK's choice rather than
+ * the browser's default.
  */
-function readFont(override: unknown): FontReading {
-  const value =
-    typeof override === "object" && override !== null
-      ? (override as { fontFamily?: unknown }).fontFamily
-      : undefined;
+function readFont(value: unknown): StaticReading {
   if (value === undefined) {
-    return { family: undefined, invalid: [] };
+    return { declarations: [], invalid: [] };
   }
   const reading = readFontFamily(value);
   if (!reading.ok) {
-    const reason: InvalidColourReason =
-      reading.reason === "not-a-string" ? "malformed" : "unparseable";
-    return {
-      family: undefined,
-      invalid: [{ theme: null, role: "fontFamily", value, reason }],
-    };
+    return refusedField(
+      "fontFamily",
+      value,
+      reading.reason === "not-a-string" ? "malformed" : "unparseable",
+    );
   }
-  return { family: `${reading.value}, ${sdkFontFamily}`, invalid: [] };
+  return {
+    declarations: [
+      `${customPropertyName(tokens.type.family)}: ${reading.value}, ${sdkFontFamily};`,
+    ],
+    invalid: [],
+  };
 }
 
-/** The rule that sets the typeface once for the scope, in every theme. */
-function renderFont(scope: string, family: string | undefined): string[] {
-  if (family === undefined) {
+/** Reads `shape`: the four radii of a preset, written through the radius tokens. */
+function readShapeField(value: unknown): StaticReading {
+  if (value === undefined) {
+    return { declarations: [], invalid: [] };
+  }
+  const reading = readShape(value);
+  if (!reading.ok) {
+    return refusedField("shape", value, reading.reason);
+  }
+  const { radii } = reading;
+  return {
+    declarations:
+      radii === undefined
+        ? []
+        : SHAPE_RADIUS_ROLES.map(
+            (role) =>
+              `${customPropertyName(tokens.radius[role])}: ${radii[role]};`,
+          ),
+    invalid: [],
+  };
+}
+
+/** Reads the fields that are not colours: the font family and the shape. */
+function readStaticFields(override: unknown): StaticReading {
+  const readings = [
+    readFont(fieldOf(override, "fontFamily")),
+    readShapeField(fieldOf(override, "shape")),
+  ];
+  return {
+    declarations: readings.flatMap((reading) => reading.declarations),
+    invalid: readings.flatMap((reading) => reading.invalid),
+  };
+}
+
+/** The rule that sets the font and the corners once for the scope, in every theme. */
+function renderStatic(scope: string, declarations: string[]): string[] {
+  if (declarations.length === 0) {
     return [];
   }
-  return [
-    renderRule([], selectorFor(scope), [
-      `${customPropertyName(tokens.type.family)}: ${family};`,
-    ]),
-  ];
+  return [renderRule([], selectorFor(scope), declarations)];
 }
 
 function refused(
@@ -355,6 +404,14 @@ function refused(
  * `#rrggbbaa`, parsed with the same strict reader as
  * {@link checkThemeContrast}, so nothing else can enter the stylesheet.
  *
+ * `shape` (`square`, `default` or `round`) sets the pill, sheet, control and
+ * inner radii once for the scope, in the same rule as the font. `default`
+ * writes nothing. The circular role stays circular and the round preset keeps
+ * the search pill a pill. Any other value refuses the override, listed in
+ * `invalid` with the role `shape`. The browser tests check every chrome state
+ * at phone, tablet and desktop sizes in both themes for each preset, so
+ * nothing overlaps and no corner cuts text, an icon, a field or a focus ring.
+ *
  * `fontFamily` is written once for the scope, outside those conditions, since
  * a typeface does not change with the theme or with high contrast. It must be
  * a list of plain family names and generic families; anything else refuses the
@@ -380,12 +437,12 @@ export function createThemeStylesheet(
   const scope = readScope(options);
   try {
     const initial = checkThemeContrast(override);
-    const font = readFont(override);
-    const invalid = [...initial.invalid, ...font.invalid];
+    const fields = readStaticFields(override);
+    const invalid = [...initial.invalid, ...fields.invalid];
     if (invalid.length > 0 || scope === undefined) {
       return refused(initial.findings, invalid, scope === undefined);
     }
-    return create(override, scope, font.family);
+    return create(override, scope, fields.declarations);
   } catch {
     return refused(
       [],
@@ -398,7 +455,7 @@ export function createThemeStylesheet(
 function create(
   override: ThemeOverride,
   scope: string,
-  family: string | undefined,
+  fields: string[],
 ): ThemeStylesheet {
   const sets = normalise(override);
   const derived = {
@@ -422,7 +479,7 @@ function create(
   }
   const css = [
     ...themeNames.flatMap((theme) => renderTheme(theme, scope, derived[theme])),
-    ...renderFont(scope, family),
+    ...renderStatic(scope, fields),
   ].join("\n");
   return { ok: true, css: css === "" ? css : `${css}\n`, findings };
 }

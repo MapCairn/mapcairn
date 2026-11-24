@@ -69,7 +69,7 @@ export interface TooltipProps {
  * pointer the tooltip does not exist at all and only the trigger renders.
  *
  * The bubble renders in a portal under `body`, outside any element a host
- * scoped a theme to, so it takes the colours and font its trigger sees (see
+ * scoped a theme to, so it takes the colours, font and corner radii its trigger sees (see
  * `inheritTheme`). A host's scoped theme therefore reaches it with no
  * markup or option of its own. The colours are read once, when the bubble
  * opens: a theme or colour scheme change while it is open applies the next
