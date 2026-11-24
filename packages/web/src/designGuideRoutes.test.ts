@@ -4,6 +4,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   DESIGN_GUIDE_PATH,
   DESIGN_HOST_THEME_PATH,
+  DESIGN_TWO_MAPS_PATH,
   designGuideRoutes,
   isDesignGuideEnabled,
 } from "./designGuideRoutes";
@@ -28,14 +29,16 @@ describe("isDesignGuideEnabled", () => {
 });
 
 describe("designGuideRoutes", () => {
-  it("adds the /design route and the host theme stylesheets in development and e2e", () => {
+  it("adds the /design route, the host theme stylesheets and the two-maps page in development and e2e", () => {
     for (const mode of ["development", "e2e"]) {
       const routes = designGuideRoutes(mode);
-      expect(routes).toHaveLength(2);
+      expect(routes).toHaveLength(3);
       expect(routes[0]?.path).toBe(DESIGN_GUIDE_PATH);
       expect(routes[0]?.file).toBe("./routes/design.tsx");
       expect(routes[1]?.path).toBe(DESIGN_HOST_THEME_PATH);
       expect(routes[1]?.file).toBe("./routes/design.host-theme.ts");
+      expect(routes[2]?.path).toBe(DESIGN_TWO_MAPS_PATH);
+      expect(routes[2]?.file).toBe("./routes/design.two-maps.tsx");
     }
   });
 
@@ -62,6 +65,7 @@ describe("the route table", () => {
     const paths = await routePathsIn("production");
     expect(paths).not.toContain(DESIGN_GUIDE_PATH);
     expect(paths).not.toContain(DESIGN_HOST_THEME_PATH);
+    expect(paths).not.toContain(DESIGN_TWO_MAPS_PATH);
     expect(paths).toContain("privacy");
   });
 
@@ -69,5 +73,6 @@ describe("the route table", () => {
     const paths = await routePathsIn("e2e");
     expect(paths).toContain(DESIGN_GUIDE_PATH);
     expect(paths).toContain(DESIGN_HOST_THEME_PATH);
+    expect(paths).toContain(DESIGN_TWO_MAPS_PATH);
   });
 });

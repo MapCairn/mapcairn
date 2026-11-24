@@ -278,6 +278,7 @@ export type MessageKey =
   | "chrome.sheet.resize"
   | "chrome.sheet.close"
   | "host.map.label"
+  | "host.map.named"
   | "host.map.roleDescription"
   | "ui.skipToMap"
   | "ui.dismiss"
@@ -767,6 +768,11 @@ interface MessageParamOverrides {
   readonly "common.dotJoined": {
     readonly first: string;
     readonly second: string;
+  };
+  // A landmark's name joined to the label of its map
+  readonly "host.map.named": {
+    readonly name: string;
+    readonly label: string;
   };
   // Formatting
   readonly "format.day": { readonly date: Date };

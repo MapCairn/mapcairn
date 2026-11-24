@@ -19,6 +19,7 @@ import {
   useState,
 } from "react";
 import { useMap } from "../../host";
+import { useLandmarkName } from "../../host/useLandmarkName";
 import { useMessages, usePreferences } from "../../services";
 import { IconButton } from "../../ui";
 import { isSitePath, isWebAddress } from "../../ui/linkAddress";
@@ -244,6 +245,7 @@ export function Attribution({
   const [openRequest, setOpenRequest] = useState(0);
   const [placement, setPlacement] = useState<Placement>("above");
   const { t } = useMessages();
+  const regionName = useLandmarkName("chrome.attribution.label");
   const regionId = useId();
   const rootRef = useRef<HTMLDivElement>(null);
   const regionRef = useRef<HTMLElement>(null);
@@ -475,7 +477,7 @@ export function Attribution({
       <section
         ref={regionRef}
         id={regionId}
-        aria-label={t("chrome.attribution.label", {})}
+        aria-label={regionName}
         tabIndex={-1}
         hidden={!open}
         data-chrome="attribution-popover"

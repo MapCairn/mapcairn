@@ -30,7 +30,7 @@ afterEach(() => {
 /** Renders the page and returns queries over the first map's wrapper. */
 function renderPine() {
   render(<ExampleApp />);
-  return within(screen.getByRole("region", { name: "Pine map" }));
+  return within(screen.getByTestId("map-pine"));
 }
 
 describe("ExampleApp", () => {
@@ -38,7 +38,7 @@ describe("ExampleApp", () => {
     render(<ExampleApp />);
 
     const wrappers = EXAMPLE_THEMES.map((theme) =>
-      screen.getByRole("region", { name: `${theme.title} map` }),
+      screen.getByTestId(theme.className),
     );
     expect(wrappers.map((wrapper) => wrapper.className)).toEqual(
       EXAMPLE_THEMES.map((theme) => expect.stringContaining(theme.className)),
@@ -51,10 +51,34 @@ describe("ExampleApp", () => {
     expect(document.querySelectorAll("[id='map-pine']")).toHaveLength(1);
   });
 
+  it("names each map by its theme, so no two landmarks share a role and name, under one main", async () => {
+    const { container } = render(<ExampleApp />);
+    const pine = within(screen.getByTestId("map-pine"));
+    await pine.findByRole("search", { name: "Search (Pine)" });
+
+    expect(screen.getAllByRole("main")).toHaveLength(1);
+    for (const theme of EXAMPLE_THEMES) {
+      const wrapper = within(screen.getByTestId(theme.className));
+      expect(
+        wrapper.getByRole("region", { name: `Map (${theme.title})` }),
+      ).toBeTruthy();
+      expect(
+        wrapper.getByRole("region", { name: `Map tools (${theme.title})` }),
+      ).toBeTruthy();
+    }
+    const landmarks = [
+      ...container.querySelectorAll("section[aria-label], [role=search]"),
+    ].map(
+      (element) =>
+        `${element.getAttribute("role") ?? "region"} ${element.getAttribute("aria-label")}`,
+    );
+    expect(new Set(landmarks).size).toBe(landmarks.length);
+  });
+
   it("mounts the map region and its chrome from the SDK's entry points", async () => {
     const pine = renderPine();
 
-    expect(pine.getByRole("region", { name: "Map" })).toBeTruthy();
+    expect(pine.getByRole("region", { name: "Map (Pine)" })).toBeTruthy();
     expect(
       await pine.findByRole("combobox", { name: "Search places" }),
     ).toBeTruthy();

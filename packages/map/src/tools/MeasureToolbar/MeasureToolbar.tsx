@@ -2,6 +2,7 @@
 // Copyright MapCairn contributors
 import { ArrowUUpLeft, Crosshair, Trash } from "@phosphor-icons/react";
 import { useEffect, useRef } from "react";
+import { useLandmarkName } from "../../host/useLandmarkName";
 import { useMessages } from "../../services";
 import { Button } from "../../ui/Button";
 import { IconButton } from "../../ui/IconButton";
@@ -46,6 +47,7 @@ export function MeasureToolbar({
 }: MeasureToolbarProps) {
   const { mode, points, readout, setMode, undo, clear } = measure;
   const { t } = useMessages();
+  const landmarkName = useLandmarkName("tools.measure.region");
   const modeOptions = [
     { value: "distance", label: t("tools.measure.distance", {}) },
     { value: "area", label: t("tools.measure.area", {}) },
@@ -60,7 +62,7 @@ export function MeasureToolbar({
   return (
     <section
       ref={rootRef}
-      aria-label={t("tools.measure.region", {})}
+      aria-label={landmarkName}
       className={styles.root}
       data-chrome="measure-toolbar"
     >

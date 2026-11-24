@@ -31,11 +31,12 @@ const WEBKIT_SPECS =
 // language yet, so they prove the layout mirrors, not any translation.
 const RTL_SPECS = /(basemap|keyboard|sheet|app-shell|rtl)\.spec\.ts$/;
 
-// The Afrikaans projects run the layout collision test and the accessibility
-// specs with Afrikaans chosen (see `language` in e2e/fixtures.ts), because
+// The Afrikaans projects run the layout collision test, the accessibility
+// specs and the two-maps spec (the names of two maps' landmarks, composed in
+// the catalogue's language) with Afrikaans chosen (see `language` in e2e/fixtures.ts), because
 // translated text is often longer than English. `i18n.spec.ts` sets its own
 // language, so it runs in the default projects.
-const AFRIKAANS_SPECS = /(^|\/)(collision|a11y)\.spec\.ts$/;
+const AFRIKAANS_SPECS = /(^|\/)(collision|a11y|two-maps)\.spec\.ts$/;
 
 // The sample-language projects run one spec in each of three sample languages
 // that the test seam offers (see `SAMPLE_LANGUAGES` in e2e/support/language.ts):

@@ -25,6 +25,7 @@ import {
 import { type KeyboardEvent, useCallback, useEffect, useRef } from "react";
 import { useFocusTarget } from "../../chrome/focusRegistry";
 import { useScrollEdges } from "../../chrome/useScrollEdges";
+import { useLandmarkName } from "../../host/useLandmarkName";
 import { useFormatMessage, useMessages } from "../../services";
 import { Button } from "../../ui/Button";
 import { Icon } from "../../ui/Icon";
@@ -207,6 +208,7 @@ export function DrawToolbar({ draw, onDone, onOpenShapes }: DrawToolbarProps) {
   const rootRef = useRef<HTMLElement>(null);
   const format = useFormatMessage();
   const { t } = useMessages();
+  const landmarkName = useLandmarkName("tools.draw.region");
   const registerShapes = useFocusTarget("draw-shapes");
   const scrollerRef = useRef<HTMLDivElement>(null);
   useScrollEdges(scrollerRef);
@@ -271,7 +273,7 @@ export function DrawToolbar({ draw, onDone, onOpenShapes }: DrawToolbarProps) {
   return (
     <section
       ref={setRoot}
-      aria-label={t("tools.draw.region", {})}
+      aria-label={landmarkName}
       className={styles.root}
       data-chrome="draw-toolbar"
     >

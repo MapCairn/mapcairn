@@ -44,6 +44,7 @@ import { type ReactNode, useState } from "react";
 import { CAIRNS_LAYER } from "./cairnsLayer";
 import { createExampleServices } from "./exampleServices";
 import { EXAMPLE_THEMES, type ExampleTheme } from "./exampleThemes";
+import { sheetTitle } from "./sheetTitle";
 import { showResult } from "./showResult";
 
 const PRIVACY_NOTE =
@@ -64,6 +65,8 @@ type OpenSheet = "map-options" | "settings" | null;
  * a wrapper that carries the class its theme is scoped to
  * (`exampleThemes.ts`); `data-theme` is read from the document element, which
  * the one theme setting writes, so light and dark are one choice for the page.
+ * The page holds the one `main` landmark, and each map is named by its theme's
+ * title (`MapView`'s `label`), so no two landmarks share a name.
  */
 export function ExampleApp() {
   const [services] = useState(createExampleServices);
@@ -71,17 +74,17 @@ export function ExampleApp() {
     <ServicesProvider services={services}>
       <LiveRegionProvider>
         <TooltipProvider>
-          <div className="maps">
+          <main className="maps">
             {EXAMPLE_THEMES.map((theme) => (
-              <section
+              <div
                 key={theme.className}
-                aria-label={`${theme.title} map`}
+                data-testid={theme.className}
                 className={`themed-map ${theme.className}`}
               >
                 <ExampleMap theme={theme} />
-              </section>
+              </div>
             ))}
-          </div>
+          </main>
         </TooltipProvider>
       </LiveRegionProvider>
     </ServicesProvider>
@@ -154,6 +157,7 @@ function ExampleMap({ theme }: ExampleMapProps) {
     <SelectionProvider selection={selection}>
       <MapView
         id={mapId}
+        label={theme.title}
         initialView={INITIAL_VIEW}
         basemap={basemap}
         cursor={measuring ? "crosshair" : "grab"}
@@ -226,6 +230,7 @@ function ChromeSlots({ state, background }: ExampleChromeProps) {
     <MapChrome
       background={background}
       modal={modal}
+      mainLandmark={false}
       topStart={<SearchPill onSelect={showPick} />}
       endStack={
         <EndStack
@@ -269,7 +274,7 @@ function ChromeSlots({ state, background }: ExampleChromeProps) {
         <Sheet
           id={state.sheetId}
           open={open !== null}
-          title={open === "settings" ? "Settings and help" : "Map options"}
+          title={sheetTitle(open, map.label)}
           detent={detent}
           onDetentChange={setDetent}
           onModalChange={setModal}

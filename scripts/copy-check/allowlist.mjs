@@ -9,7 +9,7 @@
  *
  * Everything a visitor can see in the host app is in the catalogue, the
  * privacy page included, except the product page at `/`, which is English
- * only by decision. The four design guide entries stay: that guide is built
+ * only by decision. The design guide entries stay: that guide and its test page are built
  * only in development and test builds, so no visitor sees it. The other
  * entries are the product page's two files and the product name in the map
  * page's hidden heading.
@@ -36,6 +36,12 @@ export const COPY_ALLOWLIST = [
     file: "packages/web/src/designGuide/FoundationSections.tsx",
     reason:
       "The developer design guide exists only in development and test builds and is not shown to visitors; see #271.",
+  },
+  {
+    file: "packages/web/src/designGuide/TwoMaps.tsx",
+    text: "Two maps",
+    reason:
+      "The heading of the two-maps test page, which exists only in development and test builds and is not shown to visitors.",
   },
   {
     file: "packages/web/src/routes/map.tsx",

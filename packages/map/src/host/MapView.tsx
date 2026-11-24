@@ -27,6 +27,7 @@ import { StatusMessageFocusProvider } from "../ui/StatusMessage";
 import { VisuallyHidden } from "../ui/VisuallyHidden";
 import { MapContext, type MapContextValue } from "./MapContext";
 import * as styles from "./MapView.css";
+import { landmarkName } from "./useLandmarkName";
 import { type MapLongPressEvent, useLongPress } from "./useLongPress";
 import { useMapEngine } from "./useMapEngine";
 import { usePointerPosition } from "./usePointerPosition";
@@ -122,6 +123,16 @@ export interface MapViewProps {
   readonly chrome?: (map: ReactNode) => ReactNode;
   /** Sets `data-testid` on the map region. */
   readonly testId?: string;
+  /**
+   * The name of this map, in the language of the page, for a page with more
+   * than one: "Pine" makes the map region "Map (Pine)", the search "Search
+   * (Pine)", the map tools "Map tools (Pine)", and so on for the map scale,
+   * the measuring and drawing toolbars and the credits, so no two landmarks
+   * on the page share a name. Leave it out for a page with one map, where the
+   * names stay as they are. A sheet's name is its `title`, which the host
+   * writes.
+   */
+  readonly label?: string;
 }
 
 /**
@@ -219,6 +230,7 @@ export function MapView({
   id,
   chrome,
   testId,
+  label,
 }: MapViewProps) {
   const hostRef = useRef<HTMLElement>(null);
   const slotRef = useRef<HTMLDivElement>(null);
@@ -227,6 +239,7 @@ export function MapView({
   const { reducedMotion } = usePreferences();
   const messages = useMessages();
   const { t } = messages;
+  const mapName = landmarkName(messages, "host.map.label", label);
 
   const getAdapter = useCallback(() => adapterRef.current, []);
   const longPress = useLongPress({ hostRef, getAdapter, onLongPress });
@@ -265,8 +278,8 @@ export function MapView({
     onUserZoom: notifyUserZoom,
   });
   const map = useMemo<MapContextValue>(
-    () => ({ ...engine, onUserZoom }),
-    [engine, onUserZoom],
+    () => ({ ...engine, onUserZoom, label }),
+    [engine, onUserZoom, label],
   );
 
   const onKeyDown = (event: KeyboardEvent<HTMLElement>) => {
@@ -305,7 +318,7 @@ export function MapView({
       <section
         ref={hostRef}
         id={id}
-        aria-label={t("host.map.label", {})}
+        aria-label={mapName}
         aria-roledescription={t("host.map.roleDescription", {})}
         aria-describedby={helpId}
         aria-busy={map.loading}

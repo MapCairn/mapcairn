@@ -823,6 +823,7 @@ export interface MapChromeProps {
     readonly bottomEnd?: ReactNode;
     readonly bottomStart?: ReactNode;
     readonly endStack?: ReactNode;
+    readonly mainLandmark?: boolean;
     readonly mapKey?: ReactNode;
     readonly modal: boolean;
     readonly onViewportChange?: (viewport: {
@@ -846,6 +847,7 @@ export interface MapContextValue {
     readonly error: MapEngineError | null;
     readonly focusMap: () => void;
     readonly hostElement: HTMLElement | null;
+    readonly label?: string;
     readonly loading: boolean;
     readonly maxZoom: number;
     readonly minZoom: number;
@@ -935,6 +937,7 @@ export interface MapViewProps {
     readonly id?: string;
     readonly initialView: ViewState;
     readonly keyHelp?: readonly MapKeyHelpEntry[];
+    readonly label?: string;
     readonly onBasemapApplied?: (basemap: BasemapDefinition) => void;
     readonly onBasemapError?: (error: MapEngineError, failed: BasemapDefinition, kept: BasemapDefinition) => void;
     readonly onBasemapUnavailable?: (basemap: BasemapDefinition) => void;

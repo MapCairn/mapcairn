@@ -62,6 +62,11 @@ export interface MapContextValue {
    * function that unsubscribes.
    */
   readonly onUserZoom: (listener: () => void) => () => void;
+  /**
+   * The name the host gave this map (`MapView`'s `label`), or undefined. The
+   * interface adds it to the names of its landmarks.
+   */
+  readonly label?: string;
 }
 
 /** The map context. Provided by `MapView`; read it with {@link useMap}. */
