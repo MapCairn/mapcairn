@@ -49,7 +49,7 @@ The interface now uses your accent in both themes, and colours you leave out kee
 
 Two more keys sit beside `colour`. `fontFamily` is a list of plain family names and generic families, and the SDK's own stack follows it: `fontFamily: '"Brand Sans", system-ui, sans-serif'`. `shape` is `"square"`, `"default"` or `"round"` and sets the corners of the pill, sheet, controls and inner shapes: `shape: "square"`. Any other value is refused and listed in `invalid`.
 
-For two maps with different looks, make one stylesheet for each, with its own scope (`.brand-a`, `.brand-b` or `#id`), and put the class on an element around each map.
+For two maps with different looks, make one stylesheet for each, with its own scope (`.brand-a`, `.brand-b` or `#id`), and put the class on an element around each map. The [Two themed maps](https://github.com/MapCairn/mapcairn/blob/main/examples/embed/README.md#two-themed-maps) section of the embed example shows it.
 
 ## What you can and cannot change
 
