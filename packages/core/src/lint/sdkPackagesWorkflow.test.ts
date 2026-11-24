@@ -171,11 +171,9 @@ describe("the repeatable build comparison", () => {
 
   it("removes every dist folder before the second build, or it compares a build with itself", () => {
     const rebuild = workflow.slice(workflow.indexOf("Second build from clean"));
-    for (const name of ["core", "react", "theme", "map"]) {
-      expect(rebuild.slice(0, rebuild.indexOf("Hash the second"))).toContain(
-        `packages/${name}/dist`,
-      );
-    }
+    expect(rebuild.slice(0, rebuild.indexOf("Hash the second"))).toContain(
+      'rm -rf "packages/${package}/dist"',
+    );
   });
 
   it.each(["first", "second"])(

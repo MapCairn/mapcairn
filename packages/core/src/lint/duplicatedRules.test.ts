@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
+import { execFileSync } from "node:child_process";
 import { readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -43,8 +44,116 @@ function numbersAfter(text: string, key: string): number[] {
   return [...text.matchAll(pattern)].map((match) => Number(match[1]));
 }
 
+/** The text files the repository tracks, relative to it, that can state a rule in prose or in code. */
+function trackedTextFiles(): string[] {
+  const listed = execFileSync("git", ["ls-files", "-z"], {
+    cwd: REPO,
+    encoding: "utf8",
+    maxBuffer: 64 * 1024 * 1024,
+  });
+  return listed
+    .split("\0")
+    .filter((file) => /\.(md|mdx|yml|yaml|mjs|cjs|ts|tsx|toml)$/.test(file))
+    .filter((file) => !file.endsWith("CHANGELOG.md"))
+    .filter(
+      (file) => file !== "packages/core/src/lint/duplicatedRules.test.ts",
+    );
+}
+
+const NUMBER_WORDS: Readonly<Record<string, number>> = {
+  one: 1,
+  two: 2,
+  three: 3,
+  four: 4,
+  five: 5,
+  six: 6,
+  seven: 7,
+  eight: 8,
+  nine: 9,
+  ten: 10,
+};
+
+/** Words that make a line about the minimum age of a package version. */
+const AGE_CONTEXT =
+  /release age|package age|minimum age|dependency age|cooldown|exclude-newer|\bpackages? (?:version )?(?:under|younger|older|published)|age rule/i;
+
+const DAY_COUNT = new RegExp(
+  `\\b(\\d+|${Object.keys(NUMBER_WORDS).join("|")})[- ]days?\\b`,
+  "gi",
+);
+
+/**
+ * The day counts a text gives for the dependency age: in a sentence about the
+ * minimum age of a package, every "3 days", "three-day" and similar, and every
+ * `min-release-age=<n>` that is not the `=0` which lifts it for a registry read.
+ */
+function ageClaims(text: string): number[] {
+  const claims: number[] = [];
+  for (const sentence of text.split(/\n|(?<=[.;])\s+/)) {
+    for (const match of sentence.matchAll(/min-release-age=(\d+)/g)) {
+      if (Number(match[1]) !== 0) {
+        claims.push(Number(match[1]));
+      }
+    }
+    if (!AGE_CONTEXT.test(sentence)) {
+      continue;
+    }
+    for (const match of sentence.matchAll(DAY_COUNT)) {
+      const word = match[1].toLowerCase();
+      claims.push(NUMBER_WORDS[word] ?? Number(word));
+    }
+  }
+  return claims;
+}
+
+/**
+ * The runs of five or more SDK package names a text lists in one go, such as
+ * "core, react, theme, map, adapter-maplibre and the umbrella sdk".
+ */
+function packageRuns(text: string): string[][] {
+  const name = "(?:core|react|theme|map|adapter-maplibre|sdk)";
+  const run = new RegExp(
+    `\\b${name}(?:(?:, | and (?:the umbrella )?)${name})+`,
+    "g",
+  );
+  return [...text.matchAll(run)]
+    .map((match) => match[0].split(/, | and (?:the umbrella )?/))
+    .filter((names) => names.length >= 5);
+}
+
+describe("reading the age and the package list out of prose", () => {
+  it("finds a digit, a word and a hyphenated count on a line about the age", () => {
+    expect(ageClaims("A package under 7 days old needs a say-so.")).toEqual([
+      7,
+    ]);
+    expect(ageClaims("the seven-day release age")).toEqual([7]);
+    expect(ageClaims("`min-release-age=7` in .npmrc")).toEqual([7]);
+  });
+
+  it("ignores a count on a line that is not about the age, and the lifted age", () => {
+    expect(ageClaims("an answer within 7 days")).toEqual([]);
+    expect(ageClaims("`--min-release-age=0` reads the registry")).toEqual([]);
+  });
+
+  it("finds a run of five or more package names and keeps its order", () => {
+    expect(
+      packageRuns(
+        "the six (core, react, theme, map, adapter-maplibre and sdk)",
+      ),
+    ).toEqual([["core", "react", "theme", "map", "adapter-maplibre", "sdk"]]);
+    expect(packageRuns("core, map, react and theme")).toEqual([]);
+  });
+});
+
 describe("the dependency age rule", () => {
   const [age] = numbersAfter(read(".npmrc"), "min-release-age");
+
+  it("is the only age any tracked file gives for a package version", () => {
+    const offenders = trackedTextFiles().filter((file) =>
+      ageClaims(read(file)).some((claim) => claim !== age),
+    );
+    expect(offenders).toEqual([]);
+  });
 
   it("is set in .npmrc, the source of truth", () => {
     expect(age).toBeGreaterThan(0);
@@ -101,6 +210,23 @@ describe("the list of SDK packages", () => {
         names: [...SDK_PACKAGES],
       });
     }
+  });
+
+  it("is never given as a list of paths in a workflow, so a new package cannot be missed", () => {
+    const listed = new RegExp(`packages/(?:${SDK_PACKAGES.join("|")})/dist`);
+    const offenders = filesIn(".github/workflows", [".yml"]).filter((file) =>
+      listed.test(read(file)),
+    );
+    expect(offenders).toEqual([]);
+  });
+
+  it("is the only list of all six that any tracked file gives in prose", () => {
+    const offenders = trackedTextFiles().filter((file) =>
+      packageRuns(read(file)).some(
+        (names) => names.join(",") !== SDK_PACKAGES.join(","),
+      ),
+    );
+    expect(offenders).toEqual([]);
   });
 });
 

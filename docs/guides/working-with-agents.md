@@ -135,7 +135,7 @@ The `triage-production` skill reads the deployed site's health the same way each
 
 ## Dependency pull requests
 
-The `triage-dependency-pr` skill takes a Dependabot or other dependency pull request to a green merge: it reads the manifest and lockfile diff, checks the 3-day release age and the one vulnerability exception (`AGENTS.md`, "Dependencies and lockfiles"), restores peer ranges that Dependabot raised, runs `npm run licence:sdk` and a real `npm ci --ignore-scripts`, reads the changelogs of what the SDK packages depend on or require, and merges only with the person's authority, on a green head, as `land-pr` says. It has no agent of its own. It has not been trialled on a live pull request yet.
+The `triage-dependency-pr` skill takes a Dependabot or other dependency pull request to a green merge: it reads the manifest and lockfile diff, checks the minimum release age and the one vulnerability exception (`AGENTS.md`, "Dependencies and lockfiles"), restores peer ranges that Dependabot raised, runs `npm run licence:sdk` and a real `npm ci --ignore-scripts`, reads the changelogs of what the SDK packages depend on or require, and merges only with the person's authority, on a green head, as `land-pr` says. It has no agent of its own. It has not been trialled on a live pull request yet.
 
 ## Trying the docs as a newcomer
 

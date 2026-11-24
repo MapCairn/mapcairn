@@ -54,7 +54,7 @@ Skip a line that does not apply without comment. Each line names the place to lo
 
 **Dependencies and licences**
 
-- A new or upgraded package is at least 3 days old, from a caret range, with the lockfile changed by a real install (`AGENTS.md`, "Dependencies and lockfiles"). A new runtime dependency of an SDK package is the maintainer's call and passes `npm run licence:sdk`.
+- A new or upgraded package is at least the minimum release age old, from a caret range, with the lockfile changed by a real install (`AGENTS.md`, "Dependencies and lockfiles"). A new runtime dependency of an SDK package is the maintainer's call and passes `npm run licence:sdk`.
 - Check the package's install scripts, new transitive packages, maintainer change and a name close to a known one. A dependency that fetches code or phones home at runtime is a finding.
 
 **GitHub Actions and release**
