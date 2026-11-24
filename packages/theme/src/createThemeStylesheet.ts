@@ -4,13 +4,20 @@ import {
   type ContrastFinding,
   checkThemeContrast,
   type InvalidColour,
+  type InvalidColourReason,
   type ThemeColours,
   type ThemeContrastCheck,
   type ThemeOverride,
 } from "./checkThemeContrast";
 import { compositeOver, parseColour, toHex } from "./contrast";
+import { readFontFamily } from "./fontFamily";
 import { surfaceBlurSupported, tokens } from "./tokens.css";
-import { colourRoleNames, type ThemeName, themeValues } from "./tokenValues";
+import {
+  colourRoleNames,
+  fontFamily as sdkFontFamily,
+  type ThemeName,
+  themeValues,
+} from "./tokenValues";
 
 /** Where a theme override applies. */
 export interface ThemeStylesheetOptions {
@@ -36,7 +43,7 @@ export interface ThemeStylesheetCreated {
   ok: true;
   /**
    * The stylesheet text, to serve as a same-origin file. It is empty when the
-   * override sets no colour.
+   * override sets no colour and no font.
    */
   css: string;
   /**
@@ -61,7 +68,13 @@ export interface ThemeStylesheetRefused {
    * missing, as in {@link checkThemeContrast}.
    */
   findings: ContrastFinding[];
-  /** The colours and keys that could not be used, and why. */
+  /**
+   * The colours and keys that could not be used, and why. A `fontFamily` that
+   * could not be used is listed here with the role `fontFamily` and no theme:
+   * the reason is `malformed` when it is not a string and `unparseable` when
+   * it is anything but a list of family names (see
+   * {@link ThemeOverride.fontFamily}).
+   */
   invalid: InvalidColour[];
   /** True when `scope` is not `:root`, `#id` or `.class`, or could not be read. */
   invalidScope: boolean;
@@ -137,14 +150,18 @@ function readScope(options: ThemeStylesheetOptions): string | undefined {
   }
 }
 
-/** The custom property behind a colour role, taken from the built contract. */
-function propertyName(role: keyof ThemeColours): string {
-  const reference = tokens.color[role];
+/** The custom property a `var(--name)` token reference points at. */
+function customPropertyName(reference: string): string {
   const name = /^var\((--[\w-]+)\)$/.exec(reference)?.[1];
   if (name === undefined) {
     throw new Error(`Unexpected token reference: ${reference}`);
   }
   return name;
+}
+
+/** The custom property behind a colour role, taken from the built contract. */
+function propertyName(role: keyof ThemeColours): string {
+  return customPropertyName(tokens.color[role]);
 }
 
 /** Writes every colour the host gave as `#rrggbb` or `#rrggbbaa`. */
@@ -229,10 +246,10 @@ function renderRule(
  * The selector for a context. The root scope is written twice over so it
  * outranks the SDK's own rules on the same element whatever the link order.
  */
-function selectorFor(scope: string, context: Context): string {
+function selectorFor(scope: string, rootState = ""): string {
   return scope === ":root"
-    ? `:root:root${context.rootState}`
-    : `:root${context.rootState} ${scope}`;
+    ? `:root:root${rootState}`
+    : `:root${rootState} ${scope}`;
 }
 
 function mediaRule(context: Context, ...extra: string[]): string {
@@ -247,7 +264,7 @@ function renderTheme(
 ): string[] {
   const rules: string[] = [];
   for (const context of contexts[theme]) {
-    const selector = selectorFor(scope, context);
+    const selector = selectorFor(scope, context.rootState);
     const base = declarationsOf(colours);
     const flat = declarationsOf(opaque);
     if (base.length > 0) {
@@ -261,6 +278,49 @@ function renderTheme(
     }
   }
   return rules;
+}
+
+/** The font as the override gave it: the list to write, or why it was refused. */
+interface FontReading {
+  family: string | undefined;
+  invalid: InvalidColour[];
+}
+
+/**
+ * Reads `fontFamily` from an override that may be anything. The list is
+ * written with the SDK's own stack after it, so a face the host's font lacks
+ * falls back to the SDK's choice rather than the browser's default.
+ */
+function readFont(override: unknown): FontReading {
+  const value =
+    typeof override === "object" && override !== null
+      ? (override as { fontFamily?: unknown }).fontFamily
+      : undefined;
+  if (value === undefined) {
+    return { family: undefined, invalid: [] };
+  }
+  const reading = readFontFamily(value);
+  if (!reading.ok) {
+    const reason: InvalidColourReason =
+      reading.reason === "not-a-string" ? "malformed" : "unparseable";
+    return {
+      family: undefined,
+      invalid: [{ theme: null, role: "fontFamily", value, reason }],
+    };
+  }
+  return { family: `${reading.value}, ${sdkFontFamily}`, invalid: [] };
+}
+
+/** The rule that sets the typeface once for the scope, in every theme. */
+function renderFont(scope: string, family: string | undefined): string[] {
+  if (family === undefined) {
+    return [];
+  }
+  return [
+    renderRule([], selectorFor(scope), [
+      `${customPropertyName(tokens.type.family)}: ${family};`,
+    ]),
+  ];
 }
 
 function refused(
@@ -295,10 +355,21 @@ function refused(
  * `#rrggbbaa`, parsed with the same strict reader as
  * {@link checkThemeContrast}, so nothing else can enter the stylesheet.
  *
+ * `fontFamily` is written once for the scope, outside those conditions, since
+ * a typeface does not change with the theme or with high contrast. It must be
+ * a list of plain family names and generic families; anything else refuses the
+ * override, listed in `invalid`. The SDK's own stack follows the list as its
+ * fallback. The host loads the font file: it must be same-origin
+ * or allowed by the host's `font-src`, and the stylesheet must be linked,
+ * because a strict policy blocks an inline `<style>`. How wide a font is
+ * cannot be known here, so the layout holds instead: the browser tests put a
+ * deliberately wide face on the chrome and check that no control gets smaller
+ * and nothing overlaps. Text in a control may be cut short.
+ *
  * Total: it never throws. A tooltip renders in a portal outside the scope, so
  * it keeps the SDK's colours in a `#id` or `.class` scope.
  *
- * @param override - The colours to change, per theme.
+ * @param override - The colours to change, per theme, and the font family.
  * @param options - The scope to apply them in.
  * @returns The stylesheet and the findings, or the reasons it was refused.
  */
@@ -309,10 +380,12 @@ export function createThemeStylesheet(
   const scope = readScope(options);
   try {
     const initial = checkThemeContrast(override);
-    if (initial.invalid.length > 0 || scope === undefined) {
-      return refused(initial.findings, initial.invalid, scope === undefined);
+    const font = readFont(override);
+    const invalid = [...initial.invalid, ...font.invalid];
+    if (invalid.length > 0 || scope === undefined) {
+      return refused(initial.findings, invalid, scope === undefined);
     }
-    return create(override, scope);
+    return create(override, scope, font.family);
   } catch {
     return refused(
       [],
@@ -322,7 +395,11 @@ export function createThemeStylesheet(
   }
 }
 
-function create(override: ThemeOverride, scope: string): ThemeStylesheet {
+function create(
+  override: ThemeOverride,
+  scope: string,
+  family: string | undefined,
+): ThemeStylesheet {
   const sets = normalise(override);
   const derived = {
     light: derive("light", sets.light),
@@ -343,8 +420,9 @@ function create(override: ThemeOverride, scope: string): ThemeStylesheet {
   if (!check.passes || !opaqueCheck.passes) {
     return refused(findings, [...check.invalid, ...opaqueCheck.invalid], false);
   }
-  const css = themeNames
-    .flatMap((theme) => renderTheme(theme, scope, derived[theme]))
-    .join("\n");
+  const css = [
+    ...themeNames.flatMap((theme) => renderTheme(theme, scope, derived[theme])),
+    ...renderFont(scope, family),
+  ].join("\n");
   return { ok: true, css: css === "" ? css : `${css}\n`, findings };
 }

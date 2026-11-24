@@ -204,6 +204,28 @@ describe("Tooltip inside a scoped host theme", () => {
     expect(bubble().style.getPropertyValue(text)).toBe("#f2f4f6");
   });
 
+  it("gives the portalled bubble the font family its trigger sees", () => {
+    const family = propertyOf(tokens.type.family);
+    setup(
+      <Tooltip content="Shortcut: plus">
+        <button
+          type="button"
+          ref={(node) => {
+            node?.style.setProperty(family, '"Brand Sans", sans-serif');
+          }}
+        >
+          Zoom in
+        </button>
+      </Tooltip>,
+    );
+    act(() => {
+      trigger().focus();
+    });
+    expect(bubble().style.getPropertyValue(family)).toBe(
+      '"Brand Sans", sans-serif',
+    );
+  });
+
   it("sets nothing when the trigger sees no host colours", () => {
     setup(
       <Tooltip content="Shortcut: plus">

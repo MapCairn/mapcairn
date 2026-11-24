@@ -15,8 +15,8 @@ export interface HostTheme {
  * load generated stylesheets from the app's own origin under its policy.
  * Scopes with different colours stand in for themed maps on a page.
  *
- * `sage` changes only the surface and text, the roles the tooltip bubble
- * reads, so a test can tell a themed bubble from the SDK's.
+ * `sage` changes only the surface, text and font family, what the tooltip
+ * bubble reads, so a test can tell a themed bubble from the SDK's.
  */
 export const HOST_THEMES: Readonly<Record<string, HostTheme>> = {
   green: {
@@ -37,6 +37,11 @@ export const HOST_THEMES: Readonly<Record<string, HostTheme>> = {
       },
     },
   },
+  /** The page's font set to "Wide Test", a face the browser tests define as a wide one. */
+  wide: {
+    scope: ":root",
+    override: { fontFamily: '"Wide Test", sans-serif' },
+  },
   sage: {
     scope: ".host-sage",
     override: {
@@ -52,6 +57,7 @@ export const HOST_THEMES: Readonly<Record<string, HostTheme>> = {
           text: "#e4f4ec",
         },
       },
+      fontFamily: '"Sage Test", Georgia, serif',
     },
   },
 };

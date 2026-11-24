@@ -121,6 +121,7 @@ export interface ThemeOverride {
         light?: Partial<ThemeColours>;
         dark?: Partial<ThemeColours>;
     };
+    fontFamily?: string;
 }
 
 // @public
