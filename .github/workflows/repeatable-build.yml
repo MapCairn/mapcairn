@@ -55,7 +55,10 @@ jobs:
         run: |
           # The SDK packages skip a build their stamp says is current, so their
           # `dist` folders go too, or this would compare a build with itself.
-          rm -rf packages/web/.cloudflare packages/core/dist packages/react/dist packages/theme/dist packages/map/dist packages/adapter-maplibre/dist packages/sdk/dist
+          rm -rf packages/web/.cloudflare
+          for package in core react theme map adapter-maplibre sdk; do
+            rm -rf "packages/${package}/dist"
+          done
           npm run build -w @mapcairn/web
 
       - name: Hash the second build

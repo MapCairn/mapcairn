@@ -1,6 +1,6 @@
 ---
 name: triage-dependency-pr
-description: "Take a dependency pull request (Dependabot or any other) to a green, mergeable state: read the manifest and lockfile diff, check the 3-day release age and the vulnerability exception, restore peer ranges Dependabot raised, run the SDK licence check and a real `npm ci --ignore-scripts`, read the changelogs of what the SDK packages expose, update the branch when it is behind, and merge only with authority naming the pull request, on a green head. Use when a dependency pull request is open, when asked to review, fix or merge Dependabot, and for any pull request that changes a `package.json` range or `package-lock.json`."
+description: "Take a dependency pull request (Dependabot or any other) to a green, mergeable state: read the manifest and lockfile diff, check the minimum release age and the vulnerability exception, restore peer ranges Dependabot raised, run the SDK licence check and a real `npm ci --ignore-scripts`, read the changelogs of what the SDK packages expose, update the branch when it is behind, and merge only with authority naming the pull request, on a green head. Use when a dependency pull request is open, when asked to review, fix or merge Dependabot, and for any pull request that changes a `package.json` range or `package-lock.json`."
 ---
 
 # Triage a dependency pull request
@@ -17,9 +17,9 @@ Example: a grouped pull request raises `react` in a development range and in `pa
 
 ## 2. Check the age
 
-The rule is 3 days, never 7 (`.npmrc` sets `min-release-age=3`; the Dependabot cooldown is 3). For each version the pull request installs, read its publish date: `npm view <package>@<version> time --json` and take the entry for that version, or `npm view <package> time.<version>`. Queries for `dist-tags` and `author` were denied by mistake until the deny patterns were narrowed, and Claude Code allows them now. A version younger than 3 days does not merge without the maintainer.
+The age is the `min-release-age` in `.npmrc`, the same as the Dependabot cooldown (`AGENTS.md`); never apply an older figure from memory. For each version the pull request installs, read its publish date: `npm view <package>@<version> time --json` and take the entry for that version, or `npm view <package> time.<version>`. Queries for `dist-tags` and `author` were denied by mistake until the deny patterns were narrowed, and Claude Code allows them now. A version younger than that does not merge without the maintainer.
 
-One exception: a fix to a known vulnerability (a Dependabot or code scanning alert, or an advisory) may bypass the rule for that one package, with `--min-release-age-exclude=<package>` (`AGENTS.md`). Confirm the alert or advisory exists, prefer the newest patched version already 3 days old, say in the pull request that the exception was used and why, and never use `--min-release-age=0` or edit `.npmrc`. Any other package or non-security upgrade goes to the maintainer first; an agent never decides it alone.
+One exception: a fix to a known vulnerability (a Dependabot or code scanning alert, or an advisory) may bypass the rule for that one package, with `--min-release-age-exclude=<package>` (`AGENTS.md`). Confirm the alert or advisory exists, prefer the newest patched version already old enough, say in the pull request that the exception was used and why, and never use `--min-release-age=0` or edit `.npmrc`. Any other package or non-security upgrade goes to the maintainer first; an agent never decides it alone.
 
 ## 3. Restore peer ranges
 
