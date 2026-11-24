@@ -131,6 +131,28 @@ A release candidate is published under `next` (`npm run release:plan -- --pre rc
 
 What counts as the public API, and which changes are breaking, is in [The public API](https://mapcairn.timothybrits.co.za/docs/guides/public-api/). The release notes and the choice of version follow it. The same page says how an export is deprecated before it is removed ("Deprecating and removing an export"), and what each of the two releases lists in its notes.
 
+## What the pack and consumer checks verify
+
+`npm run pack:check` (`scripts/release/packCheck.mjs`) packs each SDK package with `npm pack --dry-run --json`. It fails when a tarball:
+
+- holds anything but `package.json`, `README.md`, `LICENSE` and files under `dist` ending in `.js`, `.js.map`, `.d.ts` or `.css`, so there is no source, test, dotfile, data file or image (each `.js.map` carries its source in `sourcesContent`);
+- lacks a file that `exports` or `types` names (the `@mapcairn/source` condition is left out, because it names a file only this repository has);
+- differs from the SDK manifests in `files`, `publishConfig` or a `main` field, or has a `license` other than `AGPL-3.0-only`, or lacks the npm page fields (`repository` with the package's own `directory`, `homepage`, `bugs`, `keywords`, `description`);
+- is over its size ceiling (`SIZE_CEILINGS`, about one and a half times the size measured when it was set; raising one is an edit in a pull request);
+- has a source map whose `sourceRoot` or `sources` entry is absolute, a URL or outside the package's `src`, or a script, declaration or stylesheet that no export names.
+
+The check reads what is on disk, so the release `verify` job runs it after `npm run build:sdk -- --force` from a clean checkout. It then runs `scripts/release/packTypes.mjs`, which packs the six packages and runs `publint` (with `--strict`) and `@arethetypeswrong/cli` over the tarballs.
+
+`npm run consumer:check` (`scripts/release/consumerCheck.mjs`) packs the packages into a temporary folder outside the repository and installs them into a fresh app with the repository's `.npmrc` and the tool versions from the root lockfile. In npm, and in pnpm and Yarn when installed, it renders `MapChrome` in plain Node, runs `tsc` under `bundler`, `node16` and `nodenext` resolution, builds with plain Vite, and runs the server bundle on workerd through Miniflare. Bun renders it too. A second app lists only `@mapcairn/sdk`, and its module graphs show that the root never reaches `maplibre-gl` or the adapter. Bundle size ceilings (`BUNDLE_CEILINGS`) budget what an app ships. A third app lists the umbrella with `core`, `map` and the adapter and must install one copy of each.
+
+A browser leg (`scripts/release/consumer-browser/`) draws a real map from `@mapcairn/sdk` in Chromium under the policy `buildContentSecurityPolicy` builds, and another builds the README's quickstart as written. They fail on a request before the map is asked for, a policy violation or a console error. A leg skips with a warning when its tool is missing, such as Playwright or Miniflare in the release workflow's `check` job, so the `release` skill makes `npm run consumer:check` with Chromium a go/no-go item. The Yarn and Bun legs do not run against published packages, because the minimum release age would refuse a release made today.
+
+`map` lists `@vanilla-extract/css` in `dependencies` although nothing loads it at run time, because `@vanilla-extract/recipes` names it as a peer and a strict pnpm install refuses a missing one. Decided on 2026-11-20: declare it as a dependency, not a peer, which would put it on every consumer. Remove it if `recipes` drops the peer.
+
+`npm audit` reports a `minimatch` finding through `@microsoft/api-extractor`. It is accepted: API Extractor runs only at development and build time, never in a package a host installs, and the patterns it matches come from this repository's own configuration. Drop the acceptance when API Extractor moves to `minimatch` 11 or later.
+
+The package READMEs are written for the npm page, which shows each one away from the repository. They install with npm, pnpm and yarn side by side, hold one **Status** line, and link to the repository only by absolute URL. `packages/core/src/lint/packageReadmes.test.ts` checks this. The `repository.url` is `git+https://github.com/MapCairn/mapcairn.git`: npm's trusted publishing requires it to match the GitHub repository exactly, so a fork that publishes must change it.
+
 ## The maintainer's setup
 
 Only the maintainer does these; an agent lists them and waits.
