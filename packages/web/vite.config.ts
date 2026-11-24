@@ -105,7 +105,8 @@ export default defineConfig(async ({ mode, command, isPreview }) => {
             FontaineTransform.vite({
               fallbacks: ["Arial", "sans-serif"],
               // IBM Plex Sans has a hand-declared "IBM Plex Sans Fallback" in
-              // src/fonts/fonts.css, with metrics derived from the font file.
+              // @mapcairn/theme's tokens.css, with metrics derived from the
+              // font file.
               // Its @font-face names a bare package path that fontaine cannot
               // resolve, so skip it rather than emit a second, unused face.
               skipFontFaceGeneration: (name) =>

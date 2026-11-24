@@ -164,6 +164,21 @@ createRoot(root).render(
 
 `MapChrome` lays out the interface in slots, named places over the map such as `topStart` and `bottomEnd`. `LiveRegionProvider` adds the live region, a hidden area that screen readers read announcements from, and `TooltipProvider` serves the tooltips. [Embed a map](guides/embed-a-map.md) explains the rest of the file.
 
+## Add the font (optional)
+
+The SDK's design uses IBM Plex Sans Variable. Without it the interface uses your system's font through the fallback stack, and that is a fine place to start. The SDK's `tokens.css` already declares a fallback face matched to Plex's metrics, so loading the font later moves the layout very little. To load Plex, add the font package and import its stylesheet in `src/main.tsx`, above the SDK's:
+
+```bash
+npm install @fontsource-variable/ibm-plex-sans
+```
+
+```ts check
+import "@fontsource-variable/ibm-plex-sans/wght.css";
+import "@mapcairn/sdk/styles.css";
+```
+
+The design uses the Latin and Latin Extended subsets at weights 400 and 600. The package's `wght.css` declares more subsets and weights, and the browser fetches only the files a page's text needs. Vite copies the font files into your build with the rest of your assets and rewrites the stylesheet to point at them. If you serve the page with a strict Content Security Policy, the files must come from your own origin (`font-src 'self'`) or from an origin your `font-src` allows; [Embed a map](guides/embed-a-map.md) has a policy to start from. [Theme the interface](tasks/theme-the-interface.md) covers the rest of the theme.
+
 ## Run it
 
 ```bash

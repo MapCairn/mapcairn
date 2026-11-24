@@ -5,6 +5,7 @@ import {
   createGlobalTheme,
   createThemeContract,
   type GlobalStyleRule,
+  globalFontFace,
   globalStyle,
 } from "@vanilla-extract/css";
 import {
@@ -50,6 +51,30 @@ const OS_DARK_QUERY = "(prefers-color-scheme: dark)";
 const colourContract = Object.fromEntries(
   colourRoleNames.map((name) => [name, null]),
 ) as { [Role in keyof ColourRoles]: null };
+
+/**
+ * The metric-matched fallback for IBM Plex Sans Variable, the second family in
+ * `fontFamily`. It holds no font file: `src` names the system's Arial, or
+ * Liberation Sans, which has Arial's metrics, and the descriptors scale and
+ * space it to Plex's, so the swap to Plex moves the layout very little. A host
+ * that loads Plex, or none, gets it from this stylesheet.
+ *
+ * The numbers are derived from the font files, not another font's preset.
+ * Plex (`ibm-plex-sans-latin-wght-normal.woff2`): unitsPerEm 1000, ascent 1025,
+ * descent 275, lineGap 0, xWidthAvg 451. Arial: unitsPerEm 2048, xWidthAvg 913.
+ * `size-adjust` is (451 / 1000) / (913 / 2048) = 101.1663%. The overrides are
+ * Plex's metric divided by it, because the browser applies them to the
+ * adjusted size: 1025 / 1000 / 1.011663 = 101.3184% and 275 / 1000 / 1.011663 =
+ * 27.183%. The widths are measured at weight 400, so semibold text still shifts
+ * slightly. The name must stay the second family of `fontFamily`.
+ */
+globalFontFace("IBM Plex Sans Fallback", {
+  src: 'local("Arial"), local("Arial Regular"), local("Arial-Regular"), local("ArialMT"), local("Liberation Sans")',
+  sizeAdjust: "101.1663%",
+  ascentOverride: "101.3184%",
+  descentOverride: "27.183%",
+  lineGapOverride: "0%",
+});
 
 /**
  * The whole token contract: every custom property that components may read.
