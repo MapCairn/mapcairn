@@ -27,7 +27,20 @@ export interface ThemeOverride {
     light?: Partial<ThemeColours>;
     dark?: Partial<ThemeColours>;
   };
+  /**
+   * A font-family list such as `"Brand Sans", system-ui, sans-serif`: plain
+   * family names, quoted or not, and generic families. It does not change a
+   * contrast, so {@link checkThemeContrast} leaves it alone; it is read and
+   * written by {@link createThemeStylesheet}, which refuses a list with
+   * anything else in it. The host loads the font face (weights 400 and 600).
+   * Left out, the SDK's own font stack applies, and it follows this list as
+   * the fallback.
+   */
+  fontFamily?: string;
 }
+
+/** Keys of an override that are not colours: they are not checked here, and not unknown. */
+const NON_COLOUR_KEYS: ReadonlySet<string> = new Set(["fontFamily"]);
 
 /** The measured contrast of one pair, in one theme, over one backdrop. */
 export interface ContrastFinding {
@@ -177,6 +190,9 @@ function readProposedThemes(override: unknown): ProposedThemes {
     return result;
   }
   for (const [key, colour] of Object.entries(override)) {
+    if (NON_COLOUR_KEYS.has(key)) {
+      continue;
+    }
     if (key !== "colour") {
       report(null, key, colour, "unknown-key");
     } else if (colour !== undefined && !isPlainRecord(colour)) {

@@ -51,7 +51,7 @@ A host that renders on a server, or builds a Worker, and imports `@mapcairn/sdk/
 
 ## Theme the SDK with your own colours
 
-`createThemeStylesheet` in `@mapcairn/theme` makes the stylesheet that gives the SDK's interface your own colours, and refuses a theme that is below WCAG 2.2 AA. It covers the 14 interface colour roles (`surface`, `surfaceRaised`, `text`, `textMuted`, `accent`, `accentTint`, `accentContrast`, `hairline`, `controlBoundary`, `danger`, `dangerTint`, `scrim`, `focusRing`, `focusRingInner`), in light and dark. It does not change the font, the page background, the map overlay colours or the data palette. [Theme the interface](../tasks/theme-the-interface.md) has the code: generate the stylesheet in your build, serve it from your own origin and link it after the SDK's stylesheets, with a class that you own on an element around the `MapView` and its chrome.
+`createThemeStylesheet` in `@mapcairn/theme` makes the stylesheet that gives the SDK's interface your own colours, and refuses a theme that is below WCAG 2.2 AA. It covers the 14 interface colour roles (`surface`, `surfaceRaised`, `text`, `textMuted`, `accent`, `accentTint`, `accentContrast`, `hairline`, `controlBoundary`, `danger`, `dangerTint`, `scrim`, `focusRing`, `focusRingInner`), in light and dark. It can also set the font family (`fontFamily`). It does not change the page background, the map overlay colours or the data palette. [Theme the interface](../tasks/theme-the-interface.md) has the code: generate the stylesheet in your build, serve it from your own origin and link it after the SDK's stylesheets, with a class that you own on an element around the `MapView` and its chrome.
 
 What to know:
 

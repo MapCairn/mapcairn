@@ -9,8 +9,14 @@ import {
   type ThemeOverride,
 } from "./checkThemeContrast";
 import { compositeOver, parseColour, toHex } from "./contrast";
+import { type InvalidThemeFieldReason, readFontFamily } from "./fontFamily";
 import { surfaceBlurSupported, tokens } from "./tokens.css";
-import { colourRoleNames, type ThemeName, themeValues } from "./tokenValues";
+import {
+  colourRoleNames,
+  fontFamily as sdkFontFamily,
+  type ThemeName,
+  themeValues,
+} from "./tokenValues";
 
 /** Where a theme override applies. */
 export interface ThemeStylesheetOptions {
@@ -36,7 +42,7 @@ export interface ThemeStylesheetCreated {
   ok: true;
   /**
    * The stylesheet text, to serve as a same-origin file. It is empty when the
-   * override sets no colour.
+   * override sets no colour and no font.
    */
   css: string;
   /**
@@ -63,8 +69,26 @@ export interface ThemeStylesheetRefused {
   findings: ContrastFinding[];
   /** The colours and keys that could not be used, and why. */
   invalid: InvalidColour[];
+  /** The font, and why it could not be used. Empty when it was fine or not set. */
+  invalidFields: InvalidThemeField[];
   /** True when `scope` is not `:root`, `#id` or `.class`, or could not be read. */
   invalidScope: boolean;
+}
+
+/** A field other than a colour that was refused, so nothing was written. */
+export interface InvalidThemeField {
+  /** The field of the override. */
+  field: "fontFamily";
+  /** The value as the host supplied it. */
+  value: unknown;
+  /**
+   * Why: it is not a string, it is too long, it holds a character outside
+   * letters, numbers, space, comma, quote, hyphen, underscore and full stop
+   * (so braces, semicolons, `url()`, `var()`, comments and newlines all
+   * land here), it is not a list of family names, or it is a reserved word
+   * such as `inherit`.
+   */
+  reason: InvalidThemeFieldReason;
 }
 
 /** The result of {@link createThemeStylesheet}. */
@@ -137,14 +161,18 @@ function readScope(options: ThemeStylesheetOptions): string | undefined {
   }
 }
 
-/** The custom property behind a colour role, taken from the built contract. */
-function propertyName(role: keyof ThemeColours): string {
-  const reference = tokens.color[role];
+/** The custom property a `var(--name)` token reference points at. */
+function customPropertyName(reference: string): string {
   const name = /^var\((--[\w-]+)\)$/.exec(reference)?.[1];
   if (name === undefined) {
     throw new Error(`Unexpected token reference: ${reference}`);
   }
   return name;
+}
+
+/** The custom property behind a colour role, taken from the built contract. */
+function propertyName(role: keyof ThemeColours): string {
+  return customPropertyName(tokens.color[role]);
 }
 
 /** Writes every colour the host gave as `#rrggbb` or `#rrggbbaa`. */
@@ -229,10 +257,10 @@ function renderRule(
  * The selector for a context. The root scope is written twice over so it
  * outranks the SDK's own rules on the same element whatever the link order.
  */
-function selectorFor(scope: string, context: Context): string {
+function selectorFor(scope: string, rootState = ""): string {
   return scope === ":root"
-    ? `:root:root${context.rootState}`
-    : `:root${context.rootState} ${scope}`;
+    ? `:root:root${rootState}`
+    : `:root${rootState} ${scope}`;
 }
 
 function mediaRule(context: Context, ...extra: string[]): string {
@@ -247,7 +275,7 @@ function renderTheme(
 ): string[] {
   const rules: string[] = [];
   for (const context of contexts[theme]) {
-    const selector = selectorFor(scope, context);
+    const selector = selectorFor(scope, context.rootState);
     const base = declarationsOf(colours);
     const flat = declarationsOf(opaque);
     if (base.length > 0) {
@@ -263,12 +291,64 @@ function renderTheme(
   return rules;
 }
 
+/** The font as the override gave it: the list to write, or why it was refused. */
+interface FontReading {
+  family: string | undefined;
+  invalidFields: InvalidThemeField[];
+}
+
+/**
+ * Reads `fontFamily` from an override that may be anything. The list is
+ * written with the SDK's own stack after it, so a face the host's font lacks
+ * falls back to the SDK's choice rather than the browser's default.
+ */
+function readFont(override: unknown): FontReading {
+  const value =
+    typeof override === "object" && override !== null
+      ? (override as { fontFamily?: unknown }).fontFamily
+      : undefined;
+  if (value === undefined) {
+    return { family: undefined, invalidFields: [] };
+  }
+  const reading = readFontFamily(value);
+  if (!reading.ok) {
+    return {
+      family: undefined,
+      invalidFields: [{ field: "fontFamily", value, reason: reading.reason }],
+    };
+  }
+  return {
+    family: `${reading.value}, ${sdkFontFamily}`,
+    invalidFields: [],
+  };
+}
+
+/** The rule that sets the typeface once for the scope, in every theme. */
+function renderFont(scope: string, family: string | undefined): string[] {
+  if (family === undefined) {
+    return [];
+  }
+  return [
+    renderRule([], selectorFor(scope), [
+      `${customPropertyName(tokens.type.family)}: ${family};`,
+    ]),
+  ];
+}
+
 function refused(
   findings: ContrastFinding[],
   invalid: InvalidColour[],
   invalidScope: boolean,
+  invalidFields: InvalidThemeField[] = [],
 ): ThemeStylesheetRefused {
-  return { ok: false, css: undefined, findings, invalid, invalidScope };
+  return {
+    ok: false,
+    css: undefined,
+    findings,
+    invalid,
+    invalidFields,
+    invalidScope,
+  };
 }
 
 /**
@@ -295,10 +375,20 @@ function refused(
  * `#rrggbbaa`, parsed with the same strict reader as
  * {@link checkThemeContrast}, so nothing else can enter the stylesheet.
  *
+ * `fontFamily` is written once for the scope, outside those conditions, since
+ * a typeface does not change with the theme or with high contrast. It must be
+ * a list of plain family names and generic families; anything else refuses the
+ * override with the reason in `invalidFields`. The SDK's own stack follows the
+ * list as its fallback. The host loads the font file: it must be same-origin
+ * or allowed by the host's `font-src`, and the stylesheet must be linked,
+ * because a strict policy blocks an inline `<style>`. A wider font changes the
+ * text's width but not the size of a control: controls keep their 44 px
+ * minimum and the text wraps or truncates inside them.
+ *
  * Total: it never throws. A tooltip renders in a portal outside the scope, so
  * it keeps the SDK's colours in a `#id` or `.class` scope.
  *
- * @param override - The colours to change, per theme.
+ * @param override - The colours to change, per theme, and the font family.
  * @param options - The scope to apply them in.
  * @returns The stylesheet and the findings, or the reasons it was refused.
  */
@@ -309,10 +399,20 @@ export function createThemeStylesheet(
   const scope = readScope(options);
   try {
     const initial = checkThemeContrast(override);
-    if (initial.invalid.length > 0 || scope === undefined) {
-      return refused(initial.findings, initial.invalid, scope === undefined);
+    const font = readFont(override);
+    if (
+      initial.invalid.length > 0 ||
+      font.invalidFields.length > 0 ||
+      scope === undefined
+    ) {
+      return refused(
+        initial.findings,
+        initial.invalid,
+        scope === undefined,
+        font.invalidFields,
+      );
     }
-    return create(override, scope);
+    return create(override, scope, font.family);
   } catch {
     return refused(
       [],
@@ -322,7 +422,11 @@ export function createThemeStylesheet(
   }
 }
 
-function create(override: ThemeOverride, scope: string): ThemeStylesheet {
+function create(
+  override: ThemeOverride,
+  scope: string,
+  family: string | undefined,
+): ThemeStylesheet {
   const sets = normalise(override);
   const derived = {
     light: derive("light", sets.light),
@@ -343,8 +447,9 @@ function create(override: ThemeOverride, scope: string): ThemeStylesheet {
   if (!check.passes || !opaqueCheck.passes) {
     return refused(findings, [...check.invalid, ...opaqueCheck.invalid], false);
   }
-  const css = themeNames
-    .flatMap((theme) => renderTheme(theme, scope, derived[theme]))
-    .join("\n");
+  const css = [
+    ...themeNames.flatMap((theme) => renderTheme(theme, scope, derived[theme])),
+    ...renderFont(scope, family),
+  ].join("\n");
   return { ok: true, css: css === "" ? css : `${css}\n`, findings };
 }

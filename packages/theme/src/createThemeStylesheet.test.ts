@@ -11,6 +11,7 @@ import {
   type ThemeStylesheet,
 } from "./createThemeStylesheet";
 import { surfaceBlurSupported, tokens } from "./tokens.css";
+import * as tokenValues from "./tokenValues";
 import { themeValues } from "./tokenValues";
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -72,7 +73,7 @@ function passed(result: ThemeStylesheet): { css: string } {
   if (!result.ok) {
     const failing = result.findings.filter((finding) => !finding.passes);
     throw new Error(
-      `refused: ${JSON.stringify({ failing, invalid: result.invalid, invalidScope: result.invalidScope })}`,
+      `refused: ${JSON.stringify({ failing, invalid: result.invalid, invalidFields: result.invalidFields, invalidScope: result.invalidScope })}`,
     );
   }
   return result;
@@ -108,7 +109,7 @@ describe("createThemeStylesheet", () => {
     expect(result.css).toContain(".brand");
   });
 
-  it("writes an empty stylesheet when no colour is set", () => {
+  it("writes an empty stylesheet when no colour, font or shape is set", () => {
     expect(createThemeStylesheet({}, { scope: ".brand" })).toEqual(
       expect.objectContaining({ ok: true, css: "" }),
     );
@@ -434,7 +435,7 @@ describe("createThemeStylesheet", () => {
       for (const override of [
         { colour: { light: { chromeBorder: "#000000" } } },
         { colour: { light: { pageBackground: "#000000" } } },
-        { fontFamily: "Inter" },
+        { spacing: { md: "8px" } },
         { colour: { sepia: {} } },
         { colour: [] },
         null,
@@ -603,6 +604,192 @@ describe("createThemeStylesheet", () => {
     });
   });
 
+  describe("fontFamily", () => {
+    const familyName = nameOf(tokens.type.family);
+    const brandFont = '"Brand Sans", system-ui, sans-serif';
+
+    it("writes the family once for the scope, followed by the SDK's own stack", () => {
+      const { css } = passed(
+        createThemeStylesheet({ fontFamily: brandFont }, { scope: ".brand" }),
+      );
+
+      expect(readRules(css)).toEqual([
+        {
+          conditions: [],
+          selector: ":root .brand",
+          declarations: {
+            [familyName]: `${brandFont}, ${tokenValues.fontFamily}`,
+          },
+        },
+      ]);
+    });
+
+    it("raises the specificity for the root scope", () => {
+      const { css } = passed(
+        createThemeStylesheet({ fontFamily: brandFont }, { scope: ":root" }),
+      );
+
+      expect(readRules(css).map((rule) => rule.selector)).toEqual([
+        ":root:root",
+      ]);
+    });
+
+    it("is not held back for high contrast or forced colours", () => {
+      const { css } = passed(
+        createThemeStylesheet({ fontFamily: brandFont }, { scope: "#map" }),
+      );
+
+      expect(css).not.toContain("@media");
+    });
+
+    it("writes the list normalised, so spacing in the input cannot reach the sheet", () => {
+      const { css } = passed(
+        createThemeStylesheet(
+          { fontFamily: "  Inter ,serif " },
+          { scope: "#map" },
+        ),
+      );
+
+      expect(readRules(css)[0]?.declarations[familyName]).toBe(
+        `Inter, serif, ${tokenValues.fontFamily}`,
+      );
+    });
+
+    it("writes only the colours when no font is given, and only the font when no colour is", () => {
+      const colourOnly = passed(
+        createThemeStylesheet(brand, { scope: "#map" }),
+      );
+      const fontOnly = passed(
+        createThemeStylesheet({ fontFamily: brandFont }, { scope: "#map" }),
+      );
+
+      expect(colourOnly.css).not.toContain(familyName);
+      expect(fontOnly.css).not.toContain(nameOf(tokens.color.accent));
+      expect(fontOnly.css).not.toContain("accent");
+    });
+
+    it("writes the font beside the colours in one sheet", () => {
+      const { css } = passed(
+        createThemeStylesheet(
+          { ...brand, fontFamily: brandFont },
+          { scope: "#map" },
+        ),
+      );
+      const rules = readRules(css);
+
+      expect(
+        rules.filter((rule) => familyName in rule.declarations),
+      ).toHaveLength(1);
+      expect(
+        rules.some((rule) => nameOf(tokens.color.accent) in rule.declarations),
+      ).toBe(true);
+    });
+
+    it("skips a font set to undefined", () => {
+      expect(
+        createThemeStylesheet({ fontFamily: undefined }, { scope: "#map" }),
+      ).toEqual(expect.objectContaining({ ok: true, css: "" }));
+    });
+
+    it("does not change the contrast findings", () => {
+      const withFont = createThemeStylesheet(
+        { ...brand, fontFamily: brandFont },
+        { scope: "#map" },
+      );
+
+      expect(withFont.findings.length).toBeGreaterThan(0);
+      expect(withFont.findings).toEqual(
+        createThemeStylesheet(brand, { scope: "#map" }).findings,
+      );
+    });
+
+    const hostile = [
+      "Inter; } body { display: none",
+      "url(https://example.invalid/font.woff2)",
+      "var(--brand-font)",
+      "Inter /* x */",
+      "Inter,\nserif",
+      "Inter</style><script>alert(1)</script>",
+      "Inter !important",
+      '"\\72 ed"',
+      "inherit",
+    ];
+
+    it.each(hostile)(
+      "refuses %j, names the field and writes no CSS",
+      (value) => {
+        const result = createThemeStylesheet(
+          { fontFamily: value },
+          { scope: ".brand" },
+        );
+
+        expect(result.ok).toBe(false);
+        expect(result.css).toBeUndefined();
+        if (!result.ok) {
+          expect(result.invalidFields).toEqual([
+            { field: "fontFamily", value, reason: expect.any(String) },
+          ]);
+          expect(result.invalid).toEqual([]);
+        }
+      },
+    );
+
+    it("names the reason it refused", () => {
+      const reasonFor = (fontFamily: unknown): unknown => {
+        const result = createThemeStylesheet({ fontFamily } as ThemeOverride, {
+          scope: ".brand",
+        });
+        return result.ok ? undefined : result.invalidFields[0]?.reason;
+      };
+
+      expect(reasonFor(42)).toBe("not-a-string");
+      expect(reasonFor("a".repeat(513))).toBe("too-long");
+      expect(reasonFor("Inter;")).toBe("forbidden-character");
+      expect(reasonFor("Inter,")).toBe("malformed");
+      expect(reasonFor("unset")).toBe("reserved-keyword");
+    });
+
+    it("reports a refused font together with a refused colour and scope", () => {
+      const result = createThemeStylesheet(
+        { fontFamily: "x;", colour: { light: { accent: "nope" } } },
+        { scope: "body" },
+      );
+
+      expect(result.ok).toBe(false);
+      if (!result.ok) {
+        expect(result.invalidFields).toHaveLength(1);
+        expect(result.invalid).toHaveLength(1);
+        expect(result.invalidScope).toBe(true);
+      }
+    });
+
+    it("has no invalid fields when a refusal is only about colour", () => {
+      const result = createThemeStylesheet(
+        { fontFamily: brandFont, colour: { light: { accent: "#ffff00" } } },
+        { scope: ".brand" },
+      );
+
+      expect(result.ok).toBe(false);
+      expect(!result.ok && result.invalidFields).toEqual([]);
+    });
+
+    it("refuses a font whose getter throws, without throwing", () => {
+      const override = {
+        get fontFamily(): string {
+          throw new Error("boom");
+        },
+      };
+
+      expect(() =>
+        createThemeStylesheet(override as ThemeOverride, { scope: ".brand" }),
+      ).not.toThrow();
+      expect(
+        createThemeStylesheet(override as ThemeOverride, { scope: ".brand" })
+          .ok,
+      ).toBe(false);
+    });
+  });
+
   describe("custom property names", () => {
     let compiled = "";
 
@@ -637,6 +824,16 @@ describe("createThemeStylesheet", () => {
       for (const role of roleNames) {
         expect(used).toContain(nameOf(tokens.color[role]));
       }
+    });
+
+    it("writes the font through the name tokens.css declares for the family", () => {
+      const { css } = passed(
+        createThemeStylesheet({ fontFamily: "Inter" }, { scope: ".brand" }),
+      );
+      const name = nameOf(tokens.type.family);
+
+      expect(css.match(/--[\w-]+(?=:)/g)).toEqual([name]);
+      expect(compiled).toContain(`${name}:`);
     });
   });
 

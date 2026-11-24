@@ -60,6 +60,16 @@ export interface InvalidColour {
 export type InvalidColourReason = "unknown-role" | "unparseable" | "out-of-gamut" | "translucent" | "unknown-key" | "malformed" | "unreadable";
 
 // @public
+export interface InvalidThemeField {
+    field: "fontFamily";
+    reason: InvalidThemeFieldReason;
+    value: unknown;
+}
+
+// @public
+export type InvalidThemeFieldReason = "not-a-string" | "too-long" | "forbidden-character" | "malformed" | "reserved-keyword";
+
+// @public
 export const mapOverlayTokens: {
     readonly background: `var(--${string})`;
     readonly globeSpace: `var(--${string})`;
@@ -121,6 +131,7 @@ export interface ThemeOverride {
         light?: Partial<ThemeColours>;
         dark?: Partial<ThemeColours>;
     };
+    fontFamily?: string;
 }
 
 // @public
@@ -143,6 +154,7 @@ export interface ThemeStylesheetRefused {
     css: undefined;
     findings: ContrastFinding[];
     invalid: InvalidColour[];
+    invalidFields: InvalidThemeField[];
     invalidScope: boolean;
     ok: false;
 }

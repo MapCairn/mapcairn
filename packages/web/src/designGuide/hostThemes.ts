@@ -37,6 +37,11 @@ export const HOST_THEMES: Readonly<Record<string, HostTheme>> = {
       },
     },
   },
+  /** The page's font set to "Wide Test", a face the browser tests define as a wide one. */
+  wide: {
+    scope: ":root",
+    override: { fontFamily: '"Wide Test", sans-serif' },
+  },
   sage: {
     scope: ".host-sage",
     override: {

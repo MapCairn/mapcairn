@@ -30,6 +30,13 @@ export const pill = style({
 });
 
 /**
+ * The buttons keep their size. The input's own width comes from its `size`,
+ * which a wide font makes larger than the pill, and without this the buttons
+ * give way to it and fall under the 44px target.
+ */
+globalStyle(`${pill} > button`, { flexShrink: 0 });
+
+/**
  * The input, 17px (the `large` step) so iOS does not zoom on focus. The
  * focus ring is drawn on the pill with `:has(input:focus-visible)`, so the input itself
  * has no outline of its own.
