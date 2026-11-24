@@ -110,6 +110,50 @@ export interface SplitDocument {
   readonly parts: readonly DocPart[];
 }
 
+/** A third-level section of a document's preamble, which gets a page of its own. */
+export interface PreambleNote {
+  /** The note's file name without its extension, unique among the document's pages. */
+  readonly stem: string;
+  /** The heading's plain text. */
+  readonly title: string;
+  /** The note's text, verbatim, from its own heading line. */
+  readonly markdown: string;
+}
+
+const NOTE_HEADING = /^### (.+?)\s*$/;
+
+/**
+ * Cuts a preamble at each third-level heading outside a code block: the text
+ * before the first one is the lead and each heading starts a note that runs
+ * to the next. The lead and the notes, joined, are the preamble.
+ * @param preamble - The text between a document's title and its first section.
+ * @param taken - Stems the notes must not take, such as those of the parts.
+ */
+export function splitPreamble(
+  preamble: string,
+  taken: readonly string[] = [],
+): { lead: string; notes: PreambleNote[] } {
+  const used = new Set(taken);
+  const runs: string[][] = [[]];
+  let inFence = false;
+  for (const line of linesOf(preamble)) {
+    inFence = FENCE.test(line) ? !inFence : inFence;
+    if (!inFence && NOTE_HEADING.test(line)) {
+      runs.push([]);
+    }
+    runs[runs.length - 1]?.push(line);
+  }
+  const [lead = [], ...noteRuns] = runs;
+  const notes = noteRuns.map((lines): PreambleNote => {
+    const heading = NOTE_HEADING.exec(lines[0] ?? "")?.[1] ?? "";
+    const slug = slugifyHeading(heading);
+    const stem = used.has(slug) ? `${slug}-notes` : slug;
+    used.add(stem);
+    return { stem, title: plainHeading(heading), markdown: lines.join("") };
+  });
+  return { lead: lead.join(""), notes };
+}
+
 /** A block that is kept whole, or one row of a table, from which parts are packed. */
 interface Unit {
   readonly lines: string[];

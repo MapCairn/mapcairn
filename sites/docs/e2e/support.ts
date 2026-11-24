@@ -35,7 +35,8 @@ export interface AuditedPage {
  * one for a type, the roadmap, the Architecture overview, two of its parts (one
  * with many tables, one with a diagram), a Design system part, the visual
  * design page (both themes drawn at once, whatever the reader chose), the
- * extending guide (a diagram) and the 404 page (which the static server answers for an
+ * extending guide (a diagram), the layer definitions guide (tables and long
+ * code samples) and the 404 page (which the static server answers for an
  * unknown address).
  */
 export const AUDITED_PAGES: readonly AuditedPage[] = [
@@ -53,6 +54,7 @@ export const AUDITED_PAGES: readonly AuditedPage[] = [
   { name: "Design part", path: "/docs/design/tokens/" },
   { name: "Design tokens, visually", path: "/docs/design/visual-tokens/" },
   { name: "Extend the SDK", path: "/docs/guides/extending/" },
+  { name: "Layer definitions", path: "/docs/guides/layer-definitions/" },
   { name: "404", path: "/docs/this-page-does-not-exist/" },
 ];
 
@@ -101,34 +103,35 @@ export interface HeaderTarget {
   readonly height: number;
 }
 
-/** Every link and button in the header that is shown, with its box. */
-export function headerTargets(page: Page): Promise<HeaderTarget[]> {
-  return page.evaluate(() =>
-    [
-      ...document.querySelectorAll<HTMLElement>(
-        "nav.navbar a, nav.navbar button",
-      ),
-    ]
-      .filter((element) =>
-        element.checkVisibility({ visibilityProperty: true }),
-      )
-      .map((element) => {
-        const box = element.getBoundingClientRect();
-        const name = (
-          element.getAttribute("aria-label") ??
-          element.textContent ??
-          element.className
+/** Every link and button matching `selector` (the header's by default) that is shown, with its box. */
+export function headerTargets(
+  page: Page,
+  selector = "nav.navbar a, nav.navbar button",
+): Promise<HeaderTarget[]> {
+  return page.evaluate(
+    (css) =>
+      [...document.querySelectorAll<HTMLElement>(css)]
+        .filter((element) =>
+          element.checkVisibility({ visibilityProperty: true }),
         )
-          .trim()
-          .slice(0, 40);
-        return {
-          name: name || element.tagName.toLowerCase(),
-          left: box.left,
-          top: box.top,
-          width: box.width,
-          height: box.height,
-        };
-      }),
+        .map((element) => {
+          const box = element.getBoundingClientRect();
+          const name = (
+            element.getAttribute("aria-label") ??
+            element.textContent ??
+            element.className
+          )
+            .trim()
+            .slice(0, 40);
+          return {
+            name: name || element.tagName.toLowerCase(),
+            left: box.left,
+            top: box.top,
+            width: box.width,
+            height: box.height,
+          };
+        }),
+    selector,
   );
 }
 

@@ -6,7 +6,6 @@ import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import {
   BANNED_WORDS,
-  BOLD_LEAD_IN_EXEMPT,
   findProseProblems,
   isChecked,
   MAX_BOLD_LEAD_INS,
@@ -170,18 +169,6 @@ describe("bold lead-in bullets", () => {
   it("counts across the whole page, with any bullet marker and nesting", () => {
     const text = `${bullets(4)}\n\nProse.\n\n${bullets(3, "*")}\n\n  - **Nested.** Text.\n\n1. **Numbered.** Text.\n`;
     expect(rules(text)).toEqual(["14 bold-lead-ins"]);
-  });
-
-  it("can be left out for a page, and only that rule", () => {
-    const text = `${bullets(MAX_BOLD_LEAD_INS + 1)}\n\nIt is robust.\n`;
-    expect(
-      findProseProblems(text, { boldLeadIns: false }).map(
-        (problem: Problem) => problem.rule,
-      ),
-    ).toEqual(["banned-word"]);
-    expect([...BOLD_LEAD_IN_EXEMPT.keys()]).toEqual([
-      "sites/docs/docs/guides/extending.md",
-    ]);
   });
 
   it("does not count a bullet that only holds bold text later, or one in a code block", () => {

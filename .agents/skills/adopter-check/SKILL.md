@@ -27,7 +27,7 @@ Use the install line in `sites/docs/docs/get-started.md` ("Install"): `npm insta
 Do them in order, each from the document named, using only what it and the pages it links say. After each, build and type-check as the guide does (`npm run build` in your project, and `npx --no-install tsc --noEmit` if it has a `tsconfig.json`). Look at the map in a browser only if your caller gave you one; otherwise say "not drawn".
 
 1. Render a map: `sites/docs/docs/get-started.md`, "Write the three files", then the README of `packages/sdk` for the install block.
-2. Add a data layer: `sites/docs/docs/guides/extending.md`, "Add a data layer".
+2. Add a data layer: `sites/docs/docs/guides/layer-definitions.md`.
 3. Swap or add a basemap: `extending.md`, "Add a basemap".
 4. Translate one string: `sites/docs/docs/guides/translate-the-sdk.md`, "Use one language of your own" (and "Check a catalogue" if it names a check you can run).
 

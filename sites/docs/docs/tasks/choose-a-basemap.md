@@ -146,7 +146,7 @@ export const services = createFakeServices({
 
 ## Add a basemap of your own
 
-A definition of your own is plain data: an id, a name, a source and the attribution. [Extending MapCairn](../guides/extending.md#add-a-basemap) describes every field and what the reference site adds around a new basemap, and [Content Security Policy](../guides/content-security-policy.md) says which origins a strict policy needs for it.
+A definition of your own is plain data: an id, a name, a source and the attribution. [Extending MapCairn](../guides/extending.md#add-a-basemap) lists the fields and the other things a new basemap needs, and [Content Security Policy](../guides/content-security-policy.md) says which origins a strict policy needs for it.
 
 ## When it goes wrong
 

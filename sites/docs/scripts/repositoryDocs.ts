@@ -8,9 +8,11 @@ import {
   type DocPart,
   headingsOf,
   PART_CEILING,
+  type PreambleNote,
   type SplitDocument,
   slugifyHeading,
   splitDocument,
+  splitPreamble,
 } from "./repositoryDocParts";
 
 /** A Markdown file of the repository that the site shows as a set of pages. */
@@ -179,11 +181,11 @@ function markCodeNotChecked(text: string): string {
 }
 
 /**
- * The text of a part for its own page: the section's heading is the page's
- * title, so its line is dropped with the blank line after it, and each
+ * The text of a part for its own page: the heading at `titleLevel` is the
+ * page's title, so its line is dropped with the blank line after it, and each
  * heading below moves up one level.
  */
-function raiseHeadings(text: string): string {
+function raiseHeadings(text: string, titleLevel: number): string {
   const lines = text.split("\n");
   const kept: string[] = [];
   let inFence = false;
@@ -195,7 +197,7 @@ function raiseHeadings(text: string): string {
     }
     if (inFence || level === 0) {
       kept.push(line);
-    } else if (level === 2) {
+    } else if (level === titleLevel) {
       index += lines[index + 1]?.trim() === "" ? 1 : 0;
     } else {
       kept.push(line.slice(1));
@@ -214,11 +216,28 @@ function partFile(doc: RepositoryDoc, part: DocPart): string {
   return `${folderOf(doc)}/${part.stem}.md`;
 }
 
-/** Where each heading of a document ends up: its title and preamble on the overview page, a section's heading as the title of its page, the rest on the page that holds them. */
+/** The file of a preamble note, relative to the generated folder. */
+function noteFile(doc: RepositoryDoc, note: PreambleNote): string {
+  return `${folderOf(doc)}/${note.stem}.md`;
+}
+
+/**
+ * The preamble of a document cut into the text that stays on the overview
+ * page and the notes that get a page each, whose stems differ from the parts'.
+ */
+function preambleOf(split: SplitDocument): ReturnType<typeof splitPreamble> {
+  return splitPreamble(
+    split.preamble,
+    split.parts.map((part) => part.stem),
+  );
+}
+
+/** Where each heading of a document ends up: its title and the start of its preamble on the overview page, a note's or section's heading as the title of its page, the rest on the page that holds them. */
 function anchorsOf(
   doc: RepositoryDoc,
   split: SplitDocument,
 ): Map<string, AnchorTarget> {
+  const { lead, notes } = preambleOf(split);
   const anchors = new Map<string, AnchorTarget>();
   const add = (id: string, target: AnchorTarget): void => {
     if (!anchors.has(id)) {
@@ -228,8 +247,14 @@ function anchorsOf(
   const overview = { file: doc.output, fragment: false };
   anchors.set("", overview);
   add(slugifyHeading(split.title), overview);
-  for (const { id } of headingsOf(split.preamble)) {
+  for (const { id } of headingsOf(lead)) {
     add(id, { file: doc.output, fragment: true });
+  }
+  for (const note of notes) {
+    const file = noteFile(doc, note);
+    for (const { id, level } of headingsOf(note.markdown)) {
+      add(id, { file, fragment: level > 3 });
+    }
   }
   for (const part of split.parts) {
     const file = partFile(doc, part);
@@ -284,6 +309,13 @@ function overviewItem(doc: RepositoryDoc, section: readonly DocPart[]): string {
   return `${entry}\n  - In ${first.parts} parts: ${links}`;
 }
 
+/** A preamble note's line in the overview: a link to its page and its lead. */
+function noteItem(doc: RepositoryDoc, note: PreambleNote): string {
+  const summary = leadOf(note.markdown);
+  const anchor = `<span id="${slugifyHeading(note.title)}"></span>`;
+  return `- ${anchor}[${note.title}](${noteFile(doc, note)})${summary === "" ? "" : `: ${summary}`}`;
+}
+
 function frontMatter(fields: Record<string, string>): string {
   const lines = Object.entries(fields).map(
     ([key, value]) => `${key}: ${JSON.stringify(value)}`,
@@ -297,11 +329,13 @@ function overviewPage(
   split: SplitDocument,
   context: LinkContext,
 ): string {
-  const items = sectionsOf(split.parts).map((section) =>
-    overviewItem(doc, section),
-  );
+  const { lead, notes } = preambleOf(split);
+  const items = [
+    ...notes.map((note) => noteItem(doc, note)),
+    ...sectionsOf(split.parts).map((section) => overviewItem(doc, section)),
+  ];
   const preamble = markCodeNotChecked(
-    relinkRepositoryDoc(split.preamble.trim(), context),
+    relinkRepositoryDoc(lead.trim(), context),
   );
   const sections = [
     `# ${split.title}`,
@@ -320,27 +354,77 @@ function overviewPage(
   })}\n${sections.join("\n\n")}\n`;
 }
 
-/** The page for one part: front matter, where it belongs, then its text. */
+/** What differs between the pages under a document's overview. */
+interface PageContent {
+  readonly title: string;
+  readonly label: string;
+  readonly description: string;
+  readonly stem: string;
+  /** The page's text, from its own heading line, which is `titleLevel`. */
+  readonly markdown: string;
+  readonly titleLevel: number;
+}
+
+/** A page under an overview: front matter, where it belongs, then its text. */
+function pageUnder(
+  doc: RepositoryDoc,
+  content: PageContent,
+  context: LinkContext,
+): string {
+  const opening = `Part of [${doc.title}](${posix.relative(posix.dirname(context.fromFile), doc.output)}), which is built from [${doc.source}](${BLOB}${doc.source}) in the repository, where it is edited.`;
+  const body = relinkRepositoryDoc(
+    raiseHeadings(content.markdown, content.titleLevel).trim(),
+    context,
+  );
+  return `${frontMatter({
+    title: content.title,
+    sidebar_label: content.label,
+    description: content.description,
+    slug: `${doc.slug}/${content.stem}`,
+  })}\n${opening}\n\n${markCodeNotChecked(body)}\n`;
+}
+
+/** The page for one part. */
 function partPage(
   doc: RepositoryDoc,
   part: DocPart,
   context: LinkContext,
 ): string {
-  const label =
-    part.parts === 1
-      ? part.title
-      : `${part.sectionTitle} (${part.part} of ${part.parts})`;
-  const opening = `Part of [${doc.title}](${posix.relative(posix.dirname(context.fromFile), doc.output)}), which is built from [${doc.source}](${BLOB}${doc.source}) in the repository, where it is edited.`;
-  const body = relinkRepositoryDoc(
-    raiseHeadings(part.tableHeader + part.markdown).trim(),
+  return pageUnder(
+    doc,
+    {
+      title: part.title,
+      label:
+        part.parts === 1
+          ? part.title
+          : `${part.sectionTitle} (${part.part} of ${part.parts})`,
+      description: summaryOf(part) || `${part.sectionTitle}, in ${doc.title}.`,
+      stem: part.stem,
+      markdown: part.tableHeader + part.markdown,
+      titleLevel: 2,
+    },
     context,
   );
-  return `${frontMatter({
-    title: part.title,
-    sidebar_label: label,
-    description: summaryOf(part) || `${part.sectionTitle}, in ${doc.title}.`,
-    slug: `${doc.slug}/${part.stem}`,
-  })}\n${opening}\n\n${markCodeNotChecked(body)}\n`;
+}
+
+/** The page for one preamble note. */
+function notePage(
+  doc: RepositoryDoc,
+  note: PreambleNote,
+  context: LinkContext,
+): string {
+  return pageUnder(
+    doc,
+    {
+      title: note.title,
+      label: note.title,
+      description: leadOf(note.markdown) || `${note.title}, in ${doc.title}.`,
+      stem: note.stem,
+      markdown: note.markdown,
+      titleLevel: 3,
+    },
+    context,
+  );
 }
 
 /** The pages built from the repository documents and the sidebar entries that list them. */
@@ -394,7 +478,12 @@ export function buildRepositoryPages(
       source: doc.source,
       anchors,
     });
+    const { notes } = preambleOf(split);
     files.set(doc.output, overviewPage(doc, split, at(doc.output)));
+    for (const note of notes) {
+      const file = noteFile(doc, note);
+      files.set(file, notePage(doc, note, at(file)));
+    }
     for (const part of split.parts) {
       const file = partFile(doc, part);
       files.set(file, partPage(doc, part, at(file)));
@@ -403,10 +492,10 @@ export function buildRepositoryPages(
       type: "category",
       label: doc.sidebarLabel,
       link: { type: "doc", id: `${GENERATED_FOLDER}/${folderOf(doc)}` },
-      items: split.parts.map(
-        (part) =>
-          `${GENERATED_FOLDER}/${partFile(doc, part).replace(/\.md$/, "")}`,
-      ),
+      items: [
+        ...notes.map((note) => noteFile(doc, note)),
+        ...split.parts.map((part) => partFile(doc, part)),
+      ].map((file) => `${GENERATED_FOLDER}/${file.replace(/\.md$/, "")}`),
     });
   });
   return { files, sidebar };

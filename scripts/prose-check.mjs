@@ -155,29 +155,17 @@ function tooManyBoldLeadIns(lines) {
 }
 
 /**
- * Pages that may keep their bold lead-in bullets for now, each with the reason.
- * Remove a page from here when it is rewritten.
- */
-export const BOLD_LEAD_IN_EXEMPT = new Map([
-  [
-    "sites/docs/docs/guides/extending.md",
-    "being split into smaller pages in a separate change",
-  ],
-]);
-
-/**
  * Every problem in a page's text, in line order.
  *
  * @param {string} text The page's Markdown.
- * @param {{ boldLeadIns?: boolean }} [options] Pass `boldLeadIns: false` to leave the bold lead-in rule out for a page.
  * @returns {{ line: number, rule: string, message: string }[]}
  */
-export function findProseProblems(text, { boldLeadIns = true } = {}) {
+export function findProseProblems(text) {
   const lines = proseLines(text);
   return [
     ...bannedWords(lines),
     ...extraEmDashes(lines),
-    ...(boldLeadIns ? tooManyBoldLeadIns(lines) : []),
+    ...tooManyBoldLeadIns(lines),
   ].sort((a, b) => a.line - b.line);
 }
 
@@ -195,9 +183,9 @@ function main() {
     .filter((file) => file !== "" && isChecked(file))
     .filter((file) => existsSync(join(root, file)));
   const reports = files.flatMap((file) =>
-    findProseProblems(readFileSync(join(root, file), "utf8"), {
-      boldLeadIns: !BOLD_LEAD_IN_EXEMPT.has(file),
-    }).map(({ line, message }) => `${file}:${line}: ${message}`),
+    findProseProblems(readFileSync(join(root, file), "utf8")).map(
+      ({ line, message }) => `${file}:${line}: ${message}`,
+    ),
   );
   if (reports.length > 0) {
     console.error(`prose: ${reports.length} problem(s)\n${reports.join("\n")}`);
