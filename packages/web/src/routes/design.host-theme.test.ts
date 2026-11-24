@@ -26,10 +26,19 @@ describe("/design/host-theme/:name route", () => {
     }
   });
 
-  it("gives the two themes different scopes", () => {
-    const scopes = Object.values(HOST_THEMES).map((theme) => theme.scope);
+  it("gives the themes that stand in for separate maps different scopes", () => {
+    const scopes = Object.values(HOST_THEMES)
+      .map((theme) => theme.scope)
+      .filter((scope) => scope !== ":root");
 
+    expect(scopes.length).toBeGreaterThan(1);
     expect(new Set(scopes).size).toBe(scopes.length);
+  });
+
+  it("scopes the page-wide themes to the root, where each applies on its own", () => {
+    for (const name of ["wide", "square", "round"]) {
+      expect(HOST_THEMES[name]?.scope).toBe(":root");
+    }
   });
 
   it("answers 404 for a name it does not hold", () => {
