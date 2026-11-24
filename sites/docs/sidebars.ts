@@ -82,6 +82,7 @@ export const sidebar: SidebarEntry[] = [
     items: [
       "guides/embed-a-map",
       "guides/extending",
+      "guides/layer-definitions",
       "guides/translate-the-sdk",
       "guides/content-security-policy",
       "guides/serving-layers",
