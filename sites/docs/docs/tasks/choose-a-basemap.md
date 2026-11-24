@@ -19,7 +19,7 @@ A basemap is a `BasemapDefinition`: an id, a name and a source, which is a vecto
 
 ## Add a picker and the credits
 
-Replace `MapScreen` in `src/main.tsx` from Get started with this. It keeps the choice in state and shows the theme's default basemap until a person chooses one. A button at the top opens a sheet with the picker, and the credits sit at the bottom:
+Create `src/basemap.tsx` with this. It has its own `MapScreen`, which keeps the choice in state and shows the theme's default basemap until a person chooses one. A button in the `topStart` slot, where Get started has the search box, opens a sheet with the picker, and the credits sit at the bottom:
 
 ```tsx check
 import {
@@ -103,13 +103,19 @@ function Chrome({ background, basemapId, onBasemapChange }: ChromeProps) {
 }
 ```
 
+Now change `src/main.tsx`. Delete `MapScreen` and `Chrome`, and the imports only they used, and add this import. `services`, the providers in `App` and the mount stay as they are in Get started:
+
+```ts no-check
+import { MapScreen } from "./basemap";
+```
+
 `defaultBasemapFor(catalogue, resolved)` gives Bright in the light theme and Fiord in the dark theme with the built-in catalogue. Until someone picks a basemap the default follows the theme; after that the chosen id stays. Pressing the tile that is already shown counts as choosing it. The picker's tiles are plain colour swatches, because the built-in definitions name no preview image; a definition of your own can name one in `thumbnail`. A saved id that the catalogue no longer holds opens on the catalogue's default, because `resolve` never fails.
 
 `Attribution` writes the credits the basemap's definition carries. A provider's terms usually require them to be visible, so keep it on any map you publish. The credits show for a few seconds and then collapse to a button.
 
 ## Offer fewer basemaps
 
-The picker lists what the catalogue holds. To offer a subset, build a catalogue and pass it as `Services.basemaps`. This one offers two basemaps, with Fiord as the default in the dark theme:
+The picker lists what the catalogue holds. To offer a subset, build a catalogue and pass it as `Services.basemaps`. Create `src/services.ts` with this, which offers two basemaps, with Fiord as the default in the dark theme:
 
 ```tsx check
 /// <reference types="vite/client" />
@@ -136,7 +142,7 @@ export const services = createFakeServices({
 });
 ```
 
-`createBasemapCatalogue` throws, at start-up, if the list is empty, repeats an id or leaves out the default. Use this `services` in place of the one in `main.tsx`.
+`createBasemapCatalogue` throws, at start-up, if the list is empty, repeats an id or leaves out the default. In `src/main.tsx`, delete `services` and the imports only it used, and add `import { services } from "./services";`.
 
 ## Add a basemap of your own
 

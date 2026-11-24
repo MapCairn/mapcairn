@@ -17,7 +17,7 @@ Every piece of text the interface shows is a key in a message catalogue: `tools.
 
 ## Change the words
 
-`createMessageCatalogue(language, catalogue, fallback)` builds the catalogue the services use. This one changes the search box's placeholder to French and leaves every other word English. Put it in `src/main.tsx` in place of the services from Get started:
+`createMessageCatalogue(language, catalogue, fallback)` builds the catalogue the services use. This one changes the search box's placeholder to French and leaves every other word English. Create `src/french.tsx` with it. It has its own `services` and `MapScreen`, and keeps the search box from Get started:
 
 ```tsx check
 /// <reference types="vite/client" />
@@ -71,18 +71,30 @@ function Chrome({ background }: { readonly background: ReactNode }) {
       <MapChrome
         background={background}
         modal={false}
-        topStart={<SearchPill onSelect={() => undefined} />}
+        topStart={
+          <SearchPill
+            onSelect={(result) =>
+              map.adapter?.setView({ center: result.centre, zoom: 14 })
+            }
+          />
+        }
       />
     </FocusRegistryProvider>
   );
 }
 ```
 
+Now change `src/main.tsx`. Delete `services`, `MapScreen` and `Chrome`, and the imports only they used. Add this import. The providers in `App` and the mount stay as they are in Get started:
+
+```ts no-check
+import { MapScreen, services } from "./french";
+```
+
 The first argument is the catalogue's language, a BCP 47 tag. It sets how numbers, lists and plurals are formatted, and the reading direction when it is a right-to-left language. A string may hold `{name}` placeholders, which a translation must keep, and plural forms such as `one{{count} item} other{{count} items}`. Text a host shows itself, such as a button of its own, looks up its words in the same catalogue with `useMessages()`, so one catalogue serves the whole page.
 
 ## Offer more than one language
 
-A host that offers a choice builds a `LanguageCatalogue` and passes it as `Services.languages`. Its `load` function returns the messages for a tag, directly or as a promise, so every language except the default can be a separate file loaded on demand. This one offers English and French, and the component below it switches between them:
+A host that offers a choice builds a `LanguageCatalogue` and passes it as `Services.languages`. Its `load` function returns the messages for a tag, directly or as a promise, so every language except the default can be a separate file loaded on demand. This one offers English and French, and the component below it switches between them. Replace `src/french.tsx` with it; `main.tsx` needs no further change:
 
 ```tsx check
 /// <reference types="vite/client" />
@@ -174,7 +186,13 @@ function Chrome({ background }: { readonly background: ReactNode }) {
       <MapChrome
         background={background}
         modal={false}
-        topStart={<SearchPill onSelect={() => undefined} />}
+        topStart={
+          <SearchPill
+            onSelect={(result) =>
+              map.adapter?.setView({ center: result.centre, zoom: 14 })
+            }
+          />
+        }
         bottomStart={<LanguageButtons />}
       />
     </FocusRegistryProvider>

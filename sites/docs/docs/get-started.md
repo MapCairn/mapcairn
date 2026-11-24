@@ -20,7 +20,7 @@ You need Node 24 or newer, npm 11 or newer and a browser. The SDK needs React 19
 
 ## Install
 
-Make a Vite and React project, then add the SDK:
+Make a Vite and React project in a new, empty folder that is not inside another project, then add the SDK:
 
 ```bash
 npm create vite@latest my-map -- --template react-ts
@@ -28,11 +28,13 @@ cd my-map
 npm install @mapcairn/sdk react react-dom maplibre-gl
 ```
 
-`@mapcairn/sdk` is the one package most apps need. The interface comes from its root, and the MapLibre adapter that draws the map comes from `@mapcairn/sdk/adapter-maplibre`. An app that never imports that subpath carries no map engine. `maplibre-gl` is a required peer, so a strict package manager wants it listed.
+The template adds files this app does not use. Delete `src/App.tsx`, `src/App.css` and `src/index.css`.
+
+`@mapcairn/sdk` is the one package most apps need. The interface comes from its root, and the MapLibre adapter that draws the map comes from `@mapcairn/sdk/adapter-maplibre`. An adapter connects the SDK to one outside thing, here the MapLibre map engine; the SDK describes each such thing (the map, search, storage) as a port, an interface, and an adapter implements it. An app that never imports the subpath carries no map engine. `maplibre-gl` is a required peer, so a strict package manager wants it listed.
 
 ## Write the three files
 
-Replace the template's `index.html` and `src/main.tsx` with these, and add `src/page.css`. The page:
+Replace the template's `index.html` and `src/main.tsx` with these, and add `src/page.css`.
 
 `index.html`:
 
@@ -64,7 +66,7 @@ body,
 }
 ```
 
-The entry file mounts the map with the SDK's interface around it and builds its services with the MapLibre adapter, which needs the address of the engine's worker file. In a Vite app that is the bundler's own worker URL import:
+The entry file builds the app's adapters once, in `services` (the composition root: the one place that decides which adapter fills each port), and `ServicesProvider` hands them to the components. The MapLibre adapter needs the address of the engine's worker file, which in a Vite app is the bundler's own worker URL import:
 
 `src/main.tsx`:
 
@@ -160,6 +162,8 @@ createRoot(root).render(
 );
 ```
 
+`MapChrome` lays out the interface in slots, named places over the map such as `topStart` and `bottomEnd`. `LiveRegionProvider` adds the live region, a hidden area that screen readers read announcements from, and `TooltipProvider` serves the tooltips. [Embed a map](guides/embed-a-map.md) explains the rest of the file.
+
 ## Run it
 
 ```bash
@@ -170,14 +174,12 @@ Open the address Vite prints. You should see a map of Cape Town, in the light or
 
 This app shows no credits for the map data. The basemap's providers ask for them, so before you publish, add [`Attribution`](api/map/Attribution.md) to the `bottomEnd` slot of `MapChrome`, with the basemap you passed `MapView`.
 
-If the map stays blank, or the browser has no WebGL 2 context, [Troubleshooting](troubleshooting.md) lists the messages and the fix for each.
-
-If the page is blank, check that `src/page.css` is imported and that the project has no other style that sets the height of `#root`. [Embed a map](guides/embed-a-map.md) explains each part of `main.tsx` and gives a Content Security Policy to start from.
+If the map stays blank, check that `src/page.css` is imported and that no other style sets the height of `#root`. [Troubleshooting](troubleshooting.md) lists the messages, including the one for a browser with no WebGL 2 context, and the fix for each.
 
 ## Where to go next
 
 - Each task has a page that builds on this app: [choose a basemap](tasks/choose-a-basemap.md), [add a data layer](tasks/add-a-layer.md), [draw and edit shapes](tasks/draw-shapes.md), [theme the interface](tasks/theme-the-interface.md), [translate the interface](tasks/translate-the-interface.md) and [host the map on a server-rendered page](tasks/host-on-a-server-rendered-page.md).
-- [Embed a map](guides/embed-a-map.md) says what each part does and how another bundler serves the worker file.
+- [Embed a map](guides/embed-a-map.md) says what each part of `main.tsx` does, how another bundler serves the worker file and which Content Security Policy to start from.
 - [Extending MapCairn](guides/extending.md) lists what an app provides around the SDK and how to add a basemap, a data layer, a search or routing provider, or an adapter of your own.
 - The [API reference](api/index.md) lists every export of the six packages.
 - [Troubleshooting](troubleshooting.md) lists the error messages the SDK throws, with the cause and the fix of each, and what to check when the map is blank.

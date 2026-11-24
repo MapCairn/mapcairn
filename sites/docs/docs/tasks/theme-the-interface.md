@@ -17,7 +17,7 @@ The SDK's stylesheet reads `data-theme` on `<html>` (`light` or `dark`), and use
 
 ## Follow the system and let people choose
 
-This `ThemeSource` reads the system setting with `matchMedia` and writes the attribute. The component below shows three buttons. Add the source to the services in `src/main.tsx`, and use `MapScreen` in place of the one from Get started:
+This `ThemeSource` reads the system setting with `matchMedia` and writes the attribute. The component below shows three buttons. Create `src/theme.tsx` with this. It has its own `services`, with the source added, and its own `MapScreen`, which puts the buttons in the `topStart` slot where Get started has the search box:
 
 ```tsx check
 /// <reference types="vite/client" />
@@ -116,6 +116,12 @@ function Chrome({
     </FocusRegistryProvider>
   );
 }
+```
+
+Now change `src/main.tsx`. Delete `services`, `MapScreen` and `Chrome`, and the imports only they used. Add this import. The providers in `App` and the mount stay as they are in Get started:
+
+```ts no-check
+import { MapScreen, services } from "./theme";
 ```
 
 `useTheme()` returns the person's `choice` and the `resolved` theme that applies, which is the choice, or the system's theme when the choice is `system`. `defaultBasemapFor(basemaps, resolved)` gives Bright in the light theme and Fiord in the dark theme, so the map and the interface change together.
