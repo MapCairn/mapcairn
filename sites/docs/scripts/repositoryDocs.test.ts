@@ -170,13 +170,51 @@ describe("the overview page", () => {
     expect(afterTitle).toContain("%sdkVersion%");
   });
 
-  it("lists every part with its size and the first sentence of its text, built from the headings", () => {
+  it("lists every section with the first sentence of its prose, and no size", () => {
     expect(overview).toContain(
-      '- <span id="layers-and-rules"></span>[Layers and rules](architecture/layers-and-rules.md) (0.2 KB): Layers are stacked.',
+      '- <span id="layers-and-rules"></span>[Layers and rules](architecture/layers-and-rules.md): Layers are stacked.',
     );
+    expect(overview).not.toMatch(/\bKB\b/);
+  });
+
+  it("gives a section that opens with a table no description, not its rows", () => {
     expect(overview).toContain(
-      '- <span id="ports"></span>[Ports](architecture/ports.md) (0.2 KB): Table rows A to B.',
+      '- <span id="ports"></span>[Ports](architecture/ports.md)\n',
     );
+  });
+
+  it("gives a section that opens with a list, whose first item holds a table, no description", () => {
+    const text = buildRepositoryPages(
+      new Map([
+        [
+          ARCH.source,
+          "# T\n\n## Tokens\n\n- **Syntax palette:** the colours.\n\n  | Role | Light |\n  | ---- | ----- |\n  | Key | 7.8 |\n\nProse after.\n",
+        ],
+      ]),
+      [ARCH],
+    ).files.get("architecture.md");
+    expect(text).toContain(
+      '- <span id="tokens"></span>[Tokens](architecture/tokens.md)\n',
+    );
+    expect(text).not.toContain("| Role |");
+  });
+
+  it("lists a section cut into parts once, with its parts on a line below", () => {
+    const cut = buildRepositoryPages(
+      new Map([
+        [
+          ARCH.source,
+          `# T\n\n## Big\n\nBig opens in prose.\n\n| N | W |\n| - | - |\n${Array.from({ length: 20 }, (_, i) => `| \`r${i}\` | ${"y".repeat(30)} |`).join("\n")}\n`,
+        ],
+      ]),
+      [ARCH],
+      400,
+    ).files;
+    const text = cut.get("architecture.md") ?? "";
+    expect(text).toMatch(
+      /- <span id="big"><\/span>\[Big\]\(architecture\/big-part-1\.md\): Big opens in prose\.\n {2}- In \d+ parts: \[1\]\(architecture\/big-part-1\.md\), \[2\]\(architecture\/big-part-2\.md\)/,
+    );
+    expect(text).not.toContain("part 2 of");
   });
 
   it("gives each section's old id on its line, once, so an old link to the section lands there", () => {
@@ -192,7 +230,9 @@ describe("the overview page", () => {
     );
     const text = cut.files.get("architecture.md") ?? "";
     expect(text.match(/<span id="big">/g)).toHaveLength(1);
-    expect(text).toContain('<span id="big"></span>[Big (part 1 of ');
+    expect(text).toContain(
+      '<span id="big"></span>[Big](architecture/big-part-1.md)',
+    );
   });
 
   it("gives an anchor on a heading that two sections share to the first one", () => {
@@ -208,7 +248,7 @@ describe("the overview page", () => {
     expect(twice.files.get("architecture/c.md")).toContain("[link](a.md#same)");
   });
 
-  it("says what a part that begins with a table covers, and a single row as a row", () => {
+  it("gives a section that is only a table a line with no description", () => {
     const single = buildRepositoryPages(
       new Map([
         [ARCH.source, "# T\n\n## S\n\n| X | Y |\n| - | - |\n| `only` | 1 |\n"],
@@ -216,7 +256,7 @@ describe("the overview page", () => {
       [ARCH],
     );
     expect(single.files.get("architecture.md")).toContain(
-      "(0.0 KB): Table row only.",
+      '- <span id="s"></span>[S](architecture/s.md)\n',
     );
   });
 
@@ -242,7 +282,7 @@ describe("a part page", () => {
   it("has front matter, says where it belongs, and leaves the section's heading to the title", () => {
     expect(ports).toContain('title: "Ports"\n');
     expect(ports).toContain('sidebar_label: "Ports"\n');
-    expect(ports).toContain('description: "Table rows A to B."\n');
+    expect(ports).toContain('description: "Ports, in Architecture."\n');
     expect(ports).toContain(
       `Part of [Architecture](../architecture.md), which is built from [ARCHITECTURE.md](${BLOB}ARCHITECTURE.md)`,
     );
@@ -397,6 +437,22 @@ describe("the documents rendered on the site", () => {
     );
     const margin = PART_CEILING + PART_COPY_ALLOWANCE - largest;
     expect(margin).toBeGreaterThan(PART_COPY_ALLOWANCE / 2);
+  });
+
+  it("describe a section in each overview as a short plain sentence, never a table, code or a size", () => {
+    for (const doc of REPOSITORY_DOCS) {
+      const overview = real.files.get(doc.output) ?? "";
+      const lines = overview
+        .split("\n")
+        .filter((line) => line.startsWith("- <span id="));
+      expect(lines.length).toBeGreaterThan(5);
+      for (const line of lines) {
+        const description = line.split("): ")[1] ?? "";
+        expect(description, line).not.toMatch(/[|`]|^Table rows?\b/);
+        expect(description.length, line).toBeLessThanOrEqual(120);
+      }
+      expect(overview).not.toMatch(/\(\d+\.\d KB\)/);
+    }
   });
 
   it("have a link from each overview to every one of its parts", () => {
