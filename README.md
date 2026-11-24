@@ -14,7 +14,7 @@
 [![OpenSSF Best Practices](https://www.bestpractices.dev/projects/16543/badge)](https://www.bestpractices.dev/projects/16543)
 [![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/MapCairn/mapcairn/badge)](https://scorecard.dev/viewer/?uri=github.com/MapCairn/mapcairn)
 
-**MapCairn is an open-source React SDK for maps that serve the public.** It is for teams building public-interest map applications, such as open data and hazard maps, who would rather spend their time on the data than on the interface around it. MapCairn supplies that interface on top of MapLibre GL JS: search, measuring and drawing tools, a layers panel and a design system, built to be accessible and private. Open data layers are written as data, and every service the map talks to sits behind a small interface, so it can be replaced or faked in a test.
+**MapCairn is an open-source React SDK for maps that serve the public.** Six packages put an interface on MapLibre GL JS for teams building public-interest maps, such as open data and hazard maps, who would rather spend their time on the data than on the controls around it. The interface has search, measuring and drawing tools, a layers panel and a design system that targets WCAG 2.2 AA in a light and a dark theme. Open data layers are written as data, and every service the map talks to sits behind a small interface, so it can be replaced or faked in a test. The reference site has no accounts, sets no cookies and counts only cookieless page views ([`PRIVACY.md`](PRIVACY.md)), and it offers English and Afrikaans.
 
 This repository also holds the playground, a reference site built from the SDK's packages.
 
@@ -275,12 +275,14 @@ npm run dev
 
 ## How it is checked
 
-- **The playground** is built from the SDK packages and is what the browser tests run against, on desktop and mobile Chromium, with the basemap, keyboard, sheet and app-shell tests also on iPhone WebKit and in a right-to-left layout.
-- **The example app** imports the SDK by package name only. It is type-checked, built and tested on every pull request, so a missing export or build step fails CI.
-- **Coverage floors:** `npm run test:coverage` fails below 95% of statements, branches, functions and lines across the SDK packages.
-- **Contract suites:** each port has one suite, run against its fake and, where the playground has one, its real adapter, so they cannot drift apart.
-- **Accessibility:** automated axe checks for WCAG 2.0 A and AA and WCAG 2.1 and 2.2 AA run in the required `e2e` check on every pull request.
-- **Security and licences:** CodeQL, a secret scan, OpenSSF Scorecard, and a lint check that every production dependency of an SDK package has a permissive licence.
+| What                  | How it is checked                                                                                                                                                                                                       |
+| --------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| The playground        | It is built from the SDK packages and is what the browser tests run against, on desktop and mobile Chromium, with the basemap, keyboard, sheet and app-shell tests also on iPhone WebKit and in a right-to-left layout. |
+| The example app       | It imports the SDK by package name only, and is type-checked, built and tested on every pull request, so a missing export or build step fails CI.                                                                       |
+| Coverage              | `npm run test:coverage` fails below 95% of statements, branches, functions and lines across the SDK packages.                                                                                                           |
+| Ports                 | Each port has one contract suite, run against its fake and, where the playground has one, its real adapter.                                                                                                             |
+| Accessibility         | Automated axe checks for WCAG 2.0 A and AA and WCAG 2.1 and 2.2 AA run in the required `e2e` check on every pull request.                                                                                               |
+| Security and licences | CodeQL, a secret scan, OpenSSF Scorecard, and a lint check that every production dependency of an SDK package has a permissive licence.                                                                                 |
 
 ## Packages
 

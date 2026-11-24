@@ -7,9 +7,7 @@ description: The JSON files the documentation site publishes for tools and agent
 
 # Machine-readable data
 
-This page is for people who write a tool or an agent that reads these docs. By the end you will know which JSON files the site publishes, what each field holds and what you can rely on staying the same.
-
-Checked against `@mapcairn/sdk` %sdkVersion%, the version in this repository.
+The JSON files the site publishes for tools and agents that read these docs, what each field holds and what you can rely on staying the same.
 
 ## The files
 

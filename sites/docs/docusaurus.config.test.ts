@@ -3,6 +3,7 @@
 import { describe, expect, it } from "vitest";
 import config from "./docusaurus.config";
 import { docsMissingFromSidebar, sidebarDocIds } from "./scripts/docChecks";
+import { SDK_VERSION } from "./scripts/sdkVersion";
 import { sidebar } from "./sidebars";
 import { BASE_URL, SITE_ORIGIN } from "./src/siteConfig";
 
@@ -27,6 +28,14 @@ describe("docusaurus.config", () => {
     expect(options.blog).toBe(false);
     expect(options.pages).toBe(false);
     expect((options.docs as { routeBasePath: string }).routeBasePath).toBe("/");
+  });
+
+  it("says in the footer, on every page, which version of the SDK the pages are checked against", () => {
+    const footer = config.themeConfig?.footer as { copyright: string };
+    expect(footer.copyright).toContain(
+      `checked against <code>@mapcairn/sdk</code> ${SDK_VERSION}`,
+    );
+    expect(footer.copyright).not.toContain("%sdkVersion%");
   });
 
   it("keeps the framework's storage key un-namespaced, as the theme bridge expects", () => {

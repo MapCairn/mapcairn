@@ -7,9 +7,9 @@ description: Describe a raster tile layer as data, give it to the services and t
 
 # Add a data layer
 
-This page is for a developer whose map already shows, as in [Get started](../get-started.md), and who wants to draw a data layer over it. By the end you will have a raster tile layer defined as data, listed in a catalogue, turned on from a button, with its credit in the corner of the map.
+Add a raster tile layer to the map from [Get started](../get-started.md): defined as data, listed in a catalogue, turned on from a button, with its credit in the corner of the map.
 
-Checked against `@mapcairn/sdk` %sdkVersion%, the version in this repository. The code uses [`createStaticLayerCatalogue`](../api/core/createStaticLayerCatalogue.md), [`useDataLayers`](../api/map/useDataLayers.md), [`MapDataLayers`](../api/map/MapDataLayers.md) and [`Attribution`](../api/map/Attribution.md), and the [`TileLayerDefinition`](../api/core/TileLayerDefinition.md) type.
+The code uses [`createStaticLayerCatalogue`](../api/core/createStaticLayerCatalogue.md), [`useDataLayers`](../api/map/useDataLayers.md), [`MapDataLayers`](../api/map/MapDataLayers.md) and [`Attribution`](../api/map/Attribution.md), and the [`TileLayerDefinition`](../api/core/TileLayerDefinition.md) type.
 
 ## What a layer is
 
@@ -161,7 +161,7 @@ A layer is requested only after it is turned on, so a failure shows only then. T
 
 The map and the other layers keep working while one layer fails.
 
-## Next steps
+## Related
 
 - [Extending MapCairn](../guides/extending.md#add-a-data-layer) shows the other kinds of layer, with a definition for each.
 - [Troubleshooting](../troubleshooting.md) explains a layer definition that is refused.

@@ -7,9 +7,7 @@ description: Contributor steps for adding a basemap, a data layer, a routing or 
 
 # Add to the reference site
 
-This page is for a contributor who changes the reference site, the host app in `packages/web` in this repository. By the end you will know the files to touch to add a basemap, a data layer, a routing or suggestion provider or a language to it. An app of your own needs none of these steps: [Extend the SDK](extending.md) and [Translate the SDK](translate-the-sdk.md) say how to add the same things there.
-
-Checked against `@mapcairn/sdk` %sdkVersion%, the version in this repository.
+The files to touch to add a basemap, a data layer, a routing or suggestion provider or a language to the reference site, the host app in `packages/web`. An app of your own needs none of these steps: [Extend the SDK](extending.md) and [Translate the SDK](translate-the-sdk.md) say how to add the same things there.
 
 ## Add a basemap
 

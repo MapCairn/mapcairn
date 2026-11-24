@@ -58,7 +58,7 @@ const ARCH: RepositoryDoc = {
   sidebarLabel: "Architecture",
   description: "The layers.",
   slug: "/architecture",
-  intro: "This page is for a developer. By the end you will know the layers.",
+  intro: "The layers, and how they depend on each other.",
 };
 
 const DESIGN: RepositoryDoc = {
@@ -68,7 +68,7 @@ const DESIGN: RepositoryDoc = {
   sidebarLabel: "Design system",
   description: "The tokens.",
   slug: "/design",
-  intro: "This page is for a developer. By the end you will know the tokens.",
+  intro: "The tokens, and how to use them.",
 };
 
 const ARCH_TEXT = [
@@ -163,11 +163,12 @@ describe("the overview page", () => {
     expect(overview).toContain('description: "The layers."\n');
   });
 
-  it("opens with what the page is for, where it is edited and the version line, under the document's title", () => {
+  it("opens with one plain sentence on what the page holds and where it is edited, under the document's title, with no version line", () => {
     const afterTitle = overview.slice(overview.indexOf("# Architecture"));
     expect(afterTitle).toContain(ARCH.intro);
     expect(afterTitle).toContain(`[ARCHITECTURE.md](${BLOB}ARCHITECTURE.md)`);
-    expect(afterTitle).toContain("%sdkVersion%");
+    expect(afterTitle).not.toContain("%sdkVersion%");
+    expect(afterTitle).not.toContain("Checked against");
   });
 
   it("lists every section with the first sentence of its prose, and no size", () => {
@@ -390,7 +391,7 @@ describe("the documents rendered on the site", () => {
     for (const doc of REPOSITORY_DOCS) {
       expect(doc.title.length).toBeGreaterThan(0);
       expect(doc.description.length).toBeGreaterThan(0);
-      expect(doc.intro).toMatch(/^This page is for /);
+      expect(doc.intro).not.toMatch(/^This page is for |By the end you/);
     }
   });
 

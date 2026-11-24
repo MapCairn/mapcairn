@@ -7,9 +7,9 @@ description: Change the words the interface shows, or offer a choice of language
 
 # Translate the interface
 
-This page is for a developer whose map already shows, as in [Get started](../get-started.md), and who wants the interface in another language, or in more than one. By the end the search box and the other controls will use your words, and the app will offer two languages with a way to switch between them.
+Put the interface from [Get started](../get-started.md) in your own words, with the search box and the other controls translated, and offer two languages with a way to switch between them.
 
-Checked against `@mapcairn/sdk` %sdkVersion%, the version in this repository. The code uses [`createMessageCatalogue`](../api/core/createMessageCatalogue.md), [`createLanguageCatalogue`](../api/core/createLanguageCatalogue.md), [`useLanguages`](../api/map/useLanguages.md), [`useSettings`](../api/map/useSettings-function.md) and [`SearchPill`](../api/map/SearchPill.md).
+The code uses [`createMessageCatalogue`](../api/core/createMessageCatalogue.md), [`createLanguageCatalogue`](../api/core/createLanguageCatalogue.md), [`useLanguages`](../api/map/useLanguages.md), [`useSettings`](../api/map/useSettings-function.md) and [`SearchPill`](../api/map/SearchPill.md).
 
 ## How the words are held
 
@@ -219,7 +219,7 @@ The person's choice is `Settings.language`, a tag or `null` for "follow the brow
 - **A tag nobody offers.** `resolveLanguage` falls back to the default language when neither the person's choice nor any of the browser's languages is offered.
 - **A catalogue built wrong.** `createLanguageCatalogue` throws at start-up for an empty list, a repeated tag or a default tag that is not in the list.
 
-## Next steps
+## Related
 
 - [Translate the SDK](../guides/translate-the-sdk.md) has the full guide: the keys, plurals, layer text and right-to-left checks.
 - [Troubleshooting](../troubleshooting.md) explains the catalogue errors and warnings.
