@@ -1,7 +1,5 @@
 # Governance
 
-_Last updated: 2026-11-12_
-
 MapCairn is a small, volunteer-maintained project with one maintainer. This document says who decides what, how decisions are made and recorded, how that can change, and what is not yet in place.
 
 ## Roles

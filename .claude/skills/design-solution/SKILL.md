@@ -61,7 +61,7 @@ Choose the simplest option that passes section 3. Record it in this shape, in th
 ```markdown
 ### Decision: <title in sentence case>
 
-Status: proposed | decided on <date>, by <role>, in <issue or pull request>.
+Status: proposed | decided, by <role>, in <issue or pull request>.
 Context: the problem in one or two sentences, with the issue.
 Options: 1. <the smallest>, what it costs and where it fails. 2. <the next>, the same.
 Choice: <option>, because <the reason, tied to a check in section 3>.

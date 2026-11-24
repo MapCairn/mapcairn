@@ -74,7 +74,7 @@ Without a tag, every export in a report is public. The tags mean:
 - `@beta`: exported so a host can try it; named in the release notes. Under `0.x` a minor release may break anything, so `@beta` is advisory until `1.0.0`. A host should not depend on a `@beta` export in a library of its own.
 - `@internal`: in the entry point only because a barrel (`export *`) or another SDK package reaches it, and not supported, such as a tuning constant, an engine layer id or a helper that turns the SDK's data into engine input. An export that gains `@internal` is a likely breaking change (a host may use it today); one that is `@internal` from the start never breaks anyone.
 
-The maintainer has adopted this tag policy. On 2026-11-20 the maintainer decided on a light sweep of the exports before `0.1.0`, not a full audit: it hid the names that nothing outside their own file used and tagged the clearly internal ones. It was not an export-by-export audit: anything plausibly part of the supported surface stays public and untagged, and the rest of the review happens as the API evolves under the report check. A name that a guide or a host's tests use stays public even when a sibling is tagged `@internal` (`MIN_SUGGEST_LENGTH` is public while `MIN_SEARCH_LENGTH` is `@internal`).
+The maintainer has adopted this tag policy. The exports are not audited one by one: a name that nothing outside its own file uses is hidden and a clearly internal one is tagged, anything plausibly part of the supported surface stays public and untagged, and the rest of the review happens as the API evolves under the report check. A name that a guide or a host's tests use stays public even when a sibling is tagged `@internal` (`MIN_SUGGEST_LENGTH` is public while `MIN_SEARCH_LENGTH` is `@internal`).
 
 ### TSDoc warnings
 
@@ -82,7 +82,7 @@ The report run also prints warnings and never fails on them: `ae-undocumented` (
 
 ## Deprecating and removing an export
 
-Decided on 2026-11-24. An export that is going away is deprecated first, so a host sees the notice before it breaks. The rules cover every export that is public under "Release tags": an export tagged `@internal` is outside them.
+An export that is going away is deprecated first, so a host sees the notice before it breaks. The rules cover every export that is public under "Release tags": an export tagged `@internal` is outside them.
 
 1. **Tag it.** Add a `@deprecated` TSDoc tag that names the replacement, or says there is none. API Extractor writes the tag into the report (`// @public @deprecated`), so the deprecation shows in the pull request diff. Adding the tag is not a breaking change and `npm run release:plan` does not flag it, so the pull request is not marked with a `!`.
 2. **Keep it working.** The export keeps its behaviour until it is removed.
@@ -92,7 +92,7 @@ Decided on 2026-11-24. An export that is going away is deprecated first, so a ho
 
 Before `1.0.0`, a removal may skip the notice period when the export is documented as experimental or tagged `@beta`, or when keeping it would be unsafe, such as a privacy or security fault. The pull request that removes it says which exception applies and why.
 
-Only the marker on the removal is enforced. The step "Check that a breaking API change is marked in the pull request title", in the `build` job of `.github/workflows/ci.yml` (`scripts/apiBreakingCheck.mjs`), fails when the reports show a likely breaking change and neither the `!` nor the footer is there. No check requires a `@deprecated` tag before a removal or counts the minor releases between them; the reviewer does. The maintainer decided on 2026-11-24 that no such check is added.
+Only the marker on the removal is enforced. The step "Check that a breaking API change is marked in the pull request title", in the `build` job of `.github/workflows/ci.yml` (`scripts/apiBreakingCheck.mjs`), fails when the reports show a likely breaking change and neither the `!` nor the footer is there. No check requires a `@deprecated` tag before a removal or counts the minor releases between them; the reviewer does.
 
 ## How a change is classed for a release
 
