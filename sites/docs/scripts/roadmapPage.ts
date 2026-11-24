@@ -61,6 +61,9 @@ function trackersOf(item: RoadmapItem): string {
   return ` · ${item.trackers.length === 1 ? "Tracker" : "Trackers"} ${links.join(", ")}`;
 }
 
+/** Decimals in the fill width of a bar, whose drawing is 100 units wide. */
+const BAR_DECIMALS = 2;
+
 /** The progress lines of a card: a bar for the eye and the count as text. */
 function progressLines(counts: MilestoneCounts | undefined): string[] {
   if (!counts) {
@@ -71,8 +74,9 @@ function progressLines(counts: MilestoneCounts | undefined): string[] {
     return ["No issues yet."];
   }
   const percent = Math.floor((counts.closed / total) * PERCENT);
+  const fill = ((counts.closed / total) * PERCENT).toFixed(BAR_DECIMALS);
   return [
-    `<progress className="roadmap__bar" value={${counts.closed}} max={${total}} aria-hidden="true"></progress>`,
+    `<svg className="roadmap__bar" viewBox="0 0 100 1" preserveAspectRatio="none" aria-hidden="true"><rect className="roadmap__fill" width="${fill}" height="1" /></svg>`,
     "",
     `**${counts.closed} of ${total} issues closed (${percent}%), ${counts.open} open**`,
   ];

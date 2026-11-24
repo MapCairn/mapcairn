@@ -912,9 +912,9 @@ blockquote {
   line-height: var(--mc-type-large-line-height);
 }
 
-/* The bar is outlined in the accent as well as filled with it, so its extent reads against either theme's ground. */
+/* An SVG, because a progress element's fill is drawn by engine-specific parts that iOS Safari left empty. It is outlined in the accent as well as filled with it, so its extent reads against either theme's ground. */
 .roadmap__bar {
-  appearance: none;
+  display: block;
   width: 100%;
   height: var(--mc-space-sm);
   border: 1px solid var(--mc-color-accent);
@@ -923,16 +923,8 @@ blockquote {
   overflow: hidden;
 }
 
-.roadmap__bar::-webkit-progress-bar {
-  background-color: var(--mc-color-accent-tint);
-}
-
-.roadmap__bar::-webkit-progress-value {
-  background-color: var(--mc-color-accent);
-}
-
-.roadmap__bar::-moz-progress-bar {
-  background-color: var(--mc-color-accent);
+.roadmap__fill {
+  fill: var(--mc-color-accent);
 }
 
 .roadmap__card > p:has(+ .roadmap__bar),

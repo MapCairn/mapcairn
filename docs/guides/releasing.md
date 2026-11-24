@@ -129,7 +129,7 @@ A release candidate is published under `next` (`npm run release:plan -- --pre rc
 
 ## The public API
 
-What counts as the public API, and which changes are breaking, is in [The public API](https://mapcairn.timothybrits.co.za/docs/guides/public-api/). The release notes and the choice of version follow it.
+What counts as the public API, and which changes are breaking, is in [The public API](https://mapcairn.timothybrits.co.za/docs/guides/public-api/). The release notes and the choice of version follow it. The same page says how an export is deprecated before it is removed ("Deprecating and removing an export"), and what each of the two releases lists in its notes.
 
 ## The maintainer's setup
 
