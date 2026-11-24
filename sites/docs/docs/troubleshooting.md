@@ -7,9 +7,7 @@ description: The error messages the SDK throws and reports, what causes each, an
 
 # Troubleshooting
 
-Find the message your app shows when the map does not start or the SDK stops with an error, what causes it and what to change. Each message is quoted as the code writes it, so search the page for the words you see. Where a part of the message depends on your app, it is shown as `...` or in angle brackets. Each entry says how the message reaches you: _thrown_ is an exception or a rejected promise, _reported_ is a callback on `MapView`, and _logged_ is a line in the browser console. A test keeps the quoted messages equal to the strings in the packages' source.
-
-The messages come from `@mapcairn/core`, `@mapcairn/map`, `@mapcairn/react` and `@mapcairn/adapter-maplibre`, which the umbrella package re-exports.
+Find the message your app shows when the map does not start or the SDK stops with an error, what causes it and what to change. Each message is quoted as the code writes it, so search the page for the words you see; a part that depends on your app is shown as `...` or in angle brackets. Each entry says how the message reaches you: _thrown_ is an exception or a rejected promise, _reported_ is a callback on `MapView`, and _logged_ is a line in the browser console. A test keeps the quoted messages equal to the strings in the packages' source. The messages come from `@mapcairn/core`, `@mapcairn/map`, `@mapcairn/react` and `@mapcairn/adapter-maplibre`, which the umbrella package re-exports.
 
 ## The map does not start
 
@@ -31,7 +29,7 @@ Cause: `loadWorkerUrl` returned an address that does not serve the worker file, 
 
 Fix: serve `maplibre-gl/dist/maplibre-gl-worker.mjs` as a file from your own origin and return its address from `loadWorkerUrl`, as in [Get started](get-started.md). Allow it with `worker-src 'self' blob:`; [Content Security Policy](guides/content-security-policy.md) explains the directive. A map that stays blank with no message at all can mean that no worker address was given.
 
-A failed load can be retried. The adapter does not keep a rejected load, so the next mount, for example after the visitor comes back online, asks for the engine and the worker address again. The engine and its worker address are shared by every adapter on the page, and the first adapter's `loadWorkerUrl` is the one used.
+A failed load can be retried: the adapter does not keep a rejected load, so the next mount asks again. The engine and its worker address are shared by every adapter on the page, and the first adapter's `loadWorkerUrl` is the one used.
 
 ### `The basemap style could not be loaded: ...`
 
@@ -39,7 +37,7 @@ Thrown by `mount` when the first basemap fails, and reported through `onEngineEr
 
 Cause: the visitor is offline, the style address is wrong, the provider is down, or `connect-src` in your policy does not list the provider's origin.
 
-Fix: open the style address from the basemap's definition in a browser. If it loads there, the policy is the cause: add the origin to `connect-src` and `img-src`. `MapView` tells your app too. `onBasemapError` is called when a change of `basemap` could not load, with the basemap the map kept drawing, and `onBasemapUnavailable` when every tile of the basemap failed, so your app can offer another one. The catalogue has `panels.basemap.unavailable` ("Not available right now") for a tile that cannot be chosen.
+Fix: open the style address from the basemap's definition in a browser. If it loads there, the policy is the cause: add the origin to `connect-src` and `img-src`. `onBasemapError` is called when a change of `basemap` could not load, with the basemap the map kept drawing, and `onBasemapUnavailable` when every tile of the basemap failed, so your app can offer another one, and the catalogue has `panels.basemap.unavailable` ("Not available right now") for a basemap that cannot be chosen.
 
 ### `The map engine stopped working: its worker failed.`
 
@@ -73,7 +71,7 @@ This one is a `console.error` line, not an exception. The adapter prints it with
 
 Cause: a tile or style request failed. A status of `0` means the browser never got an answer: the address does not resolve, the visitor is offline, a policy refused it, or the server sent no CORS header.
 
-Fix: open the address in the error. The adapter prints this line for every error the engine reports. A failure your app should react to reaches it separately, through `onBasemapError` and `onBasemapUnavailable` on `MapView`.
+Fix: open the address in the error. The line is printed for every error the engine reports; a failure your app should react to reaches it through `onBasemapError` and `onBasemapUnavailable` on `MapView`.
 
 ## Saving the map as an image
 
