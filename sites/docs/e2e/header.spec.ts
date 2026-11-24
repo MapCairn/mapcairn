@@ -79,4 +79,26 @@ for (const width of DRAWER_WIDTHS) {
     expect(undersized(targets)).toEqual([]);
     expect(crowded(targets)).toEqual([]);
   });
+
+  test(`the open menu at ${width} px keeps 44 px targets and 8 px gaps once a category is expanded`, async ({
+    page,
+  }) => {
+    await prepare(page, "light", width);
+    await open(page, "/docs/");
+    await page.getByRole("button", { name: "Toggle navigation bar" }).click();
+    const drawer = page.locator(".navbar-sidebar");
+    const before = (await headerTargets(page, ".navbar-sidebar a")).length;
+    await drawer
+      .getByRole("button", { name: /^Expand sidebar category/ })
+      .first()
+      .click();
+
+    const targets = await headerTargets(
+      page,
+      ".navbar-sidebar a, .navbar-sidebar button",
+    );
+    expect(targets.filter((t) => t.name).length).toBeGreaterThan(before + 3);
+    expect(undersized(targets)).toEqual([]);
+    expect(crowded(targets)).toEqual([]);
+  });
 }

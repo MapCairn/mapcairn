@@ -165,9 +165,6 @@ body {
   min-width: var(--mc-size-min-target);
   min-height: var(--mc-size-min-target);
   border-radius: var(--mc-radius-inner);
-}
-
-.navbar-sidebar__close {
   color: var(--mc-color-text);
 }
 
@@ -175,6 +172,11 @@ body {
   stroke: currentColor;
 }
 
+/* A press shows on touch, where there is no hover: the same tint as the header's links and buttons. */
+.navbar-sidebar .menu__link:active,
+.navbar-sidebar .menu__caret:active,
+.navbar__link:active,
+.navbar-sidebar__close:active,
 .navbar-sidebar__close:hover {
   background-color: var(--mc-color-accent-tint);
 }
