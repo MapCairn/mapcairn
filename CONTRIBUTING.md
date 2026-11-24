@@ -38,7 +38,7 @@ On Windows, use PowerShell or Git Bash. The project's scripts are Node and run t
 - `packages/theme`: the design tokens.
 - `packages/web`: the SSR host, which holds the adapters and the composition root, with no bundled datasets.
 
-[`ARCHITECTURE.md`](ARCHITECTURE.md) describes the layers and the dependency rules, and how to add an adapter. `npm run lint` enforces the rules, so supply services through the composition root and `ServicesProvider` rather than importing an adapter or an engine into the user interface. [`DESIGN.md`](DESIGN.md) describes the tokens and the accessibility contracts. The [extending guide](https://mapcairn.timothybrits.co.za/docs/guides/extending/) has short how-tos for adding a basemap, a data layer, a routing provider and an adapter.
+[`ARCHITECTURE.md`](ARCHITECTURE.md) describes the layers and the dependency rules, and how to add an adapter. `npm run lint` enforces the rules, so supply services through the composition root and `ServicesProvider` rather than importing an adapter or an engine into the user interface. [`DESIGN.md`](DESIGN.md) describes the tokens and the accessibility contracts. [Add to the reference site](https://mapcairn.timothybrits.co.za/docs/guides/add-to-the-reference-site/) lists the files to change for a basemap, a data layer, a routing provider, search suggestions and a language. The [extending guide](https://mapcairn.timothybrits.co.za/docs/guides/extending/) is for an app of your own.
 
 ## Translations
 

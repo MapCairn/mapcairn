@@ -166,6 +166,6 @@ The reference host's `App.tsx` is the full version, with the tool opened from a 
 
 ## Next steps
 
-- [Extending MapCairn](../guides/extending.md) lists the file and clipboard ports a host supplies.
+- [Extending MapCairn](../guides/extending.md#add-an-adapter) says how to supply an adapter for a port, such as the file opener, and check it with the port's contract suite.
 - [Troubleshooting](../troubleshooting.md) lists the messages from the map when it cannot start.
 - [Add a data layer](add-a-layer.md) puts data under the shapes people draw.
