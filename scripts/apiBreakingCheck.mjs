@@ -2,7 +2,7 @@
 // Copyright MapCairn contributors
 /**
  * Reports a pull request whose API reports (`packages/*\/api`) change in a way
- * that is likely breaking when it is not marked as breaking, as a warning (see
+ * that is likely breaking when it is not marked as breaking, as an error (see
  * `SEVERITY`). Pull requests are squash-merged with the title as the commit
  * subject, and the release plan reads a `!` there, or a `BREAKING CHANGE:`
  * footer in the body, to choose the version and write the notes.
@@ -25,12 +25,13 @@ import { parseCommit } from "./release/versionRules.mjs";
 
 /**
  * Whether a finding fails the pull request (`error`) or only annotates it
- * (`warning`). It is a warning because the classifier is not yet precise: over
- * the history of `packages/*\/api` it called three changes breaking that were
- * not (added message keys, which the public API guide says are not breaking,
- * and a reformatted constructor). Make it `error` when that is fixed.
+ * (`warning`). Decided on 2026-11-24: it is an error, because over the 21
+ * commits that touched `packages/*\/api` the classifier has no false
+ * positive left (an added message key and a reformatted declaration are not
+ * breaking). A pull request that is really breaking passes by carrying the
+ * marker, a `!` in the title or a `BREAKING CHANGE:` footer.
  */
-export const SEVERITY = "warning";
+export const SEVERITY = "error";
 
 /**
  * The likely-breaking changes between two sets of API reports.
@@ -75,7 +76,7 @@ function markedTitle(title) {
  */
 function findings(title, changes) {
   return [
-    `The API reports show a likely breaking change, but the pull request is not marked as breaking. Change the title to \`${markedTitle(title)}\` and end the description with a \`BREAKING CHANGE:\` line that names what was removed or changed.`,
+    `The API reports show a likely breaking change, but the pull request is not marked as breaking, so this check fails. If the change is intended, change the title to \`${markedTitle(title)}\` and end the description with a \`BREAKING CHANGE:\` line that names what was removed or changed, then re-run the job. If it is not intended, revert the change to the API reports.`,
     ...changes.map(
       (change) => `${change.package} (${change.entry}): ${change.detail}`,
     ),

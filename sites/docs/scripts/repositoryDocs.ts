@@ -3,12 +3,11 @@
 import { posix } from "node:path";
 import { REPOSITORY_URL } from "../src/siteConfig";
 import type { SidebarEntry } from "./docChecks";
-import { firstSentenceOf } from "./markdownSummary";
+import { leadOf } from "./markdownSummary";
 import {
   type DocPart,
   headingsOf,
   PART_CEILING,
-  plainHeading,
   type SplitDocument,
   slugifyHeading,
   splitDocument,
@@ -88,10 +87,8 @@ const OTHER_DOCUMENT = /^(ARCHITECTURE\.md|DESIGN\.md)(?:#(.*))?$/;
 const SCHEME = /^[a-z][a-z0-9+.-]*:/i;
 const FENCE = /^\s*(?:```|~~~)/;
 const HEADING = /^(#{1,6}) /;
-const TABLE_LINE = /^\s*\|/;
 const UNMARKED_CODE_FENCE = /^(\s*(?:```|~~~)(?:ts|tsx))\s*$/;
 const CODE_SPAN = /(`[^`\n]*`)/;
-const BYTES_IN_KB = 1000;
 
 /** The link to a page from another, with the heading's fragment when the page holds more than that heading. */
 function linkTo(fromFile: string, target: AnchorTarget, id: string): string {
@@ -246,41 +243,45 @@ function anchorsOf(
   return anchors;
 }
 
-/** The size of a part as the overview shows it, such as `25.3 KB`. */
-function sizeOf(part: DocPart): string {
-  return `${(part.bytes / BYTES_IN_KB).toFixed(1)} KB`;
-}
-
-/** The first cell of a table row, as plain text. */
-function firstCell(row: string): string {
-  return plainHeading(row.split("|")[1] ?? "");
-}
-
-/** What a part that starts with a table covers: its first and last row. */
-function tableSummary(part: DocPart): string {
-  const lines = part.markdown
-    .split("\n")
-    .filter((line) => TABLE_LINE.test(line));
-  const rows = part.tableHeader === "" ? lines.slice(2) : lines;
-  const first = firstCell(rows[0] ?? "");
-  const last = firstCell(rows[rows.length - 1] ?? "");
-  return rows.length < 2
-    ? `Table row ${first}.`
-    : `Table rows ${first} to ${last}.`;
-}
-
 /**
- * What a part is about, built from its text: the first sentence of its first
- * paragraph, or for a part that begins with a table, its first and last row.
- * An empty string when it has neither.
+ * What a section is about, in a few plain words: the sentence that opens it
+ * ({@link leadOf}), or an empty string when it opens with a list, a table or
+ * code, or when the part is not the first of its section.
  */
 function summaryOf(part: DocPart): string {
-  const first = part.markdown
-    .split("\n")
-    .find((line) => line.trim() !== "" && !HEADING.test(line));
-  return first && TABLE_LINE.test(first)
-    ? tableSummary(part)
-    : firstSentenceOf(part.markdown);
+  return part.part === 1 ? leadOf(part.markdown) : "";
+}
+
+/** The parts of each section, in order. */
+function sectionsOf(parts: readonly DocPart[]): DocPart[][] {
+  const sections: DocPart[][] = [];
+  for (const part of parts) {
+    if (part.part === 1) {
+      sections.push([part]);
+    } else {
+      sections[sections.length - 1]?.push(part);
+    }
+  }
+  return sections;
+}
+
+/** A section's line in the overview: a link to its first page and its lead, and for a section cut into parts, a nested line that links each. */
+function overviewItem(doc: RepositoryDoc, section: readonly DocPart[]): string {
+  const [first] = section;
+  if (!first) {
+    return "";
+  }
+  const summary = summaryOf(first);
+  const anchor = `<span id="${slugifyHeading(first.sectionTitle)}"></span>`;
+  const title = first.parts === 1 ? first.title : first.sectionTitle;
+  const entry = `- ${anchor}[${title}](${partFile(doc, first)})${summary === "" ? "" : `: ${summary}`}`;
+  if (first.parts === 1) {
+    return entry;
+  }
+  const links = section
+    .map((part) => `[${part.part}](${partFile(doc, part)})`)
+    .join(", ");
+  return `${entry}\n  - In ${first.parts} parts: ${links}`;
 }
 
 function frontMatter(fields: Record<string, string>): string {
@@ -296,14 +297,9 @@ function overviewPage(
   split: SplitDocument,
   context: LinkContext,
 ): string {
-  const items = split.parts.map((part) => {
-    const summary = summaryOf(part);
-    const anchor =
-      part.part === 1
-        ? `<span id="${slugifyHeading(part.sectionTitle)}"></span>`
-        : "";
-    return `- ${anchor}[${part.title}](${partFile(doc, part)}) (${sizeOf(part)})${summary === "" ? "" : `: ${summary}`}`;
-  });
+  const items = sectionsOf(split.parts).map((section) =>
+    overviewItem(doc, section),
+  );
   const preamble = markCodeNotChecked(
     relinkRepositoryDoc(split.preamble.trim(), context),
   );
@@ -312,7 +308,7 @@ function overviewPage(
     doc.intro,
     `This page is built from [${doc.source}](${BLOB}${doc.source}) in the repository, which is where it is edited. Checked against \`@mapcairn/sdk\` %sdkVersion%, the version in this repository.`,
     `## At a glance`,
-    `The document is long, so the site splits it by section into the pages below, and cuts a section that is still long into numbered parts. Each line gives a page's size as Markdown and what it opens with.`,
+    `The document is long, so the site gives each section its own page. A section that is still long is cut into numbered parts.`,
     items.join("\n"),
     ...(preamble === "" ? [] : [`## About this document`, preamble]),
   ];

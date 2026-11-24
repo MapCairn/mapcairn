@@ -134,6 +134,25 @@ CI prints each warning in a group and a count for each package as one annotation
 - **Custom properties.** Not public (above).
 - **Audit finding on `minimatch`.** `npm audit` reports a `minimatch` finding through `@microsoft/api-extractor`. It is accepted, with this record: API Extractor runs only at development and build time, never in a package a host installs, and the glob patterns it matches come from this repository's own build configuration, not from outside input. Drop the acceptance when API Extractor moves to `minimatch` 11 or later.
 
+## Deprecating and removing an export
+
+Decided on 2026-11-24. An export that is going away is deprecated first, so a host sees the notice before it breaks. The rules cover every export that is public under "Release tags" above: an export tagged `@internal` is outside them.
+
+1. **Tag it.** Add a `@deprecated` TSDoc tag to the export that names its replacement, or says there is none. API Extractor writes the tag into the report (`// @public @deprecated`, as `tagsToReport` is left at its default in `scripts/apiReports.mjs`), so the deprecation shows in the pull request diff. Adding the tag is not a breaking change and `npm run release:plan` does not flag it, so the pull request is not marked with a `!`.
+2. **Keep it working.** The export keeps its behaviour until it is removed.
+3. **Wait one minor release.** Remove it no sooner than the first minor release after the release that carries the tag. For example, an export tagged in `0.4.0` is removed in `0.5.0` at the earliest. While the version is `0.x`, a likely breaking change gives a minor bump, so the removal itself makes that release.
+4. **Mark the removal.** The pull request that removes it has a `!` after the type in its title and ends its description with a `BREAKING CHANGE:` footer that names the export and its replacement.
+5. **Put both in the release notes.** The notes of the release that carries the tag list the deprecation, and the notes of the release that removes the export list the removal. Both go under "What to change when you upgrade", with Before and After blocks (`docs/guides/releasing.md`, "Release notes style guide"). A person writes the notes, so a reviewer of the Release pull request checks that they are there.
+
+**Before `1.0.0`, two exceptions.** A removal may skip the notice period when:
+
+- the export is documented as experimental or tagged `@beta` (under `0.x` a minor release may break anything, so `@beta` is advisory); or
+- keeping it would be unsafe, such as a privacy or security fault.
+
+The pull request that removes it without notice says which exception applies and why.
+
+What is enforced: only the marker on the removal. The step "Check that a breaking API change is marked in the pull request title", in the `build` job of `.github/workflows/ci.yml` (`scripts/apiBreakingCheck.mjs`), fails when the reports show a likely breaking change and neither the `!` nor the footer is there. No check requires a `@deprecated` tag before a removal or counts the minor releases between them; the reviewer does, from the report diff and the tags in the last release. The maintainer decided on 2026-11-24 that no such check is added.
+
 ## How a change is classed for a release
 
 `npm run release:plan` (`scripts/release/plan.mjs`, described in [[`docs/guides/releasing.md`](https://github.com/MapCairn/mapcairn/blob/main/docs/guides/releasing.md)](https://github.com/MapCairn/mapcairn/blob/main/docs/guides/releasing.md)) reads the reports' change since the last tag and the commits' types, and flags each change below as a likely breaking change. It cannot see everything above, so a person reads the go/no-go list in the Release pull request.
@@ -147,4 +166,4 @@ The plan names removed and renamed message keys, because the keys are a union in
 
 ## Who decides
 
-The maintainer decides what is public: a new entry point, a change to the tag policy, a custom property or `data-*` name becoming public, and any breaking change. A contributor proposes it in the issue and the pull request; the pull request description names every breaking change and why. A reviewer who sees a change on this page without that note asks for it. A breaking pull request is marked with a `!` after the type in its title (`refactor!: ...`) or a `BREAKING CHANGE:` footer in its description, because the squash commit drives the version; CI warns when the API reports show a likely breaking change and neither marker is there (`scripts/apiBreakingCheck.mjs`).
+The maintainer decides what is public: a new entry point, a change to the tag policy, a custom property or `data-*` name becoming public, and any breaking change. A contributor proposes it in the issue and the pull request; the pull request description names every breaking change and why. A reviewer who sees a change on this page without that note asks for it. A breaking pull request is marked with a `!` after the type in its title (`refactor!: ...`) or a `BREAKING CHANGE:` footer in its description, because the squash commit drives the version; the `build` check fails when the API reports show a likely breaking change and neither marker is there (`scripts/apiBreakingCheck.mjs`).

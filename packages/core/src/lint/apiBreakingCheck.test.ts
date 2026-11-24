@@ -148,11 +148,11 @@ describe("isMarkedBreaking", () => {
 });
 
 describe("runApiBreakingCheck", () => {
-  it("is a warning until the classifier is precise enough to fail a pull request", () => {
-    expect(SEVERITY).toBe("warning");
+  it("fails a pull request by default", () => {
+    expect(SEVERITY).toBe("error");
   });
 
-  it("annotates a warning and passes, with the default severity", () => {
+  it("fails an unmarked breaking change with the default severity", () => {
     const lines: string[] = [];
     const code = runApiBreakingCheck({
       author: "someone",
@@ -164,8 +164,36 @@ describe("runApiBreakingCheck", () => {
       log: (line: string) => lines.push(line),
       summarise: () => undefined,
     });
+    expect(code).toBe(1);
+    expect(lines.join("\n")).toContain("::error");
+  });
+
+  it("passes the same change with the default severity when the description has a BREAKING CHANGE footer", () => {
+    const code = runApiBreakingCheck({
+      author: "someone",
+      labels: [],
+      title: "refactor: remove the data cost",
+      body: "Removes it.\n\nBREAKING CHANGE: the data cost key is gone.",
+      before: REMOVAL_BEFORE,
+      after: REMOVAL_AFTER,
+      log: () => undefined,
+      summarise: () => undefined,
+    });
     expect(code).toBe(0);
-    expect(lines.join("\n")).toContain("::warning");
+  });
+
+  it("passes the same change with the default severity when the title carries a !", () => {
+    const code = runApiBreakingCheck({
+      author: "someone",
+      labels: [],
+      title: "refactor!: remove the data cost",
+      body: "",
+      before: REMOVAL_BEFORE,
+      after: REMOVAL_AFTER,
+      log: () => undefined,
+      summarise: () => undefined,
+    });
+    expect(code).toBe(0);
   });
 
   function run(

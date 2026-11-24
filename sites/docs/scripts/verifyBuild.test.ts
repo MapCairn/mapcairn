@@ -196,6 +196,22 @@ describe("verifyBuild", () => {
     );
   });
 
+  it("reports a bundler that writes licence notice files", () => {
+    const root = builtSite("<script>one()</script>", {
+      "assets/js/main.js.LICENSE.txt": "notice",
+    });
+    expect(verifyBuild(root, [ONE], []).join("\n")).toContain(
+      "assets/js/main.js.LICENSE.txt is a licence notice file",
+    );
+  });
+
+  it("reports a repository ATTRIBUTIONS.md that lacks a bundled notice", () => {
+    const root = builtSite("<script>one()</script>");
+    expect(
+      verifyBuild(root, [ONE], [], [], "no notices here").join("\n"),
+    ).toContain("ATTRIBUTIONS.md does not carry the notice");
+  });
+
   it("reports a package whose API reference section was not built", () => {
     const root = builtSite("<script>one()</script>", {
       "api/core/index.html": "<p>core</p>",

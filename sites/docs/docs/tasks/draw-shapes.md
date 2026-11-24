@@ -24,7 +24,7 @@ The shapes belong to the app, not to the toolbar, so they stay on the map when t
 
 ## A map you can draw on
 
-Replace `MapScreen` in `src/main.tsx` from Get started with this. It leaves the tool open all the time, to keep the example short, so its "Done" button only deselects the shape. The reference site opens the tool from a button and closes it with "Done".
+Create `src/draw.tsx` with this. It has its own `MapScreen`, with the toolbar in the `bottomCentre` slot, and no search box. It leaves the tool open all the time, to keep the example short, so its "Done" button only deselects the shape. The reference site opens the tool from a button and closes it with "Done".
 
 ```tsx check
 import {
@@ -137,6 +137,12 @@ function Chrome({ background, draw, mapRef }: ChromeProps) {
 }
 ```
 
+Now change `src/main.tsx`. Delete `MapScreen` and `Chrome`, and the imports only they used, and add this import. `services`, the providers in `App` and the mount stay as they are in Get started:
+
+```ts no-check
+import { MapScreen } from "./draw";
+```
+
 ## What people can do
 
 The toolbar chooses the kind of shape: Point, Line, Polygon or Circle. A click or tap on the map adds a corner to the shape being drawn, and "Finish" completes it and selects it for editing. A selected shape shows handles at its corners and midpoints that can be dragged, and dragging a midpoint adds a corner. The toolbar also has undo and redo, delete, and a button that opens the list of shapes.
@@ -147,7 +153,7 @@ The measure of the shape, in the person's units, is in `draw.measure`, and the h
 
 ## What you provide
 
-`useDraw` needs the map's adapter, which is why `Chrome` writes `useMap()` into a ref that `getAdapter` reads: the hook lives above `MapView`, and the adapter exists only inside it. The units come from `useSettings`. Export, copy and import use services from `ServicesProvider`: the file saver, the clipboard and the file opener. The fakes in Get started do not write real files; a host that supplies its own adapters does. [Extending MapCairn](../guides/extending.md) lists the ports.
+`useDraw` needs the map's adapter, which is why `Chrome` writes `useMap()` into a ref that `getAdapter` reads: the hook lives above `MapView`, and the adapter exists only inside it. The units come from `useSettings`. Export, copy and import use services from `ServicesProvider`: the file saver, the clipboard and the file opener. The fakes in Get started do not write real files; a host that supplies its own adapters does. [Extending MapCairn](../guides/extending.md) lists the ports, the interfaces the SDK defines for what lies outside it.
 
 The reference host's `App.tsx` is the full version, with the tool opened from a button, the sheet shared with other sections, and `Done` returning focus to the button.
 

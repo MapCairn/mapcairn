@@ -19,7 +19,7 @@ There are tile, feed, vector tile, heatmap and query layers. A tile layer is the
 
 ## Define the layer and give it to the services
 
-Put this in its own file and import `services` and `MapScreen` from it in `src/main.tsx`, in place of the ones from Get started. The tile address is a placeholder: use the address of tiles you may use, and read the provider's terms first.
+Create `src/layers.tsx` with this. It has its own `services` and `MapScreen`, and its `topStart` slot holds the layer button where Get started has the search box. The tile address is a placeholder: use the address of tiles you may use, and read the provider's terms first.
 
 ```tsx check
 /// <reference types="vite/client" />
@@ -126,6 +126,12 @@ function Chrome({ background, basemap, layers }: ChromeProps) {
     </FocusRegistryProvider>
   );
 }
+```
+
+Now change `src/main.tsx`. Delete `services`, `MapScreen` and `Chrome`, and the imports only they used. Add this import. The providers in `App` and the mount stay as they are in Get started:
+
+```ts no-check
+import { MapScreen, services } from "./layers";
 ```
 
 `createStaticLayerCatalogue` checks every definition when the app starts and throws an error that lists each problem, prefixed with the layer's id, so a mistake in a definition stops the app at once and does not wait for someone to turn the layer on. The decoder and formatter registries are what a definition's feed fields and templates are checked against; a tile layer uses neither, but the catalogue needs them.

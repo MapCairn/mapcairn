@@ -126,10 +126,10 @@ export const CAPABILITY_MATRIX_LINK: InlineLink = {
   href: `${GUIDES_PATH}/capability-matrix/`,
 };
 
-/** The whole embedding app, file by file, which the page's excerpt leads to. */
+/** The whole embedding app, file by file, which the page's excerpt leads to: Get started, the documentation's front page. */
 export const EMBED_GUIDE_LINK: InlineLink = {
   text: "embedding walkthrough",
-  href: `${GUIDES_PATH}/embed-a-map/`,
+  href: DOCS_PATH,
 };
 
 /** What changed in each release. */
