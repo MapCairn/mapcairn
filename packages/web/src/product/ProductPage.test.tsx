@@ -80,17 +80,17 @@ const README = readFileSync(
 );
 
 /**
- * The embedding walkthrough the page links, which holds the whole app. The
- * docs site's `check` marker on a code fence is dropped, so the blocks read as
- * the README writes them.
+ * Get started, the embedding walkthrough the page links, which holds the whole
+ * app. The docs site's `check` marker on a code fence is dropped, so the blocks
+ * read as the README writes them.
  */
-const EMBED_GUIDE = readFileSync(
-  path.resolve(__dirname, "../../../../sites/docs/docs/guides/embed-a-map.md"),
+const GET_STARTED = readFileSync(
+  path.resolve(__dirname, "../../../../sites/docs/docs/get-started.md"),
   "utf8",
 ).replaceAll(/^```(tsx?) (?:no-)?check$/gm, "```$1");
 
-/** The walkthrough's path on the documentation site, which the page links. */
-const EMBED_GUIDE_URL = "/docs/guides/embed-a-map/";
+/** The walkthrough's path on the documentation site (its front page), which the page links. */
+const GET_STARTED_URL = "/docs/";
 
 /** The name of the excerpt's code region and of its copy button. */
 const EXCERPT = "src/main.tsx, an excerpt";
@@ -631,8 +631,8 @@ describe("the product page stands on its own", () => {
     ).toHaveAttribute("href", EXAMPLE_APP);
     expect(
       screen.getByRole("link", { name: "embedding walkthrough" }),
-    ).toHaveAttribute("href", EMBED_GUIDE_URL);
-    expect(EMBED_GUIDE_LINK.href).toBe(EMBED_GUIDE_URL);
+    ).toHaveAttribute("href", GET_STARTED_URL);
+    expect(EMBED_GUIDE_LINK.href).toBe(GET_STARTED_URL);
   });
 
   it("ends with a quiet line that says where it is made, then the licence and its links, and nothing else", () => {
@@ -687,7 +687,7 @@ describe("the product page stands on its own", () => {
       ...FOOTER_REPOSITORY_PAGES.map(([, href]) => href),
       EXAMPLE_APP,
       CAPABILITY_MATRIX,
-      EMBED_GUIDE_URL,
+      GET_STARTED_URL,
     ]);
     // The credits the picture carries, which its basemaps ask for wherever the map shows.
     const creditHrefs = new Set<string>(
@@ -973,7 +973,7 @@ describe("the embedding example", () => {
 
   it("is the same three files in the walkthrough the page links, character for character", () => {
     for (const { language, code } of EMBED_EXAMPLE_FILES) {
-      expect(codeBlocks(EMBED_GUIDE, language)).toEqual([code]);
+      expect(codeBlocks(GET_STARTED, language)).toEqual([code]);
     }
   });
 
@@ -1069,25 +1069,18 @@ describe("the embedding example", () => {
     );
     expect(
       within(embed).getByRole("link", { name: "embedding walkthrough" }),
-    ).toHaveAttribute("href", EMBED_GUIDE_URL);
+    ).toHaveAttribute("href", GET_STARTED_URL);
     expect(
       within(embed).getByRole("link", { name: "examples/embed" }),
     ).toHaveAttribute("href", EXAMPLE_APP);
   });
 
-  it("repeats the README's walkthrough prose in the guide word for word, so the two cannot drift", () => {
-    const start = "A map that shows is three files";
-    const end =
-      "[`examples/embed`](examples/embed/README.md) is the full version";
-    const fromReadme = README.slice(README.indexOf(start), README.indexOf(end))
-      .trimEnd()
-      .replace(
-        /\]\(https:\/\/mapcairn\.timothybrits\.co\.za\/docs\/guides\/([\w-]+)\/(#[^)]*)?\)/g,
-        (_link, name: string, hash = "") => `](${name}.md${hash})`,
-      )
-      .replaceAll("](examples/", `](${REPO}/blob/main/examples/`);
-    expect(README.indexOf(start)).toBeGreaterThan(0);
-    expect(EMBED_GUIDE).toContain(fromReadme);
+  it("gives Get started the README's install line and a heading line for each of the three files", () => {
+    expect(README).toContain(`\`\`\`bash\n${INSTALL_COMMAND}\n\`\`\``);
+    expect(GET_STARTED).toContain(`\n${INSTALL_COMMAND}\n`);
+    for (const { name } of EMBED_EXAMPLE_FILES) {
+      expect(GET_STARTED).toContain(`\`${name}\`:`);
+    }
   });
 });
 
