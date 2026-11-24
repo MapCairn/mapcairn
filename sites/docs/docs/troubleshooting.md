@@ -7,9 +7,9 @@ description: The error messages the SDK throws and reports, what causes each, an
 
 # Troubleshooting
 
-This page is for a developer whose map does not show, or whose app stops with an error from the SDK. By the end you will be able to find your message below, know what causes it and know what to change. Each message is quoted as the code writes it, so search the page for the words you see. Where a part of the message depends on your app, it is shown as `...` or in angle brackets. Each entry says how the message reaches you: _thrown_ is an exception or a rejected promise, _reported_ is a callback on `MapView`, and _logged_ is a line in the browser console. A test keeps the quoted messages equal to the strings in the packages' source.
+Find the message your app shows when the map does not start or the SDK stops with an error, what causes it and what to change. Each message is quoted as the code writes it, so search the page for the words you see. Where a part of the message depends on your app, it is shown as `...` or in angle brackets. Each entry says how the message reaches you: _thrown_ is an exception or a rejected promise, _reported_ is a callback on `MapView`, and _logged_ is a line in the browser console. A test keeps the quoted messages equal to the strings in the packages' source.
 
-Checked against `@mapcairn/sdk` %sdkVersion%, the version in this repository. The messages come from `@mapcairn/core`, `@mapcairn/map`, `@mapcairn/react` and `@mapcairn/adapter-maplibre`, which the umbrella package re-exports.
+The messages come from `@mapcairn/core`, `@mapcairn/map`, `@mapcairn/react` and `@mapcairn/adapter-maplibre`, which the umbrella package re-exports.
 
 ## The map does not start
 

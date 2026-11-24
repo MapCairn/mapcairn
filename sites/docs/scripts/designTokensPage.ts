@@ -227,7 +227,7 @@ export function buildDesignTokensPage(
     "",
     "This page is the visual companion to the [Design system](generated/design.md) pages. It draws the tokens in both themes at once, whichever theme you chose for the site, and gives every value as text in a table beside the drawing.",
     "",
-    "It is generated when the site is built, from the values `@mapcairn/theme` exports, so it cannot drift from the code. The contrast ratios use the same maths the SDK's tests use.",
+    "It is generated when the site is built, from the values `@mapcairn/theme` exports. The contrast ratios use the same maths the SDK's tests use.",
     "",
     "## Colour",
     "",

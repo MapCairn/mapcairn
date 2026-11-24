@@ -7,25 +7,18 @@ description: What the SDK does and does not do, row by row.
 
 # Capability matrix
 
-This page is for a team that is deciding whether MapCairn fits, and for a contributor choosing what to build next. By the end you will know, row by row, what an industry-grade GIS application needs and what MapCairn has, partly has or lacks, with the code or issue that shows it.
-
-Checked against `@mapcairn/sdk` %sdkVersion%, the version in this repository.
+For a team deciding whether MapCairn fits, and a contributor choosing what to build next: what an industry-grade GIS application needs, and which of it MapCairn has, partly has or lacks, row by row, with the code or issue that shows it. The areas were drawn up from the public documentation of commercial and open-source mapping development kits and are written in the project's own words. The gaps set the order of the SDK work ([`ROADMAP.md`](https://github.com/MapCairn/mapcairn/blob/main/ROADMAP.md), "Direction").
 
 _Last reviewed: 2026-11-20. Review it whenever a row below changes status, and at least with each yearly review of [`ROADMAP.md`](https://github.com/MapCairn/mapcairn/blob/main/ROADMAP.md)._
 
-The project's aim is an SDK with everything a team needs to build an industry-grade GIS application ([`ROADMAP.md`](https://github.com/MapCairn/mapcairn/blob/main/ROADMAP.md), "Direction"). This page lists what such an application needs, as neutral capability areas, and says what MapCairn has, partly has or lacks, with the code or issue that shows it. It is the basis for the order of the SDK work.
-
-The areas were drawn up from the public documentation of commercial and open-source mapping development kits, summarised in the project's own words. It compares nothing with any product, and no text is copied.
-
 ## Reading this matrix
 
-- **has**: built, in the code now. The evidence column names the path or document.
-- **partial**: some of it is built, and the evidence says which part. Nothing planned is described as built.
+- **has**: built, in the code now.
+- **partial**: some of it is built, and the evidence says which part.
 - **lacks**: not built. The last column names the issue that covers it, or says why there is none.
-- **out of scope by decision**: the project has chosen not to do it. [`ROADMAP.md`](https://github.com/MapCairn/mapcairn/blob/main/ROADMAP.md) ("Non-goals") and [`README.md`](https://github.com/MapCairn/mapcairn/blob/main/README.md) give the reasons, repeated under "Deliberately out of scope" below.
-- Paths are relative to the repository root. "Tracked by" lists open issues unless it says closed.
-- A capability that would need a new runtime dependency in an SDK package, or a new data source, is marked **needs a decision**: both are the maintainer's, and everything in an SDK package must allow commercial use, so a dependency or data with restricted terms belongs in the host.
-- The reference site shows the parts working together and does not adopt a capability just because the SDK offers it. A row describes the SDK unless it names the reference site.
+- **out of scope by decision**: the project has chosen not to do it, for the reasons under "Deliberately out of scope" below.
+
+Paths are relative to the repository root, and "Tracked by" lists open issues unless it says closed. A row describes the SDK unless it names the reference site. Evidence that says **needs a decision** marks a capability that would need a new runtime dependency in an SDK package or a new data source, both of which are the maintainer's call. Everything in an SDK package must allow commercial use, so a dependency or data with restricted terms belongs in the host.
 
 ## Data formats and connections
 
@@ -226,7 +219,7 @@ The areas were drawn up from the public documentation of commercial and open-sou
 
 ## Proposed order for the SDK track
 
-This is a proposal, not a promise. It orders the open issues by what unlocks the most for a team that wants to adopt the SDK, and by how little each costs. The ranked milestones in [`ROADMAP.md`](https://github.com/MapCairn/mapcairn/blob/main/ROADMAP.md) are a separate step and may differ. An item that needs a decision from the maintainer, a plan or research is marked as such.
+This is a proposal, not a promise. It orders the open issues by how much each helps a team that wants to adopt the SDK, and by how little each costs. The ranked milestones in [`ROADMAP.md`](https://github.com/MapCairn/mapcairn/blob/main/ROADMAP.md) are a separate step and may differ. An item that needs a decision from the maintainer, a plan or research is marked as such.
 
 **Now: finish what is half built and open the way in**
 
@@ -260,29 +253,33 @@ This is a proposal, not a promise. It orders the open issues by what unlocks the
 
 These come from [`ROADMAP.md`](https://github.com/MapCairn/mapcairn/blob/main/ROADMAP.md) ("Non-goals") and [`README.md`](https://github.com/MapCairn/mapcairn/blob/main/README.md). An SDK item may let a host do something the reference site will not.
 
-- **Accounts and stored user data.** The reference site has no sign-in and no server-side user data, so there is no saved-maps service and no sharing by account.
-- **Tracking.** Only cookieless page views. No counting of feature use on the reference site ([#41], closed as not planned). A host can plug in its own analytics ([#75]).
-- **Bundled datasets.** A layer is a definition that points to a public provider, and the browser fetches it only when a person turns it on. Adding a dataset is a separate, explicit decision.
-- **Another map engine.** MapLibre GL JS is the only engine, behind a port that tests replace with a fake.
-- **Adapters for a closed provider's search and routing services** ([#40], closed as not planned): the provider's terms appear to restrict use with another map, and a host may write its own adapter against the ports.
-- **Proxying or caching layers on the Worker.** Browsers talk to providers directly.
-- **Live refresh of layers.** No timers and no polling, because the providers are public services nobody pays for.
-- **A GIS analysis engine.** The SDK offers measuring, drawing aids and geometry helpers, not overlay analysis or geoprocessing.
+| Not built                                                                                   | Why                                                                                                                                                                     |
+| ------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Accounts and stored user data                                                               | The reference site has no sign-in and no server-side user data, so there is no saved-maps service and no sharing by account.                                            |
+| Tracking                                                                                    | Only cookieless page views. No counting of feature use on the reference site ([#41], closed as not planned). A host can plug in its own analytics ([#75]).              |
+| Bundled datasets                                                                            | A layer is a definition that points to a public provider, and the browser fetches it only when a person turns it on. Adding a dataset is a separate, explicit decision. |
+| Another map engine                                                                          | MapLibre GL JS is the only engine, behind a port that tests replace with a fake.                                                                                        |
+| Adapters for a closed provider's search and routing services ([#40], closed as not planned) | The provider's terms appear to restrict use with another map, and a host may write its own adapter against the ports.                                                   |
+| Proxying or caching layers on the Worker                                                    | Browsers talk to providers directly.                                                                                                                                    |
+| Live refresh of layers                                                                      | No timers and no polling, because the providers are public services nobody pays for.                                                                                    |
+| A GIS analysis engine                                                                       | The SDK offers measuring, drawing aids and geometry helpers, not overlay analysis or geoprocessing.                                                                     |
 
 ## Gaps left without an issue
 
 A gap is filed only when it is real, small enough to pick up (or says it needs a plan) and not a duplicate. These were left, with the reason, and can be filed when someone needs one.
 
-- **Binary vector files and raster files** (zipped vector sets, GeoPackage, FlatGeobuf, GeoTIFF). Each needs a reader library, which is a decision about a runtime dependency, and several are large. Wait for a named need, then start with a plan.
-- **Reading a service's capabilities document.** A definition is data a host writes on purpose, so the service's own list adds a parser and a trust question for little gain. [Serving layers to MapCairn](serving-layers.md) shows how to write the definitions by hand for OGC API Features, WMS and WMTS.
-- **Custom image icons for points.** The design contract is that colour is never the only signal and that a style names a palette slot, never a value. An image icon would need its own rules for contrast and for a text alternative, so it needs a design decision first.
-- **Bearing and angle measurement.** Low demand, and a small addition to the measure tool once someone asks.
-- **Write-back of edits to a service.** It needs a port with a write method, and no host has asked. [#45] comes first.
-- **Bulk geocoding.** A browser SDK has no place to run it, and public geocoders limit bulk use.
-- **Distance matrices, closest facility and stop-order optimisation.** They belong to a routing service's own API. The routing port could grow, but nothing needs it yet.
-- **An installable, offline-capable app.** A service worker belongs to the host, and the reference site would need a decision about what it stores ([#196] is the research for tiles).
-- **Wrappers for other UI frameworks.** Wait until the mount function in [#44] settles, because a wrapper is a thin layer over it.
-- **Shapes crossing the antimeridian.** A documented limit: the helpers refuse such a shape and ask for it to be split. Fitting the map to points or a feature on both sides of the line is not limited: `boundsOfPoints` returns the short box, with `east` past 180, and `boundsOfPaths` (used for a polygon or line feature) also holds every edge taken the short way, so a shape wider than half the globe with few vertices is fitted on the side it covers, and a shape that covers every longitude gets the whole circle (-180 to 180).
+| Gap                                                                                        | Why it has no issue                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
+| ------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Binary vector files and raster files (zipped vector sets, GeoPackage, FlatGeobuf, GeoTIFF) | Each needs a reader library, which is a decision about a runtime dependency, and several are large. Wait for a named need, then start with a plan.                                                                                                                                                                                                                                                                                                                                                      |
+| Reading a service's capabilities document                                                  | A definition is data a host writes on purpose, so the service's own list adds a parser and a trust question for little gain. [Serving layers to MapCairn](serving-layers.md) shows how to write the definitions by hand for OGC API Features, WMS and WMTS.                                                                                                                                                                                                                                             |
+| Custom image icons for points                                                              | The design contract is that colour is never the only signal and that a style names a palette slot, never a value. An image icon would need its own rules for contrast and for a text alternative, so it needs a design decision first.                                                                                                                                                                                                                                                                  |
+| Bearing and angle measurement                                                              | Low demand, and a small addition to the measure tool once someone asks.                                                                                                                                                                                                                                                                                                                                                                                                                                 |
+| Write-back of edits to a service                                                           | It needs a port with a write method, and no host has asked. [#45] comes first.                                                                                                                                                                                                                                                                                                                                                                                                                          |
+| Bulk geocoding                                                                             | A browser SDK has no place to run it, and public geocoders limit bulk use.                                                                                                                                                                                                                                                                                                                                                                                                                              |
+| Distance matrices, closest facility and stop-order optimisation                            | They belong to a routing service's own API. The routing port could grow, but nothing needs it yet.                                                                                                                                                                                                                                                                                                                                                                                                      |
+| An installable, offline-capable app                                                        | A service worker belongs to the host, and the reference site would need a decision about what it stores ([#196] is the research for tiles).                                                                                                                                                                                                                                                                                                                                                             |
+| Wrappers for other UI frameworks                                                           | Wait until the mount function in [#44] settles, because a wrapper is a thin layer over it.                                                                                                                                                                                                                                                                                                                                                                                                              |
+| Shapes crossing the antimeridian                                                           | A documented limit: the helpers refuse such a shape and ask for it to be split. Fitting the map to points or a feature on both sides of the line is not limited: `boundsOfPoints` returns the short box, with `east` past 180, and `boundsOfPaths` (used for a polygon or line feature) also holds every edge taken the short way, so a shape wider than half the globe with few vertices is fitted on the side it covers, and a shape that covers every longitude gets the whole circle (-180 to 180). |
 
 [#1]: https://github.com/MapCairn/mapcairn/issues/1
 [#4]: https://github.com/MapCairn/mapcairn/issues/4

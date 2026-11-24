@@ -937,11 +937,6 @@ blockquote {
   line-height: var(--mc-type-body-line-height);
 }
 
-/* What is being worked on carries the accent on its edge; the position is also in the lane's name. */
-.roadmap__lane:first-child .roadmap__card {
-  border-inline-start: 3px solid var(--mc-color-accent);
-}
-
 .roadmap__card > * {
   margin: 0;
 }

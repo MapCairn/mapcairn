@@ -7,9 +7,7 @@ description: A plain-words guide to what MapCairn's AGPL-3.0-only licence asks o
 
 # What the AGPL means for your project
 
-This page is for people who know MIT, Apache-2.0 or GPL-3.0 and want to know what MapCairn's licence asks of them. By the end you will know when the AGPL applies to your app and what you must do when it does. It is not legal advice. The licence text is the only authority, so if your project matters, read the [LICENSE](https://github.com/MapCairn/mapcairn/blob/main/LICENSE) file and ask your own lawyer.
-
-Checked against `@mapcairn/sdk` %sdkVersion%, the version in this repository.
+For people who know MIT, Apache-2.0 or GPL-3.0 and want to know what MapCairn's licence asks of them: when the AGPL applies to your app and what you must do when it does. It is not legal advice. The licence text is the only authority, so if your project matters, read the [LICENSE](https://github.com/MapCairn/mapcairn/blob/main/LICENSE) file and ask your own lawyer.
 
 ## The short version
 
@@ -34,7 +32,7 @@ AGPL-3.0 is GPL-3.0 with one added rule, section 13, for software that people us
 ## When it applies to a web app
 
 - **Distributing.** The SDK's JavaScript runs in the visitor's browser, so your server hands each visitor a copy of it, bundled with your app. Treat that as distributing (the licence's word is "convey", defined in section 0), even though no one downloads an installer. The duty then reaches the code you combine with the SDK and serve with it, not only the SDK.
-- **Inside your own organisation.** An app that only your own staff use, and that you give to nobody else, is not distributed, so the distribution duty does not apply. Once people outside the organisation (partners, customers, the public) use it, read the case above. Contractors who build or run the tool only for you, under your direction, are a narrow exception in section 2; contractors who simply use it are less clear, so ask a lawyer.
+- **Inside your own organisation.** An app that only your own staff use, and that you give to nobody else, is not distributed, so the distribution duty does not apply. Once people outside the organisation (partners, customers, the public) use it, read the case above. Contractors who build or run the tool only for you, under your direction, are a narrow exception in section 2; contractors who only use it are less clear, so ask a lawyer.
 - **A separate server.** A backend your app talks to over HTTP or another network protocol is usually a separate program, not part of the combined work, so this duty does not reach it. Section 13 does, if that server runs a modified copy of MapCairn code.
 - **Server-only use.** Running the SDK's code only on your server, unmodified, does not by itself trigger the network rule, which applies to a modified version. The SDK's interface still runs in the browser.
 
@@ -60,11 +58,13 @@ Using the SDK, even unmodified, as a dependency of a closed-source product you d
 
 ## Examples
 
-- **A hobby site.** Publish the site's source in a public repository under AGPL-3.0 and link to it from the site. That is the usual way to meet the source duty; keep the notices too.
-- **An open-source app.** Publish the app's source under a licence compatible with the AGPL and offer the combined work under AGPL-3.0, with a link in the app.
-- **An internal tool.** Used only inside your organisation, it is not distributed, so there is no duty to offer the source of the code you combine with the SDK. Once people outside it open the tool in their browsers, they receive the SDK's code, so the distributing case above applies, modified or not.
-- **A closed-source web service.** The app that includes the SDK reaches users' browsers, so the AGPL requires the source of the code you serve with it to be offered.
-- **A closed-source mobile app.** Distributing the app with the SDK inside is conveying it, so the source of the app would have to be offered under AGPL-3.0. App store terms can also conflict with the AGPL, which this guide does not settle. Ask a lawyer before you rely on this.
+| Your project                | What follows                                                                                                                                                                                                                                                                           |
+| --------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| A hobby site                | Publish the site's source in a public repository under AGPL-3.0 and link to it from the site. That is the usual way to meet the source duty; keep the notices too.                                                                                                                     |
+| An open-source app          | Publish the app's source under a licence compatible with the AGPL and offer the combined work under AGPL-3.0, with a link in the app.                                                                                                                                                  |
+| An internal tool            | Used only inside your organisation, it is not distributed, so there is no duty to offer the source of the code you combine with the SDK. Once people outside it open the tool in their browsers, they receive the SDK's code, so the distributing case above applies, modified or not. |
+| A closed-source web service | The app that includes the SDK reaches users' browsers, so the AGPL requires the source of the code you serve with it to be offered.                                                                                                                                                    |
+| A closed-source mobile app  | Distributing the app with the SDK inside is conveying it, so the source of the app would have to be offered under AGPL-3.0. App store terms can also conflict with the AGPL, which this guide does not settle. Ask a lawyer before you rely on this.                                   |
 
 ## Contributing
 

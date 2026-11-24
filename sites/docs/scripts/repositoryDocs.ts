@@ -26,7 +26,7 @@ export interface RepositoryDoc {
   readonly description: string;
   /** The overview page's address under the site's base path, starting with `/`. Its parts are under it. */
   readonly slug: string;
-  /** What the page is for and what the reader will have, in one paragraph. */
+  /** What the page holds, in plain words and a short paragraph at most. */
   readonly intro: string;
 }
 
@@ -46,7 +46,7 @@ export const REPOSITORY_DOCS: readonly RepositoryDoc[] = [
       "The layers, the ports, the map adapter, data layers and drawing, and how to add an adapter.",
     slug: "/architecture",
     intro:
-      "This page is for a developer who changes the SDK or adds an adapter of their own. By the end you will know the layers and their dependency rules, the ports, how the map adapter works and how to add an adapter.",
+      "The layers and their dependency rules, the ports, how the map adapter works and how to add an adapter of your own.",
   },
   {
     source: "DESIGN.md",
@@ -57,7 +57,7 @@ export const REPOSITORY_DOCS: readonly RepositoryDoc[] = [
       "The tokens, the layout slots and the accessibility contracts the interface keeps, and what the lint checks.",
     slug: "/design",
     intro:
-      "This page is for a developer who changes or themes the interface. By the end you will know the tokens, the layout slots, the accessibility contracts every component keeps and what the lint checks. To see the colours, type scale and spacing drawn in both themes, with their contrast ratios, open [Design tokens, visually](../design-visual.md).",
+      "The tokens, the layout slots, the accessibility contracts every component keeps and what the lint checks. To see the colours, type scale and spacing drawn in both themes, with their contrast ratios, open [Design tokens, visually](../design-visual.md).",
   },
 ];
 
@@ -340,7 +340,7 @@ function overviewPage(
   const sections = [
     `# ${split.title}`,
     doc.intro,
-    `This page is built from [${doc.source}](${BLOB}${doc.source}) in the repository, which is where it is edited. Checked against \`@mapcairn/sdk\` %sdkVersion%, the version in this repository.`,
+    `This page is built from [${doc.source}](${BLOB}${doc.source}) in the repository, which is where it is edited.`,
     `## At a glance`,
     `The document is long, so the site gives each section its own page. A section that is still long is cut into numbered parts.`,
     items.join("\n"),

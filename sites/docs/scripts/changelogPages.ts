@@ -128,7 +128,7 @@ description: What changed in each release of the SDK packages, newest first, wit
 
 # Changelog
 
-This page is for a developer who uses the SDK and wants to know what a release changed. The six SDK packages are released together under one version, so each release has one page that covers all of them. Each page says what you can now do and what to change when you upgrade.
+What each release of the SDK changed. The six SDK packages are released together under one version, so each release has one page that covers all of them. Each page says what you can now do and what to change when you upgrade.
 
 The pages are written from \`CHANGELOG.md\` in the repository when the site is built. A code sample in a release's notes is the code of that release, so it is not compiled against the current packages.
 

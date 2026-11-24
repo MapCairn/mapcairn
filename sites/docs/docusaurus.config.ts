@@ -120,8 +120,7 @@ const config: Config = {
           ],
         },
       ],
-      copyright:
-        "Built with love in South Africa. MapCairn is open source under the AGPL-3.0.",
+      copyright: `Built with love in South Africa. MapCairn is open source under the AGPL-3.0. These pages are checked against <code>@mapcairn/sdk</code> ${sdkVersion}, the version in this repository.`,
     },
     prism: {
       theme: classOnlyPrismTheme,

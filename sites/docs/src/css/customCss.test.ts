@@ -68,6 +68,13 @@ describe("custom.css", () => {
     expect(RULES).toMatch(/grid-template-rows:\s*subgrid/);
   });
 
+  it("draws every roadmap card alike, with no accent edge on the first lane's cards, because the lane's name already says Now", () => {
+    expect(RULES).not.toMatch(/\.roadmap__lane:first-child/);
+    const cards = RULES.match(/\.roadmap__card\s*{[^}]*}/g) ?? [];
+    expect(cards.length).toBeGreaterThan(0);
+    expect(cards.join("")).not.toMatch(/accent/);
+  });
+
   it("draws the roadmap bar at least as thick as a small step", () => {
     expect(RULES).toMatch(
       /\.roadmap__bar\s*{[^}]*height:\s*var\(--mc-space-sm\)/,
