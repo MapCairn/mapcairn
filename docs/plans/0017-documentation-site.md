@@ -201,7 +201,7 @@ The commands, run by the maintainer: `npm run build -w @mapcairn/docs`, then `np
 
 ## Documents to update
 
-- Step 1: `README.md` (the documentation section names the site and the `sites/docs` workspace), `CONTRIBUTING.md` (how to run and build the site), `AGENTS.md` (Commands: the docs scripts, port 4410 for `dev`; Documentation: the site; the SDK licence rule's exempt list), `ROADMAP.md` (the site is noted), `DESIGN.md` ("Exempt surfaces" and the lint table: the site is outside the harmony scan and what holds its values to the tokens), `docs/plans/README.md` (this plan in the list).
+- Step 1: `README.md` (the documentation section names the site and the `sites/docs` workspace), `.github/CONTRIBUTING.md` (how to run and build the site), `AGENTS.md` (Commands: the docs scripts, port 4410 for `dev`; Documentation: the site; the SDK licence rule's exempt list), `ROADMAP.md` (the site is noted), `DESIGN.md` ("Exempt surfaces" and the lint table: the site is outside the harmony scan and what holds its values to the tokens), `docs/plans/README.md` (this plan in the list).
 - Later steps: the guides move out of `docs/guides/`, `ARCHITECTURE.md` and `DESIGN.md` move last, and the skills and agents change their links in the step that moves each guide. `PRIVACY.md` and `packages/web/src/app/PrivacyPage.tsx` carry the sentence for the site's `theme` key (added in #669; see "Public surface"). `docs/guides/working-with-agents.md` is not updated in step 1, although the issue lists it: nothing in it describes the site yet, and step 4 updates it when the guides move.
 
 ## Risks

@@ -166,7 +166,7 @@ describe("/llms.txt", () => {
       expect.arrayContaining([
         RELEASE_NOTES_LINK.href,
         DISCUSSIONS_LINK.href,
-        `${BLOB_PREFIX}SECURITY.md`,
+        `${BLOB_PREFIX}.github/SECURITY.md`,
       ]),
     );
     expect(text).toContain("The licence allows commercial use");

@@ -47,7 +47,7 @@ These are fixed points, and a smaller change is not worth losing one:
 
 - The only test of a behaviour, and any accessibility (semantics, keyboard, focus, contrast), privacy, security, licence, names or portability check, including the Content-Security-Policy, or any review step. A duplicate test may be reported, with what it duplicates and where the remaining coverage lives.
 - Duplication that `AGENTS.md`, `ARCHITECTURE.md` or a check requires: generated copies, the `PRIVACY.md` and privacy page pair, committed deny lists, API reports, and documents the definition of done requires.
-- The licence and legal terms, public commitments (`PRIVACY.md`, `SECURITY.md`) and a provider's terms.
+- The licence and legal terms, public commitments (`PRIVACY.md`, `.github/SECURITY.md`) and a provider's terms.
 - Error handling at a boundary where input is untrusted.
 
 A check that is slow or awkward is a reason to make it faster or clearer, not to drop it. A proposal never overrides `AGENTS.md`. When you are unsure whether something is a fixed point or required, report the question, not a cut.

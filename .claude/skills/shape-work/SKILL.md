@@ -36,7 +36,7 @@ Write each of these in plain words:
 Answer each in one line. One that fails stops the work or changes the scope.
 
 - **Non-goals.** Accounts, tracking, bundled datasets, another engine, proxying layers, live refresh or polling.
-- **The maintainer's decisions.** A dataset, a runtime dependency in an SDK package, anything whose terms an SDK package would carry, the licence, `PRIVACY.md`, `SECURITY.md`. State the question; do not settle it.
+- **The maintainer's decisions.** A dataset, a runtime dependency in an SDK package, anything whose terms an SDK package would carry, the licence, `PRIVACY.md`, `.github/SECURITY.md`. State the question; do not settle it.
 - **Privacy.** What leaves the device, to which origin, and when; what is stored; what is written into a shared link (a link is pasted, logged and kept by whoever receives it). A new origin means a CSP change and, for the reference site, `PRIVACY.md`.
 - **Data terms.** The provider's terms allow this use, commercial use for anything an SDK package ships, and the attribution is shown and listed in `ATTRIBUTIONS.md`.
 - **Cost on a slow connection.** Requests per action, bytes on the first view, and the load on public providers nobody pays for.

@@ -278,7 +278,7 @@ test.describe("the product page", () => {
     await product.goto();
     for (const [name, href] of [
       ["Release notes", "/releases"],
-      ["Security", "/blob/main/SECURITY.md"],
+      ["Security", "/blob/main/.github/SECURITY.md"],
       ["Discussions", "/discussions"],
     ] as const) {
       const link = product.footer.getByRole("link", { name });

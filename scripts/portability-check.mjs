@@ -26,7 +26,7 @@ const CHECKED_FOLDERS = [
 const CHECKED_FILES = new Set([
   "AGENTS.md",
   "CLAUDE.md",
-  "CONTRIBUTING.md",
+  ".github/CONTRIBUTING.md",
   "lefthook.yml",
   "package.json",
 ]);

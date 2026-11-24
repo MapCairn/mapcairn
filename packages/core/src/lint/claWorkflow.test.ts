@@ -13,7 +13,10 @@ const workflow = readFileSync(
   path.join(REPO, ".github/workflows/cla.yml"),
   "utf8",
 );
-const contributing = readFileSync(path.join(REPO, "CONTRIBUTING.md"), "utf8");
+const contributing = readFileSync(
+  path.join(REPO, ".github/CONTRIBUTING.md"),
+  "utf8",
+);
 
 /** Lines of the workflow with comments removed, so checks see only what runs. */
 const code = workflow

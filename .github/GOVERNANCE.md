@@ -8,15 +8,15 @@ MapCairn is a small, volunteer-maintained project with one maintainer. This docu
 
 **Maintainer.** There is one. The maintainer:
 
-- decides what the project builds, accepts or declines, and what it will not do (see [`ROADMAP.md`](ROADMAP.md));
+- decides what the project builds, accepts or declines, and what it will not do (see [`ROADMAP.md`](../ROADMAP.md));
 - reviews and merges every pull request, and may decline or close one with a reason;
-- triages issues, applies labels and milestones, and keeps the plans in [`docs/plans/`](docs/plans/README.md) and their tracking issues current;
-- handles private vulnerability reports and publishes advisories, following [`SECURITY.md`](SECURITY.md);
+- triages issues, applies labels and milestones, and keeps the plans in [`docs/plans/`](../docs/plans/README.md) and their tracking issues current;
+- handles private vulnerability reports and publishes advisories, following [`SECURITY.md`](./SECURITY.md);
 - holds the repository, the Cloudflare account that serves the reference site and the domain, and is the only person with access to them today;
-- enforces the [`CODE_OF_CONDUCT.md`](CODE_OF_CONDUCT.md);
-- answers for the licence position: the repository is AGPL-3.0-only, and the terms contributors agree to are in [`CLA.md`](CLA.md).
+- enforces the [`CODE_OF_CONDUCT.md`](./CODE_OF_CONDUCT.md);
+- answers for the licence position: the repository is AGPL-3.0-only, and the terms contributors agree to are in [`CLA.md`](../CLA.md).
 
-**Contributor.** Anyone who opens an issue, comments, or sends a pull request. A contributor keeps the copyright in what they contribute and agrees to [`CLA.md`](CLA.md) before a pull request is merged. Contributors have no commit access. They propose, and the maintainer decides.
+**Contributor.** Anyone who opens an issue, comments, or sends a pull request. A contributor keeps the copyright in what they contribute and agrees to [`CLA.md`](../CLA.md) before a pull request is merged. Contributors have no commit access. They propose, and the maintainer decides.
 
 **Maintainers other than the first.** None exist yet. The way to become one is below.
 
@@ -24,12 +24,12 @@ MapCairn is a small, volunteer-maintained project with one maintainer. This docu
 
 The maintainer decides. The record of a decision is public and lives in four places.
 
-- **Issues** track work. A bug, an enhancement or a question is an issue, with a label, and a milestone when one fits. [`ROADMAP.md`](ROADMAP.md) ranks the milestones; the maintainer decides which milestones it lists and in what order. Larger decisions are written into the issue, with the date.
-- **Plans** are the proposal mechanism for large changes that cross several packages or decide a public API, where the design should be reviewed before any code is written. Smaller work needs only an issue with its design notes and task list. A plan in [`docs/plans/`](docs/plans/README.md) states the goal, the ground rules, the design, the tests and the order of work, and has a tracking issue. Its status is "proposed", "in progress" or "done". Anyone can propose a plan by opening a pull request that adds one, or an issue that asks for one. A plan marked "proposed" is a proposal, not a commitment.
-- **Pull requests** change the repository. [`.github/CODEOWNERS`](.github/CODEOWNERS) asks the `maintainers` team to review any change to [`ROADMAP.md`](ROADMAP.md) and to the files that steer agents, CI and what runs on a developer's machine (`AGENTS.md`, `CLAUDE.md`, the skill and agent folders, `.github/`, `.vscode/`, `scripts/`, the package manifests and lockfile, and the build and lint configuration; `.github/CODEOWNERS` lists them); it requests a review and the ruleset does not require the code owner's approval, so a roadmap change from a contributor is reviewed by the maintainer before it is merged. Every change reaches `main` through a pull request, and the repository ruleset requires the `build` and `e2e` checks to pass before it merges. What is checked, and by whom, is in the "Review and acceptance" section of [`CONTRIBUTING.md`](CONTRIBUTING.md).
-- **The licence agreement** governs contributions. [`CLA.md`](CLA.md) is checked on every pull request by the `CLA` workflow. A contribution is not merged without it.
+- **Issues** track work. A bug, an enhancement or a question is an issue, with a label, and a milestone when one fits. [`ROADMAP.md`](../ROADMAP.md) ranks the milestones; the maintainer decides which milestones it lists and in what order. Larger decisions are written into the issue, with the date.
+- **Plans** are the proposal mechanism for large changes that cross several packages or decide a public API, where the design should be reviewed before any code is written. Smaller work needs only an issue with its design notes and task list. A plan in [`docs/plans/`](../docs/plans/README.md) states the goal, the ground rules, the design, the tests and the order of work, and has a tracking issue. Its status is "proposed", "in progress" or "done". Anyone can propose a plan by opening a pull request that adds one, or an issue that asks for one. A plan marked "proposed" is a proposal, not a commitment.
+- **Pull requests** change the repository. [`.github/CODEOWNERS`](./CODEOWNERS) asks the `maintainers` team to review any change to [`ROADMAP.md`](../ROADMAP.md) and to the files that steer agents, CI and what runs on a developer's machine (`AGENTS.md`, `CLAUDE.md`, the skill and agent folders, `.github/`, `.vscode/`, `scripts/`, the package manifests and lockfile, and the build and lint configuration; `.github/CODEOWNERS` lists them); it requests a review and the ruleset does not require the code owner's approval, so a roadmap change from a contributor is reviewed by the maintainer before it is merged. Every change reaches `main` through a pull request, and the repository ruleset requires the `build` and `e2e` checks to pass before it merges. What is checked, and by whom, is in the "Review and acceptance" section of [`CONTRIBUTING.md`](./CONTRIBUTING.md).
+- **The licence agreement** governs contributions. [`CLA.md`](../CLA.md) is checked on every pull request by the `CLA` workflow. A contribution is not merged without it.
 
-Some things are not open to a vote or a pull request: the licence of the SDK packages and of the host, the privacy position in [`PRIVACY.md`](PRIVACY.md) (no accounts, no tracking beyond cookieless page-view counts) and the non-goals in [`ROADMAP.md`](ROADMAP.md). The maintainer can change them, in the open, with a plan and a tracking issue, but a pull request that quietly changes one will be declined.
+Some things are not open to a vote or a pull request: the licence of the SDK packages and of the host, the privacy position in [`PRIVACY.md`](../PRIVACY.md) (no accounts, no tracking beyond cookieless page-view counts) and the non-goals in [`ROADMAP.md`](../ROADMAP.md). The maintainer can change them, in the open, with a plan and a tracking issue, but a pull request that quietly changes one will be declined.
 
 A disagreement with a decision is raised on the issue or pull request in question. The maintainer gives a reason when declining. There is no separate appeals body. An unresolved disagreement can be taken up by forking the project, which the licence allows.
 
@@ -37,7 +37,7 @@ A disagreement with a decision is raised on the issue or pull request in questio
 
 There is no fixed route yet, because no one else has asked. The route the project will use is this:
 
-1. A person sends several pull requests over some months that were accepted without needing the maintainer to rewrite them, covering code, tests and documentation, and keeps to the conventions in [`CONTRIBUTING.md`](CONTRIBUTING.md), including accessibility and the design tokens.
+1. A person sends several pull requests over some months that were accepted without needing the maintainer to rewrite them, covering code, tests and documentation, and keeps to the conventions in [`CONTRIBUTING.md`](./CONTRIBUTING.md), including accessibility and the design tokens.
 2. They take part in review and triage: answering issues, reading other people's pull requests, and noticing problems in them.
 3. The maintainer asks them, or they ask the maintainer, in an issue titled for the proposal. The decision and its reason are recorded in that issue.
 4. If they agree, they are given write access, and this document is updated in the same pull request to name the new role and its holder.
