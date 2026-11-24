@@ -150,6 +150,43 @@ body {
   border-block-end: 1px solid var(--mc-color-hairline);
 }
 
+/*
+ * The drawer is the phone's whole menu, so each target in it is 44 px with a
+ * step of 8 px to its neighbours: the brand, colour toggle and close button
+ * along the top, then the rows below, and a category's link and chevron.
+ */
+.navbar-sidebar__brand {
+  gap: var(--mc-space-xs);
+}
+
+.navbar-sidebar__close {
+  align-items: center;
+  justify-content: center;
+  min-width: var(--mc-size-min-target);
+  min-height: var(--mc-size-min-target);
+  border-radius: var(--mc-radius-inner);
+}
+
+.navbar-sidebar__close {
+  color: var(--mc-color-text);
+}
+
+.navbar-sidebar__close svg g {
+  stroke: currentColor;
+}
+
+.navbar-sidebar__close:hover {
+  background-color: var(--mc-color-accent-tint);
+}
+
+.navbar-sidebar .menu__list-item:not(:first-child) {
+  margin-block-start: var(--mc-space-xs);
+}
+
+.navbar-sidebar .menu__list-item-collapsible {
+  gap: var(--mc-space-xs);
+}
+
 .navbar__title {
   overflow: visible;
   text-overflow: clip;

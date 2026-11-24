@@ -101,34 +101,35 @@ export interface HeaderTarget {
   readonly height: number;
 }
 
-/** Every link and button in the header that is shown, with its box. */
-export function headerTargets(page: Page): Promise<HeaderTarget[]> {
-  return page.evaluate(() =>
-    [
-      ...document.querySelectorAll<HTMLElement>(
-        "nav.navbar a, nav.navbar button",
-      ),
-    ]
-      .filter((element) =>
-        element.checkVisibility({ visibilityProperty: true }),
-      )
-      .map((element) => {
-        const box = element.getBoundingClientRect();
-        const name = (
-          element.getAttribute("aria-label") ??
-          element.textContent ??
-          element.className
+/** Every link and button matching `selector` (the header's by default) that is shown, with its box. */
+export function headerTargets(
+  page: Page,
+  selector = "nav.navbar a, nav.navbar button",
+): Promise<HeaderTarget[]> {
+  return page.evaluate(
+    (css) =>
+      [...document.querySelectorAll<HTMLElement>(css)]
+        .filter((element) =>
+          element.checkVisibility({ visibilityProperty: true }),
         )
-          .trim()
-          .slice(0, 40);
-        return {
-          name: name || element.tagName.toLowerCase(),
-          left: box.left,
-          top: box.top,
-          width: box.width,
-          height: box.height,
-        };
-      }),
+        .map((element) => {
+          const box = element.getBoundingClientRect();
+          const name = (
+            element.getAttribute("aria-label") ??
+            element.textContent ??
+            element.className
+          )
+            .trim()
+            .slice(0, 40);
+          return {
+            name: name || element.tagName.toLowerCase(),
+            left: box.left,
+            top: box.top,
+            width: box.width,
+            height: box.height,
+          };
+        }),
+    selector,
   );
 }
 
