@@ -7,7 +7,7 @@ description: What the SDK loads and costs, measured, and how to keep a host fast
 
 # Performance and Lighthouse
 
-What a MapCairn page costs to load, measured on 2026-11-11 on the reference site's product page and map, and what was tried and left alone so that nobody repeats an experiment. It is tracked in [#8](https://github.com/MapCairn/mapcairn/issues/8), then [#329](https://github.com/MapCairn/mapcairn/issues/329) for the product page and [#385](https://github.com/MapCairn/mapcairn/issues/385) for the map page.
+What a MapCairn page costs to load, measured on the reference site's product page and map, and what was tried and left alone so that nobody repeats an experiment. It is tracked in [#8](https://github.com/MapCairn/mapcairn/issues/8), then [#329](https://github.com/MapCairn/mapcairn/issues/329) for the product page and [#385](https://github.com/MapCairn/mapcairn/issues/385) for the map page.
 
 ## What to expect in your host
 
@@ -58,7 +58,7 @@ What is left is the engine itself, the first view's tiles and glyphs, and byte s
 
 Lighthouse CI audits both `/`, the product page, and `/map` (`packages/web/lighthouserc.json`), with the same assertions for each. The figures above are the map's.
 
-### Script preloads on the product page (2026-11-19)
+### Script preloads on the product page
 
 The product page's mobile score was 90 (first contentful paint 2.7 s, largest contentful paint 3.0 s). React Router writes one `modulepreload` link for every script the page needs into the head, about twenty and 190 KB compressed, and they compete with the stylesheets and font for the first paint. The route's `handle` now sets `modulePreload: "end"`, and `entry.server.tsx` moves those links, in order, from the head to just before `</body>` (`app/modulePreload.ts`). The map and privacy pages keep theirs in the head.
 

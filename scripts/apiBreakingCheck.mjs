@@ -25,9 +25,8 @@ import { parseCommit } from "./release/versionRules.mjs";
 
 /**
  * Whether a finding fails the pull request (`error`) or only annotates it
- * (`warning`). Decided on 2026-11-24: it is an error, because over the 21
- * commits that touched `packages/*\/api` the classifier has no false
- * positive left (an added message key and a reformatted declaration are not
+ * (`warning`). It is an error, because the classifier has no known false
+ * positive (an added message key and a reformatted declaration are not
  * breaking). A pull request that is really breaking passes by carrying the
  * marker, a `!` in the title or a `BREAKING CHANGE:` footer.
  */

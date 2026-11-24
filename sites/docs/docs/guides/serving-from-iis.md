@@ -9,7 +9,7 @@ description: Serve a MapCairn build, or a page that hosts the SDK, from IIS with
 
 Put a MapCairn map in a page that IIS serves, with no Node on the server, including a page the server renders for each request, such as a Razor page. The policy a page needs is in [Content Security Policy](content-security-policy.md), and the app side of embedding is in [Extending MapCairn](extending.md#embed-the-sdk-in-an-app-of-your-own).
 
-**What was checked.** This guide was written on 2026-11-20 on a machine with no Windows, IIS or ASP.NET. Every IIS and ASP.NET claim was checked against the Microsoft Learn page linked beside it, and none was run, so the `web.config` and Razor samples have not been loaded by a server. The build claims were checked by running the build. A claim without a link and without a file named beside it is a recommendation, not a finding. "What was not tested" at the end lists the open points.
+**What was checked.** This guide was written on a machine with no Windows, IIS or ASP.NET. Every IIS and ASP.NET claim was checked against the Microsoft Learn page linked beside it, and none was run, so the `web.config` and Razor samples have not been loaded by a server. The build claims were checked by running the build. A claim without a link and without a file named beside it is a recommendation, not a finding. "What was not tested" at the end lists the open points.
 
 ## What exists today
 

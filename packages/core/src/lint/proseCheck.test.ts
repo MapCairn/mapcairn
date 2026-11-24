@@ -6,8 +6,11 @@ import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import {
   BANNED_WORDS,
+  EVERGREEN_EXEMPTIONS,
+  findDatedProse,
   findProseProblems,
   isChecked,
+  isEvergreen,
   MAX_BOLD_LEAD_INS,
   // @ts-expect-error The scripts are dependency-free JavaScript with JSDoc types.
 } from "../../../../scripts/prose-check.mjs";
@@ -206,6 +209,102 @@ describe("isChecked", () => {
     "package-lock.json",
   ])("skips %s", (file) => {
     expect(isChecked(file)).toBe(false);
+  });
+});
+
+describe("dated prose", () => {
+  function dated(text: string): string[] {
+    return findDatedProse(text).map(
+      (problem: Problem) => `${problem.line} ${problem.rule}`,
+    );
+  }
+
+  it("reports a decision with its day, on the line", () => {
+    expect(dated("Fine.\n\nDecided on 2026-11-24: it is an error.\n")).toEqual([
+      "3 decided-on",
+      "3 iso-date",
+    ]);
+  });
+
+  it("reports decided on even without a date", () => {
+    expect(dated("The maintainer decided on a sweep.\n")).toEqual([
+      "1 decided-on",
+    ]);
+  });
+
+  it.each([
+    "as of 2026",
+    "since 2026-11-01",
+    "until 3 November 2026",
+    "measured on November 3",
+    "tested on 2026",
+  ])("reports %s as a dated claim", (phrase) => {
+    expect(dated(`It was fine ${phrase}.\n`)).toContain("1 dated-claim");
+  });
+
+  it("does not read since or until without a date", () => {
+    expect(dated("Since the build ran, and until it stops.\n")).toEqual([]);
+  });
+
+  it("reports an ISO date in prose and a table row", () => {
+    expect(dated("Released 2026-11-21.\n\n| a | 2026-01-02 |\n")).toEqual([
+      "1 iso-date",
+      "3 iso-date",
+    ]);
+  });
+
+  it("does not read code spans or code blocks", () => {
+    const text = "Use `2026-11-11T14:30:00Z`.\n\n```\nmin: 1998-01-01\n```\n";
+    expect(dated(text)).toEqual([]);
+  });
+
+  it("allows the last-reviewed and last-updated lines", () => {
+    expect(
+      dated("_Last reviewed: 2026-11-24. Reviewed every year._\n"),
+    ).toEqual([]);
+    expect(dated("_Last updated: 2026-11-22_\n")).toEqual([]);
+  });
+
+  it("reads text that merely mentions the exemption", () => {
+    expect(dated("See the Last updated: 2026-11-22 line.\n")).toEqual([
+      "1 iso-date",
+    ]);
+  });
+});
+
+describe("isEvergreen", () => {
+  it.each([
+    "README.md",
+    "packages/core/README.md",
+    "AGENTS.md",
+    "ARCHITECTURE.md",
+    "DESIGN.md",
+    "ROADMAP.md",
+    "docs/guides/releasing.md",
+    "sites/docs/docs/guides/performance.md",
+  ])("holds %s to it", (file) => {
+    expect(isEvergreen(file)).toBe(true);
+  });
+
+  it.each([
+    "CHANGELOG.md",
+    "docs/plans/0017-documentation-site.md",
+    "sites/docs/docs/changelog/index.md",
+    "sites/docs/docs/api/core/index.md",
+    "sites/docs/docs/generated/design.md",
+    "PRIVACY.md",
+    "CLA.md",
+    "ATTRIBUTIONS.md",
+    "docs/assurance-case.md",
+    "packages/core/src/lint/proseCheck.test.ts",
+  ])("leaves %s out", (file) => {
+    expect(isEvergreen(file)).toBe(false);
+  });
+
+  it("gives a reason beside every exempt document", () => {
+    for (const reason of Object.values(EVERGREEN_EXEMPTIONS)) {
+      expect(String(reason).length).toBeGreaterThan(10);
+    }
   });
 });
 

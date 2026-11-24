@@ -18,7 +18,7 @@ Links to code point at the `main` branch. Test names are quoted so they can be s
 4. **An error report carries no position.** If the app fails in the browser, a short report (message, stack, page origin and path, and a source) is logged. The query and the fragment are dropped before logging.
 5. **Pages cannot run unexpected scripts or be framed.** Production pages are served with a Content Security Policy that allows no `unsafe-inline` source, with origin allowlists, and with headers that stop framing, sniffing and downgrades.
 6. **Data from a provider is treated as data.** It is validated, and drawn as text or shapes by React and the map engine, never as markup. Links from a provider open only if they are `https`.
-7. **Cloud settings the project relies on.** Traffic is HTTPS only, with HSTS: `Strict-Transport-Security: max-age=31536000; includeSubDomains; preload`, one year, for every subdomain and with `preload`. The Cloudflare zone requires TLS 1.2 or later and uses Full (strict) encryption. These are settings in Cloudflare, not in this repository, and were checked from outside on 2026-11-10 (see [#4](https://github.com/MapCairn/mapcairn/issues/4)).
+7. **Cloud settings the project relies on.** Traffic is HTTPS only, with HSTS: `Strict-Transport-Security: max-age=31536000; includeSubDomains; preload`, one year, for every subdomain and with `preload`. The Cloudflare zone requires TLS 1.2 or later and uses Full (strict) encryption. These are settings in Cloudflare, not in this repository (see [#4](https://github.com/MapCairn/mapcairn/issues/4)).
 
 ### What a visitor cannot expect
 

@@ -28,8 +28,7 @@ export const PACKAGES = SDK_PACKAGES;
 
 /**
  * The most a tarball may weigh, in bytes of the packed `.tgz`. Set at about
- * one and a half times what each measured on 2026-11-20 (core 692 kB, react
- * 18 kB, theme 56 kB after the contrast check landed, map 470 kB, adapter-maplibre 112 kB, sdk 15 kB), so a bundled dependency or a stray data
+ * one and a half times the size each package has, so a bundled dependency or a stray data
  * file fails and ordinary growth does not. Raising one is a deliberate edit
  * in a pull request.
  *

@@ -609,8 +609,8 @@ export function engineGraphProblems(builds) {
  * each budgeted build of the umbrella app. `client` is the app's bundle through
  * the umbrella's root (the chrome, with no map engine); `client via the
  * subpath` is a build through `@mapcairn/sdk/adapter-maplibre`, which adds the
- * adapter and `maplibre-gl`. Both are minified. Set at about 1.15 times what
- * each measured on 2026-11-23, so a bundled dependency or a lost tree-shake
+ * adapter and `maplibre-gl`. Both are minified. Set at about 1.15 times the
+ * size each build has, so a bundled dependency or a lost tree-shake
  * fails and ordinary growth does not. Raising one is a deliberate edit in a
  * pull request.
  *
