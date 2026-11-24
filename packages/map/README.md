@@ -35,7 +35,7 @@ import "@mapcairn/map/styles.css";
 The JavaScript imports no CSS, so the components render on the server as plain modules. A few things are yours to provide:
 
 - `MapChrome` fills its container, so give `html`, `body` and the element you render into a height.
-- The tokens name the IBM Plex Sans Variable font, which your app loads (for example from `@fontsource-variable/ibm-plex-sans`). Without it the type falls back to the system font.
+- The tokens name the IBM Plex Sans Variable font, which your app loads (for example from `@fontsource-variable/ibm-plex-sans`; [Get started](https://mapcairn.timothybrits.co.za/docs/#add-the-font-optional) shows how). Without it the type uses the system font through the fallback stack, whose metric-matched face `tokens.css` already declares.
 - The map engine and its styles. The package never imports one; your app supplies a `MapAdapter` over MapLibre GL JS in the `Services` bundle. The MapLibre adapter is [`@mapcairn/adapter-maplibre`](https://github.com/MapCairn/mapcairn/tree/main/packages/adapter-maplibre), which `@mapcairn/sdk` re-exports at `@mapcairn/sdk/adapter-maplibre`.
 
 The styles of the primitives (buttons, chips, surfaces and list rows) sit in a cascade layer, so an unlayered rule in your own CSS, such as `button { background: transparent; border: 0; padding: 0 }` or `:focus-visible { outline: none }`, beats them. Put your app's base styles and resets in an `@layer` that is declared before `@mapcairn/map/styles.css` is imported, and they rank below the primitives. This is a known trade-off; see [Overriding a primitive](https://github.com/MapCairn/mapcairn/blob/main/DESIGN.md#overriding-a-primitive).
