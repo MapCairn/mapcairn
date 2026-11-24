@@ -22,6 +22,12 @@ pre-commit:
     publish-guard:
       run: npm run publish:guard
 
+pre-push:
+  commands:
+    typecheck:
+      glob: "**/*.{ts,tsx,mjs,cjs,json}"
+      run: npm run typecheck
+
 commit-msg:
   commands:
     names:
