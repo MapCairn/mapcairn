@@ -46,6 +46,16 @@ describe("examples/embed", () => {
     expect(manifest).not.toMatch(/vanilla-extract/);
   });
 
+  it("serves its generated theme stylesheet as a file, never as an inline style", () => {
+    expect(read("examples/embed/vite.config.ts")).toContain(
+      "themeStylesheetPlugin(createExampleThemeStylesheet)",
+    );
+    expect(read("examples/embed/index.html")).not.toMatch(/<style/);
+    expect(read("examples/embed/src/main.tsx")).not.toMatch(
+      /createElement\("style"\)/,
+    );
+  });
+
   it("resolves the packages' dist, with no source condition", () => {
     expect(read("examples/embed/vite.config.ts")).not.toContain(
       "@mapcairn/source",
