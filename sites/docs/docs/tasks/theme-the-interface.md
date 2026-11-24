@@ -2,22 +2,82 @@
 
 title: Theme the interface
 sidebar_label: Theme the interface
-description: Switch between light and dark, follow the system setting, and give the interface your own colours.
+description: Give the interface your own colours, font and corners with a stylesheet that refuses colours too faint to read, and let people choose light, dark or system.
 ---
 
 # Theme the interface
 
-Make the interface from [Get started](../get-started.md) follow the system's light or dark setting, let people choose between light, dark and system (the basemap changes with it), and recolour it with a stylesheet that refuses colours too faint to read.
+Give the interface from [Get started](../get-started.md) your brand with one generated stylesheet, then let people choose light, dark or system.
 
-The code uses [`ThemeSource`](../api/core/ThemeSource.md), [`useTheme`](../api/map/useTheme-function.md), [`defaultBasemapFor`](../api/core/defaultBasemapFor.md) and [`createThemeStylesheet`](../api/theme/createThemeStylesheet.md).
+The code uses [`createThemeStylesheet`](../api/theme/createThemeStylesheet.md), [`ThemeSource`](../api/core/ThemeSource.md), [`useTheme`](../api/map/useTheme-function.md) and [`defaultBasemapFor`](../api/core/defaultBasemapFor.md).
 
-## How the theme works
+## Brand the map
 
-The SDK's stylesheet reads `data-theme` on `<html>` (`light` or `dark`), and uses the system's colour scheme when the attribute is not set. Which theme applies is a setting, `system`, `light` or `dark`, held by the settings service. Something has to write the attribute when the setting or the system changes, and that is a `ThemeSource`: a small adapter with three methods, `getSystemTheme`, `subscribe` and `apply`. The SDK's fake only records what it is asked to apply and always reports a light system theme, so a host that wants the theme to take effect supplies its own.
+Run this in your build or a script and write the string it returns to a file your site serves:
 
-## Follow the system and let people choose
+```ts check
+import { createThemeStylesheet } from "@mapcairn/sdk";
 
-This `ThemeSource` reads the system setting with `matchMedia` and writes the attribute. The component below shows three buttons. Create `src/theme.tsx` with this. It has its own `services`, with the source added, and its own `MapScreen`, which puts the buttons in the `topStart` slot where Get started has the search box:
+/** The brand stylesheet, or an error that says what was refused. */
+export function brandStylesheet(): string {
+  const result = createThemeStylesheet(
+    {
+      colour: {
+        light: { accent: "#0b5c3a", accentTint: "#d9efe4" },
+        dark: { accent: "#7fd9aa", accentTint: "#17382a" },
+      },
+    },
+    { scope: ":root" },
+  );
+  if (!result.ok) {
+    const failing = result.findings.filter((finding) => !finding.passes);
+    throw new Error(
+      `Theme refused: ${failing.length} colour pairs fail WCAG 2.2 AA, ${result.invalid.length} values cannot be used.`,
+    );
+  }
+  return result.css;
+}
+```
+
+Link the file after the SDK's own stylesheets, in the page's `<head>`:
+
+```html no-check
+<link rel="stylesheet" href="/brand.css" />
+```
+
+The interface now uses your accent in both themes, and colours you leave out keep the SDK's. `scope: ":root"` themes the whole page. A refused theme returns no CSS, so the SDK keeps its own colours, and the code above fails the build where you will see it: `result.findings` lists every pair checked (`passes: false` on those that fail) and `result.invalid` what could not be used. `invalid[].value` repeats what you passed in, so it is untrusted text: escape it before you print it into HTML. [Extending MapCairn](../guides/extending.md#theme-the-sdk-with-your-own-colours) lists the colour roles and the rules about scope.
+
+## More you can change
+
+Two more keys sit beside `colour`. `fontFamily` is a list of plain family names and generic families, and the SDK's own stack follows it: `fontFamily: '"Brand Sans", system-ui, sans-serif'`. `shape` is `"square"`, `"default"` or `"round"` and sets the corners of the pill, sheet, controls and inner shapes: `shape: "square"`. Any other value is refused and listed in `invalid`.
+
+For two maps with different looks, make one stylesheet for each, with its own scope (`.brand-a`, `.brand-b` or `#id`), and put the class on an element around each map.
+
+## What you can and cannot change
+
+| What                                             | Can you?      | Why, or the way around                                                                                                                                    |
+| ------------------------------------------------ | ------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| The accent and the other colour roles, per theme | Yes           | The 14 roles in [Extending MapCairn](../guides/extending.md#theme-the-sdk-with-your-own-colours), light and dark, each checked against WCAG 2.2 AA.       |
+| The font family                                  | Yes           | `fontFamily`. You load the font file yourself (see the CSP note below).                                                                                   |
+| The corners                                      | Yes           | `shape`. Circles stay circles and the search pill stays a pill.                                                                                           |
+| Two maps with different looks                    | Yes, by scope | One stylesheet and one wrapper element for each.                                                                                                          |
+| Light or dark for one map                        | No, per page  | The rules read `data-theme` on `<html>`, so every map on the page shares it.                                                                              |
+| Spacing and density                              | No            | They stay the SDK's so the layout and the collision checks hold.                                                                                          |
+| Slot positions and icons                         | No            | `MapChrome` owns the slots, and the icons are the SDK's own set ([DESIGN.md](https://github.com/MapCairn/mapcairn/blob/main/DESIGN.md#layout-and-slots)). |
+| The data palette and the map overlay colours     | No            | Layers and overlays have to read on any basemap, so they are not overridable. The page background is yours to set.                                        |
+| Arbitrary CSS                                    | No            | The custom property names are generated and private, so a stylesheet of your own cannot name them.                                                        |
+
+A tooltip renders outside your scope, so in a `#id` or `.class` scope it keeps the SDK's colours. In high-contrast and forced-colours modes the SDK keeps its own values and skips your theme.
+
+## With a strict policy or your own reset
+
+Under a strict Content Security Policy, link the stylesheet, because an inline `<style>` is blocked; a plain file passes `style-src 'self'`. A font file must be on your own origin or on one your `font-src` allows, and a font from another origin is blocked ([Content Security Policy](../guides/content-security-policy.md)).
+
+The SDK's primitives sit in a cascade layer, so an unlayered reset of yours beats them. Declare your reset layer first, for example `@layer reset, base;`, and import the SDK's stylesheet after it ([Extending MapCairn](../guides/extending.md) says why).
+
+## Light, dark or system
+
+The SDK's stylesheet reads `data-theme` on `<html>` (`light` or `dark`) and follows the system's colour scheme without it. A `ThemeSource` writes the attribute when the person's choice or the system changes. The SDK's fake only records what it is asked to apply, so a host supplies its own. Create `src/theme.tsx` with one that uses `matchMedia`, and a `MapScreen` with three buttons in the `topStart` slot where Get started has the search box:
 
 ```tsx check
 /// <reference types="vite/client" />
@@ -118,52 +178,15 @@ function Chrome({
 }
 ```
 
-Now change `src/main.tsx`. Delete `services`, `MapScreen` and `Chrome`, and the imports only they used. Add this import. The providers in `App` and the mount stay as they are in Get started:
+In `src/main.tsx`, delete `services`, `MapScreen` and `Chrome` and the imports only they used, then add this import. The providers in `App` and the mount stay as they are in Get started:
 
 ```ts no-check
 import { MapScreen, services } from "./theme";
 ```
 
-`useTheme()` returns the person's `choice` and the `resolved` theme that applies, which is the choice, or the system's theme when the choice is `system`. `defaultBasemapFor(basemaps, resolved)` gives Bright in the light theme and Fiord in the dark theme, so the map and the interface change together.
+`useTheme()` returns the person's `choice` and the `resolved` theme. `defaultBasemapFor(basemaps, resolved)` gives Bright in light and Fiord in dark, so the map and the interface change together. The in-memory fake does not keep the choice between visits; a persistent settings store does.
 
-The choice is a setting, so the settings service keeps it between visits when it has a store that persists; the in-memory fake does not. Applying the theme after the page has loaded can flash the wrong theme for a moment. A host that renders on the server avoids it by setting `data-theme` from a small script in the page head before it paints, with the same logic as `apply`; [Content Security Policy](../guides/content-security-policy.md) says how a strict policy allows that script.
-
-## Use your own colours
-
-`createThemeStylesheet` makes a stylesheet that gives the interface your colours, and refuses a theme that falls below WCAG 2.2 AA. It covers the interface's colour roles in light and dark and, optionally, the font family and the corner shape. It does not change the page background, the colours drawn on the map or the data palette. Run it in your build or a script, and serve the file it returns:
-
-```ts check
-import { createThemeStylesheet } from "@mapcairn/sdk";
-
-/** The brand stylesheet, or an error that says the colours are not usable. */
-export function brandStylesheet(): string {
-  const result = createThemeStylesheet(
-    {
-      colour: {
-        light: { accent: "#0b5c3a", accentTint: "#d9efe4" },
-        dark: { accent: "#7fd9aa", accentTint: "#17382a" },
-      },
-      fontFamily: '"Brand Sans", system-ui, sans-serif',
-    },
-    { scope: ".brand" },
-  );
-  if (!result.ok) {
-    throw new Error("The theme is below WCAG 2.2 AA or cannot be used.");
-  }
-  return result.css;
-}
-```
-
-Link the file after the SDK's own stylesheets, and put the class from `scope` on an element around the map. It is a plain stylesheet, so a policy with `style-src 'self'` allows it. The result of a refused theme lists every pair of colours it checked and says which failed.
-
-`fontFamily` takes plain family names and generic families; anything else is refused and listed in `invalid` as `fontFamily` (`invalid[].value` echoes the refused text, so treat it as untrusted if you show it), and the SDK's own stack follows your list as the fallback. You load the font yourself: the file must be on your own origin or allowed by your `font-src`, and the stylesheet must be linked, because a strict policy blocks an inline `<style>`. `shape` takes `"square"`, `"default"` or `"round"` and sets the corners of the pill, sheet, controls and inner shapes; circles stay circles and the search pill stays a pill. [Extending MapCairn](../guides/extending.md#theme-the-sdk-with-your-own-colours) has the full list of colour roles and the rules about scope, high-contrast modes and tooltips.
-
-## When it goes wrong
-
-- **A theme below WCAG 2.2 AA.** `createThemeStylesheet` does not throw. It returns `ok: false` with every pair of colours it checked, the ones that fail marked `passes: false`, and what it could not use. There is no stylesheet to serve, so the interface keeps the SDK's own colours. The code above turns that into an error at build time, which is the right moment to find it.
-- **A scope that is not allowed.** The scope must be `:root`, `#id` or `.class` with an ASCII name. Anything else is refused and reported in the result.
-- **No `matchMedia`.** The `PageThemeSource` above reads `window`, so build it only in the browser. On a server, give the services a source that reports `light` and applies nothing, and set `data-theme` from a script before the first paint.
-- **Contrast modes.** In high-contrast and forced-colours modes the SDK keeps its own values and skips your theme.
+`PageThemeSource` reads `window`, so build it only in the browser. A host that renders on the server gives the services a source that reports `light` and applies nothing, and sets `data-theme` from a small script in the head before the first paint to avoid a flash ([Content Security Policy](../guides/content-security-policy.md) says how to allow it).
 
 ## Related
 
