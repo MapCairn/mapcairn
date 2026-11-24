@@ -225,17 +225,10 @@ describe("README.md", () => {
     expect(section).not.toContain("not yet shipped");
   });
 
-  it("leaves what is tested, and the bundlers and browsers tried, to the extending guide, which says them", () => {
-    const guide = readFileSync(
-      path.join(REPO, "sites/docs/docs/guides/extending.md"),
-      "utf8",
-    );
-    const section = guide.slice(guide.indexOf("## Show a real map"));
-    expect(section).toContain("`SDK packages` job");
+  it("says which bundler and browser were tried, and links the guide for the other bundlers", () => {
+    const section = README.slice(README.indexOf("## Embed a map"));
     expect(section).toContain("other bundlers and browsers are not tried");
-    expect(section).toContain("builds a similar app");
-    expect(section).toContain("`MODULE_LEVEL_DIRECTIVE`");
-    expect(section).toContain("https://tiles.openfreemap.org");
+    expect(section).toContain("docs/guides/extending/#show-a-real-map");
   });
 
   it("names the default basemap's origin, the directives it needs and the harmless build warning", () => {

@@ -108,7 +108,12 @@ export const sidebar: SidebarEntry[] = [
   {
     type: "category",
     label: "About the project",
-    items: ["guides/using-the-reference-site", "guides/licence", "roadmap"],
+    items: [
+      "guides/using-the-reference-site",
+      "guides/add-to-the-reference-site",
+      "guides/licence",
+      "roadmap",
+    ],
   },
   changelogSidebar(),
 ];
