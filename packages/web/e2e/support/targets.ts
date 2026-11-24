@@ -4,7 +4,7 @@ import type { Page } from "@playwright/test";
 
 /** The smallest touch target and the least space between two, in CSS pixels (WCAG 2.2 and the issue's rule). */
 export const MIN_TARGET_PX = 44;
-export const MIN_GAP_PX = 8;
+const MIN_GAP_PX = 8;
 
 /** What {@link measureChromeTargets} found; each list is empty when the chrome is sound. */
 export interface TargetReport {

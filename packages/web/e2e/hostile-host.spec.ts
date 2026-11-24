@@ -200,7 +200,7 @@ test.describe("the chrome in a host page with hostile base styles", () => {
 });
 
 /*
- * DOCUMENTS A KNOWN LIMITATION, not a guarantee. The extending guide and
+ * These tests document a known limitation, not a guarantee. The extending guide and
  * DESIGN.md ("Overriding a primitive") say an unlayered element rule beats
  * the primitives' layer, so a host that does not put its reset in a layer
  * declared first loses the controls' size. These tests assert the damage, so
