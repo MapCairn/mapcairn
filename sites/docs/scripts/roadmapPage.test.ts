@@ -109,7 +109,7 @@ describe("buildRoadmapPage", () => {
     const text = page();
     expect(text).toContain("4 of 12 issues closed (33%), 8 open");
     expect(text).toContain(
-      '<progress className="roadmap__bar" value={4} max={12} aria-hidden="true"></progress>',
+      '<svg className="roadmap__bar" viewBox="0 0 100 1" preserveAspectRatio="none" aria-hidden="true"><rect className="roadmap__fill" width="33.33" height="1" /></svg>',
     );
     expect(text).toContain("3 of 3 issues closed (100%), 0 open");
   });
@@ -142,7 +142,7 @@ describe("buildRoadmapPage", () => {
   it("says so for a milestone with no issues, with no bar, and for one the counts miss", () => {
     const text = page();
     expect(card(text, "Layer controls")).toContain("No issues yet.");
-    expect(card(text, "Layer controls")).not.toContain("<progress");
+    expect(card(text, "Layer controls")).not.toContain("<svg");
     expect(card(text, "Large data")).toContain(
       "Issue counts are not available for this milestone.",
     );
@@ -178,7 +178,7 @@ describe("buildRoadmapPage", () => {
     expect(none).toContain(
       "Issue counts could not be read when this site was built.",
     );
-    expect(none).not.toContain("<progress");
+    expect(none).not.toContain("<svg");
   });
 
   it("names when ROADMAP.md was last reviewed", () => {
@@ -199,7 +199,7 @@ describe("buildRoadmapPage", () => {
     expect(copy).toContain("4 of 12 issues closed (33%), 8 open");
     expect(copy).toContain("No issues yet.");
     expect(copy).toContain(PRIORITY_NOT_SCHEDULE);
-    expect(copy).not.toMatch(/<\/?(?:article|section|div|progress)/);
+    expect(copy).not.toMatch(/<\/?(?:article|section|div|svg)/);
     expect(copy).not.toMatch(/\n{3,}/);
   });
 });
