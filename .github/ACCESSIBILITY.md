@@ -12,6 +12,7 @@ The design rules in [`DESIGN.md`](../DESIGN.md) say that every gesture has a key
 - The documentation site's audited pages are checked the same way at 320, 390 and 1280 px, in both themes.
 - Other specs measure target sizes and text resizing, and check reduced motion and the more-contrast and forced-colours settings.
 - `@mapcairn/theme` calculates colour contrast, and `createThemeStylesheet` refuses a host theme that falls below AA.
+- A page with two maps can name each one: `MapView` takes an optional `label`, which is added to the name of each landmark, and `e2e/two-maps.spec.ts` runs axe's landmark and duplicate-id rules over two labelled maps.
 - The harmony scanner, part of `npm run lint`, fails on a positive `tabindex`, an icon-only button with no name, a removed focus outline and a page that blocks pinch zoom.
 - The `review-ui` skill reads interface changes against the design rules.
 
@@ -21,7 +22,6 @@ Automated checks cannot prove conformance.
 
 - No screen reader has been used to check the announcements yet ([#146](https://github.com/MapCairn/mapcairn/issues/146)). They are checked through their live-region text only.
 - The map is drawn on a canvas, so its contents are not available to a screen reader as text. The interface offers search by name or coordinates, a readout of the cursor's coordinates and zoom, lists of the features of each layer that is on, and announcements.
-- A page with two maps cannot yet name each one ([#887](https://github.com/MapCairn/mapcairn/issues/887)).
 - Basemaps and open data layers come from third parties, and the project does not control their accessibility.
 
 ## Supported environments

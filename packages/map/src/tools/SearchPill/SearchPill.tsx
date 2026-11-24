@@ -14,6 +14,7 @@ import {
   useState,
 } from "react";
 import { useFocusTarget } from "../../chrome/focusRegistry";
+import { useLandmarkName } from "../../host/useLandmarkName";
 import { useMessages } from "../../services";
 import { Button } from "../../ui/Button";
 import { Icon } from "../../ui/Icon";
@@ -109,6 +110,7 @@ export function SearchPill({
   onBlur,
 }: SearchPillProps) {
   const { t } = useMessages();
+  const searchName = useLandmarkName("tools.search.label");
   const inputRef = useRef<HTMLInputElement | null>(null);
   const [pickedLabel, setPickedLabel] = useState<string | null>(null);
   const [listOpen, setListOpen] = useState(false);
@@ -281,7 +283,7 @@ export function SearchPill({
     // biome-ignore lint/a11y/useSemanticElements: the search landmark is requested with role="search" and a name
     <div
       role="search"
-      aria-label={t("tools.search.label", {})}
+      aria-label={searchName}
       className={styles.root}
       data-chrome="search-pill"
       data-testid="search-pill"

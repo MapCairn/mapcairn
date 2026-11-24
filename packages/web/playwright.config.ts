@@ -35,7 +35,7 @@ const RTL_SPECS = /(basemap|keyboard|sheet|app-shell|rtl)\.spec\.ts$/;
 // specs with Afrikaans chosen (see `language` in e2e/fixtures.ts), because
 // translated text is often longer than English. `i18n.spec.ts` sets its own
 // language, so it runs in the default projects.
-const AFRIKAANS_SPECS = /(^|\/)(collision|a11y)\.spec\.ts$/;
+const AFRIKAANS_SPECS = /(^|\/)(collision|a11y|two-maps)\.spec\.ts$/;
 
 // The sample-language projects run one spec in each of three sample languages
 // that the test seam offers (see `SAMPLE_LANGUAGES` in e2e/support/language.ts):

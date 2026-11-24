@@ -72,6 +72,13 @@ export interface MapChromeProps {
   readonly sheet?: ReactNode;
   /** True while the sheet is modal: everything but the sheet becomes `inert`. */
   readonly modal: boolean;
+  /**
+   * Whether the map is wrapped in the page's `main` landmark. Defaults to
+   * true. Turn it off when the page has its own `main` or holds more than one
+   * map, because a page has one `main` landmark; the map is then wrapped in a
+   * plain element.
+   */
+  readonly mainLandmark?: boolean;
   /** Called when the measured container size changes. */
   readonly onViewportChange?: (viewport: {
     readonly width: number;
@@ -515,8 +522,10 @@ export function MapChrome({
   mapKey,
   sheet,
   modal,
+  mainLandmark = true,
   onViewportChange,
 }: MapChromeProps) {
+  const Background = mainLandmark ? "main" : "div";
   const rootRef = useRef<HTMLDivElement>(null);
   const slots = useRef(new Map<SlotName, HTMLElement>());
   const { finePointer } = usePreferences();
@@ -859,9 +868,9 @@ export function MapChrome({
           )}
           {slot("end-stack", styles.endStack, endStack)}
           {sheet}
-          <main className={styles.background} inert={modal}>
+          <Background className={styles.background} inert={modal}>
             {background}
-          </main>
+          </Background>
           {mapKey == null ? null : (
             <div
               ref={slotRefs["map-key"]}

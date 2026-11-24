@@ -32,7 +32,13 @@ import {
   Warning,
   X,
 } from "@phosphor-icons/react";
-import { type ReactNode, type SyntheticEvent, useEffect, useRef } from "react";
+import {
+  type ReactNode,
+  type SyntheticEvent,
+  useEffect,
+  useId,
+  useRef,
+} from "react";
 import {
   useFormatMessage,
   useMessages,
@@ -220,6 +226,10 @@ export function DirectionsPanel({
   const stopsHeading = useRef<HTMLHeadingElement>(null);
   const resultRef = useRef<HTMLDivElement>(null);
   const Heading = `h${headingLevel}` as const;
+  const stopsId = useId();
+  const routeId = useId();
+  const searchId = useId();
+  const areaId = useId();
   const { state, stops, mode } = directions;
   const busy = state.status === "loading";
   const full = !directions.canAddStop;
@@ -258,9 +268,9 @@ export function DirectionsPanel({
 
   return (
     <div className={styles.panel} data-testid="directions-panel">
-      <section className={styles.group} aria-labelledby="directions-stops">
+      <section className={styles.group} aria-labelledby={stopsId}>
         <Heading
-          id="directions-stops"
+          id={stopsId}
           ref={stopsHeading}
           tabIndex={-1}
           className={styles.groupHeading}
@@ -350,9 +360,9 @@ export function DirectionsPanel({
         ) : null}
       </section>
 
-      <section className={styles.group} aria-labelledby="directions-route">
+      <section className={styles.group} aria-labelledby={routeId}>
         {/* The controls name themselves, and the room matters on a half-height sheet. */}
-        <VisuallyHidden as={Heading} id="directions-route">
+        <VisuallyHidden as={Heading} id={routeId}>
           {t("tools.directions.route", {})}
         </VisuallyHidden>
         <SegmentedControl
@@ -391,8 +401,8 @@ export function DirectionsPanel({
         ) : null}
       </section>
 
-      <section className={styles.group} aria-labelledby="directions-search">
-        <Heading id="directions-search" className={styles.groupHeading}>
+      <section className={styles.group} aria-labelledby={searchId}>
+        <Heading id={searchId} className={styles.groupHeading}>
           {t("tools.directions.searchHeading", {})}
         </Heading>
         <form
@@ -472,8 +482,8 @@ export function DirectionsPanel({
         </form>
       </section>
 
-      <section className={styles.group} aria-labelledby="directions-area">
-        <Heading id="directions-area" className={styles.groupHeading}>
+      <section className={styles.group} aria-labelledby={areaId}>
+        <Heading id={areaId} className={styles.groupHeading}>
           {t("tools.directions.areaHeading", {})}
         </Heading>
         <p className={styles.hint}>{t("tools.directions.areaHint", {})}</p>

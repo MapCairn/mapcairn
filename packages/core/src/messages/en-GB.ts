@@ -337,6 +337,7 @@ export const EN_GB_CATALOGUE: Record<MessageKey, string> = {
   "chrome.sheet.resize": "Resize panel",
   "chrome.sheet.close": "Close",
   "host.map.label": "Map",
+  "host.map.named": "{name} ({label})",
   "host.map.roleDescription": "map",
   "ui.skipToMap": "Skip to map",
   "ui.dismiss": "Dismiss",

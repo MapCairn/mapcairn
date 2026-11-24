@@ -11,6 +11,9 @@ export const DESIGN_GUIDE_PATH = "design";
  */
 export const DESIGN_HOST_THEME_PATH = "design/host-theme/:name";
 
+/** The path of the page with two maps on it, for the tests of what several maps expose to a screen reader. */
+export const DESIGN_TWO_MAPS_PATH = "design/two-maps";
+
 /**
  * The build modes that serve the style guide: the Vite dev server and the
  * `--mode e2e` build the browser tests run against.
@@ -44,6 +47,7 @@ export function designGuideRoutes(
     ? [
         route(DESIGN_GUIDE_PATH, "./routes/design.tsx"),
         route(DESIGN_HOST_THEME_PATH, "./routes/design.host-theme.ts"),
+        route(DESIGN_TWO_MAPS_PATH, "./routes/design.two-maps.tsx"),
       ]
     : [];
 }

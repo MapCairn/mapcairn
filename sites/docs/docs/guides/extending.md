@@ -49,13 +49,24 @@ A host with more on the first screen has three more optional pieces:
 
 A host that renders on a server, or builds a Worker, and imports `@mapcairn/sdk/adapter-maplibre` from code that build follows may bundle the map engine into the server or Worker build. It runs nothing there, and it is large. Import the subpath only in code that runs in the browser (a client-only module or a dynamic import behind it), and keep the root `@mapcairn/sdk` for the code both sides share: the root never imports the adapter or the engine.
 
+## Put two maps on one page
+
+Each map is its own `MapView` with its own chrome, under one `ServicesProvider`, one `LiveRegionProvider` and one `TooltipProvider`. The example in `examples/embed` shows two. What a page with two maps needs:
+
+- Pass each `MapView` a `label`, in the language of the page, such as `label="Pine"`. It is added to the name of every landmark the interface draws: "Map (Pine)", "Search (Pine)", "Map tools (Pine)", "Map scale (Pine)", "Measurement (Pine)", "Drawing (Pine)" and "Map credits (Pine)". Without it two maps repeat those names, and a screen reader lists several landmarks with the same name. A page with one map leaves it out, and the names stay as they are. The pattern that joins the name and the label is the message `host.map.named`, which a language file translates.
+- Give each `Sheet` a `title` of its own, such as "Map options (Pine)": a sheet is named by its title, which your app writes.
+- Pass `mainLandmark={false}` to each `MapChrome` and put your own `main` around the maps. A page has one `main` landmark, and `MapChrome` draws one around its map unless told not to.
+- Give each `MapView` its own `id` if you set one, and each WebMCP tool its own name. The ids the SDK generates itself are unique across maps.
+- The announcements share the page's one live region and do not say which map they came from.
+- `data-testid` values repeat across maps, so a test finds each map's controls inside that map's wrapper.
+
 ## Theme the SDK with your own colours
 
 `createThemeStylesheet` in `@mapcairn/theme` makes the stylesheet that gives the SDK's interface your own colours, and refuses a theme that is below WCAG 2.2 AA. It covers the 14 interface colour roles (`surface`, `surfaceRaised`, `text`, `textMuted`, `accent`, `accentTint`, `accentContrast`, `hairline`, `controlBoundary`, `danger`, `dangerTint`, `scrim`, `focusRing`, `focusRingInner`), in light and dark. It can also set the font family (`fontFamily`) and the corner style (`shape`). It does not change the page background, the map overlay colours or the data palette. Anything else is out until a named adopter needs it: per-component styling hooks, density, moving a slot, swapping an icon and a light or dark choice for one map alone. [Theme the interface](../tasks/theme-the-interface.md) has the code: generate the stylesheet in your build, serve it from your own origin and link it after the SDK's stylesheets, with a class that you own on an element around the `MapView` and its chrome.
 
 What to know:
 
-- The scope is `:root`, `#id` or `.class` with an ASCII name. Anything else, including a selector list, is refused. The scope is matched as a descendant of `:root`, so a class on `<html>` itself does nothing: use the `:root` scope to theme the whole page. Two maps with different themes are two wrappers, two scopes and two calls.
+- The scope is `:root`, `#id` or `.class` with an ASCII name. Anything else, including a selector list, is refused. The scope is matched as a descendant of `:root`, so a class on `<html>` itself does nothing: use the `:root` scope to theme the whole page. Two maps with different themes are two wrappers, two scopes and two calls. See "Put two maps on one page" for the rest of what two maps need.
 - The custom property names the stylesheet writes are generated and private, so generate it from the same installed `@mapcairn/theme` that provides `tokens.css`.
 - The rules read `data-theme` on `<html>` (`light` or `dark`), or the system's colour scheme when it is not set. A `ThemeSource` of your own must set that attribute.
 - The theme is skipped in high-contrast (`prefers-contrast: more`) and forced-colours modes, which keep the SDK's own values. The rules use negated media conditions, such as `(not (prefers-contrast: more))`. A browser that does not understand one treats it as false and so skips the theme, which falls back to the SDK's own colours.

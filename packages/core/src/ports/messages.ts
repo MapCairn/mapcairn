@@ -278,6 +278,7 @@ export type MessageKey =
   | "chrome.sheet.resize"
   | "chrome.sheet.close"
   | "host.map.label"
+  | "host.map.named"
   | "host.map.roleDescription"
   | "ui.skipToMap"
   | "ui.dismiss"
@@ -1143,6 +1144,10 @@ interface MessageParamOverrides {
     readonly newest: string;
   };
   // Definition text: layer and basemap fields, keyboard help
+  readonly "host.map.named": {
+    readonly name: string;
+    readonly label: string;
+  };
   readonly "host.map.keyInstruction": {
     readonly keys: string;
     readonly description: string;

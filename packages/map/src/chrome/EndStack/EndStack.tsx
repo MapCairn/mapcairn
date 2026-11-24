@@ -13,6 +13,7 @@ import {
   Stack,
 } from "@phosphor-icons/react";
 import { useCallback, useEffect, useRef } from "react";
+import { useLandmarkName } from "../../host/useLandmarkName";
 import { useMessages, usePreferences, useSettings } from "../../services";
 import { ControlGroup, IconButton, Surface } from "../../ui";
 import { useFocusTarget } from "../focusRegistry";
@@ -127,6 +128,7 @@ export function EndStack({
   const registerDraw = useFocusTarget("draw");
   const { settings } = useSettings();
   const { t } = useMessages();
+  const landmarkName = useLandmarkName("chrome.endStack.label");
   const { finePointer } = usePreferences();
   const { endStackMaxHeight } = useChromeSurface();
 
@@ -173,7 +175,7 @@ export function EndStack({
   return (
     <section
       ref={setRoot}
-      aria-label={t("chrome.endStack.label", {})}
+      aria-label={landmarkName}
       data-testid="end-stack"
       data-zoom-yielded={zoom.yieldedToHeight ? "true" : "false"}
       className={styles.stack}

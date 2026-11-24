@@ -11,6 +11,7 @@ import {
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useMap } from "../../host";
 import { CURSOR_READOUT_CHROME, isMapHost } from "../../host/pointerTargets";
+import { useLandmarkName } from "../../host/useLandmarkName";
 import { useFormatMessage, useMessages, usePreferences } from "../../services";
 import { Isolate } from "../../ui/Isolate";
 import { VisuallyHidden } from "../../ui/VisuallyHidden";
@@ -268,11 +269,11 @@ export function MapReadout({
 }: MapReadoutProps) {
   const { view } = useMap();
   const { layout } = useChromeLayout();
-  const { t } = useMessages();
+  const landmarkName = useLandmarkName("chrome.readout.label");
   const zoomShown = showZoom ?? layout === "panel";
   return (
     <section
-      aria-label={t("chrome.readout.label", {})}
+      aria-label={landmarkName}
       data-chrome={CURSOR_READOUT_CHROME}
       data-testid="map-readout"
       className={styles.readout}

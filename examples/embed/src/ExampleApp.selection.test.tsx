@@ -45,7 +45,7 @@ afterEach(cleanup);
 describe("ExampleApp feature selection", () => {
   it("offers the selected set on the fakes' store, so a host can see it", async () => {
     render(<ExampleApp />);
-    const pine = within(screen.getByRole("region", { name: "Pine map" }));
+    const pine = within(screen.getByTestId("map-pine"));
 
     expect((await pine.findByTestId("selection-probe")).textContent).toBe(
       "0 selected of 200",
@@ -55,7 +55,7 @@ describe("ExampleApp feature selection", () => {
 
   it("selects through that store and tells the live region once", async () => {
     render(<ExampleApp />);
-    const pine = within(screen.getByRole("region", { name: "Pine map" }));
+    const pine = within(screen.getByTestId("map-pine"));
 
     fireEvent.click(await pine.findByRole("button", { name: "Add probe" }));
 
