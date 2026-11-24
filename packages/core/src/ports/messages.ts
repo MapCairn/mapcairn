@@ -769,6 +769,11 @@ interface MessageParamOverrides {
     readonly first: string;
     readonly second: string;
   };
+  // A landmark's name joined to the label of its map
+  readonly "host.map.named": {
+    readonly name: string;
+    readonly label: string;
+  };
   // Formatting
   readonly "format.day": { readonly date: Date };
   readonly "format.utcTime": { readonly time: string };
@@ -1144,10 +1149,6 @@ interface MessageParamOverrides {
     readonly newest: string;
   };
   // Definition text: layer and basemap fields, keyboard help
-  readonly "host.map.named": {
-    readonly name: string;
-    readonly label: string;
-  };
   readonly "host.map.keyInstruction": {
     readonly keys: string;
     readonly description: string;

@@ -19,16 +19,11 @@ import {
   TypeSection,
 } from "./FoundationSections";
 import type { FontGateResult } from "./fontGate";
+import { DESIGN_GUIDE_MARKER } from "./marker";
 
 export { COMPONENT_NAMES } from "./ComponentSections";
 
-/**
- * A unique string that appears in the build output only when this page is
- * bundled. `packages/web/scripts/verifyNoTestSeam.mjs` fails a production
- * build that contains it and an e2e build that does not, so renaming it
- * means updating that script.
- */
-export const DESIGN_GUIDE_MARKER = "MAPCAIRN_DESIGN_GUIDE_MARKER";
+export { DESIGN_GUIDE_MARKER };
 
 /** The id of the `main` element the skip link moves focus to. */
 const MAIN_ID = "design-guide-main";

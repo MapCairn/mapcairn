@@ -18,7 +18,7 @@ import {
   VisuallyHidden,
 } from "@mapcairn/map";
 import type { ReactNode } from "react";
-import { DESIGN_GUIDE_MARKER } from "./DesignGuide";
+import { DESIGN_GUIDE_MARKER } from "./marker";
 import * as styles from "./TwoMaps.css";
 
 const VIEW: ViewState = { center: { lat: 0, lng: 0 }, zoom: 2, bearing: 0 };

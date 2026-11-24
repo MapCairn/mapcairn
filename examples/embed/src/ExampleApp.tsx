@@ -44,6 +44,7 @@ import { type ReactNode, useState } from "react";
 import { CAIRNS_LAYER } from "./cairnsLayer";
 import { createExampleServices } from "./exampleServices";
 import { EXAMPLE_THEMES, type ExampleTheme } from "./exampleThemes";
+import { sheetTitle } from "./sheetTitle";
 import { showResult } from "./showResult";
 
 const PRIVACY_NOTE =
@@ -273,7 +274,7 @@ function ChromeSlots({ state, background }: ExampleChromeProps) {
         <Sheet
           id={state.sheetId}
           open={open !== null}
-          title={`${open === "settings" ? "Settings and help" : "Map options"} (${map.label})`}
+          title={sheetTitle(open, map.label)}
           detent={detent}
           onDetentChange={setDetent}
           onModalChange={setModal}
