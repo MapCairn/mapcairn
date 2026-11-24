@@ -5,7 +5,7 @@ description: "Review a proposed or changed MapCairn data layer, basemap or provi
 
 # Review a layer
 
-A layer is data: one definition, a fixture for a feed, the provider's origins in the headers and its credit in `ATTRIBUTIONS.md` ("Add a data layer" in `sites/docs/docs/guides/extending.md`). The loop test in `packages/web/src/layers/layers.test.ts` already fails on a schema error, an origin the production policy lacks, a credit missing from `ATTRIBUTIONS.md` or a fixture that does not decode. This skill covers what it cannot decide. Read its result first and do not repeat it.
+A layer is data: one definition, a fixture for a feed, the provider's origins in the headers and its credit in `ATTRIBUTIONS.md` ("Add a data layer" in `sites/docs/docs/guides/add-to-the-reference-site.md`). The loop test in `packages/web/src/layers/layers.test.ts` already fails on a schema error, an origin the production policy lacks, a credit missing from `ATTRIBUTIONS.md` or a fixture that does not decode. This skill covers what it cannot decide. Read its result first and do not repeat it.
 
 Adding a dataset is a maintainer decision (`AGENTS.md`, "Ask the maintainer first"). Without the maintainer's approval recorded in the issue or the conversation, review for the record, write the questions in section 4 and build nothing.
 
