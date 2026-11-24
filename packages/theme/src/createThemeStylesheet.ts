@@ -381,9 +381,10 @@ function refused(
  * override with the reason in `invalidFields`. The SDK's own stack follows the
  * list as its fallback. The host loads the font file: it must be same-origin
  * or allowed by the host's `font-src`, and the stylesheet must be linked,
- * because a strict policy blocks an inline `<style>`. A wider font changes the
- * text's width but not the size of a control: controls keep their 44 px
- * minimum and the text wraps or truncates inside them.
+ * because a strict policy blocks an inline `<style>`. How wide a font is
+ * cannot be known here, so the layout holds instead: the browser tests put a
+ * deliberately wide face on the chrome and check that no control gets smaller
+ * and nothing overlaps. Text in a control may be cut short.
  *
  * Total: it never throws. A tooltip renders in a portal outside the scope, so
  * it keeps the SDK's colours in a `#id` or `.class` scope.

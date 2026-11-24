@@ -14,7 +14,7 @@ import {
 } from "./support/states";
 
 /*
- * The layout contract for a host's font. `createThemeStylesheet` cannot know
+ * The layout contract for a host's font (DESIGN.md, Tokens). `createThemeStylesheet` cannot know
  * how wide a font is when it runs, so the chrome promises instead that its
  * controls keep their size and that text wraps or is cut short inside them
  * rather than overlapping anything. This puts a deliberately wide face on the
