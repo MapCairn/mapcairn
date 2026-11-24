@@ -122,6 +122,7 @@ describe("buildRepositoryPages", () => {
   it("makes an overview page for each document and a page for each part", () => {
     expect([...pages.files.keys()]).toEqual([
       "architecture.md",
+      "architecture/how-it-builds.md",
       "architecture/layers-and-rules.md",
       "architecture/ports.md",
       "design.md",
@@ -260,18 +261,61 @@ describe("the overview page", () => {
     );
   });
 
-  it("keeps the text before the first section, with its links relinked", () => {
+  it("keeps the text before the first heading of the preamble, with its links relinked", () => {
     expect(overview).toContain("## About this document");
     expect(overview).toContain(
       "[the tokens](design/tokens.md) and [the design](design.md)",
     );
-    expect(overview).toContain("### How it builds");
-    expect(overview).toContain("[layers](architecture/layers-and-rules.md)");
-    expect(overview).toContain("[how](architecture.md#how-it-builds)");
+  });
+
+  it("moves each third-level section of the preamble to a page of its own and lists it first, with its lead", () => {
+    expect(overview).not.toContain("### How it builds");
+    expect(overview).not.toContain("Build text, see [layers]");
+    expect(overview).toContain(
+      '- <span id="how-it-builds"></span>[How it builds](architecture/how-it-builds.md): Build text, see layers and how.',
+    );
+    expect(overview.indexOf("](architecture/how-it-builds.md)")).toBeLessThan(
+      overview.indexOf("](architecture/layers-and-rules.md)"),
+    );
   });
 
   it("has no about section when the document has no text before its first section", () => {
     expect(page("design.md")).not.toContain("About this document");
+  });
+});
+
+describe("a preamble note's page", () => {
+  const note = page("architecture/how-it-builds.md");
+
+  it("has front matter under the document's address and leaves the heading to the title", () => {
+    expect(note).toContain('title: "How it builds"\n');
+    expect(note).toContain('sidebar_label: "How it builds"\n');
+    expect(note).toContain('slug: "/architecture/how-it-builds"\n');
+    expect(note).toContain(
+      `Part of [Architecture](../architecture.md), which is built from [ARCHITECTURE.md](${BLOB}ARCHITECTURE.md)`,
+    );
+    expect(note).not.toContain("### How it builds");
+    expect(note).toContain("Build text");
+  });
+
+  it("points a link to a section at its page and a link to itself at itself", () => {
+    expect(note).toContain("[layers](layers-and-rules.md)");
+    expect(note).toContain("[how](how-it-builds.md)");
+  });
+
+  it("is where a link to its heading, or a heading under it, lands from another page", () => {
+    const linked = buildRepositoryPages(
+      new Map([
+        [
+          ARCH.source,
+          "# T\n\nLead.\n\n### Note\n\nText.\n\n#### Deeper\n\nMore.\n\n## S\n\nSee [the note](#note) and [deeper](#deeper).\n",
+        ],
+      ]),
+      [ARCH],
+    );
+    const section = linked.files.get("architecture/s.md");
+    expect(section).toContain("[the note](note.md)");
+    expect(section).toContain("[deeper](note.md#deeper)");
   });
 });
 
@@ -357,6 +401,7 @@ describe("the sidebar entries", () => {
         label: "Architecture",
         link: { type: "doc", id: "generated/architecture" },
         items: [
+          "generated/architecture/how-it-builds",
           "generated/architecture/layers-and-rules",
           "generated/architecture/ports",
         ],
@@ -453,6 +498,22 @@ describe("the documents rendered on the site", () => {
       }
       expect(overview).not.toMatch(/\(\d+\.\d KB\)/);
     }
+  });
+
+  it("keep each overview short: no section of the source's own opening stays on it, and the Design system's is under 4 KB", () => {
+    for (const doc of REPOSITORY_DOCS) {
+      expect(real.files.get(doc.output)).not.toMatch(/^###/m);
+    }
+    expect(Buffer.byteLength(real.files.get("design.md") ?? "")).toBeLessThan(
+      4096,
+    );
+  });
+
+  it("give the Design system's note on how the CSS ships its own page, linked from the overview", () => {
+    expect(real.files.has("design/how-the-css-ships.md")).toBe(true);
+    expect(real.files.get("design.md")).toContain(
+      '<span id="how-the-css-ships"></span>[How the CSS ships](design/how-the-css-ships.md)',
+    );
   });
 
   it("have a link from each overview to every one of its parts", () => {
