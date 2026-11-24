@@ -142,11 +142,16 @@ async function openTooltip(page: Page): Promise<void> {
 
 /**
  * Focuses the control with the tooltip. The control is scrolled into view
- * first because a scroll closes an open tooltip, and focusing it would
- * otherwise scroll after the tooltip opens.
+ * first, and the scroll event that causes is let through before the focus,
+ * because a scroll closes an open tooltip: the browser delivers it on the next
+ * frame, and one that arrived after the tooltip opened would close it again.
  */
 async function showTooltip(page: Page): Promise<void> {
   await faceNorth(page).scrollIntoViewIfNeeded();
+  await page.evaluate(
+    () =>
+      new Promise<void>((resolve) => requestAnimationFrame(() => resolve())),
+  );
   await faceNorth(page).focus();
   await expect(bubble(page)).toBeVisible();
 }
@@ -162,28 +167,16 @@ interface BubbleColours {
 
 const BUBBLE_SELECTOR = "[data-radix-popper-content-wrapper] > [data-side]";
 
-/**
- * Reads both colours in one step, so the bubble cannot close between them,
- * and opens the tooltip again if a late scroll or layout shift closed it.
- */
+/** Reads both colours in one step, so the bubble cannot close between them. */
 async function bubbleColours(page: Page): Promise<BubbleColours> {
-  let read: BubbleColours | null = null;
-  await expect(async () => {
-    if ((await bubble(page).count()) === 0) {
-      await faceNorth(page).blur();
-      await showTooltip(page);
+  return page.evaluate((selector) => {
+    const element = document.querySelector(selector);
+    if (element === null) {
+      throw new Error("The tooltip bubble is not open");
     }
-    read = await page.evaluate((selector) => {
-      const element = document.querySelector(selector);
-      if (element === null) {
-        return null;
-      }
-      const style = getComputedStyle(element);
-      return { text: style.color, surface: style.backgroundColor };
-    }, BUBBLE_SELECTOR);
-    expect(read).not.toBeNull();
-  }).toPass();
-  return read as unknown as BubbleColours;
+    const style = getComputedStyle(element);
+    return { text: style.color, surface: style.backgroundColor };
+  }, BUBBLE_SELECTOR);
 }
 
 /** The red, green and blue of a computed `rgb()`, `rgba()` or `color(srgb ...)`. */
@@ -258,7 +251,6 @@ test.describe("a generated host theme", () => {
     await applyThemes(page);
     await openTooltip(page);
 
-    await expect(bubble(page)).toBeVisible();
     const { family, radius } = await bubble(page).evaluate((element) => ({
       family: getComputedStyle(element).fontFamily,
       radius: getComputedStyle(element).borderTopLeftRadius,
