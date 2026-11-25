@@ -2,8 +2,14 @@
 // Copyright MapCairn contributors
 import { describe, expect, it } from "vitest";
 import { FakeMessageCatalogue } from "../fakes/FakeMessageCatalogue";
-import { coordinateSearchResult } from "./coordinateSearchResult";
-import { parseCoordinates } from "./parseCoordinates";
+import {
+  coordinateSearchResult,
+  isCoordinateText,
+} from "./coordinateSearchResult";
+import {
+  MAX_COORDINATE_TEXT_LENGTH,
+  parseCoordinates,
+} from "./parseCoordinates";
 
 const messages = new FakeMessageCatalogue();
 
@@ -24,6 +30,27 @@ describe("coordinateSearchResult", () => {
     expect(coordinateSearchResult("26.2041° S, 28.0473° E", messages)).toEqual(
       expected,
     );
+  });
+
+  it("answers a UTM reference", () => {
+    const result = coordinateSearchResult("31N 166021 0000000", messages);
+    expect(result?.centre?.lat).toBeCloseTo(0, 4);
+    expect(result?.centre?.lng).toBeCloseTo(0, 4);
+    expect(result?.label).toBe(
+      coordinateSearchResult("0.0, 0.0", messages)?.label,
+    );
+  });
+
+  it("answers an MGRS reference", () => {
+    const result = coordinateSearchResult("11S PA 72349 11844", messages);
+    expect(result?.centre?.lat).toBeCloseTo(36.2361322, 4);
+    expect(result?.centre?.lng).toBeCloseTo(-115.0820944, 4);
+  });
+
+  it("returns null for a grid reference that names an area or is out of range", () => {
+    expect(coordinateSearchResult("33U XP", messages)).toBeNull();
+    expect(coordinateSearchResult("31U 500000 9500000", messages)).toBeNull();
+    expect(coordinateSearchResult("33UXP", messages)).toBeNull();
   });
 
   it("reads the hemisphere letters of the catalogue's language", () => {
@@ -93,5 +120,142 @@ describe("coordinateSearchResult", () => {
     expect(coordinateSearchResult("-26.2041, 28.0473", afrikaans)?.label).toBe(
       "Koördinate 26.20410° S, 28.04730° O",
     );
+  });
+});
+
+describe("the label of a coordinate result", () => {
+  it("always names the hemisphere, so a band-S reference read as southern shows it", () => {
+    expect(
+      coordinateSearchResult("31N 500000 4200000", messages)?.label,
+    ).toMatch(/° N, .*° E$/);
+    expect(
+      coordinateSearchResult("31S 500000 4200000", messages)?.label,
+    ).toMatch(/° S, .*° E$/);
+    expect(
+      coordinateSearchResult("31U 500000 5500000", messages)?.label,
+    ).toMatch(/° N, /);
+  });
+});
+
+describe("isCoordinateText", () => {
+  it("is true for a mixed-case reference that does not read, so it is not sent as typed", () => {
+    expect(isCoordinateText("31U ct 12345 67890", messages)).toBe(true);
+    expect(coordinateSearchResult("31U ct 12345 67890", messages)).toBeNull();
+  });
+
+  it("is true for place text made only of coordinate words and figures", () => {
+    expect(isCoordinateText("5 North", messages)).toBe(true);
+    expect(isCoordinateText("Route 66 North", messages)).toBe(false);
+    expect(isCoordinateText("66 North", messages)).toBe(true);
+  });
+
+  it("answers long or hostile text without reading it all", () => {
+    const hostile = [
+      `1A${" ".repeat(50_000)}xyz`,
+      `1A${" ".repeat(50_000)}`,
+      `${"1 ".repeat(50_000)}x`,
+      `26.2041${" south".repeat(20_000)}`,
+    ];
+    for (const text of hostile) {
+      expect(isCoordinateText(text, messages), text.slice(0, 12)).toBe(false);
+    }
+  });
+
+  it("looks at no more characters than a coordinate can have", () => {
+    const longest = `31U 500000 5500000${" ".repeat(MAX_COORDINATE_TEXT_LENGTH)}`;
+    expect(isCoordinateText(longest, messages)).toBe(false);
+    expect(
+      isCoordinateText(`1A${"1".repeat(MAX_COORDINATE_TEXT_LENGTH)}`, messages),
+    ).toBe(false);
+    expect(
+      isCoordinateText("1A".padEnd(MAX_COORDINATE_TEXT_LENGTH, "1"), messages),
+    ).toBe(true);
+  });
+
+  it("is true for text that reads as a position", () => {
+    for (const text of [
+      "-26.2041, 28.0473",
+      "26.2041 south 28.0473 east",
+      "31U 500000 5500000",
+      "11SPA7234911844",
+      "11S PA 72349 11844",
+    ]) {
+      expect(isCoordinateText(text, messages), text).toBe(true);
+    }
+  });
+
+  it("reads the words of the catalogue's language", () => {
+    const afrikaans = new FakeMessageCatalogue({
+      language: "af",
+      overrides: { "format.wordSouth": "suid", "format.wordEast": "oos" },
+    });
+    expect(isCoordinateText("26.2041 suid, 28.0473 oos", afrikaans)).toBe(true);
+  });
+
+  it("is true for a grid reference still being typed, spaced or not", () => {
+    for (const text of [
+      "11SPA",
+      "11SPA72",
+      "11SPA7234911",
+      "11S PA 723",
+      "11S P",
+      "31U",
+      "31U 500",
+      "31 N 5000",
+      "34h26188",
+      "٣١U 500",
+      "31U CT 12345 678",
+    ]) {
+      expect(isCoordinateText(text, messages), text).toBe(true);
+    }
+  });
+
+  it("is true for a pair with words in it, finished or still being typed", () => {
+    for (const text of [
+      "26.2041 south, 28.04",
+      "26.2041 south, 28.0473 east",
+      "26 degrees 12",
+      "26 degrees 12 minutes 14.8 seconds south, 28",
+      "coordinates 26.2041, 28.0",
+      "coords -26.2041",
+      "-26.2041 North, 28",
+      "26.2041 SOUTH",
+      "26°12'14.8\"S 28",
+    ]) {
+      expect(isCoordinateText(text, messages), text).toBe(true);
+    }
+  });
+
+  it("is true for a pair in the words of the catalogue's language", () => {
+    const afrikaans = new FakeMessageCatalogue({
+      language: "af",
+      overrides: {
+        "format.wordSouth": "suid",
+        "format.wordEast": "oos",
+        "format.wordDegree": "graad grade",
+      },
+    });
+    expect(isCoordinateText("26.2041 grade suid, 28", afrikaans)).toBe(true);
+    expect(isCoordinateText("26.2041 grade suid, 28", messages)).toBe(false);
+  });
+
+  it("is false for a place name", () => {
+    for (const text of [
+      "Cape Town",
+      "Paris",
+      "5 Main Street",
+      "10 Downing Street",
+      "12 Rue de Rivoli",
+      "12 rue",
+      "5 Pub",
+      "1 Dec 2015",
+      "Mount 4",
+      "N1 Highway",
+      "coordinates",
+      "south",
+      "",
+    ]) {
+      expect(isCoordinateText(text, messages), text).toBe(false);
+    }
   });
 });

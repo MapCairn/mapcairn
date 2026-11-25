@@ -161,14 +161,63 @@ describe("useSuggestions", () => {
     },
   );
 
-  it.each(["12 Main St", "N1 Highway", "Café"])(
-    "asks about %s, which has a word in it",
+  it.each([
+    "11SPA7234911844",
+    "11spa7234911844",
+    "11S PA 72349 11844",
+    "11SPA72349",
+    "11SPA",
+    "31U CT 12345 67890",
+    "31U CT 123",
+    "33U XP 0544",
+    "31U 500000 5500000",
+    "31N 500000 4200000",
+    "34h261882 6243182",
+    "26.2041 south, 28.0473 east",
+    "26.2041 south, 28.04",
+    "26 degrees 12",
+    "coordinates 26.2041, 28.0",
+    "-26.2041 North, 28",
+  ])(
+    "asks nothing for %s, a coordinate reference or one being typed",
     async (query) => {
-      const { fake } = setup({ query });
-      await advance(SUGGEST_DEBOUNCE_MS);
-      expect(fake.suggestCalls).toHaveLength(1);
+      const { result, fake } = setup({ query });
+      await advance(SUGGEST_DEBOUNCE_MS * 2);
+      expect(fake.suggestCalls).toHaveLength(0);
+      expect(result.current).toEqual([]);
     },
   );
+
+  it.each(["5 North", "66 North", "31U ct 12345 67890"])(
+    "asks nothing for %s, text of coordinate words and figures",
+    async (query) => {
+      const { fake } = setup({ query });
+      await advance(SUGGEST_DEBOUNCE_MS * 2);
+      expect(fake.suggestCalls).toHaveLength(0);
+    },
+  );
+
+  it("still asks about Route 66 North, which has a place word", async () => {
+    const { fake } = setup({ query: "Route 66 North" });
+    await advance(SUGGEST_DEBOUNCE_MS);
+    expect(fake.suggestCalls).toHaveLength(1);
+  });
+
+  it.each([
+    "12 Main St",
+    "N1 Highway",
+    "Café",
+    "Paris",
+    "12 Rue de Rivoli",
+    "Mount 4",
+    "12 rue",
+    "5 Pub",
+    "1 Dec 2015",
+  ])("asks about %s, which has a word in it", async (query) => {
+    const { fake } = setup({ query });
+    await advance(SUGGEST_DEBOUNCE_MS);
+    expect(fake.suggestCalls).toHaveLength(1);
+  });
 
   it("does not ask again, or abort the request in flight, when only the spaces around the text change", async () => {
     const { rerender, fake } = setup({ query: "cape" });

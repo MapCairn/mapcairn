@@ -10,7 +10,12 @@ import {
 import type { LatLng } from "../ports/geometry";
 import type { MessageCatalogue } from "../ports/messages";
 import type { SearchResult } from "../ports/search";
-import { parseCoordinates } from "./parseCoordinates";
+import { normaliseCoordinateText } from "./normaliseCoordinateText";
+import {
+  isCoordinateWordsAndFigures,
+  MAX_COORDINATE_TEXT_LENGTH,
+  parseCoordinates,
+} from "./parseCoordinates";
 
 const ID_DECIMAL_PLACES = 5;
 
@@ -22,7 +27,7 @@ function coordinateId(position: LatLng): string {
 
 /**
  * Turns search text into the one result for the place it names, when the text
- * is a coordinate pair (see {@link parseCoordinates}), and `null` otherwise.
+ * is coordinates (see {@link parseCoordinates}), and `null` otherwise.
  * The result needs no search service, so a caller can answer it without a
  * request.
  *
@@ -54,4 +59,44 @@ export function coordinateSearchResult(
     }),
     centre: position,
   };
+}
+
+/**
+ * A grid reference as far as it can have been typed: the zone with its band
+ * letter written together and up to two more letters (the 100 km square) and
+ * then digits and spaces, or the zone, one letter (a band or hemisphere
+ * letter, which a UTM reference may set apart) and digits and spaces. A
+ * prefix of "11SPA7234911844" or "31U 500000 5500000" matches; "Cape Town",
+ * "5 Pub" and "1 Dec 2015" do not, so place names of that shape are still
+ * suggested.
+ */
+const GRID_REFERENCE_UNDER_WAY =
+  /^(?:\d{1,2}[A-Z](?: ?[A-Z]{1,2})?|\d{1,2} ?[A-Z])[\d ]*$/i;
+
+/**
+ * Whether text is, or may be the start of, a coordinate: text that reads as a
+ * position ({@link coordinateSearchResult}), is a pair made of figures and
+ * coordinate words only, finished or not ("26.2041 south, 28.04"), or is a
+ * UTM or MGRS reference that has not been finished. A caller that sends text to a place search service
+ * as it is typed skips this text, so a coordinate is never sent to one, even
+ * a reference whose letters ("SPA") look like a word. Text longer than
+ * {@link MAX_COORDINATE_TEXT_LENGTH} is never one.
+ */
+export function isCoordinateText(
+  text: string,
+  messages: MessageCatalogue,
+): boolean {
+  if (text.length > MAX_COORDINATE_TEXT_LENGTH) {
+    return false;
+  }
+  const normalised = normaliseCoordinateText(text.trim()).replace(/\s+/g, " ");
+  return (
+    GRID_REFERENCE_UNDER_WAY.test(normalised) ||
+    coordinateSearchResult(text, messages) !== null ||
+    isCoordinateWordsAndFigures(
+      text,
+      hemispheresFor(messages),
+      coordinateWordsFor(messages),
+    )
+  );
 }
