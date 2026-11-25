@@ -19,7 +19,7 @@ vi.mock("react-router", async (importOriginal) => {
     ...actual,
     Meta: () => null,
     Links: () => null,
-    Scripts: () => null,
+    Scripts: () => createElement("i", { "data-testid": "framework-scripts" }),
     ScrollRestoration: () => null,
   };
 });
@@ -134,6 +134,34 @@ describe("root meta", () => {
 });
 
 describe("root Layout", () => {
+  const scriptlessRoute = { path: "/", handle: { scripts: "none" } } as const;
+  const renderRoute = (route: object) =>
+    render(
+      createElement(RouterProvider, { router: createMemoryRouter([route]) }),
+    ).container.innerHTML;
+
+  it("leaves out the framework scripts on a page whose route says it runs none", () => {
+    const html = renderRoute({
+      ...scriptlessRoute,
+      element: createElement(Layout, null, "page"),
+    });
+    expect(html).not.toContain("framework-scripts");
+  });
+
+  it("keeps the framework scripts on that page's error page, so Reload works", () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    const Boom = () => {
+      throw new Error("boom");
+    };
+    const html = renderRoute({
+      ...scriptlessRoute,
+      Component: Boom,
+      errorElement: createElement(Layout, null, "error page"),
+    });
+    expect(html).toContain("error page");
+    expect(html).toContain("framework-scripts");
+  });
+
   const markup = () => {
     const router = createMemoryRouter([
       {

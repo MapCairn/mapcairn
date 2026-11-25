@@ -92,7 +92,10 @@ export const links: LinksFunction = () => [
 export function Layout({ children }: { readonly children: ReactNode }) {
   const matches = useMatches();
   const fixed = fixedPageLanguage(matches);
-  const scriptless = isScriptless(matches);
+  // An error page needs its scripts (Reload), though the failed route is still matched.
+  const routeError = useRouteError();
+  const failed = routeError !== undefined && routeError !== null;
+  const scriptless = isScriptless(matches) && !failed;
   const language = fixed ?? DEFAULT_LANGUAGE;
   const direction =
     fixed === undefined
