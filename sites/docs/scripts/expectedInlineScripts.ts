@@ -10,19 +10,14 @@ export interface ExpectedInlineScript {
 }
 
 /**
- * The inline scripts the built pages may carry, committed by hash: the theme
- * bridge (`src/themeBridge.ts`, minified by the build) and the framework's
- * colour-mode script. `_headers` allows exactly these, and `verifyBuild.ts`
- * fails the build on any other inline script and on one of these that is no
- * longer there. When a framework upgrade or a change to the bridge changes the
- * text, the build says which hash is new; read the script, then replace the
- * hash here.
+ * The inline scripts the built pages may carry, committed by hash: the
+ * framework's colour-mode script. `_headers` allows exactly these, and
+ * `verifyBuild.ts` fails the build on any other inline script and on one of
+ * these that is no longer there. When a framework upgrade changes the text,
+ * the build says which hash is new; read the script, then replace the hash
+ * here.
  */
 export const EXPECTED_INLINE_SCRIPTS: readonly ExpectedInlineScript[] = [
-  {
-    name: "theme bridge",
-    hash: "sha256-+UN1Y+Sk6xYbT+L6HN8JfvuyISurt05ASi71uKkkapU=",
-  },
   {
     name: "framework colour-mode script",
     hash: "sha256-0xt7rjlfRsoD7aukiSWSNvMBWU159Lh5cl3WNaV1g+w=",
