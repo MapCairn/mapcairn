@@ -79,6 +79,49 @@ describe("announcements from a labelled map", () => {
     expect(screen.getByRole("alert").textContent).toBe("Pine: Search failed");
   });
 
+  it("replaces a waiting message of one map with a later one of the other, unless kept", async () => {
+    await renderMaps({ a: "Pine", b: "Heather" });
+
+    act(() => announcers.a?.("First"));
+    act(() => announcers.a?.("Waiting"));
+    act(() => announcers.b?.("Later"));
+    expect(polite()).toBe("Pine: First");
+    act(() => {
+      vi.advanceTimersByTime(THROTTLE_WINDOW_MS);
+    });
+    expect(polite()).toBe("Heather: Later");
+
+    act(() => {
+      vi.advanceTimersByTime(THROTTLE_WINDOW_MS);
+      announcers.a?.("Kept", { keep: true });
+      announcers.b?.("Kept too", { keep: true });
+    });
+    expect(polite()).toBe("Pine: Kept");
+    act(() => {
+      vi.advanceTimersByTime(THROTTLE_WINDOW_MS);
+    });
+    expect(polite()).toBe("Heather: Kept too");
+  });
+
+  it("de-duplicates on the prefixed text", async () => {
+    await renderMaps({ a: "Pine", b: "Heather" });
+
+    act(() => announcers.a?.("Same"));
+    expect(polite()).toBe("Pine: Same");
+    act(() => {
+      vi.advanceTimersByTime(THROTTLE_WINDOW_MS);
+      announcers.a?.("Same");
+    });
+    // The repeat inside the de-duplication window is dropped.
+    expect(polite()).toBe("Pine: Same");
+    act(() => {
+      announcers.b?.("Same");
+      vi.advanceTimersByTime(THROTTLE_WINDOW_MS);
+    });
+    // The same words from the other map are a different message.
+    expect(polite()).toBe("Heather: Same");
+  });
+
   it("leaves an unlabelled map's announcements as they are", async () => {
     await renderMaps({ a: undefined });
 

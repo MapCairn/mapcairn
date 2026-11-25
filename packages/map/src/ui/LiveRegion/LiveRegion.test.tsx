@@ -8,6 +8,7 @@ import {
 import { act, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ServicesProvider } from "../../services/ServicesProvider";
+import { THROTTLE_MS } from "./announcer";
 import {
   type Announce,
   LiveRegionProvider,
@@ -315,14 +316,38 @@ describe("LiveRegionScope", () => {
     expect(polite().textContent).toBe("Hello");
   });
 
-  it("does nothing outside a provider", () => {
+  it("speaks nothing outside a provider, where no region exists", () => {
     const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
     render(
-      <LiveRegionScope format={(text) => text}>
+      <LiveRegionScope format={(text) => `Scoped: ${text}`}>
         <Capture />
       </LiveRegionScope>,
     );
-    expect(() => announce("Hello")).not.toThrow();
+    announce("Hello");
+    expect(screen.queryByRole("status")).toBeNull();
+    expect(screen.queryByRole("alert")).toBeNull();
     warn.mockRestore();
+  });
+
+  it("passes priority and keep through for plain text", () => {
+    render(
+      <LiveRegionProvider>
+        <LiveRegionScope format={(text) => `Scoped: ${text}`}>
+          <Capture />
+        </LiveRegionScope>
+      </LiveRegionProvider>,
+    );
+    act(() => announce("Failed", { priority: "assertive" }));
+    expect(assertive().textContent).toBe("Scoped: Failed");
+
+    act(() => {
+      announce("First", { keep: true });
+      announce("Second");
+    });
+    expect(polite().textContent).toBe("Scoped: First");
+    act(() => {
+      vi.advanceTimersByTime(THROTTLE_MS);
+    });
+    expect(polite().textContent).toBe("Scoped: Second");
   });
 });

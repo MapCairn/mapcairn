@@ -22,6 +22,7 @@ Automated checks cannot prove conformance.
 
 - No screen reader has been used to check the announcements yet ([#146](https://github.com/MapCairn/mapcairn/issues/146)). They are checked through their live-region text only.
 - The map is drawn on a canvas, so its contents are not available to a screen reader as text. The interface offers search by name or coordinates, a readout of the cursor's coordinates and zoom, lists of the features of each layer that is on, and announcements.
+- On a page with two maps, an announcement made outside a map (the host's own `useAnnounce`) carries no map name, and the maps share one throttle, so a plain message from one map can be replaced by a later one from the other.
 - Basemaps and open data layers come from third parties, and the project does not control their accessibility.
 
 ## Supported environments
