@@ -1,6 +1,6 @@
 # `@mapcairn/example-headless`
 
-A plain TypeScript page, built with Vite, that draws a map with `@mapcairn/core` and `@mapcairn/adapter-maplibre` and nothing else from this repository: no React, no `@mapcairn/map`, no `@mapcairn/react` and no umbrella. It creates the map through the adapter, shows a basemap, draws a data layer of three invented points, listens to the view and to taps on the points, shows the credits, and takes the map down when the page is hidden. The interface around the map (a basemap choice, a status line, the keys) is a few lines of the page's own code, because the SDK's interface is not in this route.
+A plain TypeScript page, built with Vite, that draws a map with `@mapcairn/core` and `@mapcairn/adapter-maplibre` and nothing else from this repository: no React, no `@mapcairn/map`, no `@mapcairn/react` and no umbrella. It creates the map through the adapter, shows a basemap, draws a data layer of three invented points, listens to the view and to taps on the points, shows the credits, and takes the map down when the page is unloaded. The interface around the map (a basemap choice, a status line, the keys) is a few lines of the page's own code, because the SDK's interface is not in this route.
 
 It builds against the packages' `dist` (each script builds them first with `npm run build:sdk`).
 

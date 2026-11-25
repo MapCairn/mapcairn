@@ -90,5 +90,10 @@ if (map) {
       event.preventDefault();
     }
   });
-  addEventListener("pagehide", () => map.destroy());
+  addEventListener("pagehide", (event) => {
+    // A page the browser keeps for the back button (persisted) comes back as it was.
+    if (!event.persisted) {
+      map.destroy();
+    }
+  });
 }

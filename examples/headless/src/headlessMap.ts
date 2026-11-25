@@ -84,7 +84,7 @@ export interface ShowMapOptions {
 
 /** A map that is showing, and what the page can do to it. */
 export interface HeadlessMap {
-  /** Swaps the basemap for one in the built-in catalogue. Rejects for an id it does not hold. */
+  /** Swaps the basemap for one in the built-in catalogue. Rejects for an id it does not hold; says on the page when the swap fails. */
   switchBasemap(id: string): Promise<void>;
   /** Moves the map for an arrow key, or zooms it for plus or minus. False for any other key. */
   handleKey(key: string): boolean;
@@ -161,7 +161,12 @@ export async function showMap({
   return {
     async switchBasemap(id) {
       const next = basemapNamed(id);
-      await adapter.setBasemap(next);
+      try {
+        await adapter.setBasemap(next);
+      } catch {
+        page.setStatus(`The ${next.id} basemap could not load.`);
+        return;
+      }
       page.setCredits(buildAttribution(next));
     },
     handleKey(key) {

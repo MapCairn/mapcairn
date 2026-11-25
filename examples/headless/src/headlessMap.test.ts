@@ -2,6 +2,7 @@
 // Copyright MapCairn contributors
 import {
   type BasemapAttributionEntry,
+  buildAttribution,
   FakeMapAdapter,
   FakeMapHost,
   getBasemap,
@@ -116,15 +117,19 @@ describe("showMap", () => {
     expect(statuses.at(-1)).toMatch(/basemap/i);
   });
 
-  it("swaps the basemap by id and updates the credits", async () => {
+  it("swaps the basemap by id and shows the credits of the new one", async () => {
     const { adapter, map, credits } = await start();
     await map.switchBasemap("osm");
     expect(drawnBasemapId(adapter)).toBe("osm");
-    expect(
-      credits()
-        .map((entry) => entry.text)
-        .join(" "),
-    ).toMatch(/OpenStreetMap/);
+    expect(credits()).toEqual(buildAttribution(getBasemap("osm") ?? BRIGHT));
+  });
+
+  it("says when the swap fails, and keeps the credits of the basemap still shown", async () => {
+    const { adapter, map, credits, statuses } = await start();
+    adapter.failNextBasemap();
+    await map.switchBasemap("osm");
+    expect(statuses.at(-1)).toMatch(/could not load/);
+    expect(credits()).toEqual(buildAttribution(BRIGHT));
   });
 
   it("refuses a basemap id it does not know and keeps the map as it was", async () => {

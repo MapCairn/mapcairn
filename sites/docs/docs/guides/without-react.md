@@ -190,7 +190,12 @@ if (map) {
       event.preventDefault();
     }
   });
-  addEventListener("pagehide", () => map.destroy());
+  addEventListener("pagehide", (event) => {
+    // A page the browser keeps for the back button (persisted) comes back as it was.
+    if (!event.persisted) {
+      map.destroy();
+    }
+  });
 }
 ```
 
@@ -231,7 +236,12 @@ export async function showMap({
   return {
     async switchBasemap(id) {
       const next = basemapNamed(id);
-      await adapter.setBasemap(next);
+      try {
+        await adapter.setBasemap(next);
+      } catch {
+        page.setStatus(`The ${next.id} basemap could not load.`);
+        return;
+      }
       page.setCredits(buildAttribution(next));
     },
     handleKey(key) {
@@ -338,7 +348,7 @@ Pointer and touch gestures need nothing: the engine handles them.
 
 ### Take the map down
 
-`destroy()` on the adapter removes the engine and its listeners. The example also unsubscribes its own handlers first, and `main.ts` calls it when the page is hidden.
+`destroy()` on the adapter removes the engine and its listeners. The example also unsubscribes its own handlers first, and `main.ts` calls it when the page is unloaded, but not when the browser keeps the page for the back button.
 
 ## What your interface has to do
 
@@ -348,7 +358,7 @@ None of this is done for you when you leave the SDK's interface out.
 - **Say what happens.** Report the view, a selection, a busy map and a failure in text a screen reader reads. The example writes to one `output` element, which a screen reader announces as a status; `aria-busy` on the region follows `loading`.
 - **Show the credits.** The adapter draws none. `buildAttribution(basemap)` returns the basemap provider's credits followed by MapLibre's, each with a text and, usually, an address. Show them where the map is, and show the new ones after a basemap swap, because a provider's terms ask for them.
 - **Respect reduced motion.** Pass `reducedMotion: true` when the person has asked their system for less motion. `setAnimationEnabled` changes it later.
-- **Handle failure.** Handle the rejected `mount`, `fatalError` and `basemapUnavailable`, which the example turns into a message.
+- **Handle failure.** Handle the rejected `mount` and `setBasemap`, `fatalError` and `basemapUnavailable`, which the example turns into a message.
 - **Write your own text.** The example writes its English in the code. `core` has a message catalogue port, `MessageCatalogue`, for an app that translates. A basemap's `name` is a catalogue key, so the example labels its basemap choice with each basemap's `id`.
 - **Choose the basemap.** The adapter has no default basemap and no origin of its own. The basemap you give it decides which provider the visitor's browser contacts, and the built-in ones are served by public tile providers, so choose one whose terms and privacy you accept.
 - **Allow the worker under a policy.** A page with a Content Security Policy needs `worker-src` for the worker file, and the basemap's origin in `connect-src` and `img-src`. [Content Security Policy](content-security-policy.md) says what each directive is for.
