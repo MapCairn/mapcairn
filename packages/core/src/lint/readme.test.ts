@@ -138,6 +138,11 @@ describe("README.md", () => {
     expect(missing).toEqual([]);
   });
 
+  it("links the umbrella package's page on npm in the text, beside the install line", () => {
+    const text = README.replace(/^\[!\[.*$/gm, "");
+    expect(text).toContain("](https://www.npmjs.com/package/@mapcairn/sdk)");
+  });
+
   it("shows the umbrella's install and import before the example, using only names the example imports", () => {
     const install = fencedBlocks(README, "bash").filter((block) =>
       block.includes("@mapcairn/sdk"),

@@ -7,7 +7,7 @@ The MapLibre GL JS adapter for MapCairn's `MapAdapter` port, and the styles that
 
 Most apps should install [`@mapcairn/sdk`](https://github.com/MapCairn/mapcairn/tree/main/packages/sdk) instead, which has this package already: it re-exports it at `@mapcairn/sdk/adapter-maplibre`, and its root stays free of the map engine. Install `@mapcairn/adapter-maplibre` on its own as the advanced option, for a host that wants fewer dependencies.
 
-**Status:** pre-1.0. While the version starts with `0.`, a minor release (the middle number) can contain a breaking change to the public API and a patch release (the last number) is not meant to, so a `^0.1.0` range takes patch releases but not the next minor release. The [changelog](https://github.com/MapCairn/mapcairn/blob/main/CHANGELOG.md) names each breaking change the release finds, and [what counts as the public API](https://docs.mapcairn.com/guides/public-api/) says what is covered.
+**Status:** pre-1.0. While the version starts with `0.`, a minor release (the middle number) can contain a breaking change to the public API and a patch release (the last number) is not meant to, so a caret range takes patch releases but not the next minor release. The [changelog](https://github.com/MapCairn/mapcairn/blob/main/CHANGELOG.md) names each breaking change the release finds, and [what counts as the public API](https://docs.mapcairn.com/guides/public-api/) says what is covered.
 
 ## Install
 

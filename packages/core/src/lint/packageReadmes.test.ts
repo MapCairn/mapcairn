@@ -469,7 +469,7 @@ describe("the release guide's steps for the stable version", () => {
     const [status = ""] = stableStatus(guide);
     expect(status).not.toMatch(/0\.2\.0|0\.1\.1/);
     expect(status).toContain(
-      "so a `^0.1.0` range takes patch releases but not the next minor release.",
+      "so a caret range takes patch releases but not the next minor release.",
     );
   });
 });
