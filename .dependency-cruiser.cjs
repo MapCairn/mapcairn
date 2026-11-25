@@ -70,7 +70,7 @@ const UMBRELLA_ENTRY_POINTS =
   "sdk/src/(index|core|coreContracts|map|adapterMaplibre|react|theme)\\.ts|sdk/dist/styles\\.css";
 
 /** Everything an example app may import from `packages/`. */
-const SDK_ENTRY_POINTS = `^packages/(${FOUR_PACKAGE_MODULES}|${FOUR_PACKAGE_STYLESHEETS}|${UMBRELLA_ENTRY_POINTS})$`;
+const SDK_ENTRY_POINTS = `^packages/(${FOUR_PACKAGE_MODULES}|${FOUR_PACKAGE_STYLESHEETS}|${ADAPTER_ENTRY_POINTS}|${UMBRELLA_ENTRY_POINTS})$`;
 
 module.exports = {
   forbidden: [
@@ -278,7 +278,7 @@ module.exports = {
       name: "examples-use-public-entry-points",
       severity: "error",
       comment:
-        "An example app uses the SDK as an outside app would: through the package entry points (`@mapcairn/core`, `@mapcairn/core/contracts`, `@mapcairn/map`, `@mapcairn/react`, `@mapcairn/theme`), never a file inside a package or the reference host.",
+        "An example app uses the SDK as an outside app would: through the package entry points (`@mapcairn/core`, `@mapcairn/core/contracts`, `@mapcairn/map`, `@mapcairn/react`, `@mapcairn/theme`, `@mapcairn/adapter-maplibre`, `@mapcairn/sdk`), never a file inside a package or the reference host.",
       from: { path: "^examples/" },
       to: { path: "^packages/", pathNot: SDK_ENTRY_POINTS },
     },

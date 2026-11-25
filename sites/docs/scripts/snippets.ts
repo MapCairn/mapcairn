@@ -1,7 +1,14 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
 import { execFileSync } from "node:child_process";
-import { mkdtempSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  symlinkSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -27,9 +34,15 @@ export interface Snippet {
   readonly fenceLine: number;
   /** The line of the first line of code, from 1. */
   readonly line: number;
-  readonly language: "ts" | "tsx";
+  /** `ts` and `tsx` for code, or the language of a block that quotes a source file. */
+  readonly language: string;
   /** The word on the fence that says whether to compile the block, or null. */
   readonly mark: typeof CHECK_MARK | typeof NO_CHECK_MARK | null;
+  /**
+   * The repository path from a `source="..."` word on the fence, or null: the
+   * block quotes that file, and `sourceFindings` checks it does.
+   */
+  readonly source: string | null;
   readonly code: string;
 }
 
@@ -39,6 +52,12 @@ function markOf(info: string): Snippet["mark"] {
     return CHECK_MARK;
   }
   return words.includes(NO_CHECK_MARK) ? NO_CHECK_MARK : null;
+}
+
+const SOURCE_WORD = /\bsource="([^"]+)"/;
+
+function sourceOf(info: string): string | null {
+  return SOURCE_WORD.exec(info)?.[1] ?? null;
 }
 
 /**
@@ -65,13 +84,15 @@ export function extractSnippets(page: string, markdown: string): Snippet[] {
     while (index < lines.length && !(lines[index] ?? "").startsWith(fence)) {
       index += 1;
     }
-    if (CODE_LANGUAGES.has(language)) {
+    const source = sourceOf(info);
+    if (CODE_LANGUAGES.has(language) || source !== null) {
       snippets.push({
         page,
         fenceLine: start + 1,
         line: start + 2,
-        language: language as Snippet["language"],
+        language,
         mark: markOf(info),
+        source,
         code: lines.slice(start + 1, index).join("\n"),
       });
     }
@@ -83,11 +104,56 @@ export function extractSnippets(page: string, markdown: string): Snippet[] {
 /** What is wrong with the markers: a `ts` or `tsx` block that says neither `check` nor `no-check`. */
 export function unmarkedFindings(snippets: readonly Snippet[]): string[] {
   return snippets
-    .filter(({ mark }) => mark === null)
+    .filter(
+      ({ mark, language }) => mark === null && CODE_LANGUAGES.has(language),
+    )
     .map(
       ({ page, fenceLine, language }) =>
         `${page}:${fenceLine} has a ${language} block marked neither "${CHECK_MARK}" nor "${NO_CHECK_MARK}".`,
     );
+}
+
+/** Whether `needle` is a run of consecutive lines of `haystack`. */
+function containsLines(
+  haystack: readonly string[],
+  needle: readonly string[],
+): boolean {
+  if (needle.every((line) => line.trim() === "")) {
+    return false;
+  }
+  return haystack.some((_, start) =>
+    needle.every((line, offset) => haystack[start + offset] === line),
+  );
+}
+
+/**
+ * What is wrong with the blocks that quote a source file (a `source="path"`
+ * word on the fence): the file is missing, or the block is empty or is not a
+ * run of whole lines of the file, so the page shows code the file no longer
+ * holds. The file is the one the consumer check builds, so a block that
+ * matches it shows code that is built and type-checked from the packed
+ * packages. The file's licence header may be left out of the block.
+ * @param repo - Absolute path of the repository root.
+ * @param snippets - Blocks from `extractSnippets`; those without a source are skipped.
+ */
+export function sourceFindings(
+  repo: string,
+  snippets: readonly Snippet[],
+): string[] {
+  return snippets.flatMap(({ page, fenceLine, source, code }) => {
+    if (source === null) {
+      return [];
+    }
+    const where = `${page}:${fenceLine}`;
+    const file = join(repo, source);
+    if (!existsSync(file)) {
+      return [`${where} quotes ${source}, which does not exist.`];
+    }
+    const lines = readFileSync(file, "utf8").split("\n");
+    return containsLines(lines, code.split("\n"))
+      ? []
+      : [`${where} is not a run of whole lines of ${source}.`];
+  });
 }
 
 /** Maps the compiler's output back to the page and line each error came from. */

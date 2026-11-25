@@ -21,7 +21,7 @@
     "deploy": "npm run deploy -w @mapcairn/web",
     "deploy:preview": "npm run deploy:preview -w @mapcairn/web",
     "build:sdk": "node scripts/buildSdk.mjs",
-    "build": "npm run build:sdk && npm run build -w @mapcairn/web && npm run build -w @mapcairn/example-embed",
+    "build": "npm run build:sdk && npm run build -w @mapcairn/web && npm run build -w @mapcairn/example-embed && npm run build -w @mapcairn/example-headless",
     "lint": "biome check --error-on-warnings . && npm run depcruise && npm run lint:harmony && npm run licence && npm run licence:sdk && npm run agents:check && npm run roadmap:check && npm run plans:check && npm run names:check && npm run portability:check && npm run guides:check && npm run prose:check && npm run release:notes-check && npm run publish:guard",
     "depcruise": "node scripts/depcruise.mjs",
     "lint:harmony": "node scripts/harmony/cli.mjs",
