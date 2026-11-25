@@ -540,6 +540,13 @@ export type MessageKey =
   | "layers.list.sortBy"
   | "layers.list.showOnMap"
   | "layers.list.showAll"
+  | "layers.save.group"
+  | "layers.save.geojson"
+  | "layers.save.csv"
+  | "layers.save.note"
+  | "layers.save.done"
+  | "layers.save.doneCapped"
+  | "layers.save.failed"
   | "layers.card.close"
   | "layers.card.opensInNewTab"
   | "layers.card.back"
@@ -1131,6 +1138,19 @@ interface MessageParamOverrides {
   readonly "layers.identify.cap": { readonly count: number };
   readonly "layers.list.summary": { readonly count: number };
   readonly "layers.list.showAll": { readonly count: number };
+  readonly "layers.save.group": { readonly name: string };
+  readonly "layers.save.note": { readonly max: number };
+  readonly "layers.save.done": {
+    readonly count: number;
+    readonly name: string;
+    readonly filename: string;
+  };
+  readonly "layers.save.doneCapped": {
+    readonly count: number;
+    readonly total: number;
+    readonly name: string;
+    readonly filename: string;
+  };
   readonly "layers.choices.heading": { readonly count: number };
   readonly "layers.turnOff.count": { readonly count: number };
   readonly "layers.turnOff.group": {

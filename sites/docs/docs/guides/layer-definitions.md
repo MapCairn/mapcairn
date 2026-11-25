@@ -123,6 +123,7 @@ A feed is one JSON document of features, fetched when the layer is on.
 - Its `fields` map each decoded field to a dotted path, such as `properties.mag`. `id` and `title` are required.
 - Its style, card and list use templates such as `{time|relative}`.
 - A point style has a colour rule and, optionally, a size and a marker shape. A colour rule needs a shape, a size or the field named on the card, so colour is never the only signal.
+- `saveFeatures: true` offers a "Save as GeoJSON" and a "Save as CSV" button in the layer's entry, which write the features that are loaded, without asking the provider again. It defaults to false and is the person writing the definition's decision: a provider's terms say whether its data may be saved and redistributed, so set it only after reading them. It is valid only on a feed or query layer of features (not a heatmap, tile or vector tile layer). A file holds at most `MAX_SAVED_FEATURES` (5,000) features, in the order the provider sent them, and carries the layer's credits and the day it was saved: as members of the GeoJSON, and in the `credit` and `saved` columns of the CSV. A CSV cell that starts with `=`, `+`, `-`, `@`, a tab or a carriage return gets a leading apostrophe so a spreadsheet does not run it.
 
 The example under [Ask only for what is in view](#ask-only-for-what-is-in-view) is a point feed with a card and a list. Polygons and lines have a style of their own.
 

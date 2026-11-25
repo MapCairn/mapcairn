@@ -638,6 +638,16 @@ export const EN_GB_CATALOGUE: Record<MessageKey, string> = {
   "layers.list.sortBy": "Sort by",
   "layers.list.showOnMap": "show on map",
   "layers.list.showAll": "Show all {count}",
+  "layers.save.group": "Save the features of {name}",
+  "layers.save.geojson": "Save as GeoJSON",
+  "layers.save.csv": "Save as CSV",
+  "layers.save.note":
+    "Saves the features loaded now, up to {max}, with the credit and the date. Nothing is sent anywhere.",
+  "layers.save.done":
+    "Saved {count} feature of {name} as {filename}.|Saved {count} features of {name} as {filename}.",
+  "layers.save.doneCapped":
+    "Saved the first {count} of {total} features of {name} as {filename}.",
+  "layers.save.failed": "The file could not be saved.",
   "layers.card.close": "Close card",
   "layers.card.opensInNewTab": "(opens in a new tab)",
   "layers.card.back": "Back to list",

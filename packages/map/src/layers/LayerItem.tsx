@@ -39,6 +39,7 @@ import { DateTimeControl } from "./DateTimeControl";
 import { FeatureGlyph } from "./FeatureGlyph";
 import { LayerKey } from "./LayerKey";
 import * as styles from "./Layers.css";
+import { SaveFeatures } from "./SaveFeatures";
 import type { DataLayerState, DataLayers, LayerStatus } from "./useDataLayers";
 
 /** How many rows the list shows before "Show all". */
@@ -356,6 +357,7 @@ export function LayerItem({
   const format = useFormatMessage();
   const { t } = messages;
   const text = statusText(status, emptyText, messages);
+  const savedOn = new Date(layers.now()).toISOString().slice(0, 10);
   return (
     <li className={styles.layerItem} data-testid={`layer-${definition.id}`}>
       <Switch
@@ -452,6 +454,7 @@ export function LayerItem({
             formatters={formatters}
             onShow={(feature) => onShow(definition.id, feature)}
           />
+          <SaveFeatures layer={layer} savedOn={savedOn} />
         </div>
       ) : null}
     </li>

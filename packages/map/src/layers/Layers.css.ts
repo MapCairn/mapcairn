@@ -316,6 +316,24 @@ export const disclaimer = style({
   ...small,
 });
 
+/** The note, the save buttons and the outcome of saving a layer's features. */
+export const saveFeatures = style({
+  border: 0,
+  margin: 0,
+  padding: 0,
+  minWidth: 0,
+  display: "flex",
+  flexDirection: "column",
+  gap: tokens.space.xs,
+});
+
+/** The save buttons, side by side and wrapping on a narrow sheet. */
+export const saveActions = style({
+  display: "flex",
+  flexWrap: "wrap",
+  gap: tokens.space.xs,
+});
+
 /** The collapsible list of loaded features. */
 export const featureList = style({
   display: "flex",

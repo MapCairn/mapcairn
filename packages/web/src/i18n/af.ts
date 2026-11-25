@@ -654,6 +654,16 @@ export const AF_CATALOGUE: Record<MessageKey, string> = {
   "layers.list.sortBy": "Sorteer volgens",
   "layers.list.showOnMap": "wys op kaart",
   "layers.list.showAll": "Wys al {count}",
+  "layers.save.group": "Stoor die kenmerke van {name}",
+  "layers.save.geojson": "Stoor as GeoJSON",
+  "layers.save.csv": "Stoor as CSV",
+  "layers.save.note":
+    "Stoor die kenmerke wat nou gelaai is, hoogstens {max}, met die erkenning en die datum. Niks word êrens heen gestuur nie.",
+  "layers.save.done":
+    "{count} kenmerk van {name} gestoor as {filename}.|{count} kenmerke van {name} gestoor as {filename}.",
+  "layers.save.doneCapped":
+    "Die eerste {count} van {total} kenmerke van {name} gestoor as {filename}.",
+  "layers.save.failed": "Die lêer kon nie gestoor word nie.",
   "layers.card.close": "Maak kaartjie toe",
   "layers.card.opensInNewTab": "(maak in 'n nuwe oortjie oop)",
   "layers.card.back": "Terug na lys",

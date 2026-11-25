@@ -623,6 +623,14 @@ export interface FeedLayerDefinition<
   readonly detail?: DetailSource;
   /** Shown when the feed has no features, such as `No volcano alerts right now`. */
   readonly emptyText: DefinitionText;
+  /**
+   * Whether the person may save the features that are loaded as a GeoJSON or
+   * CSV file. Defaults to false: the provider's terms decide whether its data
+   * may be saved and redistributed, so a definition says so only after they
+   * have been read. Only a feed or query layer of features can be saved, and
+   * `true` on any other kind of layer is a validation problem.
+   */
+  readonly saveFeatures?: boolean;
 }
 
 /**
