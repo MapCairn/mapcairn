@@ -2,7 +2,6 @@
 // Copyright MapCairn contributors
 import { readFileSync } from "node:fs";
 import path from "node:path";
-import { FakeClipboard } from "@mapcairn/core";
 import { render } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { loader as markdownLoader } from "../routes/index.md";
@@ -54,9 +53,7 @@ const VOLATILE =
 
 /** Everything the rendered page says and links to, as one text. */
 function pageText(): string {
-  const { container } = render(
-    <ProductPage clipboard={new FakeClipboard()} release={RELEASE} />,
-  );
+  const { container } = render(<ProductPage release={RELEASE} />);
   // The install block's choices are the package managers' names, npm among them.
   const managers = INSTALL_OPTIONS.map(({ manager }) => manager);
   for (const choice of container.querySelectorAll("fieldset label")) {

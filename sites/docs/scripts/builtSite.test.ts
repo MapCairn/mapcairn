@@ -105,6 +105,28 @@ describe("brokenInternalLinks", () => {
   });
 });
 
+describe("brokenInternalLinks for the files a page loads", () => {
+  it("reports an icon or stylesheet link to a file that was not built, which a browser logs as a 404", () => {
+    const root = site({
+      "assets/css/a.css": "a{}",
+      "page/index.html":
+        '<link rel="stylesheet" href="/assets/css/a.css"><link rel="icon" href="/favicon.svg" type="image/svg+xml">',
+    });
+    expect(brokenInternalLinks(root, "/")).toEqual([
+      { from: "page/index.html", href: "/favicon.svg" },
+    ]);
+  });
+
+  it("passes a link to a file that was built, and leaves another site's links alone", () => {
+    const root = site({
+      "favicon.svg": "<svg/>",
+      "page/index.html":
+        '<link rel="icon" href="/favicon.svg"><link rel="canonical" href="https://docs.example/page/">',
+    });
+    expect(brokenInternalLinks(root, "/")).toEqual([]);
+  });
+});
+
 describe("scriptBytesFor", () => {
   it("adds the gzip size of every script a page loads", () => {
     const a = "console.log(1);".repeat(50);

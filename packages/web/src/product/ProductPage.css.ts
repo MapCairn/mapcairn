@@ -894,6 +894,7 @@ export const copyButton = style({
   cursor: "pointer",
   transition: PRESS_TRANSITION,
   selectors: {
+    "&[hidden]": { display: "none" },
     "&:focus-visible": focusRing,
     "&:active": {
       transform: PRESSED,
@@ -918,14 +919,47 @@ export const copyButton = style({
   },
 });
 
-/** The copy button's icon: the accent once copied, the danger colour if the copy failed. */
-export const copyIcon = style({
+/** The copy button's icons: all three are in the markup, and the one for the button's `data-state` shows. */
+const copyIcon = style({
   flexShrink: 0,
-  selectors: {
-    [`${copyButton}[data-state="copied"] > &`]: { color: tokens.color.accent },
-    [`${copyButton}[data-state="failed"] > &`]: { color: tokens.color.danger },
-  },
+  display: "none",
 });
+
+/** The copy icon, shown until a copy has happened. */
+export const copyIconIdle = style([
+  copyIcon,
+  {
+    selectors: {
+      [`${copyButton}[data-state="idle"] > &`]: { display: "block" },
+    },
+  },
+]);
+
+/** The check, in the accent, once copied. */
+export const copyIconCopied = style([
+  copyIcon,
+  {
+    selectors: {
+      [`${copyButton}[data-state="copied"] > &`]: {
+        display: "block",
+        color: tokens.color.accent,
+      },
+    },
+  },
+]);
+
+/** The cross, in the danger colour, if the copy failed. */
+export const copyIconFailed = style([
+  copyIcon,
+  {
+    selectors: {
+      [`${copyButton}[data-state="failed"] > &`]: {
+        display: "block",
+        color: tokens.color.danger,
+      },
+    },
+  },
+]);
 
 /** Code in a box: its own scrolling, focusable region, so it never widens the page. */
 export const codeBlock = style({

@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
-import type { ClipboardPort } from "@mapcairn/core";
 import { VisuallyHidden } from "@mapcairn/map";
-import { useEffect, useId, useRef, useState } from "react";
+import { useId } from "react";
 import { CopyCodeButton } from "./CopyCodeButton";
 import * as styles from "./ProductPage.css";
 import {
+  copyMessages,
   type InstallOption,
   installCommandLabel,
   installCopyLabel,
@@ -17,44 +17,32 @@ export interface InstallBlockProps {
   readonly label: string;
   /** One command for each package manager, the first chosen. */
   readonly options: readonly InstallOption[];
-  readonly clipboard: ClipboardPort;
 }
 
 /**
  * The install command for each package manager, as a native radio group with
- * a copy button. It works without a script: the server renders every command
- * and the first radio chosen, plain CSS shows the command of the chosen radio
+ * a copy button. It needs no script: the server renders every command and the
+ * first radio chosen, plain CSS shows the command of the chosen radio
  * (`:has(:checked)`), and the radios choose natively, with the arrow keys
  * following the reading direction. The copy button is the only part that needs
- * a script, so it appears once the page runs, in the corner of the command,
- * which already leaves it room. Which manager was chosen is read back from the radios when the
- * page starts, so a choice made before then is the one copied. Nothing is
- * stored: the choice lasts until the page is left.
+ * a script, so it is `hidden` until `COPY_CODE_SCRIPT` shows it, in the corner
+ * of the command, which already leaves it room. The script copies the command
+ * of the radio chosen at the time of the click, so a choice made before it ran
+ * counts. Nothing is stored: the choice lasts until the page is left.
  */
-export function InstallBlock({ label, options, clipboard }: InstallBlockProps) {
+export function InstallBlock({ label, options }: InstallBlockProps) {
   const name = useId();
-  const group = useRef<HTMLFieldSetElement>(null);
-  const [chosen, setChosen] = useState(options[0]?.manager);
-  const [running, setRunning] = useState(false);
-
-  useEffect(() => {
-    const checked = group.current?.querySelector<HTMLInputElement>(
-      "input[type=radio]:checked",
-    );
-    if (checked) {
-      setChosen(checked.value);
-    }
-    setRunning(true);
-  }, []);
-
-  const current = options.find((option) => option.manager === chosen);
 
   return (
-    <fieldset ref={group} className={styles.install}>
+    <fieldset className={styles.install} data-copy-scope="">
       <VisuallyHidden as="legend">{label}</VisuallyHidden>
       <div className={styles.installRow}>
         {options.map(({ manager, command: text }, index) => (
-          <div key={manager} className={styles.installOption}>
+          <div
+            key={manager}
+            className={styles.installOption}
+            data-copy-option=""
+          >
             <label className={styles.installChoice}>
               <span className={styles.installName}>{manager}</span>
               <input
@@ -63,7 +51,6 @@ export function InstallBlock({ label, options, clipboard }: InstallBlockProps) {
                 name={name}
                 value={manager}
                 defaultChecked={index === 0}
-                onChange={() => setChosen(manager)}
               />
             </label>
             {/* biome-ignore lint/a11y/useSemanticElements: a pre keeps the code's whitespace; a section would not */}
@@ -73,19 +60,14 @@ export function InstallBlock({ label, options, clipboard }: InstallBlockProps) {
               tabIndex={0}
               role="region"
               aria-label={installCommandLabel(manager)}
+              data-copy={copyMessages(installCopyLabel(manager))}
             >
               <code>{text}</code>
             </pre>
           </div>
         ))}
         <div className={styles.installCopy} data-testid="install-copy">
-          {running && current !== undefined && (
-            <CopyCodeButton
-              code={current.command}
-              label={installCopyLabel(current.manager)}
-              clipboard={clipboard}
-            />
-          )}
+          <CopyCodeButton />
         </div>
       </div>
     </fieldset>

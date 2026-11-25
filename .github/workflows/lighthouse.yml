@@ -41,9 +41,11 @@ jobs:
       # separate boot step here. Scores run against real, un-mocked basemap
       # tile requests (unlike the Playwright e2e suite, which mocks them)
       # since Lighthouse is meant to reflect what a real visitor experiences.
-      # lighthouserc.json asserts accessibility and SEO at 1 (100) as errors.
-      # `performance` (0.95) and best practices (1) only warn, so real
-      # third-party network variance cannot make this check flaky.
+      # lighthouserc.json asserts all four categories on `/` (performance at
+      # 0.95, the rest at 1) as errors. On `/map`, whose real tile requests vary
+      # with the network, accessibility and SEO are errors at 1 and
+      # `performance` (0.95) and best practices (1) only warn, so that variance
+      # cannot make this check flaky.
       - name: Run Lighthouse CI
         id: lighthouse
         uses: treosh/lighthouse-ci-action@3e7e23fb74242897f95c0ba9cabad3d0227b9b18 # v12
@@ -67,8 +69,8 @@ jobs:
 
   # The documentation site, on a guide page and an API page, served from its
   # build by sites/docs/scripts/serve.ts. Advisory: it is not in the required
-  # checks. Performance only warns, as above; accessibility and best practices
-  # fail it below 0.95.
+  # checks. Performance only warns at 0.95; accessibility, best practices and
+  # SEO fail it below 1.
   lighthouse-docs:
     name: lighthouse docs
     runs-on: ubuntu-latest

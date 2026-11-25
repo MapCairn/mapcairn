@@ -15,14 +15,20 @@ const chunkDirectory = bundleRoot ? join(bundleRoot, "assets/js") : "";
 /**
  * The pages to render and how many inline scripts, outside the router's
  * nonced ones, each is expected to carry: the theme bootstrap on every page,
- * and the old-map-link redirect on the product page only. A page that loses
- * one fails on the count, not only on a hash.
+ * and the old-map-link redirect and the copy buttons' script on the product
+ * page only. A page that loses one fails on the count, not only on a hash. The
+ * last field says whether the page carries the router's nonced scripts: the
+ * product page runs no framework script, so it carries none.
  */
-const PAGES: readonly (readonly [path: string, inlineScripts: number])[] = [
-  ["/", 2],
-  ["/map", 1],
-  ["/privacy", 1],
-  ["/no-such-page", 1],
+const PAGES: readonly (readonly [
+  path: string,
+  inlineScripts: number,
+  nonced: boolean,
+])[] = [
+  ["/", 3, false],
+  ["/map", 1, true],
+  ["/privacy", 1, true],
+  ["/no-such-page", 1, true],
 ];
 
 /** Script types a browser never runs, so no policy source applies to them. */
@@ -442,14 +448,16 @@ describe.skipIf(
 
     it.each(PAGES)(
       "%s: carries %i hashed inline script(s), each allowed by the policy it is sent with and by public/_headers, a fresh nonce per render and no unsafe-inline",
-      async (page, count) => {
+      async (page, count, nonced) => {
         const response = await render(page);
         const policy = response.headers.get("content-security-policy") ?? "";
         const html = await response.text();
         const again = await (await render(page)).text();
         expect(hashedScripts(html)).toHaveLength(count);
         expect(problems(html, policy)).toEqual([]);
-        expect(missingNonce(html)).toEqual([]);
+        expect(missingNonce(html)).toEqual(
+          nonced ? [] : ["no script carries a nonce"],
+        );
         expect(reusedNonces(html, again)).toEqual([]);
         expect(
           hashedScripts(html)

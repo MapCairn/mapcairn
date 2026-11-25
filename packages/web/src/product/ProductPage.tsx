@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
-import type { ClipboardPort } from "@mapcairn/core";
 import { Icon, LiveRegionProvider, SkipLink } from "@mapcairn/map";
 import { CaretDown, Heart } from "@phosphor-icons/react";
 import type { ReactNode } from "react";
 import { Brand } from "../app/Brand";
+import { COPY_CODE_SCRIPT } from "../app/copyCodeScript";
 import { DOCUMENT_SCROLL } from "../app/documentScroll";
 import { MAP_LINK_REDIRECT_SCRIPT } from "../app/mapLinkRedirect";
 import {
@@ -24,6 +24,7 @@ import {
   BADGES_LABEL,
   type Block,
   CAIRN_LINE,
+  copyMessages,
   type Disclosure,
   type Feature,
   GITHUB_ACTION,
@@ -136,20 +137,14 @@ function ContourMotif() {
 /** A code example in a box: its name at the top, a small copy button in the corner, and the code, which scrolls inside the box. */
 function CodeExample({
   block,
-  clipboard,
 }: {
   readonly block: Extract<Block, { kind: "code" }>;
-  readonly clipboard: ClipboardPort;
 }) {
   return (
-    <div className={styles.codeExample}>
+    <div className={styles.codeExample} data-copy-scope="">
       <div className={styles.codeHeader}>
         <span className={styles.codeFile}>{block.label}</span>
-        <CopyCodeButton
-          code={block.code}
-          label={block.label}
-          clipboard={clipboard}
-        />
+        <CopyCodeButton />
       </div>
       {/* A named region the keyboard can reach and scroll (WCAG 2.1.1). It stays a
           pre, which keeps the code's whitespace, rather than becoming a section. */}
@@ -160,6 +155,7 @@ function CodeExample({
         tabIndex={0}
         role="region"
         aria-label={block.label}
+        data-copy={copyMessages(block.label)}
       >
         <code>
           {block.language === HIGHLIGHTED_LANGUAGE ? (
@@ -245,13 +241,7 @@ function Features({ items }: { readonly items: readonly Feature[] }) {
 }
 
 /** One block of a section. */
-function BlockView({
-  block,
-  clipboard,
-}: {
-  readonly block: Block;
-  readonly clipboard: ClipboardPort;
-}): ReactNode {
+function BlockView({ block }: { readonly block: Block }): ReactNode {
   switch (block.kind) {
     case "paragraph":
       return (
@@ -272,7 +262,7 @@ function BlockView({
     case "subheading":
       return <h3 className={styles.subheading}>{block.text}</h3>;
     case "code":
-      return <CodeExample block={block} clipboard={clipboard} />;
+      return <CodeExample block={block} />;
     case "details":
       return <Disclosures items={block.items} />;
     case "features":
@@ -283,13 +273,7 @@ function BlockView({
 }
 
 /** One section: its heading and its blocks. */
-function SectionView({
-  section,
-  clipboard,
-}: {
-  readonly section: Section;
-  readonly clipboard: ClipboardPort;
-}) {
+function SectionView({ section }: { readonly section: Section }) {
   const headingId = `${section.id}-heading`;
   return (
     <section
@@ -306,7 +290,6 @@ function SectionView({
           // biome-ignore lint/suspicious/noArrayIndexKey: a fixed list of blocks
           key={index}
           block={block}
-          clipboard={clipboard}
         />
       ))}
     </section>
@@ -352,13 +335,7 @@ function ProductHeader() {
  * page's one statement of it, which links the readiness section. The
  * contour motif sits behind the words in the same grid cell.
  */
-function Hero({
-  clipboard,
-  release,
-}: {
-  readonly clipboard: ClipboardPort;
-  readonly release: ReleaseFacts;
-}) {
+function Hero({ release }: { readonly release: ReleaseFacts }) {
   return (
     <div className={styles.hero}>
       <ContourMotif />
@@ -378,11 +355,7 @@ function Hero({
           {PLAYGROUND_ACTION.text}
         </a>
         <div className={styles.installArea}>
-          <InstallBlock
-            label={INSTALL_GROUP_LABEL}
-            options={INSTALL_OPTIONS}
-            clipboard={clipboard}
-          />
+          <InstallBlock label={INSTALL_GROUP_LABEL} options={INSTALL_OPTIONS} />
           <p className={styles.requirements}>
             <Text line={INSTALL_REQUIREMENTS} />
           </p>
@@ -493,8 +466,8 @@ function ProductFooter() {
  * smallest mount, the remaining questions, then the relief strip and the
  * footer.
  *
- * @remarks Server-rendered: it loads no map code and no service but the
- *   clipboard it is given, and its own markup requests nothing from another
+ * @remarks Server-rendered: it loads no map code and no service,
+ *   and its own markup requests nothing from another
  *   site (in production the host adds its cookieless page-view counter, as on
  *   every page). It links the repository's front page from three places (the
  *   header's GitHub, the hero's View on GitHub and the footer's Source code),
@@ -505,17 +478,13 @@ function ProductFooter() {
  *   Its first element is the inline script that sends an old map link
  *   (`/#map=...`) on to the playground before the page paints. It is English
  *   only, by decision, so it sets `lang="en-GB"` on its own root whatever
- *   language the playground is in. The clipboard serves the copy buttons, and
- *   the page mounts its own live regions for their messages. The latest
- *   release comes from the route's loader, which reads the changelog.
+ *   language the playground is in. It runs no framework script: its copy
+ *   buttons are server-rendered hidden and a second inline script, the last
+ *   element, shows them and announces through the page's own live regions
+ *   (`app/copyCodeScript.ts`). The latest release comes from the route's
+ *   loader, which reads the changelog.
  */
-export function ProductPage({
-  clipboard,
-  release,
-}: {
-  readonly clipboard: ClipboardPort;
-  readonly release: ReleaseFacts;
-}) {
+export function ProductPage({ release }: { readonly release: ReleaseFacts }) {
   return (
     <div
       className={styles.scroller}
@@ -532,14 +501,10 @@ export function ProductPage({
         <SkipLink targetId={MAIN_ID}>Skip to content</SkipLink>
         <ProductHeader />
         <main id={MAIN_ID} tabIndex={-1} className={styles.main}>
-          <Hero clipboard={clipboard} release={release} />
+          <Hero release={release} />
           <DemoFigure />
           {SECTIONS.map((section) => (
-            <SectionView
-              key={section.id}
-              section={section}
-              clipboard={clipboard}
-            />
+            <SectionView key={section.id} section={section} />
           ))}
           <div className={styles.closing} data-testid="closing">
             <div className={styles.closingArt}>
@@ -549,6 +514,10 @@ export function ProductPage({
         </main>
         <ProductFooter />
       </LiveRegionProvider>
+      <script
+        // biome-ignore lint/security/noDangerouslySetInnerHtml: a fixed string allowed by its CSP hash; see COPY_CODE_SCRIPT.
+        dangerouslySetInnerHTML={{ __html: COPY_CODE_SCRIPT }}
+      />
     </div>
   );
 }

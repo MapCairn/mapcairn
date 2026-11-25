@@ -120,11 +120,11 @@ describe("buildContentSecurityPolicy", () => {
   });
 
   // app/inlineScripts.test.ts checks that each hash is its script's own.
-  it("keeps the two inline script hashes alongside a nonce", () => {
+  it("keeps the three inline script hashes alongside a nonce", () => {
     const policy = buildContentSecurityPolicy("test-nonce-value");
 
     expect(policy).toMatch(
-      /script-src 'self' 'sha256-[A-Za-z0-9+/=]+' 'sha256-[A-Za-z0-9+/=]+' 'nonce-test-nonce-value'/,
+      /script-src 'self' (?:'sha256-[A-Za-z0-9+/=]+' ){3}'nonce-test-nonce-value'/,
     );
   });
 });

@@ -34,7 +34,7 @@ describe("product route", () => {
     expect(handle).toMatchObject({ language: "en-GB" });
   });
 
-  it("asks for its script preloads to follow the content, so the stylesheets and font paint first", () => {
-    expect(handle).toMatchObject({ modulePreload: "end" });
+  it("says it runs no framework script, so nothing but its stylesheets and font stands before its first paint", () => {
+    expect(handle).toMatchObject({ scripts: "none" });
   });
 });

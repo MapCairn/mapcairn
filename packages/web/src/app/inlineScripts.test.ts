@@ -5,6 +5,7 @@ import { readFileSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
 import { buildContentSecurityPolicy } from "../constants/securityHeaders";
+import { COPY_CODE_SCRIPT } from "./copyCodeScript";
 import { MAP_LINK_REDIRECT_SCRIPT } from "./mapLinkRedirect";
 import { THEME_BOOTSTRAP_SCRIPT } from "./themeBootstrap";
 
@@ -25,15 +26,16 @@ const headersFile = readFileSync(
 );
 
 /*
- * The site has two inline scripts: the theme bootstrap every page runs in its
- * head, and the product page's redirect for old map links. Each is allowed by
- * its own hash and nothing else inline is, so a change to either script fails
+ * The site has three inline scripts: the theme bootstrap every page runs in its
+ * head, and the product page's redirect for old map links and its copy buttons. Each is allowed by
+ * its own hash and nothing else inline is, so a change to any script fails
  * here until its hash is updated in both files.
  */
 describe("the inline scripts' CSP hashes", () => {
   const expected = [
     cspHash(THEME_BOOTSTRAP_SCRIPT),
     cspHash(MAP_LINK_REDIRECT_SCRIPT),
+    cspHash(COPY_CODE_SCRIPT),
   ];
 
   it("are the only script hashes the policy built in securityHeaders.ts allows", () => {
