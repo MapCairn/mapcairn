@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
 /**
- * The post-release check: installs the published version of the four SDK
+ * The post-release check: installs the published version of the six SDK
  * packages from the registry into a throwaway app outside the repository,
  * renders the chrome there, verifies the registry signatures and the
  * provenance attestations of what was installed with `npm audit signatures`,
@@ -25,7 +25,7 @@
  * what the registry serves, with the same arguments as `npm run pack:check`.
  *
  * Run it after the workflow's `npm` job has published. It only
- * reads the registry. The four SDK packages are exempted from the repository's
+ * reads the registry. The six SDK packages are exempted from the repository's
  * three-day minimum release age for this install, because a version that was
  * published a moment ago would otherwise not install; third-party packages
  * keep the rule.

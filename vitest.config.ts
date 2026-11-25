@@ -14,7 +14,10 @@ export default defineConfig({
     coverage: {
       provider: "v8",
       reporter: ["text", "html"],
-      include: ["packages/*/src/**"],
+      // The scripts under `scripts` decide what is published, what merges and
+      // what agents may do, so they are measured too, with a floor of their own
+      // below. The exclusions after the packages' own list each say why.
+      include: ["packages/*/src/**", "scripts/**/*.{mjs,cjs}"],
       exclude: [
         "**/*.test.{ts,tsx}",
         // Snapshots of rendered markup are test data, not code to cover.
@@ -25,6 +28,28 @@ export default defineConfig({
         "packages/adapter-maplibre/src/maplibreTestEngine.ts",
         "packages/web/src/entry.client.tsx",
         "packages/web/src/entry.server.tsx",
+        // Generators that need a network, a browser or the engine and write
+        // committed assets; a check compares their output, not their lines.
+        "scripts/captureReadmePictures.mjs",
+        "scripts/generateBasemapThumbnails.mjs",
+        "scripts/generateContours.mjs",
+        // Run by `npm run build`, which fails if they are wrong; a unit test
+        // would only restate the real build.
+        "scripts/buildPackage.mjs",
+        "scripts/shareDeclarations.mjs",
+        // Command-line wrappers with no logic of their own: the work is in
+        // modules whose tests are counted.
+        "scripts/depcruise.mjs",
+        "scripts/agents/sync.mjs",
+        "scripts/harmony/cli.mjs",
+        "scripts/release/notes.mjs",
+        // Drive a real browser or workerd against packed packages; the
+        // `consumer:check` run in the release is their test.
+        "scripts/release/browserRun.mjs",
+        "scripts/release/quickstartRun.mjs",
+        "scripts/release/workerdRun.mjs",
+        // Source files that are built and run inside a packed consumer app.
+        "scripts/release/consumer*/**",
       ],
       thresholds: {
         "packages/{core,map,react,theme,sdk,adapter-maplibre}/**": {
@@ -32,6 +57,16 @@ export default defineConfig({
           branches: 95,
           functions: 95,
           lines: 95,
+        },
+        // The scripts hold a lower floor than the packages. Several release
+        // scripts shell out to npm, git or a browser, and their tests cover
+        // the logic around those calls, not the calls. Set a little below the
+        // measured figures and raised as the measure rises (#608).
+        "scripts/**": {
+          statements: 80,
+          branches: 80,
+          functions: 80,
+          lines: 80,
         },
         // The host sits a little lower on branches because its layout and
         // touch-gesture code is also covered by Playwright, not only by jsdom.

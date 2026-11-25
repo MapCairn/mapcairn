@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en-GB">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>MapCairn without React</title>
+  </head>
+  <body>
+    <header>
+      <h1>MapCairn without React</h1>
+      <label>
+        Basemap
+        <select id="basemap"></select>
+      </label>
+    </header>
+    <section
+      id="map"
+      aria-label="Map"
+      aria-describedby="keys"
+      aria-busy="true"
+    ></section>
+    <p id="keys">Arrow keys move the map. Plus and minus zoom it. Enter names the places at its centre.</p>
+    <output id="status"></output>
+    <p id="credits"></p>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

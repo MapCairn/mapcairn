@@ -378,9 +378,9 @@ describe("the root scripts", () => {
     },
   );
 
-  it("builds the SDK packages once, then only the host and the example", () => {
+  it("builds the SDK packages once, then only the host and the examples", () => {
     expect(scripts.build).toBe(
-      "npm run build:sdk && npm run build -w @mapcairn/web && npm run build -w @mapcairn/example-embed",
+      "npm run build:sdk && npm run build -w @mapcairn/web && npm run build -w @mapcairn/example-embed && npm run build -w @mapcairn/example-headless",
     );
     expect(scripts["build:sdk"]).toBe("node scripts/buildSdk.mjs");
   });

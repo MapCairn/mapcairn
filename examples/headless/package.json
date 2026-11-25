@@ -1,0 +1,25 @@
+{
+  "name": "@mapcairn/example-headless",
+  "version": "1.0.0",
+  "description": "A plain TypeScript page that draws a map with @mapcairn/core and @mapcairn/adapter-maplibre, with no React and no interface package",
+  "license": "AGPL-3.0-only",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "npm --prefix ../.. run build:sdk && vite",
+    "build": "npm --prefix ../.. run build:sdk && vite build",
+    "preview": "npm --prefix ../.. run build:sdk && vite preview",
+    "test": "npm --prefix ../.. run build:sdk && vitest run",
+    "typecheck": "npm --prefix ../.. run build:sdk && tsc --noEmit"
+  },
+  "dependencies": {
+    "@mapcairn/adapter-maplibre": "0.2.0",
+    "@mapcairn/core": "0.2.0",
+    "maplibre-gl": "^6.19.0"
+  },
+  "devDependencies": {
+    "typescript": "^7.0.2",
+    "vite": "^8.3.8",
+    "vitest": "^5.1.0"
+  }
+}

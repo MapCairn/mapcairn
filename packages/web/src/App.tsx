@@ -14,6 +14,7 @@ import {
   type MeasureMode,
   MeasureOverlay,
   PinMarker,
+  SelectionHighlights,
   SelectionMarker,
   SelectionProvider,
   useSettings,
@@ -94,6 +95,7 @@ export function App() {
         />
         <MapOverlayLayer testId="map-overlays">
           <SelectionMarker layers={app.layers} />
+          <SelectionHighlights />
           {app.draw.shapes.length > 0 ? (
             <DrawOverlay
               shapes={app.draw.shapes}

@@ -23,6 +23,7 @@ import {
   MeasureToolbar,
   PinMarker,
   SearchPill,
+  SelectionHighlights,
   SelectionProvider,
   ServicesProvider,
   Sheet,
@@ -182,6 +183,7 @@ function ExampleMap({ theme }: ExampleMapProps) {
             <MeasureOverlay points={measure.points} mode={measure.mode} />
           ) : null}
           {pin ? <PinMarker position={pin} /> : null}
+          <SelectionHighlights />
         </MapOverlayLayer>
       </MapView>
     </SelectionProvider>

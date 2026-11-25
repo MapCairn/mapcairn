@@ -99,16 +99,20 @@ function thin(positions: readonly LatLng[], limit: number): LatLng[] {
 /**
  * The rings and lines of a polygon or line feature, thinned so an outline
  * drawn from them over the map stays cheap to redraw while the map moves. A
- * point has none.
+ * point has none. `maxPoints` lowers the cap on each ring or line for a mark
+ * that is drawn many times at once.
  *
  * @internal
  */
-export function featureOutlines(feature: LayerFeature): FeatureOutline[] {
+export function featureOutlines(
+  feature: LayerFeature,
+  maxPoints: number = MAX_OUTLINE_POINTS,
+): FeatureOutline[] {
   const { geometry } = feature;
   const toPoints = (line: readonly (readonly [number, number])[]) =>
     thin(
       line.map(([lng, lat]) => ({ lat, lng })),
-      MAX_OUTLINE_POINTS,
+      maxPoints,
     );
   switch (geometry.type) {
     case "Point":

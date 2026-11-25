@@ -23,6 +23,38 @@ export const selectionRing = style({
   strokeWidth: tokens.space.xxs,
 });
 
+/** The solid halo under a selected feature's dashed outline or ring. */
+export const highlightHalo = style([selectionHalo]);
+
+/** The ring or dashed outline round a feature in the selected set. The dashes are the second signal beside colour. */
+export const highlightRing = style({
+  fill: "none",
+  stroke: mapOverlayTokens.pin,
+  strokeWidth: tokens.space.xxs,
+});
+
+/** An outline's dashes, so a selected polygon or line differs from the open card's solid ring. */
+export const highlightDashes = style([
+  highlightRing,
+  { strokeDasharray: `${tokens.space.xs} ${tokens.space.xs}` },
+]);
+
+/** The disc of a check badge. */
+export const highlightBadge = style({
+  fill: mapOverlayTokens.pin,
+  stroke: mapOverlayTokens.halo,
+  strokeWidth: tokens.focus.innerWidth,
+});
+
+/** The tick inside a check badge. */
+export const highlightCheck = style({
+  fill: "none",
+  stroke: mapOverlayTokens.halo,
+  strokeWidth: tokens.focus.innerWidth,
+  strokeLinecap: "round",
+  strokeLinejoin: "round",
+});
+
 /** A marker glyph. Its edge and halo are drawn in the SVG, the same as on the map. */
 export const glyph = style({
   flexShrink: 0,
