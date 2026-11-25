@@ -209,7 +209,7 @@ describe("ShapesSection", () => {
       screen.getByRole("heading", { name: "Import", level: 4 }),
     ).toBeInTheDocument();
     fireEvent.click(
-      screen.getByRole("button", { name: "Import GeoJSON, CSV or WKT" }),
+      screen.getByRole("button", { name: "Import GeoJSON, GPX, CSV or WKT" }),
     );
     expect(services.fakes.fileOpener.waiting).toBe(true);
     await act(async () => {

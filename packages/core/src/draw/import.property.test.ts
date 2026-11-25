@@ -510,3 +510,93 @@ describe("parseShapeFile with hostile input", () => {
     );
   });
 });
+
+const GPX_FRAGMENTS = [
+  "<gpx>",
+  "</gpx>",
+  "<wpt",
+  "</wpt>",
+  "<trk>",
+  "</trk>",
+  "<trkseg>",
+  "</trkseg>",
+  "<trkpt",
+  "</trkpt>",
+  "<rte>",
+  "</rte>",
+  "<rtept",
+  " lat=",
+  " lon=",
+  '"1.5"',
+  "'-2'",
+  '"&#49;"',
+  "/>",
+  ">",
+  "<!--",
+  "-->",
+  "<![CDATA[",
+  "]]>",
+  "<?",
+  "?>",
+  "<!DOCTYPE",
+  "<!ENTITY",
+  "&lol;",
+];
+
+describe("parseShapeFile with GPX", () => {
+  it("reads text made of GPX's own parts without throwing", () => {
+    fc.assert(
+      fc.property(textFromFragments(GPX_FRAGMENTS), (text) => {
+        expectWellFormed(parseShapeFile(`<gpx>${text}`));
+        expectWellFormed(parseShapeFile(text));
+      }),
+      PROPERTY_PARAMETERS,
+    );
+  });
+
+  it("reads a track or a route of any positions back as the same line", () => {
+    fc.assert(
+      fc.property(
+        fc.array(
+          fc.record({
+            lat: degreesOnGrid(90),
+            lng: degreesOnGrid(180),
+          }),
+          { minLength: 2, maxLength: 20 },
+        ),
+        fc.constantFrom(
+          ["trk><trkseg", "trkpt", "trkseg></trk"],
+          ["rte", "rtept", "rte"],
+        ),
+        (vertices, [open, point, close]) => {
+          const points = vertices
+            .map((v) => `<${point} lat="${v.lat}" lon="${v.lng}"/>`)
+            .join("");
+          const result = parseShapeFile(
+            `<gpx><${open}>${points}</${close}></gpx>`,
+          );
+          if (result.ok && result.shapes.length === 1) {
+            expect(result.shapes[0]).toEqual({ kind: "line", vertices });
+          } else {
+            expect(result).toMatchObject({
+              ok: true,
+              shapes: [],
+              skipped: { degenerate: 1 },
+            });
+          }
+        },
+      ),
+      PROPERTY_PARAMETERS,
+    );
+  });
+
+  it("refuses deep nesting of any length", () => {
+    fc.assert(
+      fc.property(repeatedFragment("<a>"), (opens) => {
+        const result = parseShapeFile(`<gpx>${opens}`);
+        expect(result.ok).toBe(false);
+      }),
+      PROPERTY_PARAMETERS,
+    );
+  });
+});

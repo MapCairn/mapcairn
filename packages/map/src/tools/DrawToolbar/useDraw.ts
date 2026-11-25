@@ -225,7 +225,7 @@ export interface UseDraw {
   /** Copies a link with the shapes in it, built from the current address. */
   readonly copyLink: () => Promise<void>;
   /**
-   * Asks the person for a GeoJSON, CSV or WKT file and adds its shapes as one undo
+   * Asks the person for a GeoJSON, GPX, CSV or WKT file and adds its shapes as one undo
    * step. Call it straight from a press, so the browser shows the picker.
    * @returns The box holding the shapes it added, for the map to fit, or
    *   null when it added none, including when the host has no file opener.

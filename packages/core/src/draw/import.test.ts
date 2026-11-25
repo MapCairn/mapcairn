@@ -1301,3 +1301,183 @@ describe("suggestWktAxisOrder", () => {
     );
   });
 });
+
+describe("parseShapeFile with GPX", () => {
+  const gpx = (body: string) =>
+    `<?xml version="1.0"?><gpx version="1.1" creator="t">${body}</gpx>`;
+  const TRACK =
+    '<trk><name>&lt;b&gt;x&lt;/b&gt;</name><trkseg><trkpt lat="0" lon="0"/><trkpt lat="0" lon="1"/></trkseg><trkseg><trkpt lat="1" lon="1"/><trkpt lat="1" lon="2"/></trkseg></trk>';
+
+  it("reads waypoints, routes and track segments, one shape each", () => {
+    const result = parseShapeFile(
+      gpx(
+        `<wpt lat="1" lon="2"><name>A</name></wpt>
+         <rte><rtept lat="0" lon="0"/><rtept lat="0" lon="1"/></rte>${TRACK}`,
+      ),
+    );
+    expect(result).toEqual({
+      ok: true,
+      shapes: [
+        { kind: "point", vertices: [p(2, 1)] },
+        { kind: "line", vertices: [p(0, 0), p(1, 0)] },
+        { kind: "line", vertices: [p(0, 0), p(1, 0)] },
+        { kind: "line", vertices: [p(1, 1), p(2, 1)] },
+      ],
+      skipped: {},
+      holesDropped: 0,
+    });
+  });
+
+  it("tells the format from the content, past a byte order mark and a prolog", () => {
+    const text = `﻿\n  <!-- made by a device -->${gpx('<wpt lat="1" lon="2"/>')}`;
+    expect(parseShapeFile(text)).toMatchObject({
+      ok: true,
+      shapes: [{ kind: "point" }],
+    });
+  });
+
+  it("skips and counts shapes outside the rules, and goes on", () => {
+    const result = parseShapeFile(
+      gpx(
+        `<wpt lat="91" lon="2"/><wpt lon="2"/><wpt lat="1" lon="2"/>
+         <rte><rtept lat="0" lon="0"/></rte>
+         <rte><rtept lat="0" lon="0"/><rtept lat="x" lon="0"/></rte>
+         <trk><trkseg/></trk>`,
+      ),
+    );
+    expect(result).toEqual({
+      ok: true,
+      shapes: [{ kind: "point", vertices: [p(2, 1)] }],
+      skipped: {
+        "out-of-range": 1,
+        malformed: 2,
+        degenerate: 1,
+        "too-few-vertices": 1,
+      },
+      holesDropped: 0,
+    });
+  });
+
+  it("skips a track segment of more points than a shape may have", () => {
+    const points = '<trkpt lat="0" lon="0"/>'.repeat(
+      MAX_IMPORT_SHAPE_POINTS + 1,
+    );
+    expect(
+      parseShapeFile(gpx(`<trk><trkseg>${points}</trkseg></trk>`)),
+    ).toEqual({
+      ok: true,
+      shapes: [],
+      skipped: { "too-many-points": 1 },
+      holesDropped: 0,
+    });
+  });
+
+  it("refuses a file of more shapes or points than an import accepts", () => {
+    const waypoints = '<wpt lat="1" lon="2"/>'.repeat(MAX_IMPORT_SHAPES + 1);
+    expect(parseShapeFile(gpx(waypoints))).toEqual({
+      ok: false,
+      refusal: "too-many-shapes",
+    });
+    const segment = `<trkseg>${'<trkpt lat="0" lon="0"/>'.repeat(MAX_IMPORT_SHAPE_POINTS)}</trkseg>`;
+    expect(
+      parseShapeFile(
+        gpx(
+          `<trk>${segment.repeat(MAX_IMPORT_POINTS / MAX_IMPORT_SHAPE_POINTS + 1)}</trk>`,
+        ),
+      ),
+    ).toEqual({ ok: false, refusal: "too-many-points" });
+  });
+
+  it("refuses a file of too many shapes before it reads on to damaged text", () => {
+    const text = `<gpx>${'<wpt lat="1" lon="2"/>'.repeat(MAX_IMPORT_SHAPES + 1)}<wpt>`;
+    expect(parseShapeFile(text)).toEqual({
+      ok: false,
+      refusal: "too-many-shapes",
+    });
+  });
+
+  it("accepts a file of exactly the most shapes and exactly the most points", () => {
+    const waypoints = '<wpt lat="1" lon="2"/>'.repeat(MAX_IMPORT_SHAPES);
+    expect(parseShapeFile(gpx(waypoints))).toMatchObject({
+      ok: true,
+      shapes: expect.arrayContaining([{ kind: "point", vertices: [p(2, 1)] }]),
+    });
+    const segments = Array.from(
+      { length: MAX_IMPORT_POINTS / MAX_IMPORT_SHAPE_POINTS },
+      () =>
+        `<trkseg>${Array.from(
+          { length: MAX_IMPORT_SHAPE_POINTS },
+          (_, at) => `<trkpt lat="${at / 100}" lon="0"/>`,
+        ).join("")}</trkseg>`,
+    ).join("");
+    const result = parseShapeFile(gpx(`<trk>${segments}</trk>`));
+    expect(result).toMatchObject({ ok: true, skipped: {} });
+    expect(result.ok && result.shapes).toHaveLength(10);
+  });
+
+  it("skips a position outside the world", () => {
+    expect(parseShapeFile(gpx('<wpt lat="1" lon="181"/>'))).toMatchObject({
+      ok: true,
+      shapes: [],
+      skipped: { "out-of-range": 1 },
+    });
+  });
+
+  it("refuses text that nests elements too deeply", () => {
+    expect(parseShapeFile(gpx("<a>".repeat(MAX_IMPORT_DEPTH + 1)))).toEqual({
+      ok: false,
+      refusal: "too-deep",
+    });
+  });
+
+  it("refuses a file longer than an import accepts before reading it", () => {
+    expect(parseShapeFile(gpx(" ".repeat(MAX_IMPORT_BYTES)))).toEqual({
+      ok: false,
+      refusal: "too-large",
+    });
+  });
+
+  it("refuses damaged GPX whole, and leaves other XML to be not recognised", () => {
+    expect(parseShapeFile(gpx('<wpt lat="1" lon="2">'))).toEqual({
+      ok: false,
+      refusal: "gpx-unreadable",
+    });
+    expect(parseShapeFile("<kml><Placemark/></kml>")).toEqual({
+      ok: false,
+      refusal: "not-recognised",
+    });
+    expect(parseShapeFile("<")).toEqual({
+      ok: false,
+      refusal: "not-recognised",
+    });
+  });
+
+  it("reads a document whose entities would expand enormously without expanding them", () => {
+    const laughs = Array.from(
+      { length: 9 },
+      (_, level) => `<!ENTITY lol${level + 1} "${`&lol${level};`.repeat(10)}">`,
+    ).join("");
+    const started = performance.now();
+    expect(
+      parseShapeFile(
+        `<!DOCTYPE gpx [<!ENTITY lol "lol">${laughs}]>${gpx('<wpt lat="1" lon="2"><name>&lol9;</name></wpt>')}`,
+      ),
+    ).toEqual({ ok: false, refusal: "not-recognised" });
+    expect(
+      parseShapeFile(gpx('<wpt lat="1" lon="2"><name>&lol9;</name></wpt>')),
+    ).toMatchObject({ ok: true, shapes: [{ kind: "point" }] });
+    expect(performance.now() - started).toBeLessThan(500);
+  });
+
+  it("reads each of a file's own mix of foreign content and text", () => {
+    const result = parseShapeFile(
+      gpx(
+        `text<metadata><desc><![CDATA[<script>alert(1)</script>]]></desc></metadata>
+         <extensions><x:ext xmlns:x="u"><wpt lat="5" lon="5"/></x:ext></extensions>
+         <wpt lat="1" lon="2"><desc>&lt;img onerror=x&gt;</desc></wpt>
+         <?x <wpt lat="7" lon="7"/>?>`,
+      ),
+    );
+    expect(result).toMatchObject({ ok: true, shapes: [{ kind: "point" }] });
+  });
+});

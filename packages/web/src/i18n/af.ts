@@ -287,11 +287,13 @@ export const AF_CATALOGUE: Record<MessageKey, string> = {
   "draw.import.refusal.too-large":
     "Die lêer is groter as {megabytes} MB. Verdeel dit in kleiner lêers.",
   "draw.import.refusal.too-deep":
-    "Die lêer is te diep genestel om te lees. Kyk of dit GeoJSON is.",
+    "Die lêer is te diep genestel om te lees. Kyk of dit 'n GeoJSON- of GPX-lêer is.",
   "draw.import.refusal.not-recognised":
-    "Dit is nie GeoJSON, WKT of 'n CSV met vorms van hierdie kaart nie. Kies 'n .geojson-, .json-, .wkt-, .txt- of .csv-lêer.",
+    "Dit is nie GeoJSON, GPX, WKT of 'n CSV met vorms van hierdie kaart nie. Kies 'n .geojson-, .json-, .gpx-, .wkt-, .txt- of .csv-lêer.",
   "draw.import.refusal.wkt-unreadable":
     "Die WKT kon nie gelees word nie, so niks uit die lêer is ingevoer nie.",
+  "draw.import.refusal.gpx-unreadable":
+    "Die GPX kon nie gelees word nie, so niks uit die lêer is ingevoer nie.",
   "draw.import.refusal.too-many-shapes":
     "Die lêer het meer as {max} vorms. Voer hoogstens {max} op 'n slag in.",
   "draw.import.refusal.too-many-points":
@@ -364,7 +366,7 @@ export const AF_CATALOGUE: Record<MessageKey, string> = {
   "panels.shapes.deleteSelected": "Vee gekose vorm uit",
   "panels.shapes.deleteAll": "Vee alle vorms uit",
   "panels.shapes.importHeading": "Voer in",
-  "panels.shapes.import": "Voer GeoJSON, CSV of WKT in",
+  "panels.shapes.import": "Voer GeoJSON, GPX, CSV of WKT in",
   "panels.shapes.axisOrderLabel": "WKT-koördinaatvolgorde",
   "panels.shapes.axisOrder.lng-lat": "Lengtegraad, breedtegraad (verstek)",
   "panels.shapes.axisOrder.lat-lng": "Breedtegraad, lengtegraad",

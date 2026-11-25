@@ -417,12 +417,17 @@ describe("describeShapeImport", () => {
     ).toBe("The file is larger than 1 MB. Split it into smaller files.");
     expect(
       english(describeShapeImport({ ok: false, refusal: "too-deep" })),
-    ).toBe("The file is nested too deeply to read. Check that it is GeoJSON.");
+    ).toBe(
+      "The file is nested too deeply to read. Check that it is a GeoJSON or GPX file.",
+    );
     expect(
       english(describeShapeImport({ ok: false, refusal: "not-recognised" })),
     ).toBe(
-      "This is not GeoJSON, WKT or a CSV of shapes from this map. Choose a .geojson, .json, .wkt, .txt or .csv file.",
+      "This is not GeoJSON, GPX, WKT or a CSV of shapes from this map. Choose a .geojson, .json, .gpx, .wkt, .txt or .csv file.",
     );
+    expect(
+      english(describeShapeImport({ ok: false, refusal: "gpx-unreadable" })),
+    ).toBe("The GPX could not be read, so none of the file was imported.");
     expect(
       english(
         describeShapeImport({

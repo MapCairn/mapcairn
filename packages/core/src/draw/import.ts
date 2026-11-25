@@ -11,13 +11,14 @@ import { shortestLongitudeSpan } from "../globe/longitude";
 import type { Bounds, LatLng } from "../ports/geometry";
 import type { Message } from "../ports/messages";
 import { SHAPES_CSV_HEADER } from "./export";
+import { readGpx } from "./gpx";
 import type { DrawShapeInput } from "./reducer";
 import { shapeRing, validateShape } from "./shape";
 import type { DrawIssue } from "./types";
 
 /**
- * The file types the import offers in the picker: GeoJSON, CSV and WKT, by
- * extension and by media type. WKT has no media type of its own, so it is
+ * The file types the import offers in the picker: GeoJSON, CSV, WKT and GPX,
+ * by extension and by media type. WKT has no media type of its own, so it is
  * offered by the extensions `.wkt` and `.txt`.
  */
 export const SHAPE_FILE_TYPES: readonly string[] = [
@@ -26,7 +27,9 @@ export const SHAPE_FILE_TYPES: readonly string[] = [
   ".csv",
   ".wkt",
   ".txt",
+  ".gpx",
   "application/geo+json",
+  "application/gpx+xml",
   "application/json",
   "text/csv",
 ];
@@ -67,6 +70,7 @@ export type ShapeImportRefusal =
   | "too-deep"
   | "not-recognised"
   | "wkt-unreadable"
+  | "gpx-unreadable"
   | "too-many-shapes"
   | "too-many-points";
 
@@ -718,10 +722,32 @@ function addWktText(
   return "wkt-unreadable";
 }
 
+/** Adds what GPX text holds, or says why the whole text is refused. */
+function addGpxText(
+  collector: Collector,
+  body: string,
+): ShapeImportRefusal | null {
+  const reading = readGpx(body, (geometry) => {
+    addGeometry(collector, geometry, false);
+    return collector.refusal === null;
+  });
+  switch (reading) {
+    case "too-deep":
+      return "too-deep";
+    case "not-gpx":
+      return "not-recognised";
+    case "unreadable":
+      return "gpx-unreadable";
+    case "ok":
+    case "stopped":
+      return null;
+  }
+}
+
 /**
  * Adds what the text holds, read as the format its start shows: the draw
- * tool's CSV, GeoJSON (it starts with a brace), a CSV with a column of WKT,
- * or else WKT itself. Says why the whole text is refused, if it is.
+ * tool's CSV, GeoJSON (it starts with a brace), GPX (it starts with a tag), a
+ * CSV with a column of WKT, or else WKT itself. Says why the whole text is refused, if it is.
  */
 function addFileBody(
   collector: Collector,
@@ -735,6 +761,9 @@ function addFileBody(
   if (body.startsWith("{")) {
     return addGeoJsonText(collector, body);
   }
+  if (body.startsWith("<")) {
+    return addGpxText(collector, body);
+  }
   const wktColumn = wktColumnLayout(body);
   if (wktColumn) {
     addCsv(collector, body, wktColumn);
@@ -744,8 +773,8 @@ function addFileBody(
 }
 
 /**
- * Reads the shapes in a GeoJSON file, in Well-Known Text (WKT) or in a CSV,
- * ready for the draw reducer's `import` action. Pure and bounded, and never
+ * Reads the shapes in a GeoJSON file, in Well-Known Text (WKT), in GPX or in a
+ * CSV, ready for the draw reducer's `import` action. Pure and bounded, and never
  * throws: text from a file is hostile until proven otherwise.
  *
  * @remarks The format is told from the content. GeoJSON may be a
@@ -776,9 +805,19 @@ function addFileBody(
  *   (any case, comma-delimited only), whose cells are read as WKT in the same
  *   way, each stretch of a cell that cannot be used counting as one skip.
  *
+ *   GPX (text that starts with a tag; see `readGpx`) gives a point for each
+ *   waypoint, a line for each route and a line for each track segment, so a
+ *   track of several segments is several lines. It is read by a hand-written
+ *   scan, not an XML parser: entities are never expanded and nothing external
+ *   is followed, and names, descriptions and extensions are never read. A
+ *   route or segment with a position that is not a number is skipped as
+ *   `malformed`; a `DOCTYPE` or any other XML, such as KML, is
+ *   `not-recognised`, and GPX whose elements are damaged is refused whole as
+ *   `gpx-unreadable`.
+ *
  *   The text is refused whole when it is longer than
  *   {@link MAX_IMPORT_BYTES} characters, nests deeper than
- *   {@link MAX_IMPORT_DEPTH} (measured before parsing), or holds more than
+ *   {@link MAX_IMPORT_DEPTH} (JSON measured before parsing, GPX elements as they are walked), or holds more than
  *   {@link MAX_IMPORT_SHAPES} shapes or {@link MAX_IMPORT_POINTS} points; a
  *   shape of more than {@link MAX_IMPORT_SHAPE_POINTS} points is skipped.
  *   Keys are read only when they are an object's own, so a `__proto__` key

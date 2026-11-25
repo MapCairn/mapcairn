@@ -692,12 +692,12 @@ describe("useDraw", () => {
     const assertive = () =>
       screen.getByTestId("live-region-assertive").textContent;
 
-    it("opens the picker for GeoJSON, CSV and WKT within the size cap, and does nothing when cancelled", async () => {
+    it("opens the picker for GeoJSON, GPX, CSV and WKT within the size cap, and does nothing when cancelled", async () => {
       const rig = await setup();
       expect(await importFile(rig, null)).toBeNull();
       const [options] = rig.services.fakes.fileOpener.opens;
       expect(options?.accept).toEqual(
-        expect.arrayContaining([".geojson", ".json", ".csv", ".wkt"]),
+        expect.arrayContaining([".geojson", ".json", ".gpx", ".csv", ".wkt"]),
       );
       expect(options?.maxBytes).toBe(1_000_000);
       expect(rig.result.current.shapes).toEqual([]);
@@ -750,6 +750,22 @@ describe("useDraw", () => {
       });
     });
 
+    it("adds the lines and points of a GPX file and says what it held", async () => {
+      const rig = await setup();
+      await importFile(rig, {
+        name: "walk.gpx",
+        text: '<gpx><wpt lat="48.85" lon="2.35"/><trk><trkseg><trkpt lat="1" lon="1"/><trkpt lat="2" lon="2"/></trkseg><trkseg/></trk></gpx>',
+      });
+      expect(rig.result.current.shapes.map((shape) => shape.label)).toEqual([
+        "Point 1",
+        "Line 1",
+      ]);
+      expect(rig.result.current.importFeedback).toEqual({
+        kind: "success",
+        text: "2 shapes imported. 1 skipped: 1 with no length or area.",
+      });
+    });
+
     it("imports the lines of a WKT file that can be read and says how many were skipped", async () => {
       const rig = await setup();
       await importFile(rig, {
@@ -799,7 +815,7 @@ describe("useDraw", () => {
       ).toBeNull();
       expect(rig.result.current.importFeedback).toEqual({
         kind: "error",
-        text: "This is not GeoJSON, WKT or a CSV of shapes from this map. Choose a .geojson, .json, .wkt, .txt or .csv file.",
+        text: "This is not GeoJSON, GPX, WKT or a CSV of shapes from this map. Choose a .geojson, .json, .gpx, .wkt, .txt or .csv file.",
       });
       await advance(DRAW_ANNOUNCE_DELAY_MS);
       expect(assertive()).toContain("This is not GeoJSON");
