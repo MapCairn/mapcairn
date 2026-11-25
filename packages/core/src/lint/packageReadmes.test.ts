@@ -38,7 +38,7 @@ const EXAMPLE_SOURCE = "examples/embed/src";
 /** Where a link to a file of the repository must start. */
 const REPOSITORY_FILES = "https://github.com/MapCairn/mapcairn/blob/main/";
 /** The documentation site's guides, which the READMEs link by address. */
-const DOCUMENTATION_GUIDES = "https://mapcairn.timothybrits.co.za/docs/guides/";
+const DOCUMENTATION_GUIDES = "https://docs.mapcairn.com/guides/";
 /** Where a link to a folder of the repository must start. */
 const REPOSITORY_FOLDERS = "https://github.com/MapCairn/mapcairn/tree/main/";
 
@@ -350,13 +350,13 @@ describe("the Next steps list in the README of @mapcairn/sdk", () => {
   it("links the guides, the playground and the whole-app example", () => {
     expect(readme).toContain("## Next steps");
     for (const wanted of [
-      "docs/guides/extending/#show-a-real-map",
-      "docs/guides/extending/#theme-the-sdk-with-your-own-colours",
-      "docs/guides/translate-the-sdk/",
-      "docs/guides/extending/#write-a-search-provider",
-      "docs/guides/extending/#add-a-routing-provider",
-      "docs/guides/extending/#add-a-data-layer",
-      "docs/guides/content-security-policy/",
+      "docs.mapcairn.com/guides/extending/#show-a-real-map",
+      "docs.mapcairn.com/guides/extending/#theme-the-sdk-with-your-own-colours",
+      "docs.mapcairn.com/guides/translate-the-sdk/",
+      "docs.mapcairn.com/guides/extending/#write-a-search-provider",
+      "docs.mapcairn.com/guides/extending/#add-a-routing-provider",
+      "docs.mapcairn.com/guides/extending/#add-a-data-layer",
+      "docs.mapcairn.com/guides/content-security-policy/",
       "examples/embed",
     ]) {
       expect(
@@ -364,7 +364,7 @@ describe("the Next steps list in the README of @mapcairn/sdk", () => {
         wanted,
       ).toBe(true);
     }
-    expect(targets).toContain("https://mapcairn.timothybrits.co.za/map");
+    expect(targets).toContain("https://mapcairn.com/map");
   });
 });
 
@@ -568,7 +568,7 @@ describe("the README of @mapcairn/sdk", () => {
     const section = usage.slice(0, usage.indexOf("\n## ", 5));
     expect(codeBlocks(section)).toHaveLength(1);
     expect(linkTargets(section)).toContain(
-      "https://mapcairn.timothybrits.co.za/docs/get-started/",
+      "https://docs.mapcairn.com/get-started/",
     );
   });
 });

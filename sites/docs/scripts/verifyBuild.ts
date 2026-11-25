@@ -8,7 +8,7 @@ import config from "../docusaurus.config";
 import { readDocPages } from "../plugins/markdownCopiesPlugin";
 import { SEARCH_INDEX_FILE } from "../plugins/searchIndexPlugin";
 import { sidebar } from "../sidebars";
-import { BASE_URL, HOST_PATHS, SITE_ORIGIN } from "../src/siteConfig";
+import { BASE_URL, SITE_ORIGIN } from "../src/siteConfig";
 import {
   brokenInternalLinks,
   externalResources,
@@ -143,11 +143,7 @@ export function verifyBuild(
   )) {
     findings.push(`The page "${id}" is in no sidebar.`);
   }
-  for (const { from, href } of brokenInternalLinks(
-    build,
-    BASE_URL,
-    HOST_PATHS,
-  )) {
+  for (const { from, href } of brokenInternalLinks(build, BASE_URL)) {
     findings.push(`${from} links to ${href}, which was not built.`);
   }
   const headers = readFileSync(join(build, "_headers"), "utf8");

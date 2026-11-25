@@ -57,7 +57,12 @@ export default defineConfig(({ mode }) => {
         traces: { enabled: true, headSamplingRate: 1, persist: true },
         issues: { enabled: true },
       },
-      domains: ["karta.timothybrits.co.za", "mapcairn.timothybrits.co.za"],
+      domains: [
+        "mapcairn.com",
+        "karta.timothybrits.co.za",
+        "mapcairn.timothybrits.co.za",
+        "www.mapcairn.com",
+      ],
       env,
     },
   };

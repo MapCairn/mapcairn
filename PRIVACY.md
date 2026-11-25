@@ -24,7 +24,7 @@ first-visit tour (a version number under `mapcairn:tourSeen`). The other keys
 start with `mapcairn:`. The tour
 itself sends nothing; a layer you turn on during it loads from its provider as
 described below. These stay on your device and are
-never sent to a server. The documentation pages under `/docs/` read the same
+never sent to a server. The documentation pages under `docs.mapcairn.com` read the same
 theme key and also keep your light or dark choice under `theme`, the key their
 framework uses; like the others it stays on your device.
 
@@ -41,7 +41,7 @@ If the app hits an unexpected error in your browser, it sends a short
 diagnostic report to this site's own server, where it is written to
 Cloudflare's operational logs so the fault can be fixed. The report holds the
 error message, a stack trace, the page's address without its query or the part
-after # (for example `https://mapcairn.timothybrits.co.za/`), and whether it was
+after # (for example `https://mapcairn.com/`), and whether it was
 an uncaught error or a rejected promise. It never includes the map's position
 or yours. No cookies, personal data or persistent identifiers are attached to
 the report, and it is not stored in any database. One page load sends at most
@@ -123,4 +123,4 @@ this site and is not stored.
 
 ## Contact
 
-For a question or concern about privacy, write to mapcairn@timothybrits.co.za, or open an issue on [GitHub](https://github.com/MapCairn/mapcairn/issues).
+For a question or concern about privacy, write to hello@mapcairn.com, or open an issue on [GitHub](https://github.com/MapCairn/mapcairn/issues).

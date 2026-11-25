@@ -51,10 +51,7 @@ function builtSite(
   roots.push(root);
   writeFileSync(join(root, "index.html"), `${TARGETS}${pages}`);
   writeFileSync(join(root, "_headers"), buildHeadersFile([ONE.hash]));
-  writeFileSync(
-    join(root, "search-index.json"),
-    JSON.stringify([{ id: "/docs/" }]),
-  );
+  writeFileSync(join(root, "search-index.json"), JSON.stringify([{ id: "/" }]));
   writeFileSync(join(root, "sitemap.xml"), "<urlset></urlset>");
   writeMarkdownFiles(root, [], CONTEXT);
   writeFileSync(
@@ -105,17 +102,17 @@ afterEach(() => {
 describe("verifyBuild", () => {
   it("passes a site whose links, scripts and styles the policy allows", () => {
     const root = builtSite(
-      '<a href="/map">m</a><a href="/docs/">home</a><script>one()</script>',
+      '<a href="https://mapcairn.com/map">m</a><a href="/">home</a><script>one()</script>',
     );
     expect(verifyBuild(root, [ONE], [])).toEqual([]);
   });
 
   it("reports a broken link, a style attribute and a resource from another origin", () => {
     const root = builtSite(
-      '<a href="/docs/missing/">x</a><p style="color:red">y</p><script src="https://cdn.example/a.js"></script><script>one()</script>',
+      '<a href="/missing/">x</a><p style="color:red">y</p><script src="https://cdn.example/a.js"></script><script>one()</script>',
     );
     const findings = verifyBuild(root, [ONE], []).join("\n");
-    expect(findings).toContain("/docs/missing/");
+    expect(findings).toContain("/missing/");
     expect(findings).toContain("style attribute");
     expect(findings).toContain("https://cdn.example/a.js");
   });
@@ -232,7 +229,7 @@ describe("verifyBuild", () => {
       ]),
     );
     const tag =
-      '<script src="/docs/assets/js/main.js" defer></script><script>one()</script>';
+      '<script src="/assets/js/main.js" defer></script><script>one()</script>';
     expect(scriptBudgetFor(100)).toBe(
       SCRIPT_BUDGET_BYTES + 100 * API_PAGE_ALLOWANCE_BYTES,
     );
@@ -249,12 +246,9 @@ describe("verifyBuild", () => {
 
   it("reports a front page that loads more script than the budget", () => {
     const heavy = randomBytes(SCRIPT_BUDGET_BYTES + 20_000).toString("latin1");
-    const root = builtSite(
-      '<script src="/docs/assets/js/main.js" defer></script>',
-      {
-        "assets/js/main.js": heavy,
-      },
-    );
+    const root = builtSite('<script src="/assets/js/main.js" defer></script>', {
+      "assets/js/main.js": heavy,
+    });
     expect(verifyBuild(root, [ONE], []).join("\n")).toContain(
       "over the budget",
     );

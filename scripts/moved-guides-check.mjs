@@ -27,7 +27,7 @@ const TEXT_FILE = /\.(?:md|mdx|ts|tsx|mjs|cjs|yml|yaml|json|jsonc)$/;
 const SKIPPED_FILE = /(?:^|\/)package-lock\.json$/;
 const GUIDES_FOLDER = "docs/guides/";
 /** An address on the documentation site, which may end in a guide's name. */
-const SITE_URL = /https?:\/\/mapcairn\.timothybrits\.co\.za\/\S*/g;
+const SITE_URL = /https?:\/\/(?:docs\.)?mapcairn\.com\/\S*/g;
 
 /**
  * The names of the guides that moved, read from `movedGuides.json`.
@@ -109,7 +109,7 @@ function main() {
       moved,
     ).map(
       ({ line, guide }) =>
-        `${file}:${line}: docs/guides/${guide}.md moved to sites/docs/docs/guides/${guide}.md (the site's /docs/guides/${guide}/)`,
+        `${file}:${line}: docs/guides/${guide}.md moved to sites/docs/docs/guides/${guide}.md (the site's /guides/${guide}/)`,
     ),
   );
   if (reports.length > 0) {

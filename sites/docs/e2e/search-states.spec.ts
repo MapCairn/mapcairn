@@ -11,7 +11,7 @@ const HINT =
 const ERROR_TEXT =
   "Search could not be loaded. Check your connection, then try again.";
 
-async function openSearch(page: Page, path = "/docs/") {
+async function openSearch(page: Page, path = "/") {
   await open(page, path);
   await page.getByRole("button", { name: "Search" }).click();
   const dialog = page.getByRole("dialog", { name: "Search the documentation" });
@@ -108,12 +108,12 @@ test("a cut result list says so, and never announces a count that is less than w
 test("choosing a result on the page being read moves focus to its heading", async ({
   page,
 }) => {
-  const { input } = await openSearch(page, "/docs/tasks/choose-a-basemap/");
+  const { input } = await openSearch(page, "/tasks/choose-a-basemap/");
   await input.fill("What a basemap is");
   const first = page.getByRole("dialog").getByRole("link").first();
   await expect(first).toBeVisible();
   const target = await first.getAttribute("href");
-  expect(target).toContain("/docs/tasks/choose-a-basemap/#");
+  expect(target).toContain("/tasks/choose-a-basemap/#");
 
   await page.keyboard.press("ArrowDown");
   await page.keyboard.press("Enter");

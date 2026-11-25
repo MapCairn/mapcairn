@@ -15,7 +15,7 @@ describe("privacy route links", () => {
 
     expect(rels).toContainEqual({
       rel: "canonical",
-      href: "https://mapcairn.timothybrits.co.za/privacy",
+      href: "https://mapcairn.com/privacy",
     });
   });
 });
@@ -38,7 +38,7 @@ describe("privacy route meta", () => {
 
     expect(tags).toContainEqual({
       property: "og:url",
-      content: "https://mapcairn.timothybrits.co.za/privacy",
+      content: "https://mapcairn.com/privacy",
     });
     expect(tags).toContainEqual({
       property: "og:title",
@@ -52,7 +52,7 @@ describe("privacy route meta", () => {
       expect.objectContaining({
         "@type": "WebPage",
         name: "Privacy policy | MapCairn",
-        url: "https://mapcairn.timothybrits.co.za/privacy",
+        url: "https://mapcairn.com/privacy",
       }),
     );
   });

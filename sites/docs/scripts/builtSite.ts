@@ -126,16 +126,15 @@ function builtFileExists(root: string, path: string): boolean {
 
 /**
  * Every `href` that starts with `/` in the built pages and resolves to no
- * built page or file. A link under the base path must exist in the build; a
- * link outside it must be one of the reference site's own paths.
+ * built page or file. A link must be under the base path and exist in the
+ * build: another site, the reference site included, is linked by its full
+ * address.
  * @param root - The build folder.
  * @param baseUrl - The base path, with both slashes.
- * @param hostPaths - The paths outside the base path the site may link to.
  */
 export function brokenInternalLinks(
   root: string,
   baseUrl: string,
-  hostPaths: readonly string[],
 ): BrokenLink[] {
   const broken: BrokenLink[] = [];
   for (const page of htmlFiles(root)) {
@@ -146,9 +145,9 @@ export function brokenInternalLinks(
         continue;
       }
       const path = decodeURI(href.split(/[?#]/)[0] ?? "");
-      const known = path.startsWith(baseUrl)
-        ? builtFileExists(root, path.slice(baseUrl.length))
-        : hostPaths.includes(path);
+      const known =
+        path.startsWith(baseUrl) &&
+        builtFileExists(root, path.slice(baseUrl.length));
       if (!known) {
         broken.push({ from: page, href });
       }

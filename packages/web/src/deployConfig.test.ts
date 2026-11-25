@@ -4,6 +4,7 @@ import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { describe, expect, it } from "vitest";
+import { REDIRECTED_HOSTNAMES, SITE_URL } from "./constants/siteConfig";
 
 const repositoryRoot = join(
   dirname(fileURLToPath(import.meta.url)),
@@ -100,11 +101,11 @@ describe("cloudflare.config.ts", () => {
     expect(worker.observability).toEqual(PRODUCTION_OBSERVABILITY);
   });
 
-  it("serves both production hostnames as custom domains", async () => {
+  it("serves the site and every hostname that redirects to it as a custom domain", async () => {
     const { worker } = await cloudflareConfig(production);
     expect(worker.domains).toEqual([
-      "karta.timothybrits.co.za",
-      "mapcairn.timothybrits.co.za",
+      new URL(SITE_URL).hostname,
+      ...REDIRECTED_HOSTNAMES,
     ]);
   });
 

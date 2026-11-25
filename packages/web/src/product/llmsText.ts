@@ -2,7 +2,7 @@
 // Copyright MapCairn contributors
 import { EN_GB_CATALOGUE } from "@mapcairn/core";
 import {
-  DOCS_PATH,
+  DOCS_URL,
   PLAYGROUND_PATH,
   SITE_URL,
   SOURCE_REPOSITORY_URL,
@@ -35,7 +35,7 @@ function rawFile(path: string): string {
 
 /** A page of the documentation site, as its Markdown copy. */
 function docsPage(path: string): string {
-  return `${SITE_URL}${DOCS_PATH}${path}.md`;
+  return `${DOCS_URL}${path}.md`;
 }
 
 /** The one-sentence summary. */
@@ -147,10 +147,10 @@ function linkSections(): string {
 
 ## Docs
 
-- [Documentation site](${SITE_URL}${DOCS_PATH}): the SDK's documentation, built at deploy time from Markdown, with no third party.
-- [Documentation index](${SITE_URL}${DOCS_PATH}llms.txt): every documentation page as a plain Markdown file, with a one-line description and its size, and the documentation's full text split by area into files of a bounded size.
-- [Documentation pages as data](${SITE_URL}${DOCS_PATH}pages.json): every page with its title, address, description, headings and Markdown, as JSON.
-- [API catalogue as data](${SITE_URL}${DOCS_PATH}api.json): every export of the SDK packages with its signature and first sentence, as JSON.
+- [Documentation site](${DOCS_URL}): the SDK's documentation, built at deploy time from Markdown, with no third party.
+- [Documentation index](${DOCS_URL}llms.txt): every documentation page as a plain Markdown file, with a one-line description and its size, and the documentation's full text split by area into files of a bounded size.
+- [Documentation pages as data](${DOCS_URL}pages.json): every page with its title, address, description, headings and Markdown, as JSON.
+- [API catalogue as data](${DOCS_URL}api.json): every export of the SDK packages with its signature and first sentence, as JSON.
 ${docs}
 
 ## Policies and source

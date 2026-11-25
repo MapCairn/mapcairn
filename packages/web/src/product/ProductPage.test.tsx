@@ -19,6 +19,7 @@ import {
 import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { MAP_LINK_REDIRECT_SCRIPT } from "../app/mapLinkRedirect";
+import { DOCS_URL } from "../constants/siteConfig";
 import { loader as markdownLoader } from "../routes/index.md";
 import { loader as llmsLoader } from "../routes/llms.txt";
 import { loader as fullLoader } from "../routes/llms-full.txt";
@@ -52,7 +53,7 @@ const MASTODON = "https://en.osm.town/@mapcairn";
 const NPM_PACKAGE = "https://www.npmjs.com/package/@mapcairn/sdk";
 
 /** The licence guide's path on the documentation site, which the footer and the licence answer link. */
-const LICENCE_GUIDE_PATH = "/docs/guides/licence/";
+const LICENCE_GUIDE_PATH = `${DOCS_URL}guides/licence/`;
 
 /**
  * The pages the footer links, in its order, each with the
@@ -60,7 +61,7 @@ const LICENCE_GUIDE_PATH = "/docs/guides/licence/";
  * nothing else past the front page.
  */
 const FOOTER_REPOSITORY_PAGES = [
-  ["Documentation", "/docs/"],
+  ["Documentation", DOCS_URL],
   ["Release notes", `${REPO}/releases`],
   ["Licence guide", LICENCE_GUIDE_PATH],
   ["Security", `${REPO}/blob/main/.github/SECURITY.md`],
@@ -68,7 +69,7 @@ const FOOTER_REPOSITORY_PAGES = [
 ] as const;
 
 /** The capability matrix, which the production answer links for what the SDK has and lacks. */
-const CAPABILITY_MATRIX = "/docs/guides/capability-matrix/";
+const CAPABILITY_MATRIX = `${DOCS_URL}guides/capability-matrix/`;
 
 /** The example app, which the answer on how to use the SDK links. */
 const EXAMPLE_APP = `${REPO}/tree/main/examples/embed`;
@@ -90,7 +91,7 @@ const GET_STARTED = readFileSync(
 ).replaceAll(/^```(tsx?) (?:no-)?check$/gm, "```$1");
 
 /** The walkthrough's path on the documentation site (its front page), which the page links. */
-const GET_STARTED_URL = "/docs/";
+const GET_STARTED_URL = DOCS_URL;
 
 /** The name of the excerpt's code region and of its copy button. */
 const EXCERPT = "src/main.tsx, an excerpt";
@@ -455,7 +456,7 @@ describe("the product page stands on its own", () => {
     ).toEqual([
       ["MapCairn", "/"],
       ["Playground", "/map"],
-      ["Docs", "/docs/"],
+      ["Docs", DOCS_URL],
       ["GitHub", REPO],
     ]);
   });

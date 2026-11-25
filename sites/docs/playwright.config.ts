@@ -18,7 +18,7 @@ const origin = `http://127.0.0.1:${port}`;
 /**
  * Browser checks for the documentation site: an axe audit, the search
  * keyboard path and the header layout, run against the built site in
- * `build/` (`npm run build -w @mapcairn/docs`) served under `/docs/` by
+ * `build/` (`npm run build -w @mapcairn/docs`) served from the root by
  * `scripts/serve.ts`, which answers the way the Worker does.
  */
 export default defineConfig({
@@ -40,7 +40,7 @@ export default defineConfig({
   ],
   webServer: {
     command: `node --import tsx scripts/serve.ts ${port}`,
-    url: `${origin}/docs/`,
+    url: `${origin}/`,
     reuseExistingServer: !process.env.CI,
     timeout: 60_000,
   },

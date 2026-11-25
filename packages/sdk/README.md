@@ -5,7 +5,7 @@
 
 The whole MapCairn SDK from one import: it re-exports `@mapcairn/core`, `@mapcairn/map`, `@mapcairn/react` and `@mapcairn/theme` from its root, and the MapLibre adapter, `@mapcairn/adapter-maplibre`, at the subpath `@mapcairn/sdk/adapter-maplibre`, so an app learns one package name instead of five. It is the recommended install, and it holds no code of its own. The individual packages are the advanced option, for a host that wants fewer dependencies: `core` has no React or browser dependency, and `theme` installs without the interface.
 
-**Status:** pre-1.0. While the version starts with `0.`, a minor release (the middle number) can contain a breaking change to the public API and a patch release (the last number) is not meant to, so a `^0.1.0` range takes patch releases but not the next minor release. The [changelog](https://github.com/MapCairn/mapcairn/blob/main/CHANGELOG.md) names each breaking change the release finds, and [what counts as the public API](https://mapcairn.timothybrits.co.za/docs/guides/public-api/) says what is covered.
+**Status:** pre-1.0. While the version starts with `0.`, a minor release (the middle number) can contain a breaking change to the public API and a patch release (the last number) is not meant to, so a `^0.1.0` range takes patch releases but not the next minor release. The [changelog](https://github.com/MapCairn/mapcairn/blob/main/CHANGELOG.md) names each breaking change the release finds, and [what counts as the public API](https://docs.mapcairn.com/guides/public-api/) says what is covered.
 
 ## Install
 
@@ -27,19 +27,19 @@ import { MapChrome, ServicesProvider } from "@mapcairn/sdk";
 import { createMapLibreMapAdapter } from "@mapcairn/sdk/adapter-maplibre";
 ```
 
-[Get started](https://mapcairn.timothybrits.co.za/docs/get-started/) has a whole app that draws a map, with the engine's worker file.
+[Get started](https://docs.mapcairn.com/get-started/) has a whole app that draws a map, with the engine's worker file.
 
 ## Next steps
 
-- Read [Get started](https://mapcairn.timothybrits.co.za/docs/get-started/) on the documentation site, which also has a page for each common task and the API reference.
-- [Show a real map](https://mapcairn.timothybrits.co.za/docs/guides/extending/#show-a-real-map): the adapter, the engine's worker file and a basemap.
-- [Theme the interface with your own colours](https://mapcairn.timothybrits.co.za/docs/guides/extending/#theme-the-sdk-with-your-own-colours), checked against WCAG 2.2 AA.
-- [Translate the interface](https://mapcairn.timothybrits.co.za/docs/guides/translate-the-sdk/) or offer a choice of languages.
-- [Write a search provider](https://mapcairn.timothybrits.co.za/docs/guides/extending/#write-a-search-provider).
-- [Add a routing provider](https://mapcairn.timothybrits.co.za/docs/guides/extending/#add-a-routing-provider).
-- [Add a data layer](https://mapcairn.timothybrits.co.za/docs/guides/extending/#add-a-data-layer).
-- Read the [Content Security Policy guide](https://mapcairn.timothybrits.co.za/docs/guides/content-security-policy/) before you deploy.
-- Try the [playground](https://mapcairn.timothybrits.co.za/map), and read [`examples/embed`](https://github.com/MapCairn/mapcairn/tree/main/examples/embed), a whole app written against the packages.
+- Read [Get started](https://docs.mapcairn.com/get-started/) on the documentation site, which also has a page for each common task and the API reference.
+- [Show a real map](https://docs.mapcairn.com/guides/extending/#show-a-real-map): the adapter, the engine's worker file and a basemap.
+- [Theme the interface with your own colours](https://docs.mapcairn.com/guides/extending/#theme-the-sdk-with-your-own-colours), checked against WCAG 2.2 AA.
+- [Translate the interface](https://docs.mapcairn.com/guides/translate-the-sdk/) or offer a choice of languages.
+- [Write a search provider](https://docs.mapcairn.com/guides/extending/#write-a-search-provider).
+- [Add a routing provider](https://docs.mapcairn.com/guides/extending/#add-a-routing-provider).
+- [Add a data layer](https://docs.mapcairn.com/guides/extending/#add-a-data-layer).
+- Read the [Content Security Policy guide](https://docs.mapcairn.com/guides/content-security-policy/) before you deploy.
+- Try the [playground](https://mapcairn.com/map), and read [`examples/embed`](https://github.com/MapCairn/mapcairn/tree/main/examples/embed), a whole app written against the packages.
 
 ## What it exports
 
@@ -71,7 +71,7 @@ A host that adds a service of its own by declaration merging augments `@mapcairn
 
 ## Licence
 
-`@mapcairn/sdk` is licensed under AGPL-3.0-only, an open-source licence that allows commercial use, and the [licence text](https://github.com/MapCairn/mapcairn/blob/main/packages/sdk/LICENSE) comes with the package. If you distribute an app that includes the SDK, including by serving it to people's browsers, you must offer them the corresponding source of the code you combine with the SDK and serve with it, under the same licence. If you modify the SDK and let people interact with your modified version over a network, you must offer them its corresponding source. [What the licence means for your project](https://mapcairn.timothybrits.co.za/docs/guides/licence/) says it in plain words and is not legal advice. The SDK packages depend only on permissively licensed packages. The [licence section of the repository README](https://github.com/MapCairn/mapcairn#licence) says more.
+`@mapcairn/sdk` is licensed under AGPL-3.0-only, an open-source licence that allows commercial use, and the [licence text](https://github.com/MapCairn/mapcairn/blob/main/packages/sdk/LICENSE) comes with the package. If you distribute an app that includes the SDK, including by serving it to people's browsers, you must offer them the corresponding source of the code you combine with the SDK and serve with it, under the same licence. If you modify the SDK and let people interact with your modified version over a network, you must offer them its corresponding source. [What the licence means for your project](https://docs.mapcairn.com/guides/licence/) says it in plain words and is not legal advice. The SDK packages depend only on permissively licensed packages. The [licence section of the repository README](https://github.com/MapCairn/mapcairn#licence) says more.
 
 ## Contributing and changes
 

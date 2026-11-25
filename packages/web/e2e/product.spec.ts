@@ -4,6 +4,7 @@ import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import type { Locator, Page } from "@playwright/test";
+import { DOCS_URL } from "../src/constants/siteConfig";
 import { expect, test } from "./fixtures";
 import { EXCERPT, PRODUCT_HEADLINE, ProductPage } from "./pages/ProductPage";
 import {
@@ -19,7 +20,7 @@ import {
  * playground and back, and the accessibility checks in both themes.
  */
 
-const SITE = "https://mapcairn.timothybrits.co.za";
+const SITE = "https://mapcairn.com";
 
 /** Phone first, then desktop: the sizes the page is checked at. */
 const VIEWPORTS = [
@@ -264,8 +265,8 @@ test.describe("the product page", () => {
       "href",
       "https://github.com/MapCairn/mapcairn",
     );
-    await expect(product.headerDocs).toHaveAttribute("href", "/docs/");
-    await expect(product.header.locator('a[href^="https://"]')).toHaveCount(1);
+    await expect(product.headerDocs).toHaveAttribute("href", DOCS_URL);
+    await expect(product.header.locator('a[href^="https://"]')).toHaveCount(2);
     await expect(
       product.footer.getByRole("link", { name: "Source code" }),
     ).toHaveAttribute("href", "https://github.com/MapCairn/mapcairn");
@@ -291,12 +292,12 @@ test.describe("the product page", () => {
     const documentation = product.footer.getByRole("link", {
       name: "Documentation",
     });
-    await expect(documentation).toHaveAttribute("href", "/docs/");
+    await expect(documentation).toHaveAttribute("href", DOCS_URL);
     expect((await documentation.boundingBox())?.height).toBeGreaterThanOrEqual(
       44,
     );
     const licence = product.footer.getByRole("link", { name: "Licence guide" });
-    await expect(licence).toHaveAttribute("href", "/docs/guides/licence/");
+    await expect(licence).toHaveAttribute("href", `${DOCS_URL}guides/licence/`);
     expect((await licence.boundingBox())?.height).toBeGreaterThanOrEqual(44);
   });
 

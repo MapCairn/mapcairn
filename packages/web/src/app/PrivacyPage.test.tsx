@@ -36,8 +36,8 @@ describe("PrivacyPage", () => {
   it("gives a contact address for privacy questions", () => {
     render(<PrivacyPage />);
     expect(
-      screen.getByRole("link", { name: "mapcairn@timothybrits.co.za" }),
-    ).toHaveAttribute("href", "mailto:mapcairn@timothybrits.co.za");
+      screen.getByRole("link", { name: "hello@mapcairn.com" }),
+    ).toHaveAttribute("href", "mailto:hello@mapcairn.com");
   });
 
   it("discloses Cloudflare Web Analytics as cookieless and aggregate-only", () => {

@@ -6,7 +6,7 @@ import { open, prepare } from "./support";
 test("the 404 page's document title is its heading, with links to the three starting points", async ({
   page,
 }) => {
-  await open(page, "/docs/this-page-does-not-exist/");
+  await open(page, "/this-page-does-not-exist/");
   const heading = page.getByRole("heading", { level: 1 });
   await expect(heading).toHaveText("This page doesn't exist");
   await expect(page).toHaveTitle(/^This page doesn't exist/);
@@ -26,9 +26,9 @@ test("Docs is the current page on its own front page and the current section els
   const docs = page
     .getByRole("navigation", { name: "Site links" })
     .getByRole("link", { name: "Docs" });
-  await open(page, "/docs/");
+  await open(page, "/");
   await expect(docs).toHaveAttribute("aria-current", "page");
-  await open(page, "/docs/tasks/choose-a-basemap/");
+  await open(page, "/tasks/choose-a-basemap/");
   await expect(docs).toHaveAttribute("aria-current", "true");
 });
 
@@ -37,7 +37,7 @@ for (const width of [390, 1280]) {
     page,
   }) => {
     await prepare(page, "light", width);
-    await open(page, "/docs/tasks/choose-a-basemap/");
+    await open(page, "/tasks/choose-a-basemap/");
     if (width < 997) {
       await page.getByRole("button", { name: /navigation bar/i }).click();
     }
@@ -53,9 +53,9 @@ for (const width of [390, 1280]) {
 
 for (const width of [320, 390]) {
   for (const path of [
-    "/docs/architecture/",
-    "/docs/architecture/data-layers/",
-    "/docs/architecture/adding-an-adapter/",
+    "/architecture/",
+    "/architecture/data-layers/",
+    "/architecture/adding-an-adapter/",
   ]) {
     test(`the diagrams on ${path} fit the column at ${width} px, with a text alternative`, async ({
       page,
@@ -87,7 +87,7 @@ for (const width of [320, 390]) {
       page,
     }) => {
       await prepare(page, theme, width);
-      await open(page, "/docs/design/visual-tokens/");
+      await open(page, "/design/visual-tokens/");
       const drawn = await page.evaluate(() => ({
         overflows:
           document.documentElement.scrollWidth >
@@ -114,7 +114,7 @@ for (const width of [320, 390]) {
 }
 
 test("each roadmap card's link names its milestone", async ({ page }) => {
-  await open(page, "/docs/roadmap/");
+  await open(page, "/roadmap/");
   const links = page.getByRole("link", { name: /^View .+ on GitHub$/ });
   expect(await links.count()).toBeGreaterThan(0);
   await expect(

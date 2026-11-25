@@ -96,7 +96,7 @@ describe("buildHeadersFile", () => {
 
   it("caches the hashed build assets for a year and leaves pages to revalidate", () => {
     expect(file).toContain(
-      "/docs/assets/*\n  Cache-Control: public, max-age=31536000, immutable",
+      "/assets/*\n  Cache-Control: public, max-age=31536000, immutable",
     );
   });
 });

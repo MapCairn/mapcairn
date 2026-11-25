@@ -28,8 +28,8 @@ const TOUR_KEY = "mapcairn:tourSeen";
 const KEY_PREFIX = "mapcairn:";
 
 /** The two hosts the analytics script and its reports use. */
-/** Where the documentation site is served; it shares this origin's storage. */
-const DOCS_PATH = "/docs/";
+/** The documentation site's hostname, shown as text. */
+const DOCS_HOST = "docs.mapcairn.com";
 
 /** The key the documentation site's own framework keeps the theme under. */
 const DOCS_THEME_KEY = "theme";
@@ -44,7 +44,7 @@ const ISSUES_URL = "https://github.com/MapCairn/mapcairn/issues";
 const HOST_POLICY_URL = "https://www.cloudflare.com/privacypolicy/";
 
 /** The address people write to about privacy. */
-const CONTACT_EMAIL = "mapcairn@timothybrits.co.za";
+const CONTACT_EMAIL = "hello@mapcairn.com";
 
 /** A technical name or address, shown as code and never translated. */
 function code(text: string): ReactNode {
@@ -111,7 +111,7 @@ export function PrivacyPage() {
             themeKey: code(THEME_STORAGE_KEY),
             tourKey: code(TOUR_KEY),
             keyPrefix: code(KEY_PREFIX),
-            docsPath: code(DOCS_PATH),
+            docsPath: code(DOCS_HOST),
             docsThemeKey: code(DOCS_THEME_KEY),
           }}
         />

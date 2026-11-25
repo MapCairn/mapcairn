@@ -124,7 +124,7 @@ describe("root meta", () => {
     expect(tags).toContainEqual({ property: "og:locale", content: "en_GB" });
     expect(tags).toContainEqual({
       property: "og:image",
-      content: "https://mapcairn.timothybrits.co.za/og-sdk.png",
+      content: "https://mapcairn.com/og-sdk.png",
     });
     expect(tags).toContainEqual({
       name: "twitter:card",

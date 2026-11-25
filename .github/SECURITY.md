@@ -41,7 +41,7 @@ Please **do not** open a public issue for a suspected vulnerability.
 
 Report it privately through GitHub's private vulnerability reporting:
 [github.com/MapCairn/mapcairn/security/advisories/new](https://github.com/MapCairn/mapcairn/security/advisories/new).
-If you cannot use GitHub, email mapcairn@timothybrits.co.za instead.
+If you cannot use GitHub, email hello@mapcairn.com instead.
 
 Helpful reports include:
 

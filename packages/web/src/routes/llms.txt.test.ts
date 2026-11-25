@@ -3,7 +3,7 @@
 import { existsSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
-import { DOCS_PATH, SITE_URL } from "../constants/siteConfig";
+import { DOCS_URL, SITE_URL } from "../constants/siteConfig";
 import {
   DISCUSSIONS_LINK,
   EXAMPLE_APP_LINK,
@@ -32,9 +32,9 @@ const ROUTE_PATHS = new Set(routePaths(routes));
 
 /** Checks a link points at a page the site serves or a file the repository has. */
 function expectResolves(target: string): void {
-  if (target.startsWith(`${SITE_URL}${DOCS_PATH}`)) {
+  if (target.startsWith(`${DOCS_URL}`)) {
     // The documentation site is a second Worker, built by `sites/docs`.
-    const guide = target.match(/\/docs\/guides\/([\w-]+)(?:\.md|\/)$/)?.[1];
+    const guide = target.match(/\/guides\/([\w-]+)(?:\.md|\/)$/)?.[1];
     if (guide !== undefined) {
       expect(
         existsSync(path.join(REPO_ROOT, `sites/docs/docs/guides/${guide}.md`)),
@@ -43,10 +43,10 @@ function expectResolves(target: string): void {
       return;
     }
     expect([
-      `${SITE_URL}${DOCS_PATH}llms.txt`,
-      `${SITE_URL}${DOCS_PATH}pages.json`,
-      `${SITE_URL}${DOCS_PATH}api.json`,
-      `${SITE_URL}${DOCS_PATH}`,
+      `${DOCS_URL}llms.txt`,
+      `${DOCS_URL}pages.json`,
+      `${DOCS_URL}api.json`,
+      `${DOCS_URL}`,
     ]).toContain(target);
     return;
   }
@@ -144,10 +144,10 @@ describe("/llms.txt", () => {
     const targets = linkTargets(await loader().text());
     expect(targets).toEqual(
       expect.arrayContaining([
-        `${SITE_URL}${DOCS_PATH}`,
-        `${SITE_URL}${DOCS_PATH}llms.txt`,
-        `${SITE_URL}${DOCS_PATH}pages.json`,
-        `${SITE_URL}${DOCS_PATH}api.json`,
+        `${DOCS_URL}`,
+        `${DOCS_URL}llms.txt`,
+        `${DOCS_URL}pages.json`,
+        `${DOCS_URL}api.json`,
       ]),
     );
   });
@@ -155,7 +155,7 @@ describe("/llms.txt", () => {
   it("lists the licence guide, the public API guide and the changelog among the documents", async () => {
     const text = await loader().text();
     for (const guide of ["licence", "public-api"]) {
-      expect(text).toContain(`(${SITE_URL}${DOCS_PATH}guides/${guide}.md)`);
+      expect(text).toContain(`(${DOCS_URL}guides/${guide}.md)`);
     }
     expect(text).toContain(`(${RAW_PREFIX}CHANGELOG.md)`);
   });

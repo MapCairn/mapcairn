@@ -15,7 +15,7 @@ import {
 } from "./serveBuild";
 
 /**
- * Serves `build/` under the base path the way the documentation Worker does
+ * Serves `build/` from the root the way the documentation Worker does
  * (see `resolveTarget`), with gzip on text, for the browser checks and the
  * Lighthouse run. `docusaurus serve` is not used because it redirects a file
  * such as the font to an address with a trailing slash that answers 404.

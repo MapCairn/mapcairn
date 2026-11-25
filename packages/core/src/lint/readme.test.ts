@@ -218,8 +218,12 @@ describe("README.md", () => {
 
   it("says what the real map asks of a host: the other bundlers, the policy and the privacy default", () => {
     const section = README.slice(README.indexOf("## Embed a map"));
-    expect(section).toContain("docs/guides/content-security-policy/");
-    expect(section).toContain("docs/guides/extending/#show-a-real-map");
+    expect(section).toContain(
+      "docs.mapcairn.com/guides/content-security-policy/",
+    );
+    expect(section).toContain(
+      "docs.mapcairn.com/guides/extending/#show-a-real-map",
+    );
     expect(section).toMatch(/makes no request until/);
     expect(section).toContain("builds this page's blocks as written");
     expect(section).not.toContain("not yet shipped");
@@ -228,7 +232,9 @@ describe("README.md", () => {
   it("says which bundler and browser were tried, and links the guide for the other bundlers", () => {
     const section = README.slice(README.indexOf("## Embed a map"));
     expect(section).toContain("other bundlers and browsers are not tried");
-    expect(section).toContain("docs/guides/extending/#show-a-real-map");
+    expect(section).toContain(
+      "docs.mapcairn.com/guides/extending/#show-a-real-map",
+    );
   });
 
   it("names the default basemap's origin, the directives it needs and the harmless build warning", () => {
@@ -335,9 +341,7 @@ describe("README.md", () => {
     );
     expect(section).toContain(LICENCE_DUTY);
     expect(section).not.toMatch(/publish the corresponding source/);
-    expect(section).toContain(
-      "(https://mapcairn.timothybrits.co.za/docs/guides/licence/)",
-    );
+    expect(section).toContain("(https://docs.mapcairn.com/guides/licence/)");
     const start = README.indexOf("## When MapCairn fits");
     const fits = README.slice(start, README.indexOf("\n## ", start + 1));
     expect(fits).not.toMatch(/can publish its source/);
@@ -358,7 +362,7 @@ describe("README.md", () => {
       "utf8",
     );
     expect(contributing).toContain(
-      "(https://mapcairn.timothybrits.co.za/docs/guides/licence/)",
+      "(https://docs.mapcairn.com/guides/licence/)",
     );
     expect(contributing).not.toMatch(/may agree other licence terms/);
   });

@@ -45,7 +45,7 @@ for (const width of HEADER_WIDTHS) {
     page,
   }) => {
     await prepare(page, "light", width);
-    await open(page, "/docs/");
+    await open(page, "/");
     await expect(page.getByRole("button", { name: "Search" })).toBeVisible();
 
     const targets = await headerTargets(page);
@@ -65,7 +65,7 @@ for (const width of DRAWER_WIDTHS) {
     page,
   }) => {
     await prepare(page, "light", width);
-    await open(page, "/docs/");
+    await open(page, "/");
     await page.getByRole("button", { name: "Toggle navigation bar" }).click();
     await expect(
       page.getByRole("button", { name: "Close navigation bar" }),
@@ -84,7 +84,7 @@ for (const width of DRAWER_WIDTHS) {
     page,
   }) => {
     await prepare(page, "light", width);
-    await open(page, "/docs/");
+    await open(page, "/");
     await page.getByRole("button", { name: "Toggle navigation bar" }).click();
     const drawer = page.locator(".navbar-sidebar");
     const before = (await headerTargets(page, ".navbar-sidebar a")).length;

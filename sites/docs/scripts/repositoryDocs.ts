@@ -83,8 +83,7 @@ interface LinkContext {
 
 const BLOB = `${REPOSITORY_URL}/blob/main/`;
 const LINK_TARGET = /\]\(([^)\s]+)\)/g;
-const SITE_GUIDE =
-  /^https:\/\/mapcairn\.timothybrits\.co\.za\/docs\/guides\/([\w-]+)\/(#.*)?$/;
+const SITE_GUIDE = /^https:\/\/docs\.mapcairn\.com\/guides\/([\w-]+)\/(#.*)?$/;
 const OTHER_DOCUMENT = /^(ARCHITECTURE\.md|DESIGN\.md)(?:#(.*))?$/;
 const SCHEME = /^[a-z][a-z0-9+.-]*:/i;
 const FENCE = /^\s*(?:```|~~~)/;
