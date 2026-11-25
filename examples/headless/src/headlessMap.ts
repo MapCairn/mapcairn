@@ -73,6 +73,14 @@ export interface Page {
   setCredits(entries: readonly BasemapAttributionEntry[]): void;
 }
 
+/** The part of a keyboard event that {@link HeadlessMap.handleKey} reads. */
+export interface KeyPress {
+  readonly key: string;
+  readonly ctrlKey: boolean;
+  readonly metaKey: boolean;
+  readonly altKey: boolean;
+}
+
 /** What {@link showMap} needs. */
 export interface ShowMapOptions {
   readonly adapter: MapAdapter;
@@ -86,8 +94,15 @@ export interface ShowMapOptions {
 export interface HeadlessMap {
   /** Swaps the basemap for one in the built-in catalogue. Rejects for an id it does not hold; says on the page when the swap fails. */
   switchBasemap(id: string): Promise<void>;
-  /** Moves the map for an arrow key, or zooms it for plus or minus. False for any other key. */
-  handleKey(key: string): boolean;
+  /**
+   * Moves the map for an arrow key, zooms it for plus or minus and names the
+   * places at its centre for Enter. False, and nothing done, for any other
+   * key and for any key pressed with ctrl, meta or alt, which belong to the
+   * browser.
+   */
+  handleKey(press: KeyPress): boolean;
+  /** Turns the map's animation off or on, for a change of the system's reduced motion setting. */
+  setReducedMotion(reduced: boolean): void;
   /** Stops listening and takes the map down. */
   destroy(): void;
 }
@@ -151,6 +166,7 @@ export async function showMap({
   } catch (error) {
     stopListening();
     adapter.destroy();
+    page.setBusy(false);
     if (error instanceof MapEngineError) {
       page.setStatus(`The map could not start: ${error.reason}.`);
     }
@@ -158,19 +174,39 @@ export async function showMap({
   }
   adapter.setFeatureLayer(PLACES_LAYER_ID, placeFeatures());
   page.setCredits(buildAttribution(basemap));
+  let latestSwap = 0;
   return {
     async switchBasemap(id) {
       const next = basemapNamed(id);
+      latestSwap += 1;
+      const thisSwap = latestSwap;
       try {
         await adapter.setBasemap(next);
-      } catch {
-        page.setStatus(`The ${next.id} basemap could not load.`);
+      } catch (error) {
+        if (!(error instanceof MapEngineError)) {
+          throw error;
+        }
+        if (thisSwap === latestSwap) {
+          page.setStatus(`The ${next.id} basemap could not load.`);
+        }
         return;
       }
-      page.setCredits(buildAttribution(next));
+      if (thisSwap === latestSwap) {
+        page.setCredits(buildAttribution(next));
+      }
     },
-    handleKey(key) {
-      return pan(adapter, key) || zoom(adapter, key);
+    handleKey(press) {
+      if (press.ctrlKey || press.metaKey || press.altKey) {
+        return false;
+      }
+      return (
+        pan(adapter, press.key) ||
+        zoom(adapter, press.key) ||
+        nameCentre(adapter, page, press.key)
+      );
+    },
+    setReducedMotion(reduced) {
+      adapter.setAnimationEnabled(!reduced);
     },
     destroy() {
       stopListening();
@@ -205,4 +241,23 @@ function zoom(adapter: MapAdapter, key: string): boolean {
     return true;
   }
   return false;
+}
+
+/** On Enter, says which places are at the centre of the map: the keyboard route to a feature. */
+function nameCentre(adapter: MapAdapter, page: Page, key: string): boolean {
+  if (key !== "Enter") {
+    return false;
+  }
+  const names = adapter
+    .featuresAt(adapter.project(adapter.getView().center))
+    .map(
+      ({ featureId }) => PLACES.find((place) => place.id === featureId)?.name,
+    )
+    .filter((name) => name !== undefined);
+  page.setStatus(
+    names.length === 0
+      ? "No place at the centre of the map."
+      : `At the centre of the map: ${names.join(", ")}.`,
+  );
+  return true;
 }

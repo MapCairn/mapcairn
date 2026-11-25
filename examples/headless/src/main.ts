@@ -72,13 +72,13 @@ function engineFailure(error: unknown): undefined {
 }
 
 // biome-ignore lint/style/noRestrictedGlobals: this page has no DevicePreferences adapter, so it asks the browser directly.
-const reducedMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
+const motionQuery = matchMedia("(prefers-reduced-motion: reduce)");
 
 const map = await showMap({
   adapter: createMapLibreMapAdapter({ loadWorkerUrl }),
   host,
   page,
-  reducedMotion,
+  reducedMotion: motionQuery.matches,
 }).catch(engineFailure);
 
 if (map) {
@@ -86,9 +86,12 @@ if (map) {
     void map.switchBasemap(select.value);
   });
   host.addEventListener("keydown", (event) => {
-    if (map.handleKey(event.key)) {
+    if (map.handleKey(event)) {
       event.preventDefault();
     }
+  });
+  motionQuery.addEventListener("change", (event) => {
+    map.setReducedMotion(event.matches);
   });
   addEventListener("pagehide", (event) => {
     // A page the browser keeps for the back button (persisted) comes back as it was.

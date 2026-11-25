@@ -28,7 +28,7 @@ npm install @mapcairn/core @mapcairn/adapter-maplibre maplibre-gl
 - `maplibre-gl` is a required peer of the adapter, with the range its `package.json` gives. npm installs it for you, and a strict package manager wants it listed.
 - The packages are ESM only, and a TypeScript project needs `moduleResolution` set to `bundler`, `node16` or `nodenext`.
 - The declarations of `core` use the global types `Blob` and `AbortSignal`, so the project's `lib` includes `DOM`, as the example's `tsconfig.json` does.
-- A Vite project starts its entry file with `/// <reference types="vite/client" />`, which gives TypeScript the types of the `?worker&url` import and of a plain CSS import.
+- The first line of `main.ts`, `/// <reference types="vite/client" />`, gives TypeScript the types of the `?worker&url` import and of a plain CSS import. A Vite project made from a template already lists `vite/client` in its `tsconfig`, so the line only matters when your project does not already.
 
 ## The page
 
@@ -58,7 +58,7 @@ The page holds the map region and the three things around it that the example re
       aria-describedby="keys"
       aria-busy="true"
     ></section>
-    <p id="keys">Arrow keys move the map. Plus and minus zoom it.</p>
+    <p id="keys">Arrow keys move the map. Plus and minus zoom it. Enter names the places at its centre.</p>
     <output id="status"></output>
     <p id="credits"></p>
     <script type="module" src="/src/main.ts"></script>
@@ -172,13 +172,13 @@ function engineFailure(error: unknown): undefined {
 }
 
 // biome-ignore lint/style/noRestrictedGlobals: this page has no DevicePreferences adapter, so it asks the browser directly.
-const reducedMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
+const motionQuery = matchMedia("(prefers-reduced-motion: reduce)");
 
 const map = await showMap({
   adapter: createMapLibreMapAdapter({ loadWorkerUrl }),
   host,
   page,
-  reducedMotion,
+  reducedMotion: motionQuery.matches,
 }).catch(engineFailure);
 
 if (map) {
@@ -186,9 +186,12 @@ if (map) {
     void map.switchBasemap(select.value);
   });
   host.addEventListener("keydown", (event) => {
-    if (map.handleKey(event.key)) {
+    if (map.handleKey(event)) {
       event.preventDefault();
     }
+  });
+  motionQuery.addEventListener("change", (event) => {
+    map.setReducedMotion(event.matches);
   });
   addEventListener("pagehide", (event) => {
     // A page the browser keeps for the back button (persisted) comes back as it was.
@@ -226,6 +229,7 @@ export async function showMap({
   } catch (error) {
     stopListening();
     adapter.destroy();
+    page.setBusy(false);
     if (error instanceof MapEngineError) {
       page.setStatus(`The map could not start: ${error.reason}.`);
     }
@@ -233,19 +237,39 @@ export async function showMap({
   }
   adapter.setFeatureLayer(PLACES_LAYER_ID, placeFeatures());
   page.setCredits(buildAttribution(basemap));
+  let latestSwap = 0;
   return {
     async switchBasemap(id) {
       const next = basemapNamed(id);
+      latestSwap += 1;
+      const thisSwap = latestSwap;
       try {
         await adapter.setBasemap(next);
-      } catch {
-        page.setStatus(`The ${next.id} basemap could not load.`);
+      } catch (error) {
+        if (!(error instanceof MapEngineError)) {
+          throw error;
+        }
+        if (thisSwap === latestSwap) {
+          page.setStatus(`The ${next.id} basemap could not load.`);
+        }
         return;
       }
-      page.setCredits(buildAttribution(next));
+      if (thisSwap === latestSwap) {
+        page.setCredits(buildAttribution(next));
+      }
     },
-    handleKey(key) {
-      return pan(adapter, key) || zoom(adapter, key);
+    handleKey(press) {
+      if (press.ctrlKey || press.metaKey || press.altKey) {
+        return false;
+      }
+      return (
+        pan(adapter, press.key) ||
+        zoom(adapter, press.key) ||
+        nameCentre(adapter, page, press.key)
+      );
+    },
+    setReducedMotion(reduced) {
+      adapter.setAnimationEnabled(!reduced);
     },
     destroy() {
       stopListening();
@@ -310,7 +334,7 @@ function listen(adapter: MapAdapter, page: Page): () => void {
 
 ### Move the map from the keyboard
 
-The adapter leaves the engine's keyboard handling off and hides the engine's canvas from assistive technology, so the element you mount into is the one focus stop and the keys are yours. The page makes the region focusable in `main.ts`, and these two functions turn keys into calls:
+The adapter leaves the engine's keyboard handling off and hides the engine's canvas from assistive technology, so the element you mount into is the one focus stop and the keys are yours. The page makes the region focusable in `main.ts`, and these two functions turn keys into calls. `handleKey` in `showMap` calls them, and does nothing, and returns false, when ctrl, meta or alt is held, so the browser's own shortcuts (back, zoom, find) keep working; `main.ts` calls `preventDefault` only for a key it handled:
 
 ```ts no-check source="examples/headless/src/headlessMap.ts"
 const PAN_BY_KEY: Readonly<Record<string, readonly [number, number]>> = {
@@ -344,6 +368,29 @@ function zoom(adapter: MapAdapter, key: string): boolean {
 }
 ```
 
+Enter is the keyboard route to a feature. The engine's `featuresAt(point)` lists the tappable features at a pixel, so Enter asks for those at the centre of the map and says their names in the status line:
+
+```ts no-check source="examples/headless/src/headlessMap.ts"
+/** On Enter, says which places are at the centre of the map: the keyboard route to a feature. */
+function nameCentre(adapter: MapAdapter, page: Page, key: string): boolean {
+  if (key !== "Enter") {
+    return false;
+  }
+  const names = adapter
+    .featuresAt(adapter.project(adapter.getView().center))
+    .map(
+      ({ featureId }) => PLACES.find((place) => place.id === featureId)?.name,
+    )
+    .filter((name) => name !== undefined);
+  page.setStatus(
+    names.length === 0
+      ? "No place at the centre of the map."
+      : `At the centre of the map: ${names.join(", ")}.`,
+  );
+  return true;
+}
+```
+
 Pointer and touch gestures need nothing: the engine handles them.
 
 ### Take the map down
@@ -354,14 +401,17 @@ Pointer and touch gestures need nothing: the engine handles them.
 
 None of this is done for you when you leave the SDK's interface out.
 
-- **Size and focus.** Give the map region a height. Make it focusable, name it, and handle keys, as above. Give it `aria-describedby` for a line that says which keys work.
-- **Say what happens.** Report the view, a selection, a busy map and a failure in text a screen reader reads. The example writes to one `output` element, which a screen reader announces as a status; `aria-busy` on the region follows `loading`.
-- **Show the credits.** The adapter draws none. `buildAttribution(basemap)` returns the basemap provider's credits followed by MapLibre's, each with a text and, usually, an address. Show them where the map is, and show the new ones after a basemap swap, because a provider's terms ask for them.
-- **Respect reduced motion.** Pass `reducedMotion: true` when the person has asked their system for less motion. `setAnimationEnabled` changes it later.
-- **Handle failure.** Handle the rejected `mount` and `setBasemap`, `fatalError` and `basemapUnavailable`, which the example turns into a message.
-- **Write your own text.** The example writes its English in the code. `core` has a message catalogue port, `MessageCatalogue`, for an app that translates. A basemap's `name` is a catalogue key, so the example labels its basemap choice with each basemap's `id`.
-- **Choose the basemap.** The adapter has no default basemap and no origin of its own. The basemap you give it decides which provider the visitor's browser contacts, and the built-in ones are served by public tile providers, so choose one whose terms and privacy you accept.
-- **Allow the worker under a policy.** A page with a Content Security Policy needs `worker-src` for the worker file, and the basemap's origin in `connect-src` and `img-src`. [Content Security Policy](content-security-policy.md) says what each directive is for.
+| What the interface does         | What it needs                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
+| ------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Size and focus                  | Give the map region a height. Make it focusable, name it, and handle keys, as above, leaving keys with ctrl, meta or alt held to the browser. Give it `aria-describedby` for a line that says which keys work.                                                                                                                                                                                                                                                                                                                                         |
+| A keyboard route to features    | A tap on a feature has no keyboard equivalent in the adapter. Give one, as the example does with Enter and `featuresAt`, or a list of the features the person can choose from.                                                                                                                                                                                                                                                                                                                                                                         |
+| Say what happens                | Report the view, a selection, a busy map and a failure in text a screen reader reads. The example writes to one `output` element, which a screen reader announces as a status; `aria-busy` on the region follows `loading`.                                                                                                                                                                                                                                                                                                                            |
+| Show the credits                | The adapter draws none. `buildAttribution(basemap)` returns the basemap provider's credits followed by MapLibre's, each with a text and, usually, an address. Show them where the map is, and show the new ones after a basemap swap, because a provider's terms ask for them.                                                                                                                                                                                                                                                                         |
+| Respect reduced motion          | Pass `reducedMotion: true` when the person has asked their system for less motion. The example also listens to the media query's `change` event and calls `setAnimationEnabled`, which changes the map's own animation while the page is open. The engine's gesture inertia is fixed when the map is created, so it follows the setting at the time of the mount.                                                                                                                                                                                      |
+| Handle failure                  | Handle the rejected `mount` and `setBasemap`, `fatalError` and `basemapUnavailable`, which the example turns into a message.                                                                                                                                                                                                                                                                                                                                                                                                                           |
+| Write your own text             | The example writes its English in the code. `core` has a message catalogue port, `MessageCatalogue`, for an app that translates. A basemap's `name` is a catalogue key, so the example labels its basemap choice with each basemap's `id`.                                                                                                                                                                                                                                                                                                             |
+| Choose the basemap              | The adapter has no default basemap and no origin of its own. The basemap you give it decides which provider the visitor's browser contacts, and the built-in ones are served by public tile providers: OpenFreeMap (`tiles.openfreemap.org`), VersaTiles (`tiles.versatiles.org`) and the OpenStreetMap Foundation (`tile.openstreetmap.org`). The example's basemap picker lists every built-in basemap, so a visitor who chooses one reaches that provider. Choose the basemaps you offer for the terms and privacy you accept, and list only those. |
+| Allow the worker under a policy | A page with a Content Security Policy needs `worker-src` for the worker file, and the origin of every basemap you offer in `connect-src` and `img-src`, which for the example's picker is the three above. [Content Security Policy](content-security-policy.md) says what each directive is for.                                                                                                                                                                                                                                                      |
 
 ## Test it without a browser
 

@@ -11,6 +11,7 @@ import { describe, expect, it } from "vitest";
 import {
   describeView,
   KEY_PAN_PIXELS,
+  type KeyPress,
   type Page,
   PLACES,
   PLACES_LAYER_ID,
@@ -32,6 +33,11 @@ function drawnBasemapId(adapter: FakeMapAdapter): string | undefined {
   adapter.simulateBasemapUnavailable();
   stop();
   return id;
+}
+
+/** A key press, with the modifiers held. */
+function press(key: string, modifiers: Partial<KeyPress> = {}): KeyPress {
+  return { key, ctrlKey: false, metaKey: false, altKey: false, ...modifiers };
 }
 
 /** A page that records what it was told. */
@@ -141,12 +147,12 @@ describe("showMap", () => {
   it("pans and zooms from the keys, and ignores any other key", async () => {
     const { adapter, map } = await start();
     const before = adapter.getView();
-    expect(map.handleKey("ArrowRight")).toBe(true);
+    expect(map.handleKey(press("ArrowRight"))).toBe(true);
     expect(adapter.getView().center.lng).toBeGreaterThan(before.center.lng);
-    expect(map.handleKey("+")).toBe(true);
+    expect(map.handleKey(press("+"))).toBe(true);
     expect(adapter.getView().zoom).toBeGreaterThan(before.zoom);
-    expect(map.handleKey("-")).toBe(true);
-    expect(map.handleKey("q")).toBe(false);
+    expect(map.handleKey(press("-"))).toBe(true);
+    expect(map.handleKey(press("q"))).toBe(false);
     expect(KEY_PAN_PIXELS).toBeGreaterThan(0);
   });
 
@@ -178,5 +184,79 @@ describe("showMap", () => {
       reducedMotion: true,
     });
     expect(adapter.animationEnabled).toBe(false);
+  });
+  it("leaves a key alone when ctrl, meta or alt is held, so the browser's own shortcuts work", async () => {
+    const { adapter, map } = await start();
+    const before = adapter.getView();
+    for (const modifiers of [
+      { ctrlKey: true },
+      { metaKey: true },
+      { altKey: true },
+    ]) {
+      expect(map.handleKey(press("ArrowRight", modifiers))).toBe(false);
+      expect(map.handleKey(press("-", modifiers))).toBe(false);
+      expect(map.handleKey(press("Enter", modifiers))).toBe(false);
+    }
+    expect(adapter.getView()).toEqual(before);
+  });
+
+  it("clears the busy state when the engine cannot start", async () => {
+    const adapter = new FakeMapAdapter({ failMount: "webgl-unavailable" });
+    const { page, busy } = recordingPage();
+    await showMap({
+      adapter,
+      host: new FakeMapHost(),
+      page,
+      reducedMotion: false,
+    }).catch(() => {});
+    expect(busy.at(-1)).toBe(false);
+  });
+
+  it("names the places at the centre of the map on Enter", async () => {
+    const { adapter, map, statuses } = await start();
+    const place = PLACES[0];
+    if (!place) {
+      throw new Error("There are no places.");
+    }
+    adapter.simulateFeatureTap(PLACES_LAYER_ID, place.id);
+    expect(map.handleKey(press("Enter"))).toBe(true);
+    expect(statuses.at(-1)).toBe(`At the centre of the map: ${place.name}.`);
+  });
+
+  it("says so on Enter when no place is at the centre", async () => {
+    const { map, statuses } = await start();
+    expect(map.handleKey(press("Enter"))).toBe(true);
+    expect(statuses.at(-1)).toBe("No place at the centre of the map.");
+  });
+
+  it("follows a change of the reduced motion preference", async () => {
+    const { adapter, map } = await start();
+    map.setReducedMotion(true);
+    expect(adapter.animationEnabled).toBe(false);
+    map.setReducedMotion(false);
+    expect(adapter.animationEnabled).toBe(true);
+  });
+
+  it("rethrows a failure that is not the engine's, instead of reporting it as a failed swap", async () => {
+    const { adapter, map, statuses } = await start();
+    const heard = statuses.length;
+    adapter.setBasemap = () => Promise.reject(new TypeError("a bug"));
+    await expect(map.switchBasemap("osm")).rejects.toThrow("a bug");
+    expect(statuses.length).toBe(heard);
+  });
+
+  it("shows the credits of the last swap that finished when two overlap", async () => {
+    const { adapter, map, credits } = await start();
+    const first = adapter.deferNextBasemap();
+    const slow = map.switchBasemap("osm");
+    const second = adapter.deferNextBasemap();
+    const fast = map.switchBasemap("positron");
+    second.resolve();
+    await fast;
+    first.resolve();
+    await slow;
+    expect(credits()).toEqual(
+      buildAttribution(getBasemap("positron") ?? BRIGHT),
+    );
   });
 });
