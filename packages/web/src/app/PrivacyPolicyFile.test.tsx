@@ -101,13 +101,13 @@ describe("PRIVACY.md mirrors the privacy page", () => {
 
   it("says a search that is only coordinates is not sent to the geocoder", () => {
     expectBothCopies(
-      "A search that is only a pair of coordinates is read in your browser and is not sent to the geocoder; showing the place requests map tiles for that area, as any move of the map does.",
+      "A search that is only coordinates — a pair of decimal degrees or degrees, minutes and seconds, a UTM reference or an MGRS reference — is read in your browser and is not sent to the geocoder; showing the place requests map tiles for that area, as any move of the map does.",
     );
   });
 
   it("says the assistant tools send place names as a search does", () => {
     expectBothCopies(
-      "If an assistant in your browser uses this site's search or measuring tools (through WebMCP), the place names it gives are sent to Nominatim in the same way, and a pair of coordinates is again read in your browser.",
+      "If an assistant in your browser uses this site's search or measuring tools (through WebMCP), the place names it gives are sent to Nominatim in the same way, and coordinates are again read in your browser.",
     );
   });
 

@@ -92,8 +92,9 @@ export const MAX_MEASURE_LOCATIONS = 10;
 
 /**
  * Finds the place a search text names, as the search box does: text that is
- * only a pair of coordinates is read here and never sent to the search
- * service, which the privacy policy promises; any other text asks the service
+ * only coordinates (a pair, a UTM reference or an MGRS reference) is read
+ * here and never sent to the search service, which the privacy policy
+ * promises; any other text asks the service
  * for its best match.
  * @returns The place, or null when the service finds no match.
  */
@@ -186,7 +187,7 @@ export function useMapModelContextTools({
   useModelContextTool<SearchInput>({
     name: "search-map-location",
     description:
-      "Search for a place by name and move the map to the best match. A pair of coordinates also works, and is read locally without a search.",
+      "Search for a place by name and move the map to the best match. Coordinates also work (a decimal or degrees-minutes-seconds pair, a UTM reference or an MGRS reference), and are read locally without a search.",
     inputSchema: {
       type: "object",
       properties: {

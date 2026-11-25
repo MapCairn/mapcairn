@@ -26,6 +26,27 @@ describe("coordinateSearchResult", () => {
     );
   });
 
+  it("answers a UTM reference", () => {
+    const result = coordinateSearchResult("31N 166021 0000000", messages);
+    expect(result?.centre?.lat).toBeCloseTo(0, 4);
+    expect(result?.centre?.lng).toBeCloseTo(0, 4);
+    expect(result?.label).toBe(
+      coordinateSearchResult("0.0, 0.0", messages)?.label,
+    );
+  });
+
+  it("answers an MGRS reference", () => {
+    const result = coordinateSearchResult("11 SPA 72349 11844", messages);
+    expect(result?.centre?.lat).toBeCloseTo(36.2361322, 4);
+    expect(result?.centre?.lng).toBeCloseTo(-115.0820944, 4);
+  });
+
+  it("returns null for a grid reference that names an area or is out of range", () => {
+    expect(coordinateSearchResult("33U XP", messages)).toBeNull();
+    expect(coordinateSearchResult("31U 500000 9500000", messages)).toBeNull();
+    expect(coordinateSearchResult("33UXP", messages)).toBeNull();
+  });
+
   it("reads the hemisphere letters of the catalogue's language", () => {
     const afrikaans = new FakeMessageCatalogue({
       language: "af",

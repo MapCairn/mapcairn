@@ -1654,6 +1654,9 @@ export function formatLongitude(longitude: number, hemispheres: Hemispheres): st
 export function formatMessage(catalogue: MessageCatalogue, input: Message): string;
 
 // @public
+export function formatMgrs(position: LatLng): string | null;
+
+// @public
 export function formatNumber(value: number, locale: string, options?: Intl.NumberFormatOptions): string;
 
 // @public
@@ -1667,6 +1670,9 @@ export type Formatter = (value: FieldValue, context: FormatContext) => string | 
 
 // @public
 export type FormatterRegistry = NamedRegistry<Formatter>;
+
+// @public
+export function formatUtm(position: LatLng): string | null;
 
 // @public
 export function formatWkt(input: Geometry | Feature, options?: FormatWktOptions): string;

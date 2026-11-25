@@ -22,7 +22,7 @@ function coordinateId(position: LatLng): string {
 
 /**
  * Turns search text into the one result for the place it names, when the text
- * is a coordinate pair (see {@link parseCoordinates}), and `null` otherwise.
+ * is coordinates (see {@link parseCoordinates}), and `null` otherwise.
  * The result needs no search service, so a caller can answer it without a
  * request.
  *

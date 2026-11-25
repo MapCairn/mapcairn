@@ -58,7 +58,7 @@ describe("HelpSection", () => {
       screen.getByRole("heading", { name: "Search", level: 4 }),
     ).toBeInTheDocument();
     const search = screen.getByTestId("help-search");
-    expect(search).toHaveTextContent("a place name or a pair of coordinates");
+    expect(search).toHaveTextContent("a place name or coordinates");
     expect(search).toHaveTextContent("-26.2041, 28.0473");
     expect(search).toHaveTextContent("26.2041° S, 28.0473° E");
     expect(search).toHaveTextContent("then press Enter or Search");

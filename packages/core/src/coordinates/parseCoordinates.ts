@@ -2,10 +2,12 @@
 // Copyright MapCairn contributors
 import type { CoordinateWords, Hemispheres } from "../format/format";
 import type { LatLng } from "../ports/geometry";
+import { parseMgrs } from "./mgrs";
 import {
   normaliseCoordinateText,
   withDecimalCommas,
 } from "./normaliseCoordinateText";
+import { parseUtm } from "./utm";
 
 /**
  * The longest text {@link parseCoordinates} reads. A coordinate pair in
@@ -467,7 +469,7 @@ function readPair(text: string, words: Words): LatLng | null {
 }
 
 /**
- * Reads a pair of coordinates from text a person typed, or returns `null`
+ * Reads coordinates from text a person typed, or returns `null`
  * when the text is not one. It never guesses: text that is out of range,
  * ambiguous, or has anything left over is refused, so a street number, a
  * postcode or a place name goes on to a place search.
@@ -488,6 +490,25 @@ function readPair(text: string, words: Words): LatLng | null {
  * - one comma or semicolon between the two values, or white space alone
  * - a leading "coordinates" or "coords", so the label of a coordinate result
  *   reads back as the same place to about a metre
+ * - a UTM reference: the zone, a band letter or a hemisphere letter, then
+ *   the easting to the metre and the northing to the metre, with or
+ *   without spaces, in either letter case: `31U 500000 4200000`,
+ *   `31 N 500000 4200000`, `34h261882 6243182`. South of the equator the
+ *   written northing carries the 10 000 000 m offset. A reference without
+ *   a letter is ambiguous and refused, as is one whose zone is outside 1
+ *   to 60, whose letter is not a band or hemisphere letter, whose northing
+ *   contradicts its band, or whose position is outside the UTM grid (80° S
+ *   to 84° N). A reference whose position lies in the next zone's
+ *   territory still reads, because surveyors work across a zone line on
+ *   one zone's grid
+ * - an MGRS reference: the zone, band letter, 100 km square and the digits
+ *   of the easting and northing, with or without spaces, in either letter
+ *   case, at any precision from 10 km (two digits) to 1 m (ten):
+ *   `31U CT 12345 67890`, `11SPA7234911844`. A bare 100 km square names an
+ *   area rather than a point and is refused, as is a reference whose
+ *   square letters do not belong to its zone, whose digits are of unequal
+ *   count, or whose position is outside the band the reference names. A
+ *   reference written on a neighbouring zone's grid still reads
  *
  * Every value must carry a mark that says it is a degree value: a decimal
  * point with digits after it, or a degree sign or the word degrees. A bare
@@ -527,6 +548,8 @@ export function parseCoordinates(
   const withPoints = withDecimalCommas(normalised);
   return (
     readPair(normalised, readWords) ??
-    (withPoints === null ? null : readPair(withPoints, readWords))
+    (withPoints === null ? null : readPair(withPoints, readWords)) ??
+    parseUtm(normalised) ??
+    parseMgrs(normalised)
   );
 }
