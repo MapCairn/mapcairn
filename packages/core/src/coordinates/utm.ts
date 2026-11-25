@@ -55,8 +55,9 @@ const BAND_TOLERANCE_DEGREES = 3 / METRES_PER_DEGREE;
  * The UTM zone for a position, with the documented exceptions: in band V
  * (56 to 64 degrees north) the zone line moves to 3 degrees east, so zone
  * 31 is three degrees wide and zone 32 nine; in band X (72 to 84 degrees
- * north) zones 31, 33, 35 and 37 are widened to twelve degrees each and
- * zones 32, 34 and 36 cover nothing; and the antimeridian is in zone 60.
+ * north, 84 included) zones 31, 33, 35 and 37 are widened to twelve degrees
+ * each and zones 32, 34 and 36 cover nothing; and the antimeridian is in
+ * zone 60.
  */
 function zoneFor(lng: number, lat: number): number {
   if (lng === 180) {
@@ -65,7 +66,7 @@ function zoneFor(lng: number, lat: number): number {
   if (lat >= 56 && lat < 64 && lng >= 3 && lng < 12) {
     return 32;
   }
-  if (lat >= 72 && lat < 84) {
+  if (lat >= 72 && lat <= 84) {
     if (lng >= 0 && lng < 9) {
       return 31;
     }

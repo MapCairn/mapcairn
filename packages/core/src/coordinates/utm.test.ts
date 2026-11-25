@@ -67,6 +67,14 @@ describe("formatUtm", () => {
     expect(formatUtm({ lat: 83.9999, lng: 18 })).toBe("33X 534995 9328994");
   });
 
+  it("keeps the top of band X in the exception zones", () => {
+    // Band X runs to 84 degrees north inclusive, so a point at exactly 84
+    // is in the widened zone 31, not in zone 32, which band X does not use.
+    expect(formatUtm({ lat: 84, lng: 6 })?.slice(0, 3)).toBe("31X");
+    expect(formatUtm({ lat: 84, lng: 5 })?.slice(0, 3)).toBe("31X");
+    expect(formatUtm({ lat: 84, lng: 25 })?.slice(0, 3)).toBe("35X");
+  });
+
   it("refuses latitudes outside the UTM grid", () => {
     expect(formatUtm({ lat: 84.0000001, lng: 0 })).toBeNull();
     expect(formatUtm({ lat: 85, lng: 0 })).toBeNull();
