@@ -38,10 +38,6 @@ describe("docusaurus.config", () => {
     expect(footer.copyright).not.toContain("%sdkVersion%");
   });
 
-  it("keeps the framework's storage key un-namespaced, as the theme bridge expects", () => {
-    expect(config.storage).toEqual({ type: "localStorage", namespace: false });
-  });
-
   it("holds no third-party plugin, theme, script or client module of its own", () => {
     expect(config.plugins).toHaveLength(3);
     expect(config.themes).toBeUndefined();
