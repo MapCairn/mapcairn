@@ -654,9 +654,6 @@ export interface HiddenSelection {
 }
 
 // @public
-export const HIGHLIGHT_OUTLINE_POINTS = 100;
-
-// @public
 export function Icon(input: IconProps): JSX.Element;
 
 // @public
@@ -974,9 +971,6 @@ export interface MarkerGlyphProps {
     readonly radius: number;
     readonly shape: MarkerShape;
 }
-
-// @public
-export const MAX_HIGHLIGHTED_FEATURES = 200;
 
 // @public
 export const MAX_IDENTIFY_LAYERS = 4;

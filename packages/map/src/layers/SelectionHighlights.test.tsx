@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
+
 import {
   createFakeServices,
   FAKE_VECTOR_BASEMAP,
@@ -18,14 +19,33 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { MapView } from "../host/MapView";
 import { MapOverlayLayer } from "../host/overlays";
 import { ServicesProvider } from "../services";
-import {
-  HIGHLIGHT_OUTLINE_POINTS,
-  MAX_HIGHLIGHTED_FEATURES,
-  SelectionHighlights,
-} from "./SelectionHighlights";
+import { SelectionHighlights } from "./SelectionHighlights";
 import { SelectionProvider } from "./SelectionProvider";
 import type { SelectedEntry } from "./selectionResolve";
 import type { FeatureSelectionState } from "./useFeatureSelection";
+
+const prepareCalls = vi.hoisted(() => ({
+  bounds: vi.fn(),
+  outlines: vi.fn(),
+}));
+vi.mock("./mapFeatures", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("./mapFeatures")>();
+  return {
+    ...actual,
+    featureBounds: (...args: Parameters<typeof actual.featureBounds>) => {
+      prepareCalls.bounds(...args);
+      return actual.featureBounds(...args);
+    },
+    featureOutlines: (...args: Parameters<typeof actual.featureOutlines>) => {
+      prepareCalls.outlines(...args);
+      return actual.featureOutlines(...args);
+    },
+  };
+});
+
+/** The numbers the component documents: how many features and how many vertices of each outline. */
+const MAX_HIGHLIGHTED_FEATURES = 200;
+const HIGHLIGHT_OUTLINE_POINTS = 100;
 
 const VIEW: ViewState = { center: { lat: 10, lng: 20 }, zoom: 6, bearing: 0 };
 const LAYER = SAMPLE_FEED_LAYER;
@@ -78,6 +98,8 @@ function stateOf(entries: readonly SelectedEntry[]): FeatureSelectionState {
 }
 
 beforeEach(() => {
+  prepareCalls.bounds.mockClear();
+  prepareCalls.outlines.mockClear();
   // jsdom has no layout, so the fake map would be zero pixels wide and see nothing.
   vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockReturnValue(
     new DOMRect(0, 0, 800, 600),
@@ -228,6 +250,53 @@ describe("SelectionHighlights", () => {
     expect(marks()).toHaveLength(1);
   });
 
+  it("follows the map as it moves, so a feature comes into view and goes out of it", async () => {
+    vi.stubGlobal("requestAnimationFrame", (run: FrameRequestCallback) => {
+      queueMicrotask(() => run(0));
+      return 1;
+    });
+    const { adapter } = await renderHighlights([
+      shown("east", samplePoint("east", {}, [40, 10]).geometry),
+    ]);
+    expect(marks()).toHaveLength(0);
+    await act(async () => adapter.setView({ center: { lat: 10, lng: 40 } }));
+    expect(marks()).toHaveLength(1);
+    await act(async () => adapter.setView({ center: { lat: 10, lng: 20 } }));
+    expect(marks()).toHaveLength(0);
+  });
+
+  it("works out bounds and outlines once for a feature, not again as the map moves", async () => {
+    const polygon = shown("fresh", {
+      type: "Polygon",
+      coordinates: [
+        [
+          [20, 10],
+          [21, 10],
+          [20.5, 11],
+          [20, 10],
+        ],
+      ],
+    });
+    const { adapter } = await renderHighlights([polygon]);
+    expect(marks()).toHaveLength(1);
+    const before = [
+      prepareCalls.bounds.mock.calls.length,
+      prepareCalls.outlines.mock.calls.length,
+    ];
+    expect(before).toEqual([1, 1]);
+    await act(async () =>
+      adapter.setView({ center: { lat: 10.2, lng: 20.2 } }),
+    );
+    await act(async () =>
+      adapter.setView({ center: { lat: 10.4, lng: 20.4 }, zoom: 7 }),
+    );
+    expect(marks()).toHaveLength(1);
+    expect([
+      prepareCalls.bounds.mock.calls.length,
+      prepareCalls.outlines.mock.calls.length,
+    ]).toEqual(before);
+  });
+
   it("draws nothing for a feature beyond the horizon of a globe", async () => {
     const services = createFakeServices();
     services.fakes.settings.set({ projection: "globe" });
@@ -288,11 +357,21 @@ describe("SelectionHighlights", () => {
 });
 
 describe("the highlight colours", () => {
+  // The ring and the dashes are the pin colour drawn on the halo; the badge
+  // disc is the pin colour with a halo edge; its tick is the halo colour on
+  // the disc. Each pair clears 3:1 (the non-text minimum) in both themes.
   it.each<ThemeName>(["light", "dark"])(
-    "keep the ring clear of its halo in the %s theme",
+    "keep the ring, the badge disc and its tick clear of what they sit on in the %s theme",
     (theme) => {
       const { mapPin, mapHalo } = tokenValues.themeValues[theme].colour;
-      expect(contrastRatio(mapPin, mapHalo)).toBeGreaterThanOrEqual(3);
+      const pairs = {
+        ringOnHalo: contrastRatio(mapPin, mapHalo),
+        discEdgeAgainstDisc: contrastRatio(mapHalo, mapPin),
+        tickOnDisc: contrastRatio(mapHalo, mapPin),
+      };
+      for (const [name, ratio] of Object.entries(pairs)) {
+        expect(ratio, name).toBeGreaterThanOrEqual(3);
+      }
     },
   );
 });

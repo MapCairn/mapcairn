@@ -1,6 +1,9 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
 import {
+  type Bounds,
+  type LatLng,
+  type LayerFeature,
   type MapPlacement,
   type PixelPoint,
   type PlacedPath,
@@ -17,15 +20,49 @@ import {
 import { boundsMeet } from "./boundsMeet";
 import { nearestVisibleVertex } from "./highlightBadge";
 import * as styles from "./Layers.css";
-import { featureBounds, featureOutlines, featurePosition } from "./mapFeatures";
+import {
+  type FeatureOutline,
+  featureBounds,
+  featureOutlines,
+} from "./mapFeatures";
 import { useSelection } from "./SelectionProvider";
 import type { ShownSelection } from "./selectionResolve";
 
-/** The most selected features drawn at once, so a large set stays cheap to redraw while the map moves. */
-export const MAX_HIGHLIGHTED_FEATURES = 200;
+/** The most selected features drawn at once (200), so a large set stays cheap to redraw while the map moves. */
+const MAX_HIGHLIGHTED_FEATURES = 200;
 
-/** The most vertices one ring or line of a highlighted outline keeps; lower than the open card's outline, because up to 200 are drawn. */
-export const HIGHLIGHT_OUTLINE_POINTS = 100;
+/** The most vertices one ring or line of a highlighted outline keeps (100); lower than the open card's outline, because up to 200 are drawn. */
+const HIGHLIGHT_OUTLINE_POINTS = 100;
+
+/** What is worked out from a feature once: nothing here depends on the view. */
+interface Prepared {
+  readonly bounds: Bounds | null;
+  /** Where a point feature is, or null for a line or polygon. */
+  readonly point: LatLng | null;
+  /** The thinned rings and lines of a line or polygon. */
+  readonly outlines: readonly FeatureOutline[];
+}
+
+/**
+ * Prepared features by the feature object. The object a layer holds keeps its
+ * identity until the layer loads again, so a map move prepares nothing.
+ */
+const prepared = new WeakMap<LayerFeature, Prepared>();
+
+function prepare(feature: LayerFeature): Prepared {
+  let found = prepared.get(feature);
+  if (!found) {
+    const { geometry } = feature;
+    const [lng, lat] = geometry.type === "Point" ? geometry.coordinates : [];
+    found = {
+      bounds: featureBounds(feature),
+      point: lat === undefined || lng === undefined ? null : { lat, lng },
+      outlines: featureOutlines(feature, HIGHLIGHT_OUTLINE_POINTS),
+    };
+    prepared.set(feature, found);
+  }
+  return found;
+}
 
 /** Radius of the ring round a selected point, in pixels; larger than the open card's ring so both read when one point is both. */
 const POINT_RING_RADIUS_PX = 20;
@@ -98,8 +135,8 @@ interface HighlightProps {
 }
 
 function PointHighlight({ entry, placement }: HighlightProps) {
-  const position = featurePosition(entry.feature);
-  const at = position ? placePoint(position, placement) : null;
+  const { point } = prepare(entry.feature);
+  const at = point ? placePoint(point, placement) : null;
   if (!at) {
     return null;
   }
@@ -128,8 +165,8 @@ function PointHighlight({ entry, placement }: HighlightProps) {
 }
 
 function OutlineHighlight({ entry, placement, centre }: HighlightProps) {
-  const paths = featureOutlines(entry.feature, HIGHLIGHT_OUTLINE_POINTS).map(
-    ({ points, closed }) => placePath(points, closed, placement),
+  const paths = prepare(entry.feature).outlines.map(({ points, closed }) =>
+    placePath(points, closed, placement),
   );
   const badge = centre ? nearestVisibleVertex(paths, centre) : null;
   return (
@@ -153,8 +190,8 @@ function OutlineHighlight({ entry, placement, centre }: HighlightProps) {
  * Render it inside `MapOverlayLayer`. It reads the set with `useSelection()` and
  * draws nothing without one. Marks are placed like the draw tool's, so the
  * nearest copy of the world, great-circle curves and the horizon of a globe
- * apply. At most {@link MAX_HIGHLIGHTED_FEATURES} features are drawn, each with
- * outlines thinned to {@link HIGHLIGHT_OUTLINE_POINTS} vertices, and only
+ * apply. At most 200 features are drawn, each with
+ * outlines thinned to 100 vertices, and only
  * those whose box meets the view. A reference that is not shown has no mark.
  * Like the card's ring, the marks are left out of a saved image.
  */
@@ -177,8 +214,8 @@ export function SelectionHighlights() {
     if (entry.status !== "shown") {
       continue;
     }
-    const box = featureBounds(entry.feature);
-    if (box && boundsMeet(view, box)) {
+    const { bounds } = prepare(entry.feature);
+    if (bounds && boundsMeet(view, bounds)) {
       inView.push(entry);
     }
   }
