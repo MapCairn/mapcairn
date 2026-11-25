@@ -12,7 +12,7 @@ What a MapCairn page costs to load, measured on the reference site's product pag
 ## What to expect in your host
 
 - **The engine is most of the cost.** `maplibre-gl.mjs` is 1.1 MB as MapLibre ships it, and its evaluation, style processing and first draws are about 70% of the start-up CPU time (total blocking time). The rest of the reference app's start-up JavaScript is about 0.5 s unthrottled on the test machine, most of it rendering the chrome.
-- **Largest contentful paint waits for the map.** On a first visit the welcome card is the largest text, and it appears only once the engine's first `idle` event has fired, after the first view's tiles and glyphs. The wait is deliberate: the card must never show over `MapUnavailable` (plan 0004).
+- **Largest contentful paint waits for the map.** On a first visit the welcome card is the largest text, and it appears only once the engine's first `idle` event has fired, after the first view's tiles and glyphs. The wait is deliberate: the card must never show over `MapUnavailable` (plan 0004), and showing it sooner was measured and does not lift the mobile score (see "The map page").
 - **Layout does not shift.** CLS is 0 in every run, because the server-rendered skeleton holds the chrome's boxes.
 - **Another language costs nothing until it is used.** A language other than the host's default loads the first time a visitor uses it (`LanguageCatalogue.load` may return a promise). The default is in the main bundle. While another loads, the interface keeps showing the previous one, so a slow connection never shows blank text. The reference host's `hostLanguages.ts` imports `af.ts` and `afLayerTemplates.ts` only when Afrikaans is requested. Nothing in the repository measures the bundle's size yet, so this is a loading boundary held to by the code, not a checked budget.
 - **Keep the engine out of a server bundle.** The reference Worker only renders pages, so `vite.config.ts` answers the engine's imports with an empty module in the Worker's environment, and `workerBundle.test.ts` fails when a Worker bundle holds a MapLibre file. This took the Worker bundle from 3.9 MB in 13 files to 2.5 MB in 11.
@@ -52,7 +52,7 @@ Neither change below was kept.
 1. **Engine preload.** The engine's `import("maplibre-gl")` starts in the map's mount effect, which runs only after the whole app has rendered, so the download and the first render run one after the other. `MapAdapterFactory` gained an optional `preload`, called at the top of the app's first render, so `maplibre-gl` downloaded while the chrome rendered. A first comparison, taken an hour apart on a shared machine, suggested observed LCP fell from 5.1 s to 3.7 s. Interleaved on one machine (main, change, main, change; 3 mobile runs each), it was 3.6 s (2.9 to 4.1) against 3.3 s (2.9 to 3.9) in the clean round. On the CI runner, performance was 39, 41 and 40 with the change against 33, 42 and 42 on `main`. The scores moved by a point or two either way, and TBT could not fall from starting a download earlier.
 2. **Hydrating inside `startTransition`**, as React Router's default client entry does. FCP did not move, and mobile LCP (21.5 s) and TBT (7.9 s) were no better.
 
-What is left is the engine itself, the first view's tiles and glyphs, and byte savings the audit overstates. A real gain would need a different design, such as showing the tour card before the map has loaded, which plan 0004 rules out, or a lighter engine, which is out of scope.
+What is left is the engine itself, the first view's tiles and glyphs, and byte savings the audit overstates. A real gain would need a lighter engine, which is out of scope. Showing the tour card before the map has loaded was measured too, and moves only the desktop score by a few points ("The map page").
 
 ## The product page
 
@@ -91,11 +91,27 @@ Accessibility, best practices and SEO are asserted at 1 and fail the run. Perfor
 
 ### The map page
 
-On `/map`: mobile 55 to 71 locally and 38 to 44 in CI, desktop 90 to 91. About 25% of the score depends on the first view's tiles, sprite and 14 glyph ranges coming over the throttled link. The same build moved from 59 to 69 on one machine under load (total blocking time 160 to 370 ms), so a difference between two builds in CI is noise. Preloading the basemap style, a merged stylesheet, the font preload and removing the preloads did not separate from it. What is left needs a decision on plan 0004's rule about the tour card, and is tracked in #385.
+On `/map`: mobile 55 to 71 locally and 38 to 44 in CI, desktop 90 to 91. The same build moved from 59 to 69 on one machine under load (total blocking time 160 to 370 ms), so a difference between two builds in CI is noise. Preloading the basemap style, a merged stylesheet, the font preload and removing the preloads did not separate from it.
+
+Measured for #385 against the production build served as CI serves it, Lighthouse 13.4.1, mobile preset, 3 runs on `main`: performance 57 (49 to 59 over the runs, the low one a cold first run), first contentful paint 6.2 to 7.7 s, largest contentful paint 17.7 s, total blocking time 60 to 70 ms, layout shift 0, the other three categories 100. Desktop, 3 runs: 77, 77 and 80, largest contentful paint 3.1 to 3.2 s.
+
+What the mobile score is made of: layout shift (25%) and total blocking time (30%) score full marks, first contentful paint (10%) and largest contentful paint (25%) score 0, and speed index (10%) scores 0.24. First contentful paint is 7.7 s in the simulation though it is 73 ms as observed, because the simulation counts every script and stylesheet requested before the first paint (about 1 MB, uncompressed as the audit counts it) over the 1.6 Mbit/s link, the same effect as on the product page. The largest contentful paint element is the welcome card's paragraph.
+
+**Showing the welcome card before the map's first `idle`.** An upper bound: the card shown as soon as there is no engine error, without waiting for the map to stop loading (only `map.loading` dropped from the card's condition in `AppChrome`), interleaved with `main`, three pairs each:
+
+| State                             | Mobile performance | Mobile LCP | Desktop performance | Desktop LCP  |
+| --------------------------------- | ------------------ | ---------- | ------------------- | ------------ |
+| `main`, card after the first idle | 57 (49 to 59)      | 17.7 s     | 77 to 81            | 3.0 to 3.2 s |
+| Card shown without waiting        | 57 (57 to 60)      | 14.1 s     | 81 to 84            | 2.3 to 2.5 s |
+
+On mobile the score does not move, because both metrics stay at 0: the card cannot paint before the scripts that render it have arrived over the throttled link, and that is most of 14 s. On desktop the score rises by about three points, and the two ranges touch at 81. That is too thin to decide on, and the change was not kept for a reason that holds whatever the numbers: the first moment the app knows that WebGL is missing is after the engine's code has loaded and its constructor has thrown. A card shown on "no error yet" would be announced and drawn on such a device, then withdrawn when `MapUnavailable` takes its place, which breaks plan 0004's rule in practice and announces the card for nothing. A gate that is safe needs a signal that the engine has started and its style has loaded. The map context does not expose one (`adapter` and `loaded` arrive when the basemap's own sources are in), so keeping it means a new event on the `MapAdapter` port, its fake, the contract suite and the public API, for about three points on desktop. The rule stands.
+
+**Fewer glyph ranges or a smaller sprite.** The first view asked for 10 Noto Sans Regular ranges in these runs (Latin, Greek, Cyrillic, Georgian, Ethiopic, punctuation and presentation forms, about 450 KB) and the 2x sprite (119 KB, because the audit emulates a high pixel ratio). The ranges come from the basemap's own labels: the symbol layers' `text-field` is `name:latin` and `name:nonlatin`, so every script that has a label at the world view needs its range. Leaving ranges out changes which labels draw, a smaller sprite or a 1x pixel ratio blurs the icons, and `localIdeographFontFamily` serves CJK only, which is not among them. All of that changes what visitors see, which the ground rules rule out. It would also gain nothing: the whole of the tiles, glyphs and sprite is the 3.6 s that showing the card without waiting removed from the largest contentful paint, and that moved no score. The remaining mobile score is bounded by the script before the first paint.
 
 ## Decided not to do
 
-- Show the tour card before the map has loaded. It would move LCP without making anything faster, and it breaks plan 0004's rule.
+- Show the tour card before the map has loaded. Measured, it lifts the mobile score by nothing and the desktop score by about three points, and it needs a new engine-started signal on the port to avoid showing the card on a device without WebGL ("The map page").
+- Ask the first view for fewer glyph ranges or a smaller sprite. It changes the basemap's labels or icons and, measured, would not move the score.
 - Change the compression, protocol or throttling of the audit server. That would change the audit, not the site.
 - `modulepreload` the MapLibre chunk in the head. It competes with the first chunks for bandwidth before the first paint (see the comment in `vite.config.ts`).
 - Lazy-load the error page. It saves under 2 KB, and an error page that has to load more code can fail when the network has.
