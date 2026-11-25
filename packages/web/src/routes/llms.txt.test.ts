@@ -9,6 +9,7 @@ import {
   EXAMPLE_APP_LINK,
   INSTALL_OPTIONS,
   NPM_ACTION,
+  PUBLIC_SERVICES_NOTE,
   RELEASE_NOTES_LINK,
   STATUS_LINE,
 } from "../product/productContent";
@@ -108,6 +109,11 @@ describe("/llms.txt", () => {
       "Policies and source",
       "Optional",
     ]);
+  });
+
+  it("says the playground's public search and routing services are not for other sites' production traffic", async () => {
+    expect(await loader().text()).toContain(PUBLIC_SERVICES_NOTE);
+    expect(await fullLoader().text()).toContain(PUBLIC_SERVICES_NOTE);
   });
 
   it("puts the product first and the playground second", async () => {

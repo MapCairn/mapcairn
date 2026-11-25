@@ -197,6 +197,7 @@ If the map stays blank, check that `src/page.css` is imported and that no other 
 - [Embed a map](guides/embed-a-map.md) says what each part of `main.tsx` does, how another bundler serves the worker file and which Content Security Policy to start from.
 - [Extending MapCairn](guides/extending.md) lists what an app provides around the SDK and how to add a basemap, a data layer, a search or routing provider, or an adapter of your own.
 - The [API reference](api/index.md) lists every export of the six packages.
+- Search in this app shows sample results. To search real places, [write a search provider](guides/extending.md#write-a-search-provider); the reference site's search and directions run on public community services that are demos ([the reference site](guides/using-the-reference-site.md) says what that means for your own site).
 - [Troubleshooting](troubleshooting.md) lists the error messages the SDK throws, with the cause and the fix of each, and what to check when the map is blank.
 
 ## Status

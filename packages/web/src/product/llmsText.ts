@@ -14,6 +14,7 @@ import {
   INSTALL_OPTIONS,
   lineToText,
   NPM_ACTION,
+  PUBLIC_SERVICES_NOTE,
   RELEASE_NOTES_LINK,
   SECURITY_LINK,
   STATUS_LINE,
@@ -143,6 +144,7 @@ function linkSections(): string {
 ## Playground
 
 - [Map playground](${SITE_URL}${PLAYGROUND_PATH}): ${PLAYGROUND_SUMMARY} A link can carry the view, the basemap and the layers in the part after #, for example ${SITE_URL}${PLAYGROUND_PATH}#map=11.00/-33.92000/18.42000.
+- Public services: ${PUBLIC_SERVICES_NOTE}
 - WebMCP: in a browser that offers \`document.modelContext\`, the playground registers tools an agent in that browser can call to work the map, such as searching for a place or measuring. A place name given to one is sent to the search service, as the privacy policy says.
 
 ## Docs
