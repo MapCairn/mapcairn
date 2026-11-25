@@ -68,6 +68,7 @@ describe("consumerManifest", () => {
       "@types/react": "19.3.0",
       typescript: "7.0.2",
       vite: "8.3.8",
+      webpack: "5.112.2",
     },
   });
 
@@ -91,6 +92,7 @@ describe("consumerManifest", () => {
       "@types/react": "19.3.0",
       typescript: "7.0.2",
       vite: "8.3.8",
+      webpack: "5.112.2",
     });
   });
 
@@ -231,6 +233,7 @@ describe("what the check reads", () => {
   it("pins every tool to a locked version", () => {
     expect(LOCKED_TOOLS).toContain("vite");
     expect(LOCKED_TOOLS).toContain("typescript");
+    expect(LOCKED_TOOLS).toContain("webpack");
   });
 
   it("pins the map engine too, because the adapter's required peer must be in every app's manifest for a strict pnpm install", () => {

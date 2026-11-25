@@ -49,6 +49,13 @@ A host with more on the first screen has three more optional pieces:
 
 A host that renders on a server, or builds a Worker, and imports `@mapcairn/sdk/adapter-maplibre` from code that build follows may bundle the map engine into the server or Worker build. It runs nothing there, and it is large. Import the subpath only in code that runs in the browser (a client-only module or a dynamic import behind it), and keep the root `@mapcairn/sdk` for the code both sides share: the root never imports the adapter or the engine.
 
+What a server-rendered host may import:
+
+- Every public entry point loads in plain Node with no `window` or `document`, the adapter and `maplibre-gl` included: loading one does not touch the browser. The consumer check imports each one that way, and builds them all with Vite and webpack, in the `SDK packages` check, which runs when a package, a release script or the lockfile changes.
+- Rendering `MapChrome` on the server is supported: the consumer check renders it in plain Node and on a Worker runtime. Importing the adapter on the server is allowed, but it adds the engine to the server bundle for nothing, so the advice above still holds.
+- `@mapcairn/core/contracts` (and `@mapcairn/sdk/core/contracts`) are test code. They need the optional `vitest` peer, so import them from tests only, never from code a server or a bundle follows.
+- Style sheets (`tokens.css`, `styles.css`) are imported by the client entry, or by a server build whose bundler handles CSS; Node cannot import them.
+
 ## Put two maps on one page
 
 Each map is its own `MapView` with its own chrome, under one `ServicesProvider`, one `LiveRegionProvider` and one `TooltipProvider`. The example in `examples/embed` shows two. What a page with two maps needs:

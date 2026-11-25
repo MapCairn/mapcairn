@@ -74,6 +74,12 @@ import {
   yarnSettings,
   yarnSkipped,
 } from "./consumerLegs.mjs";
+import {
+  entrySource,
+  installedEntryPoints,
+  nodeImportProblems,
+  webpackBuildScript,
+} from "./entryPoints.mjs";
 import { isolatedEnvironment, runNpm } from "./npm.mjs";
 import { findTarballs, packTarballs } from "./packCheck.mjs";
 import { readmeQuickstart } from "./quickstartLeg.mjs";
@@ -104,6 +110,8 @@ export const LOCKED_TOOLS = [
   "react-dom",
   "vite",
   "typescript",
+  // The entry point leg builds every public entry point with it.
+  "webpack",
   "@types/react",
   "@types/react-dom",
   // The adapter's required peer. A strict pnpm install refuses an app that
@@ -211,7 +219,7 @@ export function consumerManifest({ tarballs, versions, direct }) {
         direct.includes(name.slice("@mapcairn/".length)),
     ),
   );
-  const { typescript, vite, ...runtime } = versions;
+  const { typescript, vite, webpack, ...runtime } = versions;
   const types = Object.fromEntries(
     Object.entries(runtime).filter(([name]) => name.startsWith("@types/")),
   );
@@ -224,7 +232,7 @@ export function consumerManifest({ tarballs, versions, direct }) {
     private: true,
     type: "module",
     dependencies: { ...listed, ...dependencies },
-    devDependencies: { ...types, typescript, vite },
+    devDependencies: { ...types, typescript, vite, webpack },
     overrides: sdk,
   };
 }
@@ -1092,8 +1100,58 @@ function checkApp(app, prefix = "", { engineStyles = false } = {}) {
   }
   lines.push("server render of the chrome from the bundle: ok");
 
-  lines.push(checkWorkerd(app));
+  lines.push(...checkEntryPoints(app), checkWorkerd(app));
   return lines.map((line) => `${prefix}${line}`);
+}
+
+/**
+ * Takes every public entry point of the installed SDK packages through plain
+ * Node (no `window` or `document`), a Vite server build with the style sheets,
+ * and a webpack build with no loader.
+ *
+ * @param {string} app The installed app.
+ * @returns {string[]} One line for each check.
+ */
+function checkEntryPoints(app) {
+  const packages = readdirSync(path.join(app, "node_modules", "@mapcairn"))
+    .map(String)
+    .map((name) => `@mapcairn/${name}`);
+  const scripts = installedEntryPoints(app, packages);
+  const styles = installedEntryPoints(app, packages, { styles: true });
+
+  const problems = nodeImportProblems(app, scripts);
+  if (problems.length > 0) {
+    throw new Error(problems.join("\n"));
+  }
+
+  writeFileSync(path.join(app, "entries.mjs"), entrySource(scripts));
+  writeFileSync(
+    path.join(app, "entriesWithStyles.mjs"),
+    entrySource([...scripts, ...styles]),
+  );
+  writeFileSync(
+    path.join(app, "webpack.build.mjs"),
+    webpackBuildScript("entries.mjs"),
+  );
+  const vite = path.join(app, "node_modules", "vite", "bin", "vite.js");
+  runNode(
+    "vite build of every entry point",
+    [
+      vite,
+      "build",
+      "--ssr",
+      "entriesWithStyles.mjs",
+      "--outDir",
+      "dist/entries",
+    ],
+    app,
+  );
+  runNode("webpack build of every entry point", ["webpack.build.mjs"], app);
+  return [
+    `${scripts.length} entry points import in plain Node with no window or document: ok`,
+    "every entry point and style sheet builds under Vite: ok",
+    "every entry point builds under webpack: ok",
+  ];
 }
 
 /**
