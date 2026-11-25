@@ -91,7 +91,7 @@ function useFitToImport(): (bounds: Bounds) => void {
 /**
  * The shapes the person has drawn: a list where each row selects a shape (so
  * it can be edited with the keyboard from the draw tool), buttons to delete
- * the selected shape or all of them, an import from a GeoJSON, CSV or WKT file
+ * the selected shape or all of them, an import from a GeoJSON, GPX, CSV or WKT file
  * (when the host supplies a file opener),
  * and the export buttons. Shapes are saved to a file or into a link only when
  * a button is pressed, a file is read only on this device, and the note says

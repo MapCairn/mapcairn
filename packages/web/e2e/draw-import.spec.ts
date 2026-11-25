@@ -22,6 +22,9 @@ const FAR_AWAY = "#map=10.00/-33.92000/18.42000";
 const GEOJSON_RESULT =
   "4 shapes imported. 1 skipped: 1 with edges that cross. Holes in 1 polygon were left out.";
 
+/** The words the GPX fixture's import ends with: its last segment has one position. */
+const GPX_RESULT = "4 shapes imported. 1 skipped: 1 with too few points.";
+
 /** A WKT file in Sydney that writes latitude first, so read longitude first its position is outside the world. */
 const LATITUDE_FIRST_FILE = {
   name: "sydney.wkt",
@@ -54,7 +57,7 @@ async function importFrom(
 ): Promise<void> {
   const chooser = page.waitForEvent("filechooser");
   await page
-    .getByRole("button", { name: "Import GeoJSON, CSV or WKT" })
+    .getByRole("button", { name: "Import GeoJSON, GPX, CSV or WKT" })
     .click();
   await (await chooser).setFiles(files);
 }
@@ -90,6 +93,50 @@ test.describe("draw import", () => {
     await page.keyboard.press("Escape");
     await mapPage.startDrawing();
     await mapPage.drawUndo.click();
+    await expect(mapPage.drawShapes).toHaveCount(0);
+  });
+
+  test("imports a GPX file as points and lines, shows no name or description and fits the map to it", async ({
+    page,
+    mapPage,
+  }) => {
+    await mapPage.goto(FAR_AWAY);
+    await mapPage.mapOptionsButton.click();
+    await expect(mapPage.shapesSection).toBeVisible();
+    await importFrom(page, resolve(FILES, "walk.gpx"));
+
+    await expect(page.getByTestId("shapes-import-feedback")).toHaveText(
+      GPX_RESULT,
+    );
+    await expect(mapPage.shapesSection.getByTestId("shapes-row")).toHaveText([
+      /^Point 1/,
+      /^Line 1/,
+      /^Line 2/,
+      /^Line 3/,
+    ]);
+    await expect(mapPage.drawShapes).toHaveCount(4);
+    await expect
+      .poll(() => page.url())
+      .toMatch(/#map=[\d.]+\/48\.[5-9][\d.]*\/2\./);
+    await expect(page.getByText("Start")).toHaveCount(0);
+    await expect(page.locator("img[src='x']")).toHaveCount(0);
+    await expect(page.getByText("alert(1)")).toHaveCount(0);
+  });
+
+  test("refuses damaged GPX whole, in words, and adds nothing", async ({
+    page,
+    mapPage,
+  }) => {
+    await mapPage.goto();
+    await mapPage.mapOptionsButton.click();
+    await importFrom(page, {
+      name: "broken.gpx",
+      mimeType: "application/gpx+xml",
+      buffer: Buffer.from('<gpx><wpt lat="1" lon="2">'),
+    });
+    await expect(page.getByTestId("shapes-import-feedback")).toHaveText(
+      "The GPX could not be read, so none of the file was imported.",
+    );
     await expect(mapPage.drawShapes).toHaveCount(0);
   });
 
@@ -267,7 +314,7 @@ test.describe("draw import", () => {
       buffer: Buffer.from("Bring a torch."),
     });
     await expect(page.getByTestId("shapes-import-feedback")).toContainText(
-      "This is not GeoJSON, WKT or a CSV of shapes from this map.",
+      "This is not GeoJSON, GPX, WKT or a CSV of shapes from this map.",
     );
     await expect(mapPage.assertiveAnnouncer).toContainText(
       "This is not GeoJSON",
@@ -290,6 +337,23 @@ test.describe("draw import accessibility", () => {
       await importFrom(page, resolve(FILES, "shapes.geojson"));
       await expect(page.getByTestId("shapes-import-feedback")).toHaveText(
         GEOJSON_RESULT,
+      );
+      expect(await axeViolations(page)).toEqual([]);
+      const controls = await inspectControls(page);
+      expect(controls.unnamed).toEqual([]);
+      expect(controls.tooSmall).toEqual([]);
+      expect(controls.positiveTabindex).toEqual([]);
+    });
+    test(`the Shapes section with a GPX import result passes axe in ${colorScheme} @a11y`, async ({
+      page,
+      mapPage,
+    }) => {
+      await page.emulateMedia({ colorScheme });
+      await mapPage.goto();
+      await mapPage.mapOptionsButton.click();
+      await importFrom(page, resolve(FILES, "walk.gpx"));
+      await expect(page.getByTestId("shapes-import-feedback")).toHaveText(
+        GPX_RESULT,
       );
       expect(await axeViolations(page)).toEqual([]);
       const controls = await inspectControls(page);

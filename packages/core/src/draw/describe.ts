@@ -306,6 +306,8 @@ function describeRefusal(refusal: ShapeImportRefusal): Message {
       return message("draw.import.refusal.not-recognised", {});
     case "wkt-unreadable":
       return message("draw.import.refusal.wkt-unreadable", {});
+    case "gpx-unreadable":
+      return message("draw.import.refusal.gpx-unreadable", {});
     case "too-many-shapes":
       return message("draw.import.refusal.too-many-shapes", {
         max: MAX_IMPORT_SHAPES,

@@ -36,7 +36,7 @@ Paths are relative to the repository root. A row describes the SDK unless it nam
 | Hosts that sit behind a login                                                      | lacks   | the reference site calls only public providers, so a host cannot attach credentials or react to a refused request         | [#45]      |
 | One place for tile and layer request limits, retry, priority and a host hook       | partial | each load is cancelled when replaced, and a slow tile layer says so (`useDataLayers`)                                     | [#195]     |
 | Importing drawn shapes from GeoJSON, WKT and CSV files                             | has     | `parseShapeFile` in `packages/core/src/draw/import.ts`, with the WKT axis order chosen by `wktAxisOrder`                  | none       |
-| Importing drawn shapes from GPX and KML files                                      | lacks   | none                                                                                                                      | [#227]     |
+| Importing drawn shapes from GPX and KML files                                      | partial | GPX is read by `readGpx` in `packages/core/src/draw/gpx.ts`; KML is not read yet                                          | [#227]     |
 | Zipped vector sets, GeoPackage, FlatGeobuf, GeoTIFF and other raster files         | lacks   | each needs a reader library, a runtime dependency decision, so wait for a named need and start with a plan                | none       |
 | Reading a service's capabilities document to list its layers                       | lacks   | a definition is written by the host on purpose: the service's own list adds a parser and a trust question for little gain | none       |
 

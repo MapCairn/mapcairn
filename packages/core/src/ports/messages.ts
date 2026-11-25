@@ -232,6 +232,7 @@ export type MessageKey =
   | "draw.import.refusal.too-deep"
   | "draw.import.refusal.not-recognised"
   | "draw.import.refusal.wkt-unreadable"
+  | "draw.import.refusal.gpx-unreadable"
   | "draw.import.refusal.too-many-shapes"
   | "draw.import.refusal.too-many-points"
   | "draw.import.refusalWithDetail"
