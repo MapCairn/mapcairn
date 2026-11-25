@@ -32,3 +32,5 @@ playwright/.cache/
 # Personal agent instructions (docs/guides/personal-preferences.md)
 CLAUDE.local.md
 AGENTS.local.md
+reports/
+.stryker-tmp/
