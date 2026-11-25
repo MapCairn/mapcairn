@@ -165,7 +165,30 @@ Your `tsconfig` uses a `moduleResolution` that ignores a package's `exports`. Se
 
 ### Warnings that say `MODULE_LEVEL_DIRECTIVE` and `"use client"`
 
-A Vite 8 build prints a warning for each of 18 `"use client"` directives in the Radix UI packages that `@mapcairn/map` depends on. They are expected and harmless.
+A Vite 8 build prints a `MODULE_LEVEL_DIRECTIVE` warning for each `"use client"` directive at the top of a Radix UI package that `@mapcairn/map` depends on, saying the directive's meaning may not be kept when bundling. The directive is in Radix's own files, which your bundler reads directly, so the SDK's build cannot remove it. The warning is expected and your build output is unchanged.
+
+To hide it, drop that one warning in your Vite configuration and pass every other log on:
+
+```ts no-check
+// vite.config.ts
+import { defineConfig } from "vite";
+
+export default defineConfig({
+  build: {
+    rolldownOptions: {
+      onLog(level, log, defaultHandler) {
+        const source = `${log.id ?? ""}${log.message}`;
+        if (log.code === "MODULE_LEVEL_DIRECTIVE" && source.includes("/@radix-ui/")) {
+          return;
+        }
+        defaultHandler(level, log);
+      },
+    },
+  },
+});
+```
+
+Keep the `@radix-ui` test: a `"use client"` warning from your own code is one you want to see.
 
 ## The map is blank, with no message
 
