@@ -12,6 +12,10 @@
  * with one copy of each. The umbrella app also proves that the umbrella's root
  * holds no map engine (its client, server and Worker builds never reach
  * `maplibre-gl` or the adapter), and that its `adapter-maplibre` subpath does.
+ * A headless app lists only `core` and `adapter-maplibre`, takes
+ * `examples/headless` as its source, and must install with no React and no
+ * interface package, and build (`checkHeadless`); it runs against published
+ * packages too.
  *
  *   npm run consumer:check
  *
@@ -88,6 +92,11 @@ import {
   nodeImportProblems,
   webpackBuildScript,
 } from "./entryPoints.mjs";
+import {
+  headlessInstallProblems,
+  headlessManifest,
+  isHeadlessAppFile,
+} from "./headlessLeg.mjs";
 import { isolatedEnvironment, runNpm } from "./npm.mjs";
 import { findTarballs, packTarballs, readTarballFile } from "./packCheck.mjs";
 import { readmeQuickstart } from "./quickstartLeg.mjs";
@@ -112,6 +121,9 @@ const FIXTURE = path.join(REPO, "scripts", "release", "consumer");
 
 /** The folder of the files the app that mixes the umbrella with direct dependencies adds. */
 const MIXED_FIXTURE = path.join(REPO, "scripts", "release", "consumer-mixed");
+
+/** The folder of the example the headless app is built from. */
+const HEADLESS_EXAMPLE = path.join(REPO, "examples", "headless");
 
 /** The folder of the page that draws a real map in a browser, which the umbrella app builds. */
 const BROWSER_FIXTURE = path.join(
@@ -1563,6 +1575,50 @@ function checkUmbrella({ root, packed, published, versions }) {
 }
 
 /**
+ * The headless route: an app that lists only `@mapcairn/core` and
+ * `@mapcairn/adapter-maplibre` (and the engine), built from
+ * `examples/headless`. The install must hold no React and none of the
+ * interface packages (`headlessInstallProblems`, read from the installed
+ * lock, not from `npm ls`), and the page must type-check and build with plain
+ * Vite, so the guide for the route is shown to work from the packed files.
+ *
+ * @param {{ root: string, packed: Record<string, string>, published: string | null, versions: Record<string, string> }} input
+ * @returns {string[]} One line for each check.
+ */
+function checkHeadless({ root, packed, published, versions }) {
+  const prefix = "headless (core and adapter-maplibre only): ";
+  const app = path.join(root, "headless");
+  cpSync(HEADLESS_EXAMPLE, app, {
+    recursive: true,
+    filter: (source) =>
+      isHeadlessAppFile(
+        path.relative(HEADLESS_EXAMPLE, source).split(path.sep).join("/"),
+      ),
+  });
+  writeFileSync(
+    path.join(app, "package.json"),
+    `${JSON.stringify(headlessManifest({ tarballs: packed, versions, published }), null, 2)}\n`,
+  );
+  copyFileSync(path.join(REPO, ".npmrc"), path.join(app, ".npmrc"));
+  install(app, installFlags({ published }));
+  const installed = JSON.parse(
+    readFileSync(path.join(app, "node_modules", ".package-lock.json"), "utf8"),
+  );
+  const problems = headlessInstallProblems(installed.packages);
+  if (problems.length > 0) {
+    throw new Error(problems.join("\n"));
+  }
+  const tsc = path.join(app, "node_modules", "typescript", "bin", "tsc");
+  runNode("tsc (headless example)", [tsc, "-p", "tsconfig.json"], app);
+  const vite = path.join(app, "node_modules", "vite", "bin", "vite.js");
+  runNode("vite build (headless example)", [vite, "build"], app);
+  return [
+    `${prefix}npm install: ok, with no React and no interface package`,
+    `${prefix}tsc and vite build of examples/headless: ok`,
+  ];
+}
+
+/**
  * The README's quickstart on the oldest React the SDK's peer range allows: an
  * app that lists only the umbrella, installed with React and React DOM at the
  * range's floor, then built and drawn in Chromium as `checkQuickstart` does,
@@ -1825,6 +1881,7 @@ export function runConsumerCheck({
       ...checkUmbrella({ root, packed, published, versions }),
       ...checkOldestReact({ root, packed, published, versions }),
       ...checkMixed({ root, packed, published, versions }),
+      ...checkHeadless({ root, packed, published, versions }),
     );
     if (published === null) {
       report.push(...runUpgradeLeg({ root, packed, versions, upgradeFrom }));

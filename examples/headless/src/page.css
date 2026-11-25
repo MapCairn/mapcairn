@@ -1,0 +1,22 @@
+html,
+body {
+  margin: 0;
+}
+
+body {
+  display: grid;
+  grid-template-rows: auto 1fr auto auto auto;
+  min-height: 100vh;
+  font-family: system-ui, sans-serif;
+}
+
+header,
+p,
+output {
+  margin: 0;
+  padding: 0.5rem 1rem;
+}
+
+#map {
+  min-height: 20rem;
+}

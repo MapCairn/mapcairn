@@ -37,5 +37,6 @@ default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data: bl
 
 ## Next
 
+- [Build a map without React](without-react.md) uses only `@mapcairn/core` and the MapLibre adapter, with an interface of your own.
 - [Extending MapCairn](extending.md) lists what an app provides around the SDK and how to add a basemap, a data layer, a search or routing provider, or an adapter of your own.
 - [`examples/embed`](https://github.com/MapCairn/mapcairn/blob/main/examples/embed/README.md) is the full version of this app, with the end stack of controls, the sheet, the measure tool, layers and a search provider of its own.

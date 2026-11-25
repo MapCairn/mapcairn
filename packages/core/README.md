@@ -9,6 +9,8 @@ Most apps should install [`@mapcairn/sdk`](https://github.com/MapCairn/mapcairn/
 
 It has no dependency on another MapCairn package, React, a map engine or a browser global, and it never reads the clock. Its runtime dependencies are the `@turf` maths libraries and the GeoJSON types.
 
+A host that brings its own interface, on any framework, can use this package with [`@mapcairn/adapter-maplibre`](https://github.com/MapCairn/mapcairn/tree/main/packages/adapter-maplibre) alone, with no React and no `@mapcairn/map`. [Build a map without React](https://docs.mapcairn.com/guides/without-react/) has the steps and an example.
+
 **Status:** pre-1.0. While the version starts with `0.`, a minor release (the middle number) can contain a breaking change to the public API and a patch release (the last number) is not meant to, so a caret range takes patch releases but not the next minor release. The [changelog](https://github.com/MapCairn/mapcairn/blob/main/CHANGELOG.md) names each breaking change the release finds, and [what counts as the public API](https://docs.mapcairn.com/guides/public-api/) says what is covered.
 
 ## Install

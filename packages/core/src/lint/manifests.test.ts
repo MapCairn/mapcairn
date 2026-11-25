@@ -182,7 +182,11 @@ const SIDE_EFFECTS: Readonly<Record<string, unknown>> = {
 const REPOSITORY_URL = "git+https://github.com/MapCairn/mapcairn.git";
 
 /** Workspaces that depend on the SDK packages, beside the SDK packages. */
-const INTERNAL_CONSUMERS = ["packages/web", "examples/embed"] as const;
+const INTERNAL_CONSUMERS = [
+  "packages/web",
+  "examples/embed",
+  "examples/headless",
+] as const;
 
 interface Manifest {
   readonly name: string;
