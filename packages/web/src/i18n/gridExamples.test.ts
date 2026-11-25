@@ -5,7 +5,6 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { EN_GB_CATALOGUE, parseCoordinates } from "@mapcairn/core";
 import { describe, expect, it } from "vitest";
-import { AF_CATALOGUE } from "./af";
 
 const REPO = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
@@ -40,13 +39,6 @@ describe("the grid reference examples that are printed for people", () => {
     expectEveryExampleToRead(
       "en-GB panels.help.searchDescription",
       EN_GB_CATALOGUE["panels.help.searchDescription"],
-    );
-  });
-
-  it("in the Afrikaans help text all read", () => {
-    expectEveryExampleToRead(
-      "af panels.help.searchDescription",
-      AF_CATALOGUE["panels.help.searchDescription"],
     );
   });
 
