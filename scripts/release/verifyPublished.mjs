@@ -21,6 +21,9 @@
  * attested bytes. Without the folder it says plainly that this was not
  * compared.
  *
+ * It also downloads the published tarballs and runs `publint` and `attw` on
+ * what the registry serves, with the same arguments as `npm run pack:check`.
+ *
  * Run it after the workflow's `npm` job has published. It only
  * reads the registry. The four SDK packages are exempted from the repository's
  * three-day minimum release age for this install, because a version that was
@@ -32,13 +35,21 @@
  * leg, which skips with a message where Chromium is not installed.
  */
 import { createHash } from "node:crypto";
-import { lstatSync, readdirSync, readFileSync } from "node:fs";
+import {
+  lstatSync,
+  mkdtempSync,
+  readdirSync,
+  readFileSync,
+  rmSync,
+} from "node:fs";
+import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { isEntryPoint } from "../entryPoint.mjs";
 import { parseRegistryAnswer } from "./check.mjs";
 import { auditProblems, runConsumerCheck } from "./consumerCheck.mjs";
 import { isNotFound, REGISTRY_READ_FLAGS, runNpm } from "./npm.mjs";
+import { runPackTypes } from "./packTypes.mjs";
 import { parseVersion } from "./semver.mjs";
 import { git } from "./tools.mjs";
 import { distTagFor } from "./verifyRelease.mjs";
@@ -404,6 +415,52 @@ export function compareWithTarballs({
 }
 
 /**
+ * Downloads each SDK package at a version from the registry into a folder.
+ *
+ * @param {string} version
+ * @param {string} folder An existing folder.
+ * @throws {Error} When npm cannot fetch a package.
+ */
+function downloadPublished(version, folder) {
+  for (const name of SDK_NAMES) {
+    const result = runNpm([
+      "pack",
+      `${name}@${version}`,
+      "--ignore-scripts",
+      "--pack-destination",
+      folder,
+      ...REGISTRY_READ_FLAGS,
+    ]);
+    if (result.status !== 0) {
+      throw new Error(`npm pack ${name}@${version} failed:\n${result.stderr}`);
+    }
+  }
+}
+
+/**
+ * Runs `publint` and `attw` on the tarballs the registry serves for a version.
+ *
+ * @param {object} input
+ * @param {string} input.version
+ * @param {(version: string, folder: string) => void} [input.download] Fetches the tarballs into a folder; replaced in tests.
+ * @param {(folder: string) => string[]} [input.typeCheck] Runs both tools on a folder of tarballs; replaced in tests.
+ * @returns {string[]} One entry for each failed run.
+ */
+export function publishedTypeProblems({
+  version,
+  download = downloadPublished,
+  typeCheck = runPackTypes,
+}) {
+  const folder = mkdtempSync(path.join(tmpdir(), "mapcairn-published-"));
+  try {
+    download(version, folder);
+    return typeCheck(folder);
+  } finally {
+    rmSync(folder, { recursive: true, force: true });
+  }
+}
+
+/**
  * Runs the install check. If it throws (a package is not on npm yet, say), the
  * integrity problems found before it are added to the error, so a mismatch is
  * not hidden behind the install failure.
@@ -459,10 +516,15 @@ if (isEntryPoint(import.meta.url)) {
     for (const line of [...report.lines, ...tags.lines, ...integrity.lines]) {
       console.log(line);
     }
+    const typeProblems = publishedTypeProblems({ version });
+    if (typeProblems.length === 0) {
+      console.log("ok   publint and attw: no problem in any published tarball");
+    }
     const problems = [
       ...report.problems,
       ...tags.problems,
       ...integrity.problems,
+      ...typeProblems,
     ];
     if (problems.length > 0) {
       throw new Error(problems.join("\n"));
