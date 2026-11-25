@@ -67,6 +67,28 @@ export const PNPM_MINIMUM_RELEASE_AGE = MINIMUM_RELEASE_AGE_DAYS * 24 * 60;
 /** The minimum release age in the seconds Bun counts it in. */
 export const BUN_MINIMUM_RELEASE_AGE = MINIMUM_RELEASE_AGE_DAYS * 24 * 60 * 60;
 
+/** A caret range on one exact version, the only shape the SDK's React peer range takes. */
+const CARET_RANGE = /^\^(\d+\.\d+\.\d+)$/;
+
+/**
+ * The locked versions with React and React DOM moved down to the lowest
+ * version the SDK's peer range allows, for the leg that proves the stated
+ * range's floor.
+ *
+ * @param {Record<string, string>} versions The locked versions of the fixture's tools.
+ * @param {string} peerRange The React peer range of the SDK packages, such as `^19.0.0`.
+ * @returns {Record<string, string>} A copy with `react` and `react-dom` at the floor.
+ */
+export function oldestReactVersions(versions, peerRange) {
+  const floor = CARET_RANGE.exec(peerRange)?.[1];
+  if (floor === undefined) {
+    throw new Error(
+      `The React peer range "${peerRange}" is not a caret range, so its lowest version is unknown.`,
+    );
+  }
+  return { ...versions, react: floor, "react-dom": floor };
+}
+
 /**
  * Yarn's settings for the throwaway app: real `node_modules` (what most
  * projects use), no lifecycle scripts, no telemetry, a lockfile that may be

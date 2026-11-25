@@ -64,6 +64,7 @@ import {
   corepackCliPath,
   INSTALL_TIMEOUT,
   miniflareAvailable,
+  oldestReactVersions,
   PNPM_MINIMUM_RELEASE_AGE,
   playwrightAvailable,
   publishedLegSkip,
@@ -1307,6 +1308,37 @@ function checkUmbrella({ root, packed, published, versions }) {
 }
 
 /**
+ * The README's quickstart on the oldest React the SDK's peer range allows: an
+ * app that lists only the umbrella, installed with React and React DOM at the
+ * range's floor, then built and drawn in Chromium as `checkQuickstart` does,
+ * so the stated range is proved at its lower edge and not only at the latest
+ * release the repository tests on.
+ *
+ * @param {{ root: string, packed: Record<string, string>, published: string | null, versions: Record<string, string> }} input
+ * @returns {string[]} One line for each check.
+ */
+function checkOldestReact({ root, packed, published, versions }) {
+  const umbrella = JSON.parse(
+    readFileSync(
+      path.join(REPO, "packages", UMBRELLA_PACKAGE, "package.json"),
+      "utf8",
+    ),
+  );
+  const oldest = oldestReactVersions(versions, umbrella.peerDependencies.react);
+  const prefix = `oldest React (${oldest.react}): `;
+  const manifest = manifestListing({
+    packed,
+    published,
+    versions: oldest,
+    direct: [UMBRELLA_PACKAGE],
+  });
+  const app = path.join(root, "oldest-react");
+  prepareApp(app, manifest, { umbrella: true });
+  install(app, installFlags({ published }));
+  return [`${prefix}npm install: ok`, ...checkQuickstart(app, prefix)];
+}
+
+/**
  * The check for an app that lists the umbrella and also `core`, `map` and the
  * adapter directly, at the umbrella's version, as the documents tell a host
  * that merges a declaration. It must install one copy of each package, so the
@@ -1487,6 +1519,7 @@ export function runConsumerCheck({ published = null, tarballs = null } = {}) {
 
     report.push(
       ...checkUmbrella({ root, packed, published, versions }),
+      ...checkOldestReact({ root, packed, published, versions }),
       ...checkMixed({ root, packed, published, versions }),
     );
   } finally {
