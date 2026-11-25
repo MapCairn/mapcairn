@@ -7,6 +7,7 @@ import {
   headerTargets,
   open,
   prepare,
+  settledTargets,
 } from "./support";
 
 /** Widths around the framework's 996 px breakpoint, where the header changes shape. */
@@ -92,8 +93,13 @@ for (const width of DRAWER_WIDTHS) {
       .getByRole("button", { name: /^Expand sidebar category/ })
       .first()
       .click();
+    await expect(
+      drawer
+        .getByRole("button", { name: /^Collapse sidebar category/ })
+        .first(),
+    ).toBeVisible();
 
-    const targets = await headerTargets(
+    const targets = await settledTargets(
       page,
       ".navbar-sidebar a, .navbar-sidebar button",
     );

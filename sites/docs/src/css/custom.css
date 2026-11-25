@@ -426,6 +426,11 @@ body {
   list-style: none;
 }
 
+/* The first row of an opened category is no later sibling, so the drawer's row gap skips it: give the nested list the same gap to its parent row. */
+.navbar-sidebar .menu__list .menu__list {
+  margin-block-start: var(--mc-space-xs);
+}
+
 .menu__list-item,
 .table-of-contents li {
   margin: 0;

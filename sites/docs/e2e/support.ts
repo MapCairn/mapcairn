@@ -140,6 +140,47 @@ export function headerTargets(
   );
 }
 
+/** How many snapshots in a row must be equal before a layout counts as settled. */
+const SETTLED_SNAPSHOTS = 3;
+
+/** How many snapshots to take before giving up on a layout that never settles. */
+const MAX_SNAPSHOTS = 60;
+
+/** Resolves after the browser has painted two more frames. */
+function nextFrames(page: Page): Promise<void> {
+  return page.evaluate(
+    () =>
+      new Promise<void>((resolve) => {
+        requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
+      }),
+  );
+}
+
+/**
+ * Like {@link headerTargets}, but waits until the boxes stop moving: the
+ * framework animates a sidebar category open, and a box measured on the way
+ * overlaps its neighbours. It compares snapshots a frame or two apart, so it
+ * waits for the layout itself and not for a fixed time.
+ */
+export async function settledTargets(
+  page: Page,
+  selector?: string,
+): Promise<HeaderTarget[]> {
+  let latest = await headerTargets(page, selector);
+  let equalInARow = 1;
+  for (let taken = 1; taken < MAX_SNAPSHOTS; taken += 1) {
+    await nextFrames(page);
+    const next = await headerTargets(page, selector);
+    equalInARow =
+      JSON.stringify(next) === JSON.stringify(latest) ? equalInARow + 1 : 1;
+    latest = next;
+    if (equalInARow >= SETTLED_SNAPSHOTS) {
+      return latest;
+    }
+  }
+  throw new Error("The targets kept moving and never settled.");
+}
+
 /** The distance in CSS pixels between the boxes of two targets, 0 when they touch or overlap. */
 export function gapBetween(a: HeaderTarget, b: HeaderTarget): number {
   const gapX = Math.max(
