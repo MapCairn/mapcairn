@@ -120,6 +120,20 @@ describe("coordinateSearchResult", () => {
   });
 });
 
+describe("the label of a coordinate result", () => {
+  it("always names the hemisphere, so a band-S reference read as southern shows it", () => {
+    expect(
+      coordinateSearchResult("31N 500000 4200000", messages)?.label,
+    ).toMatch(/° N, .*° E$/);
+    expect(
+      coordinateSearchResult("31S 500000 4200000", messages)?.label,
+    ).toMatch(/° S, .*° E$/);
+    expect(
+      coordinateSearchResult("31U 500000 5500000", messages)?.label,
+    ).toMatch(/° N, /);
+  });
+});
+
 describe("isCoordinateText", () => {
   it("is true for text that reads as a position", () => {
     for (const text of [
@@ -159,13 +173,49 @@ describe("isCoordinateText", () => {
     }
   });
 
+  it("is true for a pair with words in it, finished or still being typed", () => {
+    for (const text of [
+      "26.2041 south, 28.04",
+      "26.2041 south, 28.0473 east",
+      "26 degrees 12",
+      "26 degrees 12 minutes 14.8 seconds south, 28",
+      "coordinates 26.2041, 28.0",
+      "coords -26.2041",
+      "-26.2041 North, 28",
+      "26.2041 SOUTH",
+      "26°12'14.8\"S 28",
+    ]) {
+      expect(isCoordinateText(text, messages), text).toBe(true);
+    }
+  });
+
+  it("is true for a pair in the words of the catalogue's language", () => {
+    const afrikaans = new FakeMessageCatalogue({
+      language: "af",
+      overrides: {
+        "format.wordSouth": "suid",
+        "format.wordEast": "oos",
+        "format.wordDegree": "graad grade",
+      },
+    });
+    expect(isCoordinateText("26.2041 grade suid, 28", afrikaans)).toBe(true);
+    expect(isCoordinateText("26.2041 grade suid, 28", messages)).toBe(false);
+  });
+
   it("is false for a place name", () => {
     for (const text of [
       "Cape Town",
       "Paris",
       "5 Main Street",
       "10 Downing Street",
-      "12345",
+      "12 Rue de Rivoli",
+      "12 rue",
+      "5 Pub",
+      "1 Dec 2015",
+      "Mount 4",
+      "N1 Highway",
+      "coordinates",
+      "south",
       "",
     ]) {
       expect(isCoordinateText(text, messages), text).toBe(false);

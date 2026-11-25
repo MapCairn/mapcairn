@@ -29,10 +29,10 @@ export const SUGGEST_COOLDOWN_MS = 60_000;
 const NONE: readonly SearchResult[] = [];
 
 /**
- * A run of letters that makes text a place name. Text with none (digits,
- * signs, a degree mark and at most a compass letter or two) may be a
- * coordinate pair still being typed, which is never sent to a service. A
- * grid reference does carry letters, so `isCoordinateText` rules it out too.
+ * A run of three letters that makes text look like a place name. Text with
+ * none (digits, signs, a degree mark and short letters such as N or S) is
+ * skipped. A coordinate can carry longer words ("south", "degrees") and a
+ * grid reference carries letters, so `isCoordinateText` rules those out too.
  */
 const WORD = /\p{L}{3,}/u;
 
@@ -41,11 +41,16 @@ const WORD = /\p{L}{3,}/u;
  * `SuggestionProvider`. Returns the suggestions for the latest text that has
  * settled, or none.
  *
- * A request starts only when the trimmed text has been unchanged for
- * {@link SUGGEST_DEBOUNCE_MS}, is at least {@link MIN_SUGGEST_LENGTH}
- * characters and has a word in it and is not a coordinate (a pair, or a UTM or
- * MGRS reference, finished or still being typed, see `isCoordinateText`), so
- * a coordinate typed character by character is never sent (the search itself answers a whole pair without a service).
+ * A request starts only when all of these hold:
+ * - the trimmed text has been unchanged for {@link SUGGEST_DEBOUNCE_MS};
+ * - it is at least {@link MIN_SUGGEST_LENGTH} characters and has a word in it;
+ * - it is not a coordinate (see `isCoordinateText`): a pair, or a UTM or MGRS
+ *   reference, finished or still being typed.
+ *
+ * So a coordinate typed character by character is never sent; the search
+ * itself answers a whole one without a service. Text shaped like a grid
+ * reference under way, such as "11SPA72", also pauses suggestions.
+ *
  * Each change of text aborts the request before it, so an
  * answer for older text never arrives after a newer one. Nothing is asked
  * while `enabled` is false, which a caller uses after the person has picked

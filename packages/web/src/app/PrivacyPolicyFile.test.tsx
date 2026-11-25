@@ -99,9 +99,9 @@ describe("PRIVACY.md mirrors the privacy page", () => {
     );
   });
 
-  it("says a search that is only coordinates is not sent to the geocoder", () => {
+  it("says a search that reads as coordinates is not sent to the geocoder", () => {
     expectBothCopies(
-      "A search that is only coordinates — a pair of decimal degrees or degrees, minutes and seconds, a UTM reference or an MGRS reference — is read in your browser and is not sent to the geocoder; showing the place requests map tiles for that area, as any move of the map does.",
+      "A search that reads as coordinates — a pair of decimal degrees or degrees, minutes and seconds, a UTM reference or an MGRS reference — is read in your browser and is not sent to the geocoder; showing the place requests map tiles for that area, as any move of the map does. Text that does not read as coordinates, such as a typo or a reference that is out of range, is searched by name.",
     );
   });
 

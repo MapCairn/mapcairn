@@ -492,7 +492,8 @@ function readPair(text: string, words: Words): LatLng | null {
  *   reads back as the same place to about a metre
  * - a UTM reference: the zone, a band letter or a hemisphere letter, then
  *   the easting to the metre and the northing to the metre, with or
- *   without spaces, in either letter case: `31U 500000 5500000`,
+ *   without spaces between the zone, the letter and the easting (a space
+ *   between the easting and the northing is required), in either letter case: `31U 500000 5500000`,
  *   `31 N 500000 4200000`, `34h261882 6243182`. A letter that is N or S is
  *   always read as a hemisphere letter, never as band N or band S: S names
  *   the southern hemisphere, whose northing carries the 10 000 000 m offset.
@@ -509,9 +510,10 @@ function readPair(text: string, words: Words): LatLng | null {
  *   to 84° N)
  * - an MGRS reference: the zone and band letter written together, the
  *   100 km square and the digits of the easting and northing, with or
- *   without spaces between the square and the digits (runs of white space
- *   count as one), in either letter case, at any precision from 1 km (four
- *   digits) to 1 m (ten): `31U CT 12345 67890`, `11SPA7234911844`. Fewer
+ *   without a space between the square and the digits, and with at most
+ *   spaces among the digits (runs of white space count as one), in either
+ *   letter case but not a mixture ("1Dec 2015" is a date), at any precision
+ *   from 1 km (four digits) to 1 m (ten): `31U CT 12345 67890`, `11SPA7234911844`. Fewer
  *   than four digits, or a space between the zone and the band letter, is
  *   refused, so a date or an address ("1 Dec 2015", "12 Rue 10") is never
  *   read as a position. A bare 100 km square names an area rather than a
@@ -562,4 +564,27 @@ export function parseCoordinates(
     parseUtm(normalised) ??
     parseMgrs(normalised)
   );
+}
+
+/** What may remain of coordinate text once its words are taken out: figures, signs, separators and unit marks. */
+const COORDINATE_FILLER = /^[\d\s+\-.,;:°º˚′″'"’]*$/u;
+
+/**
+ * Whether text is made only of figures and the coordinate words the reader
+ * knows (hemisphere words, unit words, the "coordinates" label, in English
+ * and in the language of `hemispheres` and `words`), with at least one
+ * figure: a pair that may still be being typed, such as "26.2041 south, 28.04"
+ * or "coordinates 26.2041, 28". Any other word, such as a place name,
+ * makes it false.
+ */
+export function isCoordinateWordsAndFigures(
+  text: string,
+  hemispheres?: Hemispheres,
+  words?: CoordinateWords,
+): boolean {
+  const known = wordsFor(hemispheres, words);
+  const rest = normaliseCoordinateText(text).replace(/\p{L}+/gu, (run) =>
+    known.has(wordKey(run)) ? " " : "?",
+  );
+  return /\d/.test(rest) && COORDINATE_FILLER.test(rest);
 }

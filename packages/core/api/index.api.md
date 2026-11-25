@@ -1911,6 +1911,9 @@ export function isControlEnabled(control: LayerControlDefinition, values: Contro
 export function isCoordinateText(text: string, messages: MessageCatalogue): boolean;
 
 // @public
+export function isCoordinateWordsAndFigures(text: string, hemispheres?: Hemispheres, words?: CoordinateWords): boolean;
+
+// @public
 export function isEmptyGeometry(geometry: Geometry): boolean;
 
 // @public

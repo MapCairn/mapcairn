@@ -243,6 +243,12 @@ describe("parseCoordinates of UTM references", () => {
     expect(parseCoordinates(text ?? "")?.lat).toBeCloseTo(38, 4);
   });
 
+  it("needs a space between the easting and the northing", () => {
+    expect(parseCoordinates("31U5000005500000")).toBeNull();
+    expect(parseCoordinates("31U 5000005500000")).toBeNull();
+    expect(parseCoordinates("31U500000 5500000")).not.toBeNull();
+  });
+
   it("refuses text with anything left over", () => {
     expect(parseCoordinates("31U 500000 5500000 extra")).toBeNull();
     expect(parseCoordinates("UTM 31U 500000 5500000")).toBeNull();

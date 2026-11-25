@@ -195,9 +195,23 @@ describe("parseCoordinates of MGRS references", () => {
       "12 Rue 1012",
       "5 Pub 1234",
       "12 Pub 5678",
+      "1Dec 2015",
+      "3Mar 2015",
+      "1Feb2010",
+      "1Dec2015",
+      "7Jan 2012",
+      "3Jun1999",
     ]) {
       expect(parseCoordinates(text), text).toBeNull();
     }
+  });
+
+  it("refuses letters of mixed case, which a month name is", () => {
+    expect(parseCoordinates("33UxP0544")).toBeNull();
+    expect(parseCoordinates("33Uxp0544")).toBeNull();
+    expect(parseCoordinates("33uXP0544")).toBeNull();
+    expect(parseCoordinates("33uxp0544")).not.toBeNull();
+    expect(parseCoordinates("33UXP0544")).not.toBeNull();
   });
 
   it("refuses a space between the zone and the band letter", () => {

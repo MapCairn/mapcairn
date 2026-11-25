@@ -119,8 +119,10 @@ const MGRS_PATTERN = /^(\d{1,2})([A-Z])\s*([A-Z]{2})\s*([\d\s]{4,11})$/i;
  * text is not one. The zone and band letter are written together ("31U");
  * the 100 km square and the digits may be written with or without spaces,
  * in either letter case, at any precision from 1 km (four digits) to 1 m
- * (ten), and runs of white space are read as one space. A bare 100 km square ("31U CT")
- * names an area rather than a point and is refused.
+ * (ten), and runs of white space are read as one space. The band letter and
+ * the square letters are all upper case or all lower case, so a month name
+ * ("1Dec 2015") is not a reference. A bare 100 km square ("31U CT") names an
+ * area rather than a point and is refused.
  *
  * A reference is refused when its zone is outside 1 to 60, its band letter
  * or square letters are not MGRS letters, the square letters do not belong
@@ -140,6 +142,10 @@ export function parseMgrs(text: string): LatLng | null {
   const zone = Number(match[1] as string);
   const band = (match[2] as string).toUpperCase();
   const square = (match[3] as string).toUpperCase();
+  const letters = `${match[2]}${match[3]}`;
+  if (letters !== letters.toUpperCase() && letters !== letters.toLowerCase()) {
+    return null;
+  }
   // The digits run may carry spaces; they are dropped, and the run is then
   // split in half, so the easting and the northing always carry the same
   // count of digits. (A regex split would be greedy: "041865" would come

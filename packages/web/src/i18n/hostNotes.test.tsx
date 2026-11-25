@@ -77,7 +77,7 @@ const SHARED_FACTS: ReadonlyArray<{
   },
   {
     fact: "typed coordinates are not sent to the geocoder",
-    pattern: /coordinates typed in search|only coordinates/,
+    pattern: /search that reads as coordinates/,
     notes: [SETTINGS_PRIVACY_NOTE],
   },
 ];
@@ -88,7 +88,7 @@ describe("the host's privacy notes", () => {
       "Sends the pin's position, to about 11 m, and this site's address as the referrer, to OpenStreetMap's Nominatim service.",
     );
     expect(SETTINGS_PRIVACY_NOTE).toBe(
-      "MapCairn has no accounts, sets no cookies and counts page views without tracking you. Map tiles come from the map provider you choose. As you type in search, the text so far is sent to the Photon service, run by komoot, to suggest places. Pressing Enter or Search sends your query to OpenStreetMap's Nominatim service, and Look up address on a pin sends the pin's position, to about 11 m, to Nominatim too. A search and an address lookup also send this site's address to Nominatim as the referrer. Nothing is sent to either service until you type in search or ask for an address, and coordinates typed in search are not sent to them, though showing the place loads map tiles for that area, as any move of the map does. A data layer contacts its provider only while it is on. Your settings stay on this device.",
+      "MapCairn has no accounts, sets no cookies and counts page views without tracking you. Map tiles come from the map provider you choose. As you type in search, the text so far is sent to the Photon service, run by komoot, to suggest places. Pressing Enter or Search sends your query to OpenStreetMap's Nominatim service, and Look up address on a pin sends the pin's position, to about 11 m, to Nominatim too. A search and an address lookup also send this site's address to Nominatim as the referrer. Nothing is sent to either service until you type in search or ask for an address, and a search that reads as coordinates is not sent to them (text that does not, such as a typo, is searched by name), though showing the place loads map tiles for that area, as any move of the map does. A data layer contacts its provider only while it is on. Your settings stay on this device.",
     );
   });
 
