@@ -2,15 +2,8 @@
 // Copyright MapCairn contributors
 import { readFileSync } from "node:fs";
 import path from "node:path";
-import { FakeClipboard } from "@mapcairn/core";
-import {
-  fireEvent,
-  render,
-  screen,
-  waitFor,
-  within,
-} from "@testing-library/react";
-import { renderToStaticMarkup, renderToString } from "react-dom/server";
+import { fireEvent, render, screen, within } from "@testing-library/react";
+import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
 import { loader as markdownLoader } from "../routes/index.md";
 import { loader as llmsLoader } from "../routes/llms.txt";
@@ -82,7 +75,7 @@ describe("the install commands", () => {
 
 describe("the install block on the page", () => {
   it("is a native radio group named Package manager, with npm chosen", () => {
-    render(<ProductPage clipboard={new FakeClipboard()} release={RELEASE} />);
+    render(<ProductPage release={RELEASE} />);
     const radios = within(installGroup()).getAllByRole("radio");
     expect(radios.map((radio) => radio.getAttribute("value"))).toEqual(
       COMMANDS.map(([manager]) => manager),
@@ -96,7 +89,7 @@ describe("the install block on the page", () => {
   });
 
   it("holds each command in its own code block, in the hero, above the first section, and not in a sentence", () => {
-    render(<ProductPage clipboard={new FakeClipboard()} release={RELEASE} />);
+    render(<ProductPage release={RELEASE} />);
     const group = installGroup();
     expect(
       screen.getByRole("region", { name: "Embed a map" }).contains(group),
@@ -114,7 +107,7 @@ describe("the install block on the page", () => {
   });
 
   it("says what the SDK needs, in one line under the block", () => {
-    render(<ProductPage clipboard={new FakeClipboard()} release={RELEASE} />);
+    render(<ProductPage release={RELEASE} />);
     const line = screen.getByText(/^It adds the SDK and its three peers/);
     expect(line.textContent).toBe(lineToText(INSTALL_REQUIREMENTS));
     expect(
@@ -123,10 +116,8 @@ describe("the install block on the page", () => {
     ).toBeTruthy();
   });
 
-  it("is server-rendered with npm chosen, every command in the markup and no copy button until the page runs", () => {
-    const html = renderToStaticMarkup(
-      <ProductPage clipboard={new FakeClipboard()} release={RELEASE} />,
-    );
+  it("is server-rendered with npm chosen and every command in the markup", () => {
+    const html = renderToStaticMarkup(<ProductPage release={RELEASE} />);
     for (const [, command] of COMMANDS) {
       expect(html).toContain(command);
     }
@@ -134,103 +125,46 @@ describe("the install block on the page", () => {
       html.match(new RegExp(`<input[^>]*value="${manager}"[^>]*>`))?.[0] ?? "";
     expect(input("npm")).toContain("checked");
     expect(input("pnpm")).not.toContain("checked");
-    expect(html).not.toContain("Copy code, npm");
   });
 
-  it("offers the copy button once the page runs, named for the command it copies", async () => {
-    render(<ProductPage clipboard={new FakeClipboard()} release={RELEASE} />);
-    expect(
-      await within(installGroup()).findByRole("button", {
-        name: "Copy code, npm install command",
-      }),
-    ).toBeInTheDocument();
+  it("renders the copy button hidden, beside the command it copies, with the words for every manager", () => {
+    render(<ProductPage release={RELEASE} />);
+    const group = installGroup();
+    const button = group.querySelector("[data-copy-button]");
+    expect(button).toHaveAttribute("hidden");
+    expect(group).toHaveAttribute("data-copy-scope");
+    const words = [...group.querySelectorAll("[data-copy]")].map(
+      (element) =>
+        JSON.parse(element.getAttribute("data-copy") ?? "") as {
+          idle: string;
+          said: string;
+        },
+    );
+    expect(words.map(({ idle }) => idle)).toEqual(
+      COMMANDS.map(([manager]) => `Copy code, ${manager} install command`),
+    );
+    expect(words.map(({ said }) => said)).toEqual(
+      COMMANDS.map(([manager]) => `Code copied, ${manager} install command`),
+    );
   });
 
-  it.each(COMMANDS)(
-    "copies the %s command when it is chosen",
-    async (manager, command) => {
-      const clipboard = new FakeClipboard();
-      render(<ProductPage clipboard={clipboard} release={RELEASE} />);
-      fireEvent.click(screen.getByRole("radio", { name: manager }));
-      const button = await within(installGroup()).findByRole("button", {
-        name: `Copy code, ${manager} install command`,
-      });
-      fireEvent.click(button);
-      await waitFor(() => expect(clipboard.written).toEqual([command]));
-      expect(screen.getByTestId("live-region-polite")).toHaveTextContent(
-        "Code copied",
-      );
-      expect(
-        within(installGroup()).getByRole("button", {
-          name: `Copied, ${manager} install command`,
-        }),
-      ).toBeInTheDocument();
-    },
-  );
-
-  it("copies the manager chosen before the page ran", async () => {
-    const container = document.createElement("div");
-    document.body.append(container);
-    container.innerHTML = renderToString(
-      <ProductPage clipboard={new FakeClipboard()} release={RELEASE} />,
-    );
-    const earlyChoice = container.querySelector<HTMLInputElement>(
-      'input[value="yarn"]',
-    );
-    earlyChoice?.click();
-    const { hydrateRoot } = await import("react-dom/client");
-    const clipboard = new FakeClipboard();
-    const { act } = await import("@testing-library/react");
-    await act(async () => {
-      hydrateRoot(
-        container,
-        <ProductPage clipboard={clipboard} release={RELEASE} />,
-      );
-    });
-    const button = await within(container).findByRole("button", {
-      name: "Copy code, yarn install command",
-    });
-    fireEvent.click(button);
-    await waitFor(() =>
-      expect(clipboard.written).toEqual([
-        "yarn add @mapcairn/sdk react react-dom maplibre-gl",
-      ]),
-    );
-    container.remove();
+  it("keeps each command and its words in one option, so the script copies the chosen one", () => {
+    render(<ProductPage release={RELEASE} />);
+    for (const [manager, command] of COMMANDS) {
+      const option = screen
+        .getByRole("radio", { name: manager })
+        .closest("[data-copy-option]");
+      expect(option?.querySelector("[data-copy]")?.textContent).toBe(command);
+    }
   });
 
-  it("says how to copy by hand when the clipboard is unavailable, and keeps the command selectable", async () => {
-    const clipboard = new FakeClipboard();
-    clipboard.failWith("denied");
-    render(<ProductPage clipboard={clipboard} release={RELEASE} />);
-    fireEvent.click(
-      await within(installGroup()).findByRole("button", {
-        name: "Copy code, npm install command",
-      }),
-    );
-    await waitFor(() =>
-      expect(screen.getByTestId("live-region-assertive")).toHaveTextContent(
-        "Could not copy npm install command. Select the code and copy it manually.",
-      ),
-    );
-    expect(screen.getByText(INSTALL_COMMAND)).toBeInTheDocument();
-  });
-
-  it("stores nothing and sends nothing when a manager is chosen or copied", async () => {
+  it("stores nothing and sends nothing when a manager is chosen", () => {
     const stored = vi.spyOn(Storage.prototype, "setItem");
     const sent = vi.spyOn(globalThis, "fetch");
     const cookies = document.cookie;
     try {
-      render(<ProductPage clipboard={new FakeClipboard()} release={RELEASE} />);
+      render(<ProductPage release={RELEASE} />);
       fireEvent.click(screen.getByRole("radio", { name: "bun" }));
-      fireEvent.click(
-        await within(installGroup()).findByRole("button", {
-          name: "Copy code, bun install command",
-        }),
-      );
-      await within(installGroup()).findByRole("button", {
-        name: "Copied, bun install command",
-      });
       expect(stored).not.toHaveBeenCalled();
       expect(sent).not.toHaveBeenCalled();
       expect(document.cookie).toBe(cookies);

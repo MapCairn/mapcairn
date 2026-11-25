@@ -3,7 +3,6 @@
 import { renderToReadableStream } from "react-dom/server";
 import type { EntryContext } from "react-router";
 import { ServerRouter } from "react-router";
-import { movePreloadsToEnd, preloadsAtEnd } from "./app/modulePreload";
 import {
   buildContentSecurityPolicy,
   generateNonce,
@@ -34,9 +33,7 @@ export const handleError = handleServerError;
  *   `<ScrollRestoration>` (rendered from `root.tsx`'s `Layout`, further down
  *   the same tree) and to its own streamed-data transfer script; none of
  *   which `renderToReadableStream`'s option alone would reach, since they're
- *   react-router's own components/injected scripts, not React's. A page whose
- *   route `handle` sets `modulePreload: "end"` is sent with React Router's
- *   `modulepreload` links moved from the head to the end of the body.
+ *   react-router's own components/injected scripts, not React's.
  */
 export default async function handleRequest(
   request: Request,
@@ -67,11 +64,7 @@ export default async function handleRequest(
   // back/forward cache.
   responseHeaders.set("Cache-Control", "no-cache");
 
-  const matched = routerContext.staticHandlerContext.matches.map(
-    ({ route }) => ({ handle: routerContext.routeModules[route.id]?.handle }),
-  );
-
-  return new Response(preloadsAtEnd(matched) ? movePreloadsToEnd(body) : body, {
+  return new Response(body, {
     headers: responseHeaders,
     status: responseStatusCode,
   });

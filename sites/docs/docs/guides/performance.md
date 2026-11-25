@@ -56,24 +56,38 @@ What is left is the engine itself, the first view's tiles and glyphs, and byte s
 
 ## The product page
 
-Lighthouse CI audits both `/`, the product page, and `/map` (`packages/web/lighthouserc.json`), with the same assertions for each. The figures above are the map's.
+Lighthouse CI audits `/`, the product page, and `/map` (`packages/web/lighthouserc.json`). The two have their own assertions: `/` must score 0.95 or more for performance and 1 for accessibility, best practices and SEO, each failing the run, and `/map` keeps a looser budget (the next section). The figures above are the map's.
 
-### Script preloads on the product page
+### The page runs no framework script
 
-The product page's mobile score was 90 (first contentful paint 2.7 s, largest contentful paint 3.0 s). React Router writes one `modulepreload` link for every script the page needs into the head, about twenty and 190 KB compressed, and they compete with the stylesheets and font for the first paint. The route's `handle` now sets `modulePreload: "end"`, and `entry.server.tsx` moves those links, in order, from the head to just before `</body>` (`app/modulePreload.ts`). The map and privacy pages keep theirs in the head.
+The product page's mobile score was 65 on the preview build, three runs in CI and locally alike (largest contentful paint 5.9 s, first contentful paint 4.8 s, total blocking time near 0). Everything it needs to read is server-rendered HTML and CSS, but React Router still sent it about 640 KB of script (uncompressed, as the audit counts it): React, the map package's components, the Phosphor icons and the root and route modules, each listed in a `modulepreload` link.
 
-Four variants were measured against a production build served as CI serves it. The first row is Lighthouse 13.4.1, mobile, simulated throttling, 3 runs. The rest are a real Chrome run through the DevTools protocol with the same throttling as Lighthouse's DevTools method (1.6 Mbps, 150 ms round trip, 4x CPU), 3 runs, served uncached over HTTP/1.1. "Hydrated" is when the copy-code button gets its React props, so when the page first responds to a click.
+Lighthouse's mobile score is simulated from one unthrottled trace. The simulation counts every request that was made before the trace's first paint, scripts included, whatever their priority, and replays them over the 1.6 Mbit/s link. So script that starts loading with the document delays the simulated first paint, though the real first paint waits for the stylesheets and font only. Moving the preload links to the end of the body only reordered them. Variants measured against the same production build, three mobile runs each:
 
-| Variant                               | Lighthouse performance | First paint  | Hydrated     | Last script done |
-| ------------------------------------- | ---------------------- | ------------ | ------------ | ---------------- |
-| Links in the head (before)            | 90, 90, 90             | 2.6 s        | 4.3 s        | 4.2 s            |
-| Links removed                         | 98 to 99               | 1.9 s        | 5.7 s        | 5.7 s            |
-| Only the entry and route scripts kept | not measured           | 2.0 to 2.3 s | 4.5 to 4.9 s | 4.4 to 4.8 s     |
-| Links moved to the end (kept)         | 90, 93, 93             | 1.9 s        | 4.0 to 4.1 s | 3.9 s            |
+| Variant                                            | Performance | First paint  | Largest paint |
+| -------------------------------------------------- | ----------- | ------------ | ------------- |
+| Scripts and preloads as shipped before             | 65, 65, 69  | 4.8 to 5.4 s | 5.1 to 5.9 s  |
+| No font preload                                    | 64, 64, 64  | 5.7 s        | 5.9 s         |
+| One merged stylesheet                              | 63, 66, 66  | 5.3 to 5.6 s | 5.6 to 6.5 s  |
+| No `modulepreload` links, scripts still loaded     | 77, 79, 72  | 2.9 to 3.5 s | 4.5 to 5.6 s  |
+| Scripts loaded after the page's `load` event       | 79, 88, 97  | 1.8 to 2.9 s | 2.3 to 4.6 s  |
+| No script at all                                   | 98, 98, 98  | 1.7 s        | 2.0 s         |
+| No script, one merged stylesheet                   | 99, 99, 99  | 1.2 s        | 2.0 s         |
+| No script, one merged stylesheet, no favicon links | 99, 99, 99  | 1.2 s        | 1.8 s         |
 
-Removing the links scored best in the audit but delayed hydration by 1.4 s, because the script graph was then discovered one level at a time, so it was not kept. Moving them keeps the flattened script graph and lets the stylesheets and font go first: first paint is 0.7 s earlier and hydration is slightly earlier too. The audit's own gain is smaller (90 to 93), because it counts the bytes requested before the first paint whatever their priority, so this does not reach the 0.95 target alone and #329 stays open. The local server speaks HTTP/1.1, and Cloudflare's edge speaks HTTP/2 and HTTP/3 with its own prioritisation, so the field gain may be smaller; check the next Lighthouse CI run on `main`.
+The font preload and the stylesheet count did not move the score while the scripts were there, so they were left alone. Loading the scripts after the `load` event moved it by anything from 14 to 32 points between identical runs, because whether the download counts depends on how the trace's paint and load timestamps fall, so it is noise and not a fix.
 
-Also measured and not kept: no font preload (no change), one merged stylesheet (within the spread), and `fetchpriority="low"` on the preloads (one point).
+What shipped is the "no script" row. The route's `handle` sets `scripts: "none"` (`app/scriptlessPage.ts`): `root.tsx` leaves out `<Scripts>` and `<ScrollRestoration>`, and React Router renders its `modulepreload` links from `<Scripts>`, so they go too. The page is plain anchors, native `details` and native radios, so nothing but the copy buttons needed script. Those are server-rendered `hidden`, and one fixed inline script (`app/copyCodeScript.ts`, allowed by its own SHA-256 in the content security policy) shows and wires them: it copies with the browser's clipboard and falls back to `execCommand("copy")`, shows the outcome on the button, and announces it in the page's own live regions. The score is 98, three runs in a row, with the audit's accessibility, best practices and SEO at 100. A page that reads without script had no use for the framework's script. A visitor with script loses nothing they could see: the copy buttons appear as soon as the document is parsed instead of after React hydrates. The page no longer installs the client error reporting (`entry.client.tsx`), so a script error on it is not reported; its only scripts are the two fixed ones.
+
+What is left is bytes. The document is 64 KB, the eight stylesheets 49 KB and the font 47 KB, all uncompressed in the audit because the preview server sends them as they are. One merged stylesheet would raise the score to 99 (measured above by merging the eight in front of the build); the build splits CSS along its script chunks, which the map page shares, so a real merge means regrouping those chunks, for one point, and was not done. 100 would need the document or the font to be a fraction of the size, or the font removed, which are not changes to make for a score. The budget for `/` is therefore 0.95, an error, three points below the measured 98.
+
+Any new script on the page raises the same cost: a framework script put back on `/` takes the score back to the 60s, and the assertion fails the run.
+
+### The documentation site
+
+Lighthouse CI also audits two documentation pages, a guide and an API page (`sites/docs/lighthouserc.json`), served from the build as the Worker serves it. Three runs each: performance 95, accessibility 100, best practices 100 and SEO 100 on both (largest contentful paint 2.8 to 2.9 s, total blocking time 70 to 110 ms), where best practices had been 96 because every page asked for `/favicon.svg`, which the documentation site did not serve (a 404 in the console). The file is now in `sites/docs/static`, and the build check fails when a built page links a file that was not built, icons and stylesheets included, not only anchors.
+
+Accessibility, best practices and SEO are asserted at 1 and fail the run. Performance is asserted at 0.95 and only warns: CI measures 79 to 93 (total blocking time of 150 to 540 ms, which moves with the runner's load), where the local server measures 95, so a warning there is not a regression by itself. What holds it is the Docusaurus runtime, about 270 KB of gzip script that the page needs to navigate, search and switch theme. With every script removed from a guide page the score is 98, not 100 (first contentful paint 1.8 s), so the runtime is not the only cost. A documentation site that is fast without its runtime would be a different site, so the budget stays where it is and the score is not forced.
 
 ### The map page
 
@@ -87,4 +101,5 @@ On `/map`: mobile 55 to 71 locally and 38 to 44 in CI, desktop 90 to 91. About 2
 - Lazy-load the error page. It saves under 2 KB, and an error page that has to load more code can fail when the network has.
 - Split the sheet's panels into chunks loaded on first open. The saving is mainly bytes, which the audit overstates, and opening a panel would then wait on the network.
 - Move or remove the script preloads on `/map`. The score did not move, and the map is the page.
-- Raise the CI performance threshold. The CI assertion stays a warning at 0.95, and the scores stay far below it, which the engine and tiles make out of reach without tricks.
+- Raise the CI performance threshold on `/map`. Its assertion stays a warning at 0.95, and the scores stay far below it, which the engine and tiles make out of reach without tricks.
+- Start a page's scripts after its first paint to hide their cost from the audit. Whether the download counts depends on how the trace's timestamps fall, so the score moves by tens of points between identical runs and the page is no faster for a visitor.

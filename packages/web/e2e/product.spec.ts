@@ -1514,28 +1514,27 @@ test.describe("the product page", () => {
   });
 });
 
-test.describe("script preloads", () => {
-  /** The document's text before and after its `</head>`. */
-  async function splitAtHead(
+test.describe("scripts", () => {
+  /** The page's markup as the server sends it. */
+  async function markup(
     request: import("@playwright/test").APIRequestContext,
     path: string,
   ) {
-    const html = await (await request.get(path)).text();
-    const [head = "", body = ""] = html.split("</head>");
-    return { head, body };
+    return (await request.get(path)).text();
   }
 
-  test("the product page lists them after its content, the map and privacy pages in the head", async ({
+  test("the product page loads no script file and lists no preloads, the map and privacy pages keep theirs", async ({
     request,
   }) => {
-    const product = await splitAtHead(request, "/");
-    expect(product.head).not.toContain('rel="modulepreload"');
-    expect(product.body).toContain('rel="modulepreload"');
+    const product = await markup(request, "/");
+    expect(product).not.toMatch(/<script\b[^>]*\ssrc=/);
+    expect(product).not.toContain('rel="modulepreload"');
+    expect(product).not.toContain("__reactRouterContext");
 
     for (const path of ["/map", "/privacy"]) {
-      const page = await splitAtHead(request, path);
-      expect(page.head, path).toContain('rel="modulepreload"');
-      expect(page.body, path).not.toContain('rel="modulepreload"');
+      const page = await markup(request, path);
+      expect(page, path).toContain('rel="modulepreload"');
+      expect(page, path).toContain("__reactRouterContext");
     }
   });
 });

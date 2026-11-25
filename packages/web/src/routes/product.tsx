@@ -1,14 +1,12 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
-import { useState } from "react";
 import {
   type LinksFunction,
   type MetaFunction,
   useLoaderData,
 } from "react-router";
-import type { ModulePreloadHandle } from "../app/modulePreload";
+import type { ScriptlessHandle } from "../app/scriptlessPage";
 import { buildPageMeta } from "../buildPageMeta";
-import { createProductClipboard } from "../composition/productClipboard";
 import { PRODUCT_DESCRIPTION, SITE_URL } from "../constants/siteConfig";
 import type { PageLanguageHandle } from "../i18n/pageLanguage";
 import { ProductPage } from "../product/ProductPage";
@@ -61,12 +59,13 @@ export const links: LinksFunction = () => [
 /**
  * React Router route module export: the page is English only, so the
  * document's language stays English whatever the playground was set to. It
- * reads without script, so its script preloads follow the content instead of
- * delaying the first paint from the head.
+ * reads without script, so it ships none: no framework script and no script
+ * preloads, nothing for the first paint to wait for. Its copy buttons come from
+ * an inline script (`app/copyCodeScript.ts`).
  */
-export const handle: PageLanguageHandle & ModulePreloadHandle = {
+export const handle: PageLanguageHandle & ScriptlessHandle = {
   language: "en-GB",
-  modulePreload: "end",
+  scripts: "none",
 };
 
 /**
@@ -79,11 +78,9 @@ export function loader(): ReleaseFacts {
 }
 
 /**
- * React Router route module export: the product page at `/`, with the
- * browser clipboard for its copy buttons and no other service.
+ * React Router route module export: the product page at `/`, with no service.
  */
 export default function ProductRoute() {
-  const [clipboard] = useState(createProductClipboard);
   const release = useLoaderData<typeof loader>();
-  return <ProductPage clipboard={clipboard} release={release} />;
+  return <ProductPage release={release} />;
 }

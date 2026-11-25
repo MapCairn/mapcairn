@@ -309,6 +309,21 @@ export const COPY_CODE = {
     `Could not copy ${file}. Select the code and copy it manually.`,
 } as const;
 
+/**
+ * The words one copyable block carries for `COPY_CODE_SCRIPT`, as the JSON in
+ * its `data-copy` attribute: the copy button's name in each state, naming
+ * what it copies, and what is announced after a copy and after a failed one.
+ */
+export function copyMessages(label: string): string {
+  return JSON.stringify({
+    idle: `${COPY_CODE.idle}, ${label}`,
+    copied: `${COPY_CODE.copied}, ${label}`,
+    failed: `${COPY_CODE.failed}, ${label}`,
+    said: COPY_CODE.copiedMessage(label),
+    failedSaid: COPY_CODE.failedMessage(label),
+  });
+}
+
 /** The release line's words around the version and its date, and the link to how ready it is. */
 export const RELEASE_TEXT = {
   /** The line, with the version and the day written out. */

@@ -17,6 +17,7 @@ import {
   useRouteError,
 } from "react-router";
 import { ErrorPage } from "./app/ErrorPage";
+import { isScriptless } from "./app/scriptlessPage";
 import { THEME_BOOTSTRAP_SCRIPT } from "./app/themeBootstrap";
 import { buildPageMeta } from "./buildPageMeta";
 import { reportCaughtError } from "./composition/errorReporting";
@@ -85,10 +86,16 @@ export const links: LinksFunction = () => [
  *   rewrites a `theme-color` tag before React hydrates, so those two
  *   elements suppress the hydration warning for their own attributes.
  *   `<Scripts>` and `<ScrollRestoration>` take the CSP nonce from React
- *   Router's context, set by `entry.server.tsx`.
+ *   Router's context, set by `entry.server.tsx`, and are left out of a page
+ *   whose route `handle` sets `scripts: "none"` (`app/scriptlessPage.ts`).
  */
 export function Layout({ children }: { readonly children: ReactNode }) {
-  const fixed = fixedPageLanguage(useMatches());
+  const matches = useMatches();
+  const fixed = fixedPageLanguage(matches);
+  // An error page needs its scripts (Reload), though the failed route is still matched.
+  const routeError = useRouteError();
+  const failed = routeError !== undefined && routeError !== null;
+  const scriptless = isScriptless(matches) && !failed;
   const language = fixed ?? DEFAULT_LANGUAGE;
   const direction =
     fixed === undefined
@@ -126,8 +133,12 @@ export function Layout({ children }: { readonly children: ReactNode }) {
       </head>
       <body>
         {children}
-        <ScrollRestoration />
-        <Scripts />
+        {scriptless ? null : (
+          <>
+            <ScrollRestoration />
+            <Scripts />
+          </>
+        )}
       </body>
     </html>
   );

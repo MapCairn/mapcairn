@@ -125,10 +125,12 @@ function builtFileExists(root: string, path: string): boolean {
 }
 
 /**
- * Every `href` that starts with `/` in the built pages and resolves to no
- * built page or file. A link must be under the base path and exist in the
- * build: another site, the reference site included, is linked by its full
- * address.
+ * Every `href` that starts with `/`, on a link a reader follows or a `link`
+ * element the browser fetches (the icon, a stylesheet), in the built pages and
+ * resolves to no built page or file. A link must be under the base path and
+ * exist in the build: another site, the reference site included, is linked by
+ * its full address. A fetched file that is missing is a 404 the browser logs,
+ * which Lighthouse counts against best practices.
  * @param root - The build folder.
  * @param baseUrl - The base path, with both slashes.
  */
@@ -139,7 +141,9 @@ export function brokenInternalLinks(
   const broken: BrokenLink[] = [];
   for (const page of htmlFiles(root)) {
     const html = readFileSync(join(root, page), "utf8");
-    for (const match of html.matchAll(/<a\b[^>]*\shref\s*=\s*"(\/[^"]*)"/gi)) {
+    for (const match of html.matchAll(
+      /<(?:a|link)\b[^>]*\shref\s*=\s*"(\/[^"]*)"/gi,
+    )) {
       const href = match[1] ?? "";
       if (href.startsWith("//")) {
         continue;

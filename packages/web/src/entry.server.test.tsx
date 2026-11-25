@@ -27,16 +27,13 @@ vi.mock("react-dom/server", () => ({
  * option `renderToReadableStream` was called with, and the `nonce` prop on
  * the `<ServerRouter>` element passed to it.
  */
-async function handleOnce(handle?: unknown) {
+async function handleOnce() {
   const handleRequest = (await import("./entry.server")).default;
   const response = await handleRequest(
     new Request("https://mapcairn.com/"),
     200,
     new Headers(),
-    {
-      staticHandlerContext: { matches: [{ route: { id: "route" } }] },
-      routeModules: { route: { handle } },
-    } as never,
+    {} as never,
   );
 
   const headerNonce = response.headers
@@ -106,22 +103,6 @@ describe("entry.server handleRequest", () => {
     const second = await handleOnce();
 
     expect(first.headerNonce).not.toBe(second.headerNonce);
-  });
-
-  it("keeps the module preload links in the head of a page that has not asked", async () => {
-    const { response } = await handleOnce({ language: "en-GB" });
-
-    expect(await response.text()).toContain(
-      '<head><link rel="modulepreload" href="/a.js"/></head>',
-    );
-  });
-
-  it("moves the module preload links of a page that asks through its route handle to the end of its body", async () => {
-    const { response } = await handleOnce({ modulePreload: "end" });
-
-    expect(await response.text()).toBe(
-      '<html><head></head><body>x<link rel="modulepreload" href="/a.js"/></body></html>',
-    );
   });
 });
 

@@ -2,28 +2,16 @@
 // Copyright MapCairn contributors
 import { readFileSync } from "node:fs";
 import path from "node:path";
-import {
-  type ClipboardPort,
-  type ClipboardResult,
-  FakeClipboard,
-} from "@mapcairn/core";
 import { compositeOver, contrastRatio, tokenValues } from "@mapcairn/theme";
-import {
-  act,
-  fireEvent,
-  render,
-  screen,
-  waitFor,
-  within,
-} from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import { renderToStaticMarkup } from "react-dom/server";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
+import { COPY_CODE_SCRIPT } from "../app/copyCodeScript";
 import { MAP_LINK_REDIRECT_SCRIPT } from "../app/mapLinkRedirect";
 import { DOCS_URL } from "../constants/siteConfig";
 import { loader as markdownLoader } from "../routes/index.md";
 import { loader as llmsLoader } from "../routes/llms.txt";
 import { loader as fullLoader } from "../routes/llms-full.txt";
-import { COPIED_FEEDBACK_MS } from "./CopyCodeButton";
 import { CAPTURE_SUBJECTS, CAPTURE_THEMES } from "./captureSubjects";
 import { EMBED_EXAMPLE_FILES } from "./embedExampleFiles";
 import { ProductPage } from "./ProductPage";
@@ -105,14 +93,13 @@ const MAIN_CODE =
   EMBED_EXAMPLE_FILES.find((file) => file.name === "src/main.tsx")?.code ?? "";
 
 function renderPage(
-  clipboard: ClipboardPort = new FakeClipboard(),
   release: { readonly version: string; readonly date: string } = RELEASE,
 ) {
-  return render(<ProductPage clipboard={clipboard} release={release} />);
+  return render(<ProductPage release={release} />);
 }
 
 /** The page's polite and assertive live regions. */
-function liveRegions() {
+function _liveRegions() {
   return {
     polite: screen.getByTestId("live-region-polite"),
     assertive: screen.getByTestId("live-region-assertive"),
@@ -394,7 +381,7 @@ describe("the product page stands on its own", () => {
   });
 
   it("names the latest release and its date once, in the hero, from what the loader read, with a link to how ready it is", () => {
-    const { container } = renderPage(new FakeClipboard(), {
+    const { container } = renderPage({
       version: "9.8.7",
       date: "2030-02-03",
     });
@@ -727,9 +714,7 @@ describe("the product page stands on its own", () => {
   });
 
   it("asks nothing of a third party: no image, frame, script source or stylesheet from elsewhere", () => {
-    const html = renderToStaticMarkup(
-      <ProductPage clipboard={new FakeClipboard()} release={RELEASE} />,
-    );
+    const html = renderToStaticMarkup(<ProductPage release={RELEASE} />);
     expect(html).not.toMatch(/<(iframe|link|object|embed)\b/);
     for (const [, source] of html.matchAll(/<img\b[^>]*\ssrc="([^"]*)"/g)) {
       expect(source, "an image's address").toMatch(/^\/(?!\/)/);
@@ -763,9 +748,7 @@ describe("the product page stands on its own", () => {
   });
 
   it("starts with the old map link redirect, exactly as its CSP hash allows", () => {
-    const html = renderToStaticMarkup(
-      <ProductPage clipboard={new FakeClipboard()} release={RELEASE} />,
-    );
+    const html = renderToStaticMarkup(<ProductPage release={RELEASE} />);
     expect(html).toContain(`<script>${MAP_LINK_REDIRECT_SCRIPT}</script>`);
     expect(html.indexOf("<script>")).toBeLessThan(html.indexOf("<a "));
   });
@@ -1051,11 +1034,11 @@ describe("the embedding example", () => {
     const region = screen.getByRole("region", { name: EXCERPT });
     const heading = region.parentElement?.firstElementChild as HTMLElement;
     expect(heading.textContent).toContain(EXCERPT);
-    const button = within(heading).getByRole("button", {
-      name: `Copy code, ${EXCERPT}`,
-    });
-    expect(button.textContent).toBe("");
-    expect(button.querySelector("svg")).toHaveAttribute("aria-hidden", "true");
+    const button = heading.querySelector("[data-copy-button]");
+    expect(button?.textContent).toBe("");
+    for (const icon of button?.querySelectorAll("svg") ?? []) {
+      expect(icon).toHaveAttribute("aria-hidden", "true");
+    }
   });
 
   it("carries the excerpt, not the whole app, in /index.md and /llms-full.txt", async () => {
@@ -1107,166 +1090,53 @@ describe("what the page says the SDK sends", () => {
   });
 });
 
-describe("copying the embedding example", () => {
-  afterEach(() => {
-    vi.useRealTimers();
-  });
-
-  /** The copy button beside the example. */
-  function copyButton(): HTMLElement {
-    return within(
-      screen.getByRole("region", { name: "Embed a map" }),
-    ).getByRole("button", { name: `Copy code, ${EXCERPT}` });
+describe("the copy buttons' markup", () => {
+  /** The embedding example's box, which holds its copy button and its code. */
+  function exampleScope(): HTMLElement {
+    const code = screen.getByRole("region", { name: EXCERPT });
+    return code.closest("[data-copy-scope]") as HTMLElement;
   }
 
-  it("writes nothing to the clipboard until the visitor asks", () => {
-    const clipboard = new FakeClipboard();
-    renderPage(clipboard);
-    expect(copyButton()).toHaveAttribute("type", "button");
-    expect(clipboard.attempts).toEqual([]);
+  it("renders each copy button hidden, so a visitor without script never sees one that cannot work", () => {
+    const { container } = renderPage();
+    const buttons = container.querySelectorAll("[data-copy-button]");
+    expect(buttons.length).toBeGreaterThan(0);
+    for (const button of buttons) {
+      expect(button).toHaveAttribute("hidden");
+      expect(button).toHaveAttribute("type", "button");
+    }
   });
 
-  it("copies the exact source shown, with none of the highlighting markup", async () => {
-    const clipboard = new FakeClipboard();
-    renderPage(clipboard);
-    fireEvent.click(copyButton());
-    await waitFor(() => expect(clipboard.written).toEqual([EMBED_EXCERPT]));
+  it("keeps the words each button needs on the code it copies, naming the file", () => {
+    renderPage();
     const code = screen.getByRole("region", { name: EXCERPT });
-    expect(clipboard.written[0]).toBe(code.textContent);
+    expect(JSON.parse(code.getAttribute("data-copy") ?? "")).toEqual({
+      idle: `Copy code, ${EXCERPT}`,
+      copied: `Copied, ${EXCERPT}`,
+      failed: `Copy failed, ${EXCERPT}`,
+      said: `Code copied, ${EXCERPT}`,
+      failedSaid: `Could not copy ${EXCERPT}. Select the code and copy it manually.`,
+    });
   });
 
-  it("says Copied on the button and in the polite live region, and keeps focus on the button", async () => {
+  it("puts the button and the code in one scope, and the button's text is only its icons", () => {
     renderPage();
-    const button = copyButton();
-    button.focus();
-    fireEvent.click(button);
-    expect(
-      await screen.findByRole("button", { name: `Copied, ${EXCERPT}` }),
-    ).toBeInTheDocument();
-    await waitFor(() =>
-      expect(liveRegions().polite).toHaveTextContent(`Code copied, ${EXCERPT}`),
-    );
-    expect(liveRegions().assertive).toBeEmptyDOMElement();
-    expect(document.activeElement).toBe(button);
+    const scope = exampleScope();
+    const button = scope.querySelector("[data-copy-button]");
+    expect(button).not.toBeNull();
+    expect(button?.textContent).toBe("");
+    expect(scope.querySelectorAll("[data-copy]")).toHaveLength(1);
   });
 
-  it("goes back to Copy code after a while, so the next copy is confirmed again", async () => {
-    vi.useFakeTimers();
+  it("keeps the code as the source to copy, with the highlighting markup around its text only", () => {
     renderPage();
-    fireEvent.click(copyButton());
-    await act(async () => {
-      await Promise.resolve();
-    });
-    expect(
-      screen.getByRole("button", { name: `Copied, ${EXCERPT}` }),
-    ).toBeInTheDocument();
-    act(() => {
-      vi.advanceTimersByTime(COPIED_FEEDBACK_MS);
-    });
-    expect(copyButton()).toBeInTheDocument();
-  });
-
-  it("gives a second successful copy its own full time on Copied, even just before the first one ends", async () => {
-    vi.useFakeTimers();
-    renderPage();
-    fireEvent.click(copyButton());
-    await act(async () => {
-      await Promise.resolve();
-    });
-    act(() => {
-      vi.advanceTimersByTime(COPIED_FEEDBACK_MS - 100);
-    });
-    const copied = screen.getByRole("button", { name: `Copied, ${EXCERPT}` });
-    copied.focus();
-    fireEvent.click(copied);
-    await act(async () => {
-      await Promise.resolve();
-    });
-    act(() => {
-      vi.advanceTimersByTime(COPIED_FEEDBACK_MS - 100);
-    });
-    expect(screen.getByRole("button", { name: `Copied, ${EXCERPT}` })).toBe(
-      copied,
-    );
-    expect(copied).not.toBeDisabled();
-    expect(document.activeElement).toBe(copied);
-    act(() => {
-      vi.advanceTimersByTime(100);
-    });
-    expect(copyButton()).toBe(copied);
-  });
-
-  it("shows the outcome of the latest click when an earlier copy finishes after it", async () => {
-    const pending: ((result: ClipboardResult) => void)[] = [];
-    const clipboard: ClipboardPort = {
-      writeText: () =>
-        new Promise<ClipboardResult>((resolve) => {
-          pending.push(resolve);
-        }),
-    };
-    renderPage(clipboard);
-    const button = copyButton();
-    fireEvent.click(button);
-    fireEvent.click(button);
-    expect(pending).toHaveLength(2);
-    await act(async () => {
-      pending[1]?.({ ok: true });
-    });
-    expect(
-      await screen.findByRole("button", { name: `Copied, ${EXCERPT}` }),
-    ).toBeInTheDocument();
-    await act(async () => {
-      pending[0]?.({ ok: false, reason: "denied" });
-    });
-    expect(screen.getByRole("button", { name: `Copied, ${EXCERPT}` })).toBe(
-      button,
-    );
-    expect(liveRegions().assertive).toBeEmptyDOMElement();
-  });
-
-  it("reports a failure on the button and assertively, and leaves the code in place to select", async () => {
-    const clipboard = new FakeClipboard();
-    clipboard.failWith("denied");
-    renderPage(clipboard);
-    const button = copyButton();
-    button.focus();
-    fireEvent.click(button);
-    expect(
-      await screen.findByRole("button", { name: `Copy failed, ${EXCERPT}` }),
-    ).toBeInTheDocument();
-    await waitFor(() =>
-      expect(liveRegions().assertive).toHaveTextContent(
-        `Could not copy ${EXCERPT}. Select the code and copy it manually.`,
-      ),
-    );
-    expect(document.activeElement).toBe(button);
     const code = screen.getByRole("region", { name: EXCERPT });
-    expect(code).toHaveAttribute("tabindex", "0");
     expect(code.textContent).toBe(EMBED_EXCERPT);
   });
 
-  it("copies again after a failure once the clipboard works", async () => {
-    const clipboard = new FakeClipboard();
-    clipboard.failWith("unsupported");
-    renderPage(clipboard);
-    fireEvent.click(copyButton());
-    const failed = await screen.findByRole("button", {
-      name: `Copy failed, ${EXCERPT}`,
-    });
-    clipboard.succeed();
-    fireEvent.click(failed);
-    expect(
-      await screen.findByRole("button", { name: `Copied, ${EXCERPT}` }),
-    ).toBeInTheDocument();
-    expect(clipboard.written).toEqual([EMBED_EXCERPT]);
-  });
-
-  it("names what it copies in what it announces", async () => {
-    renderPage();
-    fireEvent.click(copyButton());
-    await waitFor(() =>
-      expect(liveRegions().polite).toHaveTextContent(`Code copied, ${EXCERPT}`),
-    );
+  it("renders the script that wires the buttons last, after the content", () => {
+    const html = renderToStaticMarkup(<ProductPage release={RELEASE} />);
+    expect(html.endsWith(`${COPY_CODE_SCRIPT}</script></div>`)).toBe(true);
   });
 
   it("leaves no duplicate test id on the code and its button", () => {
@@ -1277,13 +1147,5 @@ describe("copying the embedding example", () => {
     expect(container.querySelectorAll("[data-testid$='-code']")).toHaveLength(
       0,
     );
-  });
-
-  it("renders on the server with the button, named in words, and no message", () => {
-    const html = renderToStaticMarkup(
-      <ProductPage clipboard={new FakeClipboard()} release={RELEASE} />,
-    );
-    expect(html).toContain(`aria-label="Copy code, ${EXCERPT}"`);
-    expect(html).not.toContain("Code copied");
   });
 });
