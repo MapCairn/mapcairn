@@ -1,6 +1,6 @@
 # Privacy policy
 
-_Last updated: 2026-11-22_
+_Last updated: 2026-11-25_
 
 _This mirrors the policy on the site at `/privacy`
 (`packages/web/src/app/PrivacyPage.tsx`). Keep both in sync when either
@@ -45,7 +45,9 @@ after # (for example `https://mapcairn.com/`), and whether it was
 an uncaught error or a rejected promise. It never includes the map's position
 or yours. No cookies, personal data or persistent identifiers are attached to
 the report, and it is not stored in any database. One page load sends at most
-five reports, and the same error only once.
+five reports, and the same error only once. The product page at the site's root
+runs no script that reports errors, so it sends no reports. The map and the
+other pages send them as described here.
 
 ## Hosting logs
 
