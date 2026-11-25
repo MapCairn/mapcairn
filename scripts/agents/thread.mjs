@@ -18,7 +18,9 @@
 import { spawnSync } from "node:child_process";
 import { isEntryPoint } from "../entryPoint.mjs";
 
-const REPO = "MapCairn/mapcairn";
+/** The repository the thread is read from. */
+export const REPO = "MapCairn/mapcairn";
+const [OWNER, NAME] = REPO.split("/");
 /**
  * Markup a person reading the thread on GitHub does not see: each opens with
  * `open` and runs to the first `close` after it, or to the end of the text when
@@ -83,7 +85,7 @@ const HTML_TAG_OPEN = /<([a-z][a-z0-9:-]*)/iy;
 const REVIEW_THREAD_PAGE_SIZE = 100;
 /** Comments are requested in small pages to keep each nested connection bounded. */
 const COMMENT_PAGE_SIZE = 20;
-const REVIEW_THREADS_QUERY = `query($number:Int!,$after:String){repository(owner:"MapCairn",name:"mapcairn"){pullRequest(number:$number){reviewThreads(first:${REVIEW_THREAD_PAGE_SIZE},after:$after){pageInfo{hasNextPage endCursor}nodes{id isResolved path comments(first:${COMMENT_PAGE_SIZE}){pageInfo{hasNextPage endCursor}nodes{author{login} body}}}}}}}`;
+export const REVIEW_THREADS_QUERY = `query($number:Int!,$after:String){repository(owner:"${OWNER}",name:"${NAME}"){pullRequest(number:$number){reviewThreads(first:${REVIEW_THREAD_PAGE_SIZE},after:$after){pageInfo{hasNextPage endCursor}nodes{id isResolved path comments(first:${COMMENT_PAGE_SIZE}){pageInfo{hasNextPage endCursor}nodes{author{login} body}}}}}}}`;
 const THREAD_COMMENTS_QUERY = `query($threadId:ID!,$after:String){node(id:$threadId){... on PullRequestReviewThread{comments(first:${COMMENT_PAGE_SIZE},after:$after){pageInfo{hasNextPage endCursor}nodes{author{login} body}}}}}`;
 
 /** Code points that hide or reorder text: control characters other than tab, line feed and carriage return (the JSON line escapes those), soft hyphen, zero-width and bidirectional controls, separators, variation selectors, the byte order mark and Unicode tags. */
