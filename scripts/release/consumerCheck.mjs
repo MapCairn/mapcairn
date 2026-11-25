@@ -606,20 +606,25 @@ export function engineGraphProblems(builds) {
 }
 
 /**
- * The most gzipped JavaScript an app's client bundle may ship, in bytes, for
- * each budgeted build of the umbrella app. `client` is the app's bundle through
+ * The most gzipped JavaScript each budgeted build of the umbrella app may
+ * hold, in bytes. `client`, `server` and `worker` are the app's builds through
  * the umbrella's root (the chrome, with no map engine); `client via the
- * subpath` is a build through `@mapcairn/sdk/adapter-maplibre`, which adds the
- * adapter and `maplibre-gl`. Both are minified. Set at about 1.15 times the
- * size each build has, so a bundled dependency or a lost tree-shake
- * fails and ordinary growth does not. Raising one is a deliberate edit in a
+ * subpath` and `worker via the subpath` go through
+ * `@mapcairn/sdk/adapter-maplibre`, which adds the adapter and `maplibre-gl`.
+ * The client builds are minified; the server and Worker builds are not, and
+ * their gzipped size is what counts against a Worker's size limit. Set at about
+ * 1.15 times the size each build has, so a bundled dependency or a lost
+ * tree-shake fails and ordinary growth does not. Raising one is a deliberate edit in a
  * pull request.
  *
  * @type {Record<string, number>}
  */
 export const BUNDLE_CEILINGS = {
   client: 248_000,
+  server: 130_000,
+  worker: 373_000,
   "client via the subpath": 402_000,
+  "worker via the subpath": 441_000,
 };
 
 /**
@@ -1120,7 +1125,7 @@ function checkEngineFreeRoot(app, prefix) {
     Math.round(builds.find((build) => build.name === name).gzipBytes / 1000);
   return [
     `${prefix}the root's client, server and Worker bundles hold no map engine or adapter (${kilobytes("client")}, ${kilobytes("server")} and ${kilobytes("worker")} kB of JavaScript), and the adapter subpath brings it (${kilobytes("client via the subpath")} kB client, ${kilobytes("worker via the subpath")} kB Worker): ok`,
-    `${prefix}the client bundles are within their size budget (${gzipKilobytes("client")} kB gzipped through the root, ${gzipKilobytes("client via the subpath")} kB through the adapter subpath): ok`,
+    `${prefix}the bundles are within their size budget, gzipped (client ${gzipKilobytes("client")}, server ${gzipKilobytes("server")} and Worker ${gzipKilobytes("worker")} kB through the root; client ${gzipKilobytes("client via the subpath")} and Worker ${gzipKilobytes("worker via the subpath")} kB through the adapter subpath): ok`,
   ];
 }
 
