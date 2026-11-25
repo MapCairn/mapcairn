@@ -4,8 +4,10 @@ import { describe, expect, it } from "vitest";
 import {
   SAMPLE_ALERT_LAYER,
   SAMPLE_FEED_LAYER,
+  SAMPLE_HEATMAP_LAYER,
   SAMPLE_IDENTIFY_LAYER,
   SAMPLE_LAYERS,
+  SAMPLE_QUERY_LAYER,
   SAMPLE_TILE_LAYER,
   SAMPLE_TIME_LAYER,
   SAMPLE_VECTOR_LAYER,
@@ -1291,5 +1293,49 @@ describe("assertValidDefinitions", () => {
     expect(() =>
       assertValidDefinitions([SAMPLE_FEED_LAYER, SAMPLE_FEED_LAYER], options),
     ).toThrow(/sample-points: id: duplicate/);
+  });
+});
+
+describe("saveFeatures", () => {
+  it("accepts true and false on a feed or a query layer", () => {
+    for (const layer of [SAMPLE_FEED_LAYER, SAMPLE_QUERY_LAYER]) {
+      for (const value of [true, false]) {
+        const definition = copy(layer);
+        definition.saveFeatures = value;
+        expect(problems(definition)).toEqual([]);
+      }
+    }
+  });
+
+  it.each([["yes"], [1], [null], [{}]])(
+    "rejects %j, which is not a boolean",
+    (value) => {
+      const definition = copy(SAMPLE_FEED_LAYER);
+      definition.saveFeatures = value;
+      expect(problems(definition)).toEqual([
+        "saveFeatures: must be true or false",
+      ]);
+    },
+  );
+
+  it("rejects it set to true on a layer that has no features to save", () => {
+    for (const layer of [
+      SAMPLE_TILE_LAYER,
+      SAMPLE_VECTOR_LAYER,
+      SAMPLE_HEATMAP_LAYER,
+      SAMPLE_IDENTIFY_LAYER,
+    ]) {
+      const definition = copy(layer);
+      definition.saveFeatures = true;
+      expect(problems(definition)).toEqual([
+        "saveFeatures: only a feed or query layer of features can be saved",
+      ]);
+    }
+  });
+
+  it("allows false on any layer, since that says nothing is saved", () => {
+    const definition = copy(SAMPLE_TILE_LAYER);
+    definition.saveFeatures = false;
+    expect(problems(definition)).toEqual([]);
   });
 });

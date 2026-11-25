@@ -17,6 +17,7 @@ export function catalogueLayer(
   id: string,
   name: string,
   group: string,
+  extraFields: Record<string, string> = {},
 ): LayerDefinition {
   return {
     id,
@@ -29,7 +30,7 @@ export function catalogueLayer(
       kind: "feed",
       url: FEED_URL,
       decoder: "geojson",
-      fields: { id: "id", title: "properties.title" },
+      fields: { id: "id", title: "properties.title", ...extraFields },
     },
     style: { colour: { kind: "fixed", colour: "blue", label: name } },
     card: { title: "{title}", lines: [] },
@@ -45,6 +46,18 @@ export function catalogueLayer(
 export const RAINFALL = catalogueLayer("catalogue-rain", "Rainfall", "Weather");
 export const WINDS = catalogueLayer("catalogue-wind", "Winds", "Weather");
 export const QUAKES = catalogueLayer("catalogue-quakes", "Quakes", "Hazards");
+
+/**
+ * A layer whose definition allows saving its features. No shipped layer does:
+ * whether a provider's data may be saved is decided per layer, so the specs
+ * for saving use this one.
+ */
+export const SAVEABLE: LayerDefinition = {
+  ...catalogueLayer("catalogue-save", "Saveable", "Hazards", {
+    mag: "properties.mag",
+  }),
+  saveFeatures: true,
+};
 
 /** A definition no catalogue accepts, which is skipped and counted. */
 export const BROKEN: object = { id: "catalogue-broken" };

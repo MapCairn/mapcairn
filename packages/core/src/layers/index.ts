@@ -18,6 +18,7 @@ export * from "./query";
 export * from "./registry";
 export * from "./responseCache";
 export * from "./runtimeLayerCatalogue";
+export * from "./saveFeatures";
 export * from "./shapeStyle";
 export * from "./staticLayerCatalogue";
 export * from "./style";

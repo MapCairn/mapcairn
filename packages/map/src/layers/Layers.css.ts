@@ -316,6 +316,29 @@ export const disclaimer = style({
   ...small,
 });
 
+/** The note, the save buttons and the outcome of saving a layer's features. */
+export const saveFeatures = style({
+  border: 0,
+  margin: 0,
+  padding: 0,
+  minWidth: 0,
+  display: "flex",
+  flexDirection: "column",
+  gap: tokens.space.xs,
+});
+
+/** The save buttons in equal columns that drop to one column, each full width, when two do not fit. */
+export const saveActions = style({
+  display: "grid",
+  gridTemplateColumns: "repeat(auto-fit, minmax(12rem, 1fr))",
+  gap: tokens.space.xs,
+});
+
+/** The result of saving, whose file name may break anywhere rather than overflow. */
+export const saveOutcome = style({
+  overflowWrap: "anywhere",
+});
+
 /** The collapsible list of loaded features. */
 export const featureList = style({
   display: "flex",

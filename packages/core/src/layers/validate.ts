@@ -604,6 +604,28 @@ function checkFeedSource(
   return fields;
 }
 
+/**
+ * `saveFeatures` is a boolean, and `true` only where there are features to
+ * save: a feed or query layer with a card, not a heatmap or any tile layer.
+ */
+function checkSaveFeatures(problems: Problems, value: Json): void {
+  if (value.saveFeatures === undefined) {
+    return;
+  }
+  if (typeof value.saveFeatures !== "boolean") {
+    problems.add("saveFeatures", "must be true or false");
+    return;
+  }
+  const source = isObject(value.source) ? value.source : {};
+  const feeds = source.kind === "feed" || source.kind === "query";
+  if (value.saveFeatures && !(feeds && value.heatmap === undefined)) {
+    problems.add(
+      "saveFeatures",
+      "only a feed or query layer of features can be saved",
+    );
+  }
+}
+
 function checkFeed(
   problems: Problems,
   definition: Json,
@@ -717,6 +739,7 @@ export function validateLayerDefinition(
   if (value.disclaimer !== undefined) {
     problems.definitionText(value.disclaimer, "disclaimer");
   }
+  checkSaveFeatures(problems, value);
   let controls: Json[] = [];
   if (problems.list(value.controls, "controls", true)) {
     controls = value.controls.filter(isObject);
