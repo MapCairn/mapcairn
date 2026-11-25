@@ -579,10 +579,13 @@ describe("bundleSizeProblems", () => {
   });
   const passing = Object.keys(BUNDLE_CEILINGS).map(within);
 
-  it("budgets the client bundle through the root and through the adapter subpath", () => {
+  it("budgets the client, server and Worker bundles, through the root and through the adapter subpath", () => {
     expect(Object.keys(BUNDLE_CEILINGS)).toEqual([
       "client",
+      "server",
+      "worker",
       "client via the subpath",
+      "worker via the subpath",
     ]);
   });
 
@@ -604,16 +607,31 @@ describe("bundleSizeProblems", () => {
   });
 
   it("fails when a budgeted build is missing, or measured nothing", () => {
-    expect(bundleSizeProblems([])).toHaveLength(2);
+    const budgeted = Object.keys(BUNDLE_CEILINGS).length;
+    expect(bundleSizeProblems([])).toHaveLength(budgeted);
     expect(
       bundleSizeProblems(passing.map((entry) => ({ ...entry, gzipBytes: 0 }))),
-    ).toHaveLength(2);
+    ).toHaveLength(budgeted);
   });
 
-  it("keeps the subpath's ceiling above the root's, because it holds the engine too", () => {
+  it("keeps the subpath's ceilings above the root's, because they hold the engine too", () => {
     expect(BUNDLE_CEILINGS["client via the subpath"]).toBeGreaterThan(
       BUNDLE_CEILINGS.client,
     );
+    expect(BUNDLE_CEILINGS["worker via the subpath"]).toBeGreaterThan(
+      BUNDLE_CEILINGS.worker,
+    );
+  });
+
+  it("names a Worker build over its ceiling", () => {
+    const over = passing.map((entry) =>
+      entry.name === "worker"
+        ? { ...entry, gzipBytes: BUNDLE_CEILINGS.worker + 1 }
+        : entry,
+    );
+    expect(bundleSizeProblems(over)).toEqual([
+      expect.stringContaining("the worker build"),
+    ]);
   });
 });
 
