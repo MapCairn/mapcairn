@@ -1,8 +1,9 @@
 name: Claude Code Review
 
 # Posts a review on a pull request from this repository when it gets the
-# `claude-review` label. It is opt-in because each run spends the account's
-# Claude usage; it never runs on a fork, which has no access to the secret.
+# `claude-review` label, and only when the person who adds it is the one named
+# in the repository variable CLAUDE_REVIEW_USER. Each run spends that person's
+# Claude usage, so anyone else uses their own. It never runs on a fork.
 on:
   pull_request:
     types: [labeled]
@@ -17,6 +18,7 @@ jobs:
   claude-review:
     if: >-
       github.event.label.name == 'claude-review' &&
+      github.event.sender.login == vars.CLAUDE_REVIEW_USER &&
       github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
     permissions:
