@@ -36,6 +36,7 @@ import {
   type Inline,
   LEDE,
   type Line,
+  NPM_ACTION,
   PLAYGROUND_ACTION,
   RELEASE_TEXT,
   REPOSITORY_PAGES,
@@ -386,13 +387,22 @@ function Hero({
             <Text line={INSTALL_REQUIREMENTS} />
           </p>
         </div>
-        <a
-          className={styles.tertiaryLink}
-          href={GITHUB_ACTION.href}
-          data-testid="action-github"
-        >
-          {GITHUB_ACTION.text}
-        </a>
+        <div className={styles.quietLinks}>
+          <a
+            className={styles.tertiaryLink}
+            href={GITHUB_ACTION.href}
+            data-testid="action-github"
+          >
+            {GITHUB_ACTION.text}
+          </a>
+          <a
+            className={styles.tertiaryLink}
+            href={NPM_ACTION.href}
+            data-testid="action-npm"
+          >
+            {NPM_ACTION.text}
+          </a>
+        </div>
         <div className={styles.trust}>
           <ul className={styles.badges} aria-label={BADGES_LABEL}>
             {BADGES.map(({ text, href }) => (

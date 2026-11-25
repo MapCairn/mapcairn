@@ -412,22 +412,32 @@ describe("the product page stands on its own", () => {
     );
   });
 
-  it("does not link the npm package from the page, which the install command already names", () => {
+  it("links the npm package once, in the hero straight after the repository link, as a quiet text link", () => {
     renderPage();
     const npm = screen
       .getAllByRole("link")
       .filter((link) =>
         (link.getAttribute("href") ?? "").startsWith("https://www.npmjs.com/"),
       );
-    expect(npm).toHaveLength(0);
+    expect(npm).toHaveLength(1);
+    const [npmLink] = npm;
+    expect(npmLink).toHaveAccessibleName("View on npm");
+    expect(npmLink).toHaveAttribute("href", NPM_PACKAGE);
+    expect(npmLink?.className).toContain(styles.tertiaryLink);
+    const github = within(screen.getByRole("main")).getByRole("link", {
+      name: "View on GitHub",
+    });
+    expect(github.nextElementSibling).toBe(npmLink);
     expect(NPM_PACKAGE_URL).toBe(NPM_PACKAGE);
   });
 
-  it("links the npm package from /llms.txt, among the policies and source", async () => {
+  it("links the npm package from /index.md and /llms.txt", async () => {
     expect(await llmsLoader().text()).toContain(
       `[View on npm](${NPM_PACKAGE})`,
     );
-    expect(await markdownLoader().text()).not.toContain(NPM_PACKAGE);
+    expect(await markdownLoader().text()).toContain(
+      `[View on npm](${NPM_PACKAGE})`,
+    );
   });
 
   it("links to the repository's front page from exactly three places: the header's GitHub, the hero's View on GitHub and the footer's Source code", () => {
@@ -689,6 +699,7 @@ describe("the product page stands on its own", () => {
       EXAMPLE_APP,
       CAPABILITY_MATRIX,
       GET_STARTED_URL,
+      NPM_PACKAGE,
     ]);
     // The credits the picture carries, which its basemaps ask for wherever the map shows.
     const creditHrefs = new Set<string>(

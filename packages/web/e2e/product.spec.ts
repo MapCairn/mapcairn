@@ -227,6 +227,23 @@ test.describe("the product page", () => {
     ).toContain("underline");
   });
 
+  test("offers the package on npm beside the repository, as an underlined text link of 44 px", async ({
+    page,
+  }) => {
+    const product = new ProductPage(page);
+    await product.goto();
+    await expect(product.heroNpm).toHaveAttribute(
+      "href",
+      "https://www.npmjs.com/package/@mapcairn/sdk",
+    );
+    expect(
+      (await product.heroNpm.boundingBox())?.height,
+    ).toBeGreaterThanOrEqual(44);
+    expect(
+      (await interactionStyle(product.heroNpm)).textDecorationLine,
+    ).toContain("underline");
+  });
+
   for (const [width, height] of [
     [390, 844],
     [820, 1180],
