@@ -6,7 +6,10 @@ import {
   coordinateSearchResult,
   isCoordinateText,
 } from "./coordinateSearchResult";
-import { parseCoordinates } from "./parseCoordinates";
+import {
+  MAX_COORDINATE_TEXT_LENGTH,
+  parseCoordinates,
+} from "./parseCoordinates";
 
 const messages = new FakeMessageCatalogue();
 
@@ -135,6 +138,40 @@ describe("the label of a coordinate result", () => {
 });
 
 describe("isCoordinateText", () => {
+  it("is true for a mixed-case reference that does not read, so it is not sent as typed", () => {
+    expect(isCoordinateText("31U ct 12345 67890", messages)).toBe(true);
+    expect(coordinateSearchResult("31U ct 12345 67890", messages)).toBeNull();
+  });
+
+  it("is true for place text made only of coordinate words and figures", () => {
+    expect(isCoordinateText("5 North", messages)).toBe(true);
+    expect(isCoordinateText("Route 66 North", messages)).toBe(false);
+    expect(isCoordinateText("66 North", messages)).toBe(true);
+  });
+
+  it("answers long or hostile text without reading it all", () => {
+    const hostile = [
+      `1A${" ".repeat(50_000)}xyz`,
+      `1A${" ".repeat(50_000)}`,
+      `${"1 ".repeat(50_000)}x`,
+      `26.2041${" south".repeat(20_000)}`,
+    ];
+    for (const text of hostile) {
+      expect(isCoordinateText(text, messages), text.slice(0, 12)).toBe(false);
+    }
+  });
+
+  it("looks at no more characters than a coordinate can have", () => {
+    const longest = `31U 500000 5500000${" ".repeat(MAX_COORDINATE_TEXT_LENGTH)}`;
+    expect(isCoordinateText(longest, messages)).toBe(false);
+    expect(
+      isCoordinateText(`1A${"1".repeat(MAX_COORDINATE_TEXT_LENGTH)}`, messages),
+    ).toBe(false);
+    expect(
+      isCoordinateText("1A".padEnd(MAX_COORDINATE_TEXT_LENGTH, "1"), messages),
+    ).toBe(true);
+  });
+
   it("is true for text that reads as a position", () => {
     for (const text of [
       "-26.2041, 28.0473",

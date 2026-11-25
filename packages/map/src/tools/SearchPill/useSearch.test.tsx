@@ -569,7 +569,7 @@ describe("useSearch", () => {
       "31U CT 12345 67890",
       "11SPA7234911844",
       "11spa7234911844",
-      "33UXP0544",
+      "33U XP 0544",
     ])(
       "answers the grid reference %j and never asks the geocoder",
       async (text) => {

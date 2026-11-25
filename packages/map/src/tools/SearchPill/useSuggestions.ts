@@ -49,7 +49,8 @@ const WORD = /\p{L}{3,}/u;
  *
  * So a coordinate typed character by character is never sent; the search
  * itself answers a whole one without a service. Text shaped like a grid
- * reference under way, such as "11SPA72", also pauses suggestions.
+ * reference under way, such as "11SPA72", also pauses suggestions, and so
+ * does place text made only of coordinate words and figures, such as "5 North".
  *
  * Each change of text aborts the request before it, so an
  * answer for older text never arrives after a newer one. Nothing is asked

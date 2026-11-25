@@ -13,6 +13,7 @@ import type { SearchResult } from "../ports/search";
 import { normaliseCoordinateText } from "./normaliseCoordinateText";
 import {
   isCoordinateWordsAndFigures,
+  MAX_COORDINATE_TEXT_LENGTH,
   parseCoordinates,
 } from "./parseCoordinates";
 
@@ -70,7 +71,7 @@ export function coordinateSearchResult(
  * suggested.
  */
 const GRID_REFERENCE_UNDER_WAY =
-  /^(?:\d{1,2}[A-Z]\s*(?:[A-Z]{1,2})?|\d{1,2}\s*[A-Z])[\d\s]*$/i;
+  /^(?:\d{1,2}[A-Z](?: ?[A-Z]{1,2})?|\d{1,2} ?[A-Z])[\d ]*$/i;
 
 /**
  * Whether text is, or may be the start of, a coordinate: text that reads as a
@@ -78,13 +79,17 @@ const GRID_REFERENCE_UNDER_WAY =
  * coordinate words only, finished or not ("26.2041 south, 28.04"), or is a
  * UTM or MGRS reference that has not been finished. A caller that sends text to a place search service
  * as it is typed skips this text, so a coordinate is never sent to one, even
- * a reference whose letters ("SPA") look like a word.
+ * a reference whose letters ("SPA") look like a word. Text longer than
+ * {@link MAX_COORDINATE_TEXT_LENGTH} is never one.
  */
 export function isCoordinateText(
   text: string,
   messages: MessageCatalogue,
 ): boolean {
-  const normalised = normaliseCoordinateText(text.trim());
+  if (text.length > MAX_COORDINATE_TEXT_LENGTH) {
+    return false;
+  }
+  const normalised = normaliseCoordinateText(text.trim()).replace(/\s+/g, " ");
   return (
     GRID_REFERENCE_UNDER_WAY.test(normalised) ||
     coordinateSearchResult(text, messages) !== null ||

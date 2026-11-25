@@ -513,7 +513,9 @@ function readPair(text: string, words: Words): LatLng | null {
  *   without a space between the square and the digits, and with at most
  *   spaces among the digits (runs of white space count as one), in either
  *   letter case but not a mixture ("1Dec 2015" is a date), at any precision
- *   from 1 km (four digits) to 1 m (ten): `31U CT 12345 67890`, `11SPA7234911844`. Fewer
+ *   from 1 km (four digits) to 1 m (ten; at least six when the band letter
+ *   and the square letters have no space between them, so "1dec 2015" is a
+ *   date too, and "33U XP 0544" reads where "33UXP0544" does not): `31U CT 12345 67890`, `11SPA7234911844`. Fewer
  *   than four digits, or a space between the zone and the band letter, is
  *   refused, so a date or an address ("1 Dec 2015", "12 Rue 10") is never
  *   read as a position. A bare 100 km square names an area rather than a
@@ -575,13 +577,18 @@ const COORDINATE_FILLER = /^[\d\s+\-.,;:°º˚′″'"’]*$/u;
  * and in the language of `hemispheres` and `words`), with at least one
  * figure: a pair that may still be being typed, such as "26.2041 south, 28.04"
  * or "coordinates 26.2041, 28". Any other word, such as a place name,
- * makes it false.
+ * makes it false. Text longer than {@link MAX_COORDINATE_TEXT_LENGTH} is false.
+ *
+ * @internal
  */
 export function isCoordinateWordsAndFigures(
   text: string,
   hemispheres?: Hemispheres,
   words?: CoordinateWords,
 ): boolean {
+  if (text.length > MAX_COORDINATE_TEXT_LENGTH) {
+    return false;
+  }
   const known = wordsFor(hemispheres, words);
   const rest = normaliseCoordinateText(text).replace(/\p{L}+/gu, (run) =>
     known.has(wordKey(run)) ? " " : "?",

@@ -374,7 +374,7 @@ export const EN_GB_CATALOGUE: Record<MessageKey, string> = {
   "panels.help.tourStart": "Take the tour",
   "panels.help.searchHeading": "Search",
   "panels.help.searchDescription":
-    "Type a place name or coordinates, such as -26.2041, 28.0473 or 26.2041° S, 28.0473° E, a UTM reference such as 31U 500000 5500000, or an MGRS reference such as 31U CT 12345 67890, then press Enter or Search. After the zone of a UTM reference, N or S is the hemisphere, not a band letter. Write each value of a pair with a decimal point or a degree sign. A decimal comma also works when a semicolon separates the values, or when spaces do and every number has one. Text that reads as coordinates is read on this device and not sent to the geocoder, and other text is searched by name; the map then loads map tiles for that area, as it does for any move.",
+    "Type a place name or coordinates, such as -26.2041, 28.0473 or 26.2041° S, 28.0473° E, a UTM reference such as 31U 500000 5500000, or an MGRS reference such as 31U CT 12345 67890, then press Enter or Search. After the zone of a UTM reference, N or S is the hemisphere, not a band letter. The letters of an MGRS reference are all capitals or all lower case; a mixed-case reference is searched by name. Write each value of a pair with a decimal point or a degree sign. A decimal comma also works when a semicolon separates the values, or when spaces do and every number has one. Text that reads as coordinates is read on this device and not sent to the geocoder, and other text is searched by name; the map then loads map tiles for that area, as it does for any move.",
   "panels.help.keyboardHeading": "Keyboard",
   "panels.help.drawingHeading": "Drawing",
   "panels.help.accessibilityHeading": "Accessibility",

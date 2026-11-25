@@ -43,6 +43,15 @@ const FINEST_DIGITS = 5;
 const MIN_DIGITS = 4;
 
 /**
+ * The fewest digits when the band letter and the square letters are written
+ * together with no space ("11SPA723118"): six, so that a date such as
+ * "1dec 2015" or "1DEC2015", which has that shape with a year, is not read
+ * as a position. A reference spaced after its band letter ("31U CT 1234 5678")
+ * keeps the four-digit minimum.
+ */
+const MIN_DIGITS_UNSPACED = 6;
+
+/**
  * The northing cycle of the row letters, in metres: the letters repeat
  * every 2 000 km of northing.
  */
@@ -112,14 +121,15 @@ export function formatMgrs(position: LatLng): string | null {
  * "1 Dec 2015" and "12 Rue 1012", which a date or an address might be, never
  * read as a reference.
  */
-const MGRS_PATTERN = /^(\d{1,2})([A-Z])\s*([A-Z]{2})\s*([\d\s]{4,11})$/i;
+const MGRS_PATTERN = /^(\d{1,2})([A-Z])(\s*)([A-Z]{2})\s*([\d\s]{4,11})$/i;
 
 /**
  * Reads an MGRS reference and returns the position, or `null` when the
  * text is not one. The zone and band letter are written together ("31U");
  * the 100 km square and the digits may be written with or without spaces,
  * in either letter case, at any precision from 1 km (four digits) to 1 m
- * (ten), and runs of white space are read as one space. The band letter and
+ * (ten; six or more when the band letter and square letters have no space
+ * between them, "11SPA723118"), and runs of white space are read as one space. The band letter and
  * the square letters are all upper case or all lower case, so a month name
  * ("1Dec 2015") is not a reference. A bare 100 km square ("31U CT") names an
  * area rather than a point and is refused.
@@ -141,8 +151,8 @@ export function parseMgrs(text: string): LatLng | null {
   }
   const zone = Number(match[1] as string);
   const band = (match[2] as string).toUpperCase();
-  const square = (match[3] as string).toUpperCase();
-  const letters = `${match[2]}${match[3]}`;
+  const square = (match[4] as string).toUpperCase();
+  const letters = `${match[2]}${match[4]}`;
   if (letters !== letters.toUpperCase() && letters !== letters.toLowerCase()) {
     return null;
   }
@@ -150,9 +160,9 @@ export function parseMgrs(text: string): LatLng | null {
   // split in half, so the easting and the northing always carry the same
   // count of digits. (A regex split would be greedy: "041865" would come
   // apart as "04186" and "5".)
-  const digits = (match[4] as string).replace(/\s+/g, "");
+  const digits = (match[5] as string).replace(/\s+/g, "");
   if (
-    digits.length < MIN_DIGITS ||
+    digits.length < (match[3] === "" ? MIN_DIGITS_UNSPACED : MIN_DIGITS) ||
     digits.length > 10 ||
     digits.length % 2 !== 0
   ) {

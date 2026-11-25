@@ -150,15 +150,15 @@ describe("parseCoordinates of MGRS references", () => {
           Math.cos(((point?.lat ?? 0) * Math.PI) / 180),
       ).toBeLessThanOrEqual(halfWidthMetres * GRID_SLACK);
     };
-    withinSquare("33UXP0544", 500);
+    withinSquare("33U XP 0544", 500);
     withinSquare("33UXP050449", 50);
     withinSquare("33UXP05004499", 5);
   });
 
   it("names a coarser reference by its square's centre, not its corner", () => {
-    // 33UXP0444 is the 1 km square from 4 000 m, 4 000 m to 5 000 m, 5 000 m
+    // 33U XP 0444 is the 1 km square from 4 000 m, 4 000 m to 5 000 m, 5 000 m
     // of the 100 km square; the corner reads one-metre digits 04000 44000.
-    const centre = parseCoordinates("33UXP0444");
+    const centre = parseCoordinates("33U XP 0444");
     const corner = parseCoordinates("33UXP 04000 44000");
     expect(centre?.lat).toBeGreaterThan(corner?.lat ?? 0);
     expect(centre?.lng).toBeGreaterThan(corner?.lng ?? 0);
@@ -171,7 +171,7 @@ describe("parseCoordinates of MGRS references", () => {
 
   it("reads references of 4, 6, 8 and 10 digits", () => {
     for (const text of [
-      "33UXP0444",
+      "33U XP 0444",
       "33UXP050449",
       "33UXP05004499",
       "33UXP0500444997",
@@ -201,17 +201,40 @@ describe("parseCoordinates of MGRS references", () => {
       "1Dec2015",
       "7Jan 2012",
       "3Jun1999",
+      "1dec 2015",
+      "1DEC 2015",
+      "1DEC2015",
+      "1dec2015",
+      "7jan 2012",
+      "1feb2010",
+      "1FEB2010",
     ]) {
       expect(parseCoordinates(text), text).toBeNull();
     }
   });
 
+  it("needs six digits when the band letter and square letters have no space between them", () => {
+    expect(parseCoordinates("33UXP0544")).toBeNull();
+    expect(parseCoordinates("33U XP0544")).not.toBeNull();
+    expect(parseCoordinates("33UXP054449")).not.toBeNull();
+    expect(parseCoordinates("33U XP 0544")).not.toBeNull();
+    for (const real of [
+      "11SPA7234911844",
+      "11spa7234911844",
+      "31U CT 12345 67890",
+      "4QFJ 12345 67890",
+      "24XWT783908",
+    ]) {
+      expect(parseCoordinates(real), real).not.toBeNull();
+    }
+  });
+
   it("refuses letters of mixed case, which a month name is", () => {
-    expect(parseCoordinates("33UxP0544")).toBeNull();
-    expect(parseCoordinates("33Uxp0544")).toBeNull();
-    expect(parseCoordinates("33uXP0544")).toBeNull();
-    expect(parseCoordinates("33uxp0544")).not.toBeNull();
-    expect(parseCoordinates("33UXP0544")).not.toBeNull();
+    expect(parseCoordinates("33U xP 0544")).toBeNull();
+    expect(parseCoordinates("33U xp 0544")).toBeNull();
+    expect(parseCoordinates("33u XP 0544")).toBeNull();
+    expect(parseCoordinates("33u xp 0544")).not.toBeNull();
+    expect(parseCoordinates("33U XP 0544")).not.toBeNull();
   });
 
   it("refuses a space between the zone and the band letter", () => {

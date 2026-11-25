@@ -169,7 +169,7 @@ describe("useSuggestions", () => {
     "11SPA",
     "31U CT 12345 67890",
     "31U CT 123",
-    "33UXP0544",
+    "33U XP 0544",
     "31U 500000 5500000",
     "31N 500000 4200000",
     "34h261882 6243182",
@@ -187,6 +187,21 @@ describe("useSuggestions", () => {
       expect(result.current).toEqual([]);
     },
   );
+
+  it.each(["5 North", "66 North", "31U ct 12345 67890"])(
+    "asks nothing for %s, text of coordinate words and figures",
+    async (query) => {
+      const { fake } = setup({ query });
+      await advance(SUGGEST_DEBOUNCE_MS * 2);
+      expect(fake.suggestCalls).toHaveLength(0);
+    },
+  );
+
+  it("still asks about Route 66 North, which has a place word", async () => {
+    const { fake } = setup({ query: "Route 66 North" });
+    await advance(SUGGEST_DEBOUNCE_MS);
+    expect(fake.suggestCalls).toHaveLength(1);
+  });
 
   it.each([
     "12 Main St",
