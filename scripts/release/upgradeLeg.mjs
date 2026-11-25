@@ -38,6 +38,23 @@ const EXCERPT = 300;
 const PROBLEM_LINE =
   /error TS\d+:|is not exported by|Could not resolve|Failed to resolve/i;
 
+/** A code span: a run of backticks, the text, and the same run again. */
+const CODE_SPAN = /(?<!`)(`+)(?!`)(.+?)(?<!`)\1(?!`)/g;
+
+/**
+ * A line of failure output that no error line explains: an error, a failure or
+ * an exception in the output of the step.
+ */
+const FAILURE_WORD = /\b(?:error|failed|failure|exception|fatal)\b|ERR_/i;
+
+/**
+ * The lines every failed build prints around its errors, which say nothing
+ * more than "there were errors": the bundler's heading, its closing line and
+ * TypeScript's count.
+ */
+const FAILURE_FRAMING =
+  /^(?:error during build:?|\W*Build failed in \S+|Found \d+ errors?\.?)$/i;
+
 /** A name between quotes in an error line, as TypeScript and the bundler print it. */
 const QUOTED = /['"]([^'"\s]+)['"]/g;
 
@@ -63,16 +80,23 @@ const TYPE_KEYWORDS = new Set([
 ]);
 
 /**
- * The text under every "What to change when you upgrade" heading of one
- * version's release notes (the text the GitHub Release carries), code blocks
- * included, because a "Before" block names what was removed.
+ * What the notes of a version name in the text under every "What to change
+ * when you upgrade" heading (the release notes are the text the GitHub
+ * Release carries): the code spans in the prose, and every line of a code
+ * block, because a "Before" block names what was removed. A word of the prose
+ * names nothing: "the map moved" does not cover a missing `map` property.
  *
  * @param {string} releaseNotes The notes of one version, without its heading.
  * @returns {string} Empty when the notes ask nothing of an upgrading app.
  */
 export function migrationNotes(releaseNotes) {
   return upgradeGroups(releaseNotes)
-    .flatMap(([, ...body]) => body.map((line) => line.text))
+    .flatMap(([, ...body]) => body)
+    .flatMap((line) =>
+      line.fenced
+        ? [line.text]
+        : [...line.text.matchAll(CODE_SPAN)].map((match) => match[2]),
+    )
     .join("\n")
     .trim();
 }
@@ -97,6 +121,25 @@ function namesIn(line) {
   return [...line.matchAll(QUOTED)]
     .map((match) => match[1])
     .filter((name) => IDENTIFIER.test(name) && !TYPE_KEYWORDS.has(name));
+}
+
+/**
+ * The lines of failed output that say something failed and are not an error
+ * line, a heading or a count: a failure no error above accounts for.
+ *
+ * @param {string} output
+ * @returns {string[]}
+ */
+function unexplainedLines(output) {
+  return output
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(
+      (line) =>
+        FAILURE_WORD.test(line) &&
+        !PROBLEM_LINE.test(line) &&
+        !FAILURE_FRAMING.test(line),
+    );
 }
 
 /**
@@ -167,7 +210,31 @@ export function upgradeProblems({ output, notes, version }) {
       );
     }
   }
+  for (const line of unexplainedLines(output)) {
+    problems.push(
+      `The step also failed with a line that no error above explains, so the notes cannot cover it: ${line.slice(0, EXCERPT)}`,
+    );
+  }
   return { problems, documented: [...documented] };
+}
+
+/**
+ * The version `--upgrade-from` names in the command line.
+ *
+ * @param {string[]} argv The arguments after the script's name.
+ * @returns {string | null} Null when the flag is not given.
+ * @throws {Error} When the flag has no value, so a typo cannot turn into a skipped leg.
+ */
+export function upgradeFromArgument(argv) {
+  const flag = argv.indexOf("--upgrade-from");
+  if (flag === -1) {
+    return null;
+  }
+  const value = argv[flag + 1];
+  if (value === undefined || value.startsWith("--")) {
+    throw new Error("--upgrade-from needs a version, such as 0.2.0.");
+  }
+  return value;
 }
 
 /**

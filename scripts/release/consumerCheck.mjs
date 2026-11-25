@@ -96,6 +96,7 @@ import {
   latestPublished,
   migrationNotes,
   runStep,
+  upgradeFromArgument,
   upgradePlan,
   upgradeProblems,
 } from "./upgradeLeg.mjs";
@@ -257,7 +258,7 @@ export function consumerManifest({ tarballs, versions, direct }) {
 }
 
 /**
- * npm's options that exempt the four SDK packages, and nothing else, from the
+ * npm's options that exempt the six SDK packages, and nothing else, from the
  * repository's minimum release age, so a version published a moment ago can be
  * installed to check it. Third-party packages keep the rule.
  */
@@ -267,7 +268,7 @@ export const RELEASE_AGE_EXCLUSIONS = SDK_NAMES.map(
 
 /**
  * The npm options for an install: the minimum release age is lifted for the
- * four SDK packages only when a published version is installed, so every
+ * six SDK packages only when a published version is installed, so every
  * other install keeps the repository's rule.
  *
  * @param {{ published: string | null, extra?: string[] }} input `extra` are options that apply either way.
@@ -1376,6 +1377,74 @@ function buildBrowserPage(app) {
 }
 
 /**
+ * Writes the app the upgrade starts from and installs the latest published
+ * release into it: the browser page as the release's tag left it, a manifest
+ * that lists the umbrella at that version, and the repository's `.npmrc`.
+ *
+ * @param {{ app: string, versions: Record<string, string>, from: string }} input
+ * @returns {void}
+ */
+function installLatestRelease({ app, versions, from }) {
+  const page = path.join(app, "browser");
+  for (const { file, text } of fixtureAtTag({
+    root: REPO,
+    tag: `v${from}`,
+    folder: UPGRADE_PAGE_FOLDER,
+  })) {
+    mkdirSync(path.dirname(path.join(page, file)), { recursive: true });
+    writeFileSync(path.join(page, file), text);
+  }
+  writeFileSync(
+    path.join(page, ".env.production"),
+    `VITE_STYLE_URL=${BROWSER_STYLE_URL}\n`,
+  );
+  writeManifestOf(
+    app,
+    publishedManifest({ version: from, versions, direct: [UMBRELLA_PACKAGE] }),
+  );
+  copyFileSync(path.join(REPO, ".npmrc"), path.join(app, ".npmrc"));
+  install(app, installFlags({ published: from }));
+}
+
+/**
+ * Replaces the app's manifest.
+ *
+ * @param {string} app
+ * @param {Record<string, unknown>} manifest
+ * @returns {void}
+ */
+function writeManifestOf(app, manifest) {
+  writeFileSync(
+    path.join(app, "package.json"),
+    `${JSON.stringify(manifest, null, 2)}\n`,
+  );
+}
+
+/**
+ * Draws the upgraded app's built page in Chromium, or says why it did not.
+ *
+ * @param {string} app
+ * @param {string} prefix Put before each line of the report.
+ * @returns {string[]}
+ */
+function drawUpgradedPage(app, prefix) {
+  const executable = chromiumExecutable(REPO);
+  const draw = browserLegPlan({
+    playwright: playwrightAvailable(REPO),
+    executable,
+  });
+  if (draw.action === "fail") {
+    throw new Error(draw.message);
+  }
+  if (draw.action === "skip") {
+    return [`${prefix}${draw.line}`];
+  }
+  return drawBuiltPage(app, executable).map(
+    (line) => `${prefix}real map in Chromium, ${line}`,
+  );
+}
+
+/**
  * The upgrade leg: an app written for the latest release, with that release
  * installed, is upgraded in place to the packed tarballs. It must still
  * type-check, build and draw a map. If it does not, the notes of the version
@@ -1393,33 +1462,7 @@ function buildBrowserPage(app) {
 function checkUpgrade({ root, packed, versions, plan, notes }) {
   const prefix = `upgrade from ${plan.from} to ${plan.to}: `;
   const app = path.join(root, "upgrade");
-  const page = path.join(app, "browser");
-  for (const { file, text } of fixtureAtTag({
-    root: REPO,
-    tag: `v${plan.from}`,
-    folder: UPGRADE_PAGE_FOLDER,
-  })) {
-    mkdirSync(path.dirname(path.join(page, file)), { recursive: true });
-    writeFileSync(path.join(page, file), text);
-  }
-  writeFileSync(
-    path.join(page, ".env.production"),
-    `VITE_STYLE_URL=${BROWSER_STYLE_URL}\n`,
-  );
-  const writeManifest = (/** @type {Record<string, unknown>} */ manifest) =>
-    writeFileSync(
-      path.join(app, "package.json"),
-      `${JSON.stringify(manifest, null, 2)}\n`,
-    );
-  writeManifest(
-    publishedManifest({
-      version: plan.from,
-      versions,
-      direct: [UMBRELLA_PACKAGE],
-    }),
-  );
-  copyFileSync(path.join(REPO, ".npmrc"), path.join(app, ".npmrc"));
-  install(app, installFlags({ published: plan.from }));
+  installLatestRelease({ app, versions, from: plan.from });
   const before = buildBrowserPage(app);
   if (!before.ok) {
     throw new Error(
@@ -1427,7 +1470,8 @@ function checkUpgrade({ root, packed, versions, plan, notes }) {
     );
   }
 
-  writeManifest(
+  writeManifestOf(
+    app,
     consumerManifest({
       tarballs: packed,
       versions,
@@ -1436,38 +1480,24 @@ function checkUpgrade({ root, packed, versions, plan, notes }) {
   );
   install(app, []);
   const after = buildBrowserPage(app);
-  if (!after.ok) {
-    const { problems, documented } = upgradeProblems({
-      output: after.output,
-      notes,
-      version: plan.to,
-    });
-    if (problems.length > 0) {
-      throw new Error(
-        `${prefix}the app no longer builds, and the notes do not cover it:\n${problems.join("\n")}`,
-      );
-    }
+  if (after.ok) {
     return [
-      `${prefix}the app needs the changes the notes name (${documented.join(", ")}), so it was not built or drawn`,
+      `${prefix}the app type-checks and builds with no change`,
+      ...drawUpgradedPage(app, prefix),
     ];
   }
-  const executable = chromiumExecutable(REPO);
-  const draw = browserLegPlan({
-    playwright: playwrightAvailable(REPO),
-    executable,
+  const { problems, documented } = upgradeProblems({
+    output: after.output,
+    notes,
+    version: plan.to,
   });
-  if (draw.action === "fail") {
-    throw new Error(draw.message);
-  }
-  const built = `${prefix}the app type-checks and builds with no change`;
-  if (draw.action === "skip") {
-    return [built, `${prefix}${draw.line}`];
+  if (problems.length > 0) {
+    throw new Error(
+      `${prefix}the app no longer builds, and the notes do not cover it:\n${problems.join("\n")}`,
+    );
   }
   return [
-    built,
-    ...drawBuiltPage(app, executable).map(
-      (line) => `${prefix}real map in Chromium, ${line}`,
-    ),
+    `${prefix}the app needs the changes the notes name (${documented.join(", ")}), so it was not built or drawn`,
   ];
 }
 
@@ -1686,7 +1716,7 @@ function runUpgradeLeg({ root, packed, versions, upgradeFrom }) {
 
 /**
  * Runs every check and returns one line for each. With `published`, it
- * installs that version of the four packages from the registry instead of
+ * installs that version of the six packages from the registry instead of
  * packing the repository's, skips the pnpm install, and audits the
  * signatures of what it installed. The Yarn and Bun installs are skipped
  * for the published packages too, because their three-day release age would
@@ -1809,10 +1839,9 @@ if (isEntryPoint(import.meta.url)) {
   try {
     const flag = process.argv.indexOf("--tarballs");
     const folder = flag === -1 ? null : (process.argv[flag + 1] ?? null);
-    const from = process.argv.indexOf("--upgrade-from");
     for (const line of runConsumerCheck({
       tarballs: folder === null ? null : path.resolve(folder),
-      upgradeFrom: from === -1 ? null : (process.argv[from + 1] ?? null),
+      upgradeFrom: upgradeFromArgument(process.argv.slice(2)),
     })) {
       console.log(line);
     }
