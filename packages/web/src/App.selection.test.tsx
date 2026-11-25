@@ -18,7 +18,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { App } from "./App";
 import { TOUR_VERSION } from "./app/tourVersion";
 
-// No component reads the selected set yet, so these tests put a probe where
+// Only the map highlight reads the selected set so far, so these tests put a probe where
 // the map's data layers are, which is inside the provider the host mounts
 // around the map and the chrome. The probe reads it the way a component will.
 vi.mock("@mapcairn/map", async (importOriginal) => {

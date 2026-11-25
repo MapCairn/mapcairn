@@ -581,7 +581,7 @@ export interface FeatureOutline {
 }
 
 // @internal
-export function featureOutlines(feature: LayerFeature): FeatureOutline[];
+export function featureOutlines(feature: LayerFeature, maxPoints?: number): FeatureOutline[];
 
 // @internal
 export function featurePosition(feature: LayerFeature): LatLng | null;
@@ -1180,6 +1180,9 @@ export interface SelectedFeature {
     readonly feature: LayerFeature;
     readonly layer: DataLayerState;
 }
+
+// @public
+export function SelectionHighlights(): JSX.Element | null;
 
 // @public
 export function SelectionMarker(input: SelectionMarkerProps): JSX.Element | null;
