@@ -22,7 +22,7 @@ This repository also holds the playground, a reference site built from the SDK's
 npm install @mapcairn/sdk react react-dom maplibre-gl
 ```
 
-[`@mapcairn/sdk`](https://www.npmjs.com/package/@mapcairn/sdk) is the umbrella package on npm. It needs React 19, `maplibre-gl` 6.18 or later and an ESM bundler that handles CSS imports (tested with Vite), and a TypeScript `moduleResolution` of `bundler`, `node16` or `nodenext`. [Embed a map](#embed-a-map) shows a whole app.
+[`@mapcairn/sdk`](https://www.npmjs.com/package/@mapcairn/sdk) is the umbrella package on npm. It needs React 19, `maplibre-gl` 6.18 or later and an ESM bundler that handles CSS imports (tested with Vite), and a TypeScript `moduleResolution` of `bundler`, `node16` or `nodenext`. [Supported versions](https://docs.mapcairn.com/guides/supported-versions/) lists what is tested, and [Embed a map](#embed-a-map) shows a whole app.
 
 <p>
   <picture>

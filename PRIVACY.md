@@ -24,9 +24,9 @@ first-visit tour (a version number under `mapcairn:tourSeen`). The other keys
 start with `mapcairn:`. The tour
 itself sends nothing; a layer you turn on during it loads from its provider as
 described below. These stay on your device and are
-never sent to a server. The documentation pages under `docs.mapcairn.com` read the same
-theme key and also keep your light or dark choice under `theme`, the key their
-framework uses; like the others it stays on your device.
+never sent to a server. The documentation site at `docs.mapcairn.com` keeps its own light or dark
+choice under `theme`, the key its framework uses, in its own storage. It does
+not read the choice you made here, and like the others it stays on your device.
 
 ## Analytics
 
