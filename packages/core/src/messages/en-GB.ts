@@ -642,7 +642,7 @@ export const EN_GB_CATALOGUE: Record<MessageKey, string> = {
   "layers.save.geojson": "Save as GeoJSON",
   "layers.save.csv": "Save as CSV",
   "layers.save.note":
-    "Saves the features loaded now, up to {max}, with the credit and the date. Nothing is sent anywhere.",
+    "Saves the loaded features, up to {max}, with credit and date. Nothing is sent.",
   "layers.save.done":
     "Saved {count} feature of {name} as {filename}.|Saved {count} features of {name} as {filename}.",
   "layers.save.doneCapped":

@@ -16,7 +16,7 @@ import {
   savedFileName,
 } from "@mapcairn/core";
 import { DownloadSimple, FileXls } from "@phosphor-icons/react";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   useFileSaver,
   useFormatMessage,
@@ -82,6 +82,14 @@ export function SaveFeatures({ layer, savedOn }: SaveFeaturesProps) {
   const format = useFormatMessage();
   const announce = useAnnounce();
   const [outcome, setOutcome] = useState<string | null>(null);
+  const group = useRef<HTMLFieldSetElement>(null);
+  // The sheet may be half open with the buttons at its edge, so what happened
+  // is brought into view for a person who cannot hear the announcement.
+  useEffect(() => {
+    if (outcome !== null) {
+      group.current?.scrollIntoView?.({ block: "nearest" });
+    }
+  }, [outcome]);
   if (!canSaveFeatures(definition) || features.length === 0) {
     return null;
   }
@@ -110,6 +118,7 @@ export function SaveFeatures({ layer, savedOn }: SaveFeaturesProps) {
 
   return (
     <fieldset
+      ref={group}
       className={styles.saveFeatures}
       data-testid={`layer-save-${definition.id}`}
     >
@@ -119,6 +128,14 @@ export function SaveFeatures({ layer, savedOn }: SaveFeaturesProps) {
       <p className={styles.muted}>
         {t("layers.save.note", { max: MAX_SAVED_FEATURES })}
       </p>
+      {outcome === null ? null : (
+        <p
+          className={`${styles.muted} ${styles.saveOutcome}`}
+          data-testid={`layer-save-status-${definition.id}`}
+        >
+          {outcome}
+        </p>
+      )}
       <div className={styles.saveActions}>
         <Button
           variant="secondary"
@@ -137,14 +154,6 @@ export function SaveFeatures({ layer, savedOn }: SaveFeaturesProps) {
           {t("layers.save.csv", {})}
         </Button>
       </div>
-      {outcome === null ? null : (
-        <p
-          className={styles.muted}
-          data-testid={`layer-save-status-${definition.id}`}
-        >
-          {outcome}
-        </p>
-      )}
     </fieldset>
   );
 }

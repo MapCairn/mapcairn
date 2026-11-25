@@ -76,6 +76,21 @@ describe("savedFeatureSet", () => {
     });
   });
 
+  it("is not capped at exactly the cap, and is at one more", () => {
+    const make = (count: number) =>
+      Array.from({ length: count }, (_, i) => point(String(i), {}));
+    expect(savedFeatureSet(make(MAX_SAVED_FEATURES))).toMatchObject({
+      total: MAX_SAVED_FEATURES,
+      capped: false,
+    });
+    expect(savedFeatureSet(make(MAX_SAVED_FEATURES)).kept).toHaveLength(
+      MAX_SAVED_FEATURES,
+    );
+    const over = savedFeatureSet(make(MAX_SAVED_FEATURES + 1));
+    expect(over.kept).toHaveLength(MAX_SAVED_FEATURES);
+    expect(over).toMatchObject({ total: MAX_SAVED_FEATURES + 1, capped: true });
+  });
+
   it("keeps the first features up to the cap and says it cut", () => {
     const features = Array.from({ length: MAX_SAVED_FEATURES + 3 }, (_, i) =>
       point(String(i), {}),
@@ -180,7 +195,7 @@ describe("featuresToGeoJsonText", () => {
 });
 
 describe("featuresToCsv", () => {
-  const lines = (csv: string) => csv.split("\r\n");
+  const lines = (csv: string) => csv.replace(/^\uFEFF/, "").split("\r\n");
 
   it("writes a header, a row for each feature and the credit in each row", () => {
     const csv = featuresToCsv(
@@ -254,7 +269,20 @@ describe("featuresToCsv", () => {
     expect(csv).toContain('"one, ""two""\nthree"');
   });
 
-  it.each(["=SUM(A1)", "+1+1", "-2+3", "@cmd", "\tx", "\rx"])(
+  it.each([
+    "=SUM(A1)",
+    "+1+1",
+    "-2+3",
+    "@cmd",
+    "\tx",
+    "\rx",
+    "\n=1",
+    " =1",
+    "  \t+1",
+    "'=1",
+    "-5",
+    "+27 82 000 0000",
+  ])(
     "neutralises a text cell that starts with %j so a spreadsheet does not run it",
     (value) => {
       const csv = featuresToCsv([point("a", { title: value })], INFO);
@@ -280,6 +308,58 @@ describe("featuresToCsv", () => {
     )[0];
     const names = (header ?? "").split(",");
     expect(new Set(names).size).toBe(names.length);
+  });
+
+  it("starts with a byte order mark so Excel reads UTF-8", () => {
+    expect(
+      featuresToCsv([point("a", { title: "Kaapstad Môre" })], INFO),
+    ).toMatch(/^\uFEFFfeature_id,/);
+  });
+
+  it("writes a point's position and geometry with no exponent", () => {
+    const row = lines(featuresToCsv([point("a", {}, [1e-7, 2])], INFO))[1];
+    expect(row).toMatch(/^a,0\.0000001,2,/);
+    expect(row).toContain("[0.0000001,2]");
+    expect(row).not.toMatch(/\de-/);
+  });
+
+  it("neutralises a formula that follows a quote", () => {
+    expect(featuresToCsv([point("a", { title: '"@x' })], INFO)).toContain(
+      `"'""@x"`,
+    );
+  });
+
+  it("quotes a cell with a carriage return after neutralising it", () => {
+    expect(featuresToCsv([point("a", { title: "\rx" })], INFO)).toContain(
+      '"\'\rx"',
+    );
+  });
+
+  it("numbers a renamed field from 2, whichever column it clashes with", () => {
+    const header = lines(
+      featuresToCsv([point("a", { feature_id: "x", credit: "y" })], INFO),
+    )[0];
+    expect(header).toBe(
+      "feature_id,longitude,latitude,geometry,feature_id_2,credit_2,credit,saved",
+    );
+  });
+
+  it("leaves a geometry longer than a spreadsheet cell out of the row", () => {
+    const coordinates = Array.from(
+      { length: 4000 },
+      (_, i) => [i / 1000, i / 1000] as const,
+    );
+    const long: LayerFeature = {
+      id: "l",
+      geometry: { type: "LineString", coordinates },
+      fields: { title: "Long" },
+    };
+    const row = lines(featuresToCsv([long], INFO))[1];
+    expect(row).toMatch(/^l,,,,Long,/);
+    expect(
+      JSON.parse(featuresToGeoJsonText([long], INFO)).features[0].geometry
+        .coordinates,
+    ).toHaveLength(4000);
   });
 
   it("writes only the header for no features", () => {

@@ -17,7 +17,7 @@ import {
   waitFor,
   within,
 } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { testMapContext } from "../chrome/MapChrome/chromeTestHarness";
 import { MapContext } from "../host";
 import { ServicesProvider } from "../services";
@@ -28,12 +28,12 @@ import { useDataLayers } from "./useDataLayers";
 const NOW = Date.UTC(2026, 10, 9, 12);
 const ALLOWED: LayerDefinition = { ...SAMPLE_FEED_LAYER, saveFeatures: true };
 
-function setup(definitions: readonly LayerDefinition[]) {
+function setup(definitions: readonly LayerDefinition[], now = NOW) {
   const services = createFakeServices({
     layers: new FakeLayerCatalogue(definitions),
   });
   function Harness() {
-    const layers = useDataLayers({ now: () => NOW });
+    const layers = useDataLayers({ now: () => now });
     return <LayersSection layers={layers} onShowOnMap={() => {}} />;
   }
   render(
@@ -59,6 +59,10 @@ async function turnOn(name = "Sample points") {
 }
 
 const saveGroup = () => screen.queryByRole("group", { name: /^Save the/ });
+
+afterEach(() => {
+  vi.restoreAllMocks();
+});
 
 describe("saving a layer's features", () => {
   it("offers nothing for a layer whose definition does not allow it", async () => {
@@ -178,5 +182,55 @@ describe("saving a layer's features", () => {
         "The file could not be saved.",
       ),
     );
+  });
+
+  it("writes the year from the clock in a credit that asks for it", async () => {
+    const { source, saver } = setup([
+      {
+        ...ALLOWED,
+        attribution: [{ text: "(c) {year} Provider" }],
+      },
+    ]);
+    source.setFeatures("sample-points", [samplePoint("a")]);
+    await turnOn();
+    fireEvent.click(
+      await screen.findByRole("button", { name: "Save as GeoJSON" }),
+    );
+    await waitFor(() => expect(saver.saved).toHaveLength(1));
+    expect(JSON.parse(saver.saved[0]?.content ?? "").attribution).toEqual([
+      "(c) 2026 Provider",
+    ]);
+  });
+
+  it.each([
+    ["23:30 UTC", Date.UTC(2026, 10, 9, 23, 30), "2026-11-09"],
+    ["00:30 UTC the next day", Date.UTC(2026, 10, 10, 0, 30), "2026-11-10"],
+  ])("dates the file by the UTC day at %s", async (_when, now, day) => {
+    const { source, saver } = setup([ALLOWED], now);
+    source.setFeatures("sample-points", [samplePoint("a")]);
+    await turnOn();
+    fireEvent.click(
+      await screen.findByRole("button", { name: "Save as GeoJSON" }),
+    );
+    await waitFor(() => expect(saver.saved).toHaveLength(1));
+    expect(saver.saved[0]?.filename).toBe(`sample-points-${day}.geojson`);
+    expect(JSON.parse(saver.saved[0]?.content ?? "").saved).toBe(day);
+  });
+
+  it("shows the outcome above the buttons and scrolls it into view, so a failure is seen", async () => {
+    const scrollIntoView = vi.fn();
+    Element.prototype.scrollIntoView = scrollIntoView;
+    const { source, saver } = setup([ALLOWED]);
+    saver.failWith("failed");
+    source.setFeatures("sample-points", [samplePoint("a")]);
+    await turnOn();
+    const button = await screen.findByRole("button", { name: "Save as CSV" });
+    fireEvent.click(button);
+    const status = await screen.findByTestId("layer-save-status-sample-points");
+    expect(status).toHaveTextContent("The file could not be saved.");
+    expect(
+      status.compareDocumentPosition(button) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    expect(scrollIntoView).toHaveBeenCalled();
   });
 });

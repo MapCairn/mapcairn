@@ -19,6 +19,19 @@ export const MAX_SAVED_FEATURES = 5000;
 
 const JSON_INDENT = 2;
 
+/**
+ * Excel reads UTF-8 only when the file starts with a byte order mark, and
+ * shows accented names (Afrikaans ones, for instance) as garbage without it.
+ */
+const BYTE_ORDER_MARK = "\uFEFF";
+
+/**
+ * The most characters a spreadsheet keeps in one cell. Excel cuts a longer
+ * cell, which would leave a geometry that is no longer valid JSON, so a
+ * geometry over this is left out of the CSV row. The GeoJSON file holds it.
+ */
+export const MAX_CSV_CELL_CHARACTERS = 32_767;
+
 /** The file types a layer's features are saved as. */
 export type FeatureFileFormat = "geojson" | "csv";
 
@@ -92,6 +105,12 @@ function geometryText(feature: LayerFeature): string {
   return withFixedDecimals(JSON.stringify(feature.geometry));
 }
 
+/** The geometry cell of a row: empty when the text is more than a spreadsheet keeps. */
+function geometryCell(feature: LayerFeature): string {
+  const text = geometryText(feature);
+  return text.length > MAX_CSV_CELL_CHARACTERS ? "" : textCell(text);
+}
+
 /**
  * The features as a GeoJSON `FeatureCollection`, written as text. The layer's
  * name, its credits and the day it was saved are members of the collection
@@ -117,14 +136,19 @@ export function featuresToGeoJsonText(
   return withFixedDecimals(JSON.stringify(collection, null, JSON_INDENT));
 }
 
-/** Characters that make a spreadsheet read a text cell as a formula. */
-const FORMULA_START = /^[=+\-@\t\r]/;
+/**
+ * What makes a spreadsheet read a text cell as a formula: a tab, a carriage
+ * return or a line feed at the start, or `=`, `+`, `-` or `@` after any
+ * whitespace or quotes that a reader may skip over.
+ */
+const FORMULA_START = /^[\t\r\n]|^[\s'"]*[=+\-@]/;
 
 /**
- * A text cell for CSV: a text that a spreadsheet would run as a formula (it
- * starts with `=`, `+`, `-`, `@`, a tab or a carriage return) gets a leading
- * apostrophe, which spreadsheets read as "this is text"; one with a comma, a
- * quote or a line break is quoted.
+ * A text cell for CSV: a text that a spreadsheet would run as a formula (see
+ * {@link FORMULA_START}) gets a leading apostrophe, which spreadsheets read as
+ * "this is text", and so does a text that only looks like a number or a phone
+ * number (`-5`, `+27 82 000 0000`): the safe choice is to never decide.
+ * A text with a comma, a quote or a line break is quoted.
  */
 function textCell(text: string): string {
   const safe = FORMULA_START.test(text) ? `'${text}` : text;
@@ -170,9 +194,11 @@ function fieldNamesOf(features: readonly LayerFeature[]): string[] {
 }
 
 /**
- * The features as CSV text, rows ending CRLF. The columns are `feature_id`,
+ * The features as CSV text, starting with a byte order mark (see
+ * {@link BYTE_ORDER_MARK}) and with rows ending CRLF. The columns are `feature_id`,
  * `longitude` and `latitude` (empty unless the feature is a point),
- * `geometry` (the GeoJSON geometry as text), each decoded field, then
+ * `geometry` (the GeoJSON geometry as text, empty when it is longer than
+ * {@link MAX_CSV_CELL_CHARACTERS}), each decoded field, then
  * `credit` and `saved`, so the credit and the day travel on every row. A
  * number is plain decimal text; a text that starts with `=`, `+`, `-`, `@`,
  * a tab or a carriage return gets a leading apostrophe so a spreadsheet
@@ -199,11 +225,13 @@ export function featuresToCsv(
       textCell(feature.id),
       isPoint ? fixedDecimal(geometry.coordinates[0]) : "",
       isPoint ? fixedDecimal(geometry.coordinates[1]) : "",
-      textCell(geometryText(feature)),
+      geometryCell(feature),
       ...fieldNames.map((name) => valueCell(feature.fields[name])),
       credit,
       textCell(info.savedOn),
     ].join(",");
   });
-  return [header.map(textCell).join(","), ...rows].join("\r\n");
+  return (
+    BYTE_ORDER_MARK + [header.map(textCell).join(","), ...rows].join("\r\n")
+  );
 }

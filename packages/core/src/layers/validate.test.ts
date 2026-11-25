@@ -1323,6 +1323,7 @@ describe("saveFeatures", () => {
       SAMPLE_TILE_LAYER,
       SAMPLE_VECTOR_LAYER,
       SAMPLE_HEATMAP_LAYER,
+      SAMPLE_IDENTIFY_LAYER,
     ]) {
       const definition = copy(layer);
       definition.saveFeatures = true;

@@ -2630,6 +2630,9 @@ export const MAX_COLLECTION_DEPTH = 16;
 export const MAX_COORDINATE_TEXT_LENGTH = 120;
 
 // @public
+export const MAX_CSV_CELL_CHARACTERS = 32767;
+
+// @public
 export const MAX_DIRECTION_STOPS = 10;
 
 // @public

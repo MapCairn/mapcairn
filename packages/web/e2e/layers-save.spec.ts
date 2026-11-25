@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
+import { readFileSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import { expect, test } from "./fixtures";
 import { axeViolations, inspectControls } from "./support/a11y";
@@ -7,6 +8,19 @@ import { RAINFALL, SAVEABLE } from "./support/catalogueLayers";
 import { mockLayerProviders } from "./support/layers";
 import { scriptCatalogue } from "./support/services";
 import { waitForStableLayout } from "./support/states";
+
+/** The features the mocked USGS feed answers with, which the saved files must hold. */
+const FIXTURE_QUAKES: {
+  properties: { mag: number };
+  geometry: { coordinates: number[] };
+}[] = JSON.parse(
+  readFileSync(
+    new URL("../src/layers/fixtures/usgs-2.5_day.json", import.meta.url),
+    "utf8",
+  ),
+).features;
+
+const FIRST_QUAKE = FIXTURE_QUAKES[0] as (typeof FIXTURE_QUAKES)[number];
 
 const SIZES = [
   { name: "phone", width: 390, height: 844 },
@@ -62,9 +76,11 @@ test.describe("saving a layer's features", () => {
       await readFile((await file.path()) as string, "utf8"),
     );
     expect(collection.type).toBe("FeatureCollection");
-    expect(collection.features.length).toBeGreaterThan(0);
+    expect(collection.features).toHaveLength(FIXTURE_QUAKES.length);
+    expect(collection.features[0].properties.mag).toBe(
+      FIRST_QUAKE.properties.mag,
+    );
     expect(collection.attribution).toEqual(["Credit: U.S. Geological Survey"]);
-    expect(JSON.stringify(collection)).not.toMatch(/\de-\d/);
     await expect(
       section.getByTestId("layer-save-status-catalogue-save"),
     ).toContainText("as catalogue-save-");
@@ -77,20 +93,44 @@ test.describe("saving a layer's features", () => {
       );
   });
 
-  test("saves CSV with the credit on each row", async ({ page, mapPage }) => {
+  test("saves CSV with a row for each feature and the credit on each row", async ({
+    page,
+    mapPage,
+  }) => {
     const section = mapPage.layersSection;
     await section.getByRole("switch", { name: "Saveable" }).click();
     const download = page.waitForEvent("download");
     await section.getByRole("button", { name: "Save as CSV" }).click();
     const file = await download;
     expect(file.suggestedFilename()).toMatch(/\.csv$/);
-    const rows = (await readFile((await file.path()) as string, "utf8")).split(
-      "\r\n",
+    const text = await readFile((await file.path()) as string, "utf8");
+    expect(text.startsWith("\uFEFF")).toBe(true);
+    const rows = text.slice(1).split("\r\n");
+    expect(rows).toHaveLength(FIXTURE_QUAKES.length + 1);
+    const columns = (row: string) =>
+      row.replace(/"(?:[^"]|"")*"/g, '""').split(",");
+    const header = columns(rows[0] as string);
+    expect(header).toEqual([
+      "feature_id",
+      "longitude",
+      "latitude",
+      "geometry",
+      "id",
+      "title",
+      "mag",
+      "credit",
+      "saved",
+    ]);
+    const first = columns(rows[1] as string);
+    expect(Number(first[header.indexOf("mag")])).toBe(
+      FIRST_QUAKE.properties.mag,
     );
-    expect(rows[0]).toMatch(
-      /^feature_id,longitude,latitude,geometry,.*,credit,saved$/,
+    expect(Number(first[header.indexOf("longitude")])).toBe(
+      FIRST_QUAKE.geometry.coordinates[0],
     );
-    expect(rows[1]).toContain("Credit: U.S. Geological Survey");
+    expect(first[header.indexOf("credit")]).toBe(
+      "Credit: U.S. Geological Survey",
+    );
   });
 });
 

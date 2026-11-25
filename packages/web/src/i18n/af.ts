@@ -658,7 +658,7 @@ export const AF_CATALOGUE: Record<MessageKey, string> = {
   "layers.save.geojson": "Stoor as GeoJSON",
   "layers.save.csv": "Stoor as CSV",
   "layers.save.note":
-    "Stoor die kenmerke wat nou gelaai is, hoogstens {max}, met die erkenning en die datum. Niks word êrens heen gestuur nie.",
+    "Stoor die gelaaide kenmerke, hoogstens {max}, met erkenning en datum. Niks word gestuur nie.",
   "layers.save.done":
     "{count} kenmerk van {name} gestoor as {filename}.|{count} kenmerke van {name} gestoor as {filename}.",
   "layers.save.doneCapped":

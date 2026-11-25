@@ -17,6 +17,7 @@ export function catalogueLayer(
   id: string,
   name: string,
   group: string,
+  extraFields: Record<string, string> = {},
 ): LayerDefinition {
   return {
     id,
@@ -29,7 +30,7 @@ export function catalogueLayer(
       kind: "feed",
       url: FEED_URL,
       decoder: "geojson",
-      fields: { id: "id", title: "properties.title" },
+      fields: { id: "id", title: "properties.title", ...extraFields },
     },
     style: { colour: { kind: "fixed", colour: "blue", label: name } },
     card: { title: "{title}", lines: [] },
@@ -52,7 +53,9 @@ export const QUAKES = catalogueLayer("catalogue-quakes", "Quakes", "Hazards");
  * for saving use this one.
  */
 export const SAVEABLE: LayerDefinition = {
-  ...catalogueLayer("catalogue-save", "Saveable", "Hazards"),
+  ...catalogueLayer("catalogue-save", "Saveable", "Hazards", {
+    mag: "properties.mag",
+  }),
   saveFeatures: true,
 };
 

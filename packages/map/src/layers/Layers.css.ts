@@ -327,11 +327,16 @@ export const saveFeatures = style({
   gap: tokens.space.xs,
 });
 
-/** The save buttons, side by side and wrapping on a narrow sheet. */
+/** The save buttons in equal columns that drop to one column, each full width, when two do not fit. */
 export const saveActions = style({
-  display: "flex",
-  flexWrap: "wrap",
+  display: "grid",
+  gridTemplateColumns: "repeat(auto-fit, minmax(12rem, 1fr))",
   gap: tokens.space.xs,
+});
+
+/** The result of saving, whose file name may break anywhere rather than overflow. */
+export const saveOutcome = style({
+  overflowWrap: "anywhere",
 });
 
 /** The collapsible list of loaded features. */
