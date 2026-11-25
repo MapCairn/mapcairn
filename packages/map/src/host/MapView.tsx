@@ -23,6 +23,7 @@ import {
   useRef,
 } from "react";
 import { useMessages, usePreferences } from "../services";
+import { LiveRegionScope } from "../ui/LiveRegion";
 import { StatusMessageFocusProvider } from "../ui/StatusMessage";
 import { VisuallyHidden } from "../ui/VisuallyHidden";
 import { MapContext, type MapContextValue } from "./MapContext";
@@ -240,6 +241,13 @@ export function MapView({
   const messages = useMessages();
   const { t } = messages;
   const mapName = landmarkName(messages, "host.map.label", label);
+  const formatAnnouncement = useMemo(
+    () =>
+      label === undefined || label === ""
+        ? undefined
+        : (text: string) => t("host.map.announcement", { label, text }),
+    [t, label],
+  );
 
   const getAdapter = useCallback(() => adapterRef.current, []);
   const longPress = useLongPress({ hostRef, getAdapter, onLongPress });
@@ -358,9 +366,11 @@ export function MapView({
 
   return (
     <MapContext.Provider value={map}>
-      <StatusMessageFocusProvider fallback={map.focusMap}>
-        {content}
-      </StatusMessageFocusProvider>
+      <LiveRegionScope format={formatAnnouncement}>
+        <StatusMessageFocusProvider fallback={map.focusMap}>
+          {content}
+        </StatusMessageFocusProvider>
+      </LiveRegionScope>
     </MapContext.Provider>
   );
 }

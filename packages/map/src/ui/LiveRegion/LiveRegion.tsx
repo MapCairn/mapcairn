@@ -8,6 +8,7 @@ import {
   useCallback,
   useContext,
   useEffect,
+  useMemo,
   useState,
 } from "react";
 import { useOptionalMessages } from "../../services/hooks";
@@ -114,6 +115,47 @@ export function LiveRegionProvider({ children }: LiveRegionProviderProps) {
       >
         {texts.assertive}
       </VisuallyHidden>
+    </LiveRegionContext.Provider>
+  );
+}
+
+/** Props for {@link LiveRegionScope}. */
+export interface LiveRegionScopeProps {
+  /**
+   * Rewrites the text of every announcement made below, after a `Message` is
+   * formatted. Leave it out and announcements pass through unchanged.
+   */
+  readonly format?: (text: string) => string;
+  /** The part of the app whose announcements `format` applies to. */
+  readonly children?: ReactNode;
+}
+
+/**
+ * Narrows the app-wide announcer for the part of the app below it: each
+ * announcement is formatted with `format`, then goes to the same live
+ * regions. `MapView` uses it to say which map a message came from. Without
+ * `format`, or outside a `LiveRegionProvider`, the announcer is unchanged.
+ */
+export function LiveRegionScope({ format, children }: LiveRegionScopeProps) {
+  const parent = useContext(LiveRegionContext);
+  const catalogueRef = useLatestRef(useOptionalMessages());
+  const formatRef = useLatestRef(format);
+  const scoping = format !== undefined;
+  const scoped = useMemo<Announce | null>(() => {
+    if (parent === null || !scoping) {
+      return parent;
+    }
+    return (message, options) => {
+      const text =
+        typeof message === "string"
+          ? message
+          : formatMessage(catalogueRef.current, message);
+      parent(formatRef.current?.(text) ?? text, options);
+    };
+  }, [parent, scoping, catalogueRef, formatRef]);
+  return (
+    <LiveRegionContext.Provider value={scoped}>
+      {children}
     </LiveRegionContext.Provider>
   );
 }

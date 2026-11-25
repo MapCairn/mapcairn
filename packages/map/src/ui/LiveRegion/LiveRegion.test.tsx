@@ -8,7 +8,12 @@ import {
 import { act, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ServicesProvider } from "../../services/ServicesProvider";
-import { type Announce, LiveRegionProvider, useAnnounce } from "./LiveRegion";
+import {
+  type Announce,
+  LiveRegionProvider,
+  LiveRegionScope,
+  useAnnounce,
+} from "./LiveRegion";
 
 let announce: Announce = () => undefined;
 
@@ -275,5 +280,49 @@ describe("announcing a message", () => {
     expect(polite().textContent).toBe("Map image saved.");
     act(() => vi.advanceTimersByTime(600));
     expect(polite().textContent).toBe("Latest");
+  });
+});
+
+describe("LiveRegionScope", () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("formats announcements below it and passes others through", () => {
+    render(
+      <LiveRegionProvider>
+        <LiveRegionScope format={(text) => `Scoped: ${text}`}>
+          <Capture />
+        </LiveRegionScope>
+      </LiveRegionProvider>,
+    );
+    act(() => announce("Hello"));
+    expect(polite().textContent).toBe("Scoped: Hello");
+  });
+
+  it("leaves the announcer unchanged without a format", () => {
+    render(
+      <LiveRegionProvider>
+        <LiveRegionScope>
+          <Capture />
+        </LiveRegionScope>
+      </LiveRegionProvider>,
+    );
+    act(() => announce("Hello"));
+    expect(polite().textContent).toBe("Hello");
+  });
+
+  it("does nothing outside a provider", () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    render(
+      <LiveRegionScope format={(text) => text}>
+        <Capture />
+      </LiveRegionScope>,
+    );
+    expect(() => announce("Hello")).not.toThrow();
+    warn.mockRestore();
   });
 });

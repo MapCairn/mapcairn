@@ -348,6 +348,7 @@ export const AF_CATALOGUE: Record<MessageKey, string> = {
   "chrome.sheet.close": "Maak toe",
   "host.map.label": "Kaart",
   "host.map.named": "{name} ({label})",
+  "host.map.announcement": "{label}: {text}",
   "host.map.roleDescription": "kaart",
   "ui.skipToMap": "Spring na die kaart",
   "ui.dismiss": "Maak toe",
