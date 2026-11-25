@@ -858,3 +858,27 @@ describe("the command line", { timeout: PROCESS_TEST_TIMEOUT_MS }, () => {
     );
   });
 });
+
+describe("the agent sources in this repository", () => {
+  const agentsFolder = path.resolve(
+    path.dirname(fileURLToPath(import.meta.url)),
+    "../../../../.claude/agents",
+  );
+  const sources = readdirSync(agentsFolder).filter((file) =>
+    file.endsWith(".md"),
+  );
+
+  it("has sources to check", () => {
+    expect(sources.length).toBeGreaterThan(0);
+  });
+
+  it.each(sources)(
+    "%s has one front matter block and no copy of itself in its body",
+    (file) => {
+      const text = readFileSync(path.join(agentsFolder, file), "utf8");
+      const fences = text.split("\n").filter((line) => line === "---");
+      expect(fences).toHaveLength(2);
+      expect(text.match(/^name: /gm)).toHaveLength(1);
+    },
+  );
+});
