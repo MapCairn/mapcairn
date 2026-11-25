@@ -279,6 +279,7 @@ export type MessageKey =
   | "chrome.sheet.close"
   | "host.map.label"
   | "host.map.named"
+  | "host.map.announcement"
   | "host.map.roleDescription"
   | "ui.skipToMap"
   | "ui.dismiss"
@@ -773,6 +774,11 @@ interface MessageParamOverrides {
   readonly "host.map.named": {
     readonly name: string;
     readonly label: string;
+  };
+  // An announcement with the label of the map it came from
+  readonly "host.map.announcement": {
+    readonly label: string;
+    readonly text: string;
   };
   // Formatting
   readonly "format.day": { readonly date: Date };

@@ -58,6 +58,7 @@ const SAME_AS_ENGLISH: Partial<Record<MessageKey, string>> = {
   "keyHelp.keys.enter": "The label on the Enter key.",
   "host.map.keyInstruction": "Only placeholders and punctuation.",
   "host.map.named": "Only placeholders and brackets.",
+  "host.map.announcement": "Only placeholders and a colon.",
   "privacy.contact.issuesLink": "The name of a service, kept as published.",
 };
 

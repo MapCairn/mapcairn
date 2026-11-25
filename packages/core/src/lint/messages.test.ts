@@ -680,6 +680,7 @@ const EXPECTED_PLACEHOLDERS: Record<MessageKey, readonly string[]> = {
   "keyHelp.draw.escape": [],
   "host.map.keyInstruction": ["keys", "description"],
   "host.map.named": ["name", "label"],
+  "host.map.announcement": ["label", "text"],
   "host.notes.privacy": [],
   "host.notes.pinLookup": [],
   "host.notes.routing": [],

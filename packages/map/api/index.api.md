@@ -808,6 +808,15 @@ export interface LiveRegionProviderProps {
 }
 
 // @public
+export function LiveRegionScope(input: LiveRegionScopeProps): JSX.Element;
+
+// @public
+export interface LiveRegionScopeProps {
+    readonly children?: ReactNode;
+    readonly format?: (text: string) => string;
+}
+
+// @public
 export type LocateState = "idle" | "locating" | "found" | "error";
 
 // @public
