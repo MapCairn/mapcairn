@@ -297,7 +297,7 @@ test.describe("the product page", () => {
       44,
     );
     const licence = product.footer.getByRole("link", { name: "Licence guide" });
-    await expect(licence).toHaveAttribute("href", "/docs/guides/licence/");
+    await expect(licence).toHaveAttribute("href", `${DOCS_URL}guides/licence/`);
     expect((await licence.boundingBox())?.height).toBeGreaterThanOrEqual(44);
   });
 
