@@ -271,4 +271,32 @@ describe("the coverage floors", () => {
       "`packages/web` has 95% for statements, functions and lines and 90% for branches",
     );
   });
+
+  it("for the scripts are what AGENTS.md says, and every exclusion has a reason", () => {
+    expect(floors(String.raw`scripts/\*\*`)).toEqual({
+      statements: 80,
+      branches: 80,
+      functions: 80,
+      lines: 80,
+    });
+    expect(read("AGENTS.md")).toContain(
+      "`scripts` has 80% for statements, branches, functions and lines",
+    );
+    const excluded = config.match(/exclude: \[([\s\S]*?)\n {6}\],/)?.[1] ?? "";
+    const scriptLines = excluded
+      .split("\n")
+      .map((line) => line.trim())
+      .filter(Boolean);
+    const unexplained = scriptLines.filter((line, index) => {
+      if (!line.startsWith('"scripts/')) {
+        return false;
+      }
+      const before = scriptLines.slice(0, index).reverse();
+      const lastNonScript = before.find(
+        (other) => !other.startsWith('"scripts/'),
+      );
+      return !lastNonScript?.startsWith("//");
+    });
+    expect(unexplained).toEqual([]);
+  });
 });
