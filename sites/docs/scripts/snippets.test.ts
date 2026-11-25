@@ -1,11 +1,20 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
-import { readdirSync, readFileSync } from "node:fs";
+import {
+  mkdirSync,
+  mkdtempSync,
+  readdirSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
+import { tmpdir } from "node:os";
 import { join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import {
   extractSnippets,
+  sourceFindings,
   typeCheckSnippets,
   unmarkedFindings,
 } from "./snippets";
@@ -92,6 +101,89 @@ describe("unmarkedFindings", () => {
   });
 });
 
+describe("sourceFindings", () => {
+  const SPDX = [
+    "// SPDX-License-Identifier: AGPL-3.0-only",
+    "// Copyright MapCairn contributors",
+  ];
+  const SOURCE = [
+    ...SPDX,
+    "const a = 1;",
+    "const b = 2;",
+    "export { a, b };",
+    "",
+  ];
+
+  /** A scratch repository holding `examples/x/main.ts`, and a page quoting it. */
+  function check(quoted: string[], info = 'source="examples/x/main.ts"') {
+    const repo = mkdtempSync(join(tmpdir(), "mapcairn-docs-source-"));
+    try {
+      mkdirSync(join(repo, "examples/x"), { recursive: true });
+      writeFileSync(join(repo, "examples/x/main.ts"), SOURCE.join("\n"));
+      const snippets = extractSnippets(
+        "guides/quote.md",
+        ["# Quote", "", `\`\`\`ts no-check ${info}`, ...quoted, "```", ""].join(
+          "\n",
+        ),
+      );
+      return sourceFindings(repo, snippets);
+    } finally {
+      rmSync(repo, { recursive: true, force: true });
+    }
+  }
+
+  it("reads the source path off the fence", () => {
+    const [snippet] = extractSnippets(
+      "a.md",
+      [
+        '```ts no-check source="examples/x/main.ts"',
+        "const a = 1;",
+        "```",
+      ].join("\n"),
+    );
+    expect(snippet?.source).toBe("examples/x/main.ts");
+    expect(extractSnippets("a.md", PAGE)[0]?.source).toBeNull();
+  });
+
+  it("checks a block in a language other than ts and tsx when it names a source, and never compiles or demands a mark of it", () => {
+    const snippets = extractSnippets(
+      "a.md",
+      ['```html source="examples/x/index.html"', "<p>Hi</p>", "```"].join("\n"),
+    );
+    expect(snippets).toHaveLength(1);
+    expect(snippets[0]?.language).toBe("html");
+    expect(unmarkedFindings(snippets)).toEqual([]);
+  });
+
+  it("passes a block that is the whole file without its licence header", () => {
+    expect(check(SOURCE.slice(2, -1))).toEqual([]);
+  });
+
+  it("passes a block of whole lines from the middle of the file", () => {
+    expect(check(["const b = 2;"])).toEqual([]);
+  });
+
+  it("fails a block whose text is not in the file, naming the page and line", () => {
+    expect(check(["const a = 99;"])).toEqual([
+      expect.stringMatching(/^guides\/quote\.md:3 .*examples\/x\/main\.ts/),
+    ]);
+  });
+
+  it("fails a block that joins two lines the file keeps apart", () => {
+    expect(check(["const a = 1;", "export { a, b };"])).toHaveLength(1);
+  });
+
+  it("fails a block that names a file that does not exist", () => {
+    expect(check(["const a = 1;"], 'source="examples/x/missing.ts"')).toEqual([
+      expect.stringMatching(/missing\.ts/),
+    ]);
+  });
+
+  it("fails an empty block", () => {
+    expect(check([])).toHaveLength(1);
+  });
+});
+
 describe("typeCheckSnippets", () => {
   it(
     "passes a snippet that compiles against the built packages",
@@ -150,6 +242,10 @@ describe("the documentation's own snippets", () => {
 
   it("marks every ts and tsx block", () => {
     expect(unmarkedFindings(snippets)).toEqual([]);
+  });
+
+  it("quotes the examples' source as it is", () => {
+    expect(sourceFindings(REPO, snippets)).toEqual([]);
   });
 
   it(

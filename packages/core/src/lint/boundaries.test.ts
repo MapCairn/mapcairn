@@ -192,6 +192,11 @@ describe("dependency-cruiser boundaries", () => {
       'import { ServicesProvider } from "@mapcairn/sdk";\nexport const x = ServicesProvider;\n',
     "examples/demo/src/goodUmbrellaAdapter.ts":
       'import { createAdapter } from "@mapcairn/sdk/adapter-maplibre";\nexport const x = createAdapter;\n',
+    // An example that uses the adapter package on its own, with no interface.
+    "examples/demo/src/goodAdapterPackage.ts":
+      'import { createAdapter } from "@mapcairn/adapter-maplibre";\nexport const x = createAdapter;\n',
+    "examples/demo/src/badAdapterDeep.ts":
+      'import { helper } from "../../../packages/adapter-maplibre/src/goodCore";\nexport const x = helper;\n',
 
     // the SDK never depends on an example.
     "packages/map/src/ui/badExample.ts":
@@ -218,6 +223,7 @@ describe("dependency-cruiser boundaries", () => {
     );
     for (const [consumer, target] of [
       ["examples/demo", "sdk"],
+      ["examples/demo", "adapter-maplibre"],
       ["packages/sdk", "map"],
       ["packages/sdk", "adapter-maplibre"],
       ["packages/web", "adapter-maplibre"],
@@ -310,6 +316,8 @@ describe("dependency-cruiser boundaries", () => {
     ["examples-use-public-entry-points", "examples/demo/src/badDeep.ts"],
     ["examples-use-public-entry-points", "examples/demo/src/badHost.ts"],
     ["examples-import-packages-by-name", "examples/demo/src/badDeep.ts"],
+    ["examples-use-public-entry-points", "examples/demo/src/badAdapterDeep.ts"],
+    ["examples-import-packages-by-name", "examples/demo/src/badAdapterDeep.ts"],
     [
       "examples-import-packages-by-name",
       "examples/demo/src/badRelativeEntry.ts",
@@ -402,6 +410,7 @@ describe("dependency-cruiser boundaries", () => {
     "examples/demo/src/goodEntry.ts",
     "examples/demo/src/goodUmbrella.ts",
     "examples/demo/src/goodUmbrellaAdapter.ts",
+    "examples/demo/src/goodAdapterPackage.ts",
     "packages/sdk/src/index.ts",
     "packages/sdk/src/adapterMaplibre.ts",
   ])("accepts %s", (file) => {

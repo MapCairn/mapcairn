@@ -45,7 +45,7 @@ The engine adapter is its own package, `@mapcairn/adapter-maplibre`, released wi
 
 The ui layer (`packages/map` and `packages/react`) may read the clock (`performance.now()`, for the sheet's flick speed), make blob URLs (`URL.createObjectURL` and `URL.revokeObjectURL`, for the image download) and call the WebMCP API (`document.modelContext`) directly. None of these is a port. A port is added only when a second implementation is needed, for example a host that must replace the value or a test that cannot control it. Core still reads none of them.
 
-`npm run lint` enforces these rules with dependency-cruiser (layers, engine imports, that only the composition root imports the adapter package, and that nothing imports the umbrella), Biome (restricted imports and globals, accessibility rules) and the harmony scanner in `scripts/harmony` (style, markup and wiring rules), whose rules are proven by Vitest tests in `packages/core/src/lint`. A violation fails the build.
+`npm run lint` enforces these rules with dependency-cruiser (layers, engine imports, that only the composition root, and an example by package name, imports the adapter package, and that nothing imports the umbrella), Biome (restricted imports and globals, accessibility rules) and the harmony scanner in `scripts/harmony` (style, markup and wiring rules), whose rules are proven by Vitest tests in `packages/core/src/lint`. A violation fails the build.
 
 ## Building the SDK packages
 
