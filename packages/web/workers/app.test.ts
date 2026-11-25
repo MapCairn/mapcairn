@@ -196,6 +196,46 @@ describe.each(REDIRECTED)("worker fetch handler on %s", (hostname) => {
   });
 });
 
+describe("worker redirects never leave the site's own origins", () => {
+  beforeEach(() => {
+    requestHandlerMock.mockClear();
+  });
+
+  it.each([
+    [
+      "https://www.mapcairn.com//evil.example/x",
+      "https://mapcairn.com/evil.example/x",
+    ],
+    [
+      "https://karta.timothybrits.co.za///evil.example",
+      "https://mapcairn.com/evil.example",
+    ],
+    [
+      "https://karta.timothybrits.co.za/\\evil.example",
+      "https://mapcairn.com/evil.example",
+    ],
+    [
+      "https://mapcairn.com/docs//evil.example",
+      "https://docs.mapcairn.com/evil.example",
+    ],
+    [
+      "https://mapcairn.com/docs/\\evil.example",
+      "https://docs.mapcairn.com/evil.example",
+    ],
+    [
+      "https://www.mapcairn.com/docs///evil.example/y?q=1",
+      "https://docs.mapcairn.com/evil.example/y?q=1",
+    ],
+  ])("sends %s to %s", async (from, expected) => {
+    const workerModule = await import("./app");
+
+    const response = await workerModule.default.fetch(new Request(from));
+
+    expect(response.status).toBe(301);
+    expect(response.headers.get("Location")).toBe(expected);
+  });
+});
+
 describe("worker fetch handler on mapcairn.com for the old documentation path", () => {
   beforeEach(() => {
     requestHandlerMock.mockClear();

@@ -18,6 +18,16 @@ const requestHandler = createRequestHandler(
 const DOCS_PREFIX = "/docs";
 
 /**
+ * The address of `path` and `search` on `base`'s origin. The address is joined
+ * as text with exactly one leading slash on the path, never parsed against the
+ * base: a path such as `//example.com` would otherwise be read as another
+ * host and make the redirect leave the site.
+ */
+function addressOn(base: string, path: string, search: string): string {
+  return `${new URL(base).origin}/${path.replace(/^\/+/, "")}${search}`;
+}
+
+/**
  * The address a page request should be sent to for good, or null when this
  * Worker answers it. A path under `/docs` goes to the documentation site on
  * any hostname, and any other path on a redirected hostname goes to the same
@@ -26,11 +36,10 @@ const DOCS_PREFIX = "/docs";
 function permanentTarget(url: URL): string | null {
   const { pathname, search } = url;
   if (pathname === DOCS_PREFIX || pathname.startsWith(`${DOCS_PREFIX}/`)) {
-    const rest = pathname.slice(DOCS_PREFIX.length) || "/";
-    return new URL(rest + search, DOCS_URL).toString();
+    return addressOn(DOCS_URL, pathname.slice(DOCS_PREFIX.length), search);
   }
   if (REDIRECTED_HOSTNAMES.includes(url.hostname)) {
-    return new URL(pathname + search, SITE_URL).toString();
+    return addressOn(SITE_URL, pathname, search);
   }
   return null;
 }
