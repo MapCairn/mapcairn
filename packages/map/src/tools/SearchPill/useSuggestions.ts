@@ -4,13 +4,14 @@ import {
   announceNoSuggestions,
   announceSuggestions,
   announceSuggestionsUnavailable,
+  isCoordinateText,
   PortAbortError,
   SearchError,
   type SearchResult,
 } from "@mapcairn/core";
 import { useLatestRef } from "@mapcairn/react";
 import { useEffect, useRef, useState } from "react";
-import { useSuggestionProvider } from "../../services/hooks";
+import { useMessages, useSuggestionProvider } from "../../services/hooks";
 import { useAnnounce } from "../../ui/LiveRegion";
 
 /** How long the text must stay unchanged before suggestions are asked for. */
@@ -30,7 +31,8 @@ const NONE: readonly SearchResult[] = [];
 /**
  * A run of letters that makes text a place name. Text with none (digits,
  * signs, a degree mark and at most a compass letter or two) may be a
- * coordinate pair still being typed, which is never sent to a service.
+ * coordinate pair still being typed, which is never sent to a service. A
+ * grid reference does carry letters, so `isCoordinateText` rules it out too.
  */
 const WORD = /\p{L}{3,}/u;
 
@@ -41,8 +43,9 @@ const WORD = /\p{L}{3,}/u;
  *
  * A request starts only when the trimmed text has been unchanged for
  * {@link SUGGEST_DEBOUNCE_MS}, is at least {@link MIN_SUGGEST_LENGTH}
- * characters and has a word in it, so a coordinate pair typed digit by digit
- * is never sent (the search itself answers a whole pair without a service).
+ * characters and has a word in it and is not a coordinate (a pair, or a UTM or
+ * MGRS reference, finished or still being typed, see `isCoordinateText`), so
+ * a coordinate typed character by character is never sent (the search itself answers a whole pair without a service).
  * Each change of text aborts the request before it, so an
  * answer for older text never arrives after a newer one. Nothing is asked
  * while `enabled` is false, which a caller uses after the person has picked
@@ -65,6 +68,7 @@ export function useSuggestions(
   const provider = useSuggestionProvider();
   const announce = useAnnounce();
   const announceRef = useLatestRef(announce);
+  const messagesRef = useLatestRef(useMessages());
   const text = query.trim();
   const [suggestions, setSuggestions] = useState<readonly SearchResult[]>(NONE);
   const failures = useRef(0);
@@ -76,7 +80,8 @@ export function useSuggestions(
       provider === undefined ||
       !enabled ||
       text.length < MIN_SUGGEST_LENGTH ||
-      !WORD.test(text)
+      !WORD.test(text) ||
+      isCoordinateText(text, messagesRef.current)
     ) {
       setSuggestions(NONE);
       return;
@@ -135,7 +140,7 @@ export function useSuggestions(
       clearTimeout(timer);
       own.abort();
     };
-  }, [provider, enabled, text, announceRef]);
+  }, [provider, enabled, text, announceRef, messagesRef]);
 
   return suggestions;
 }

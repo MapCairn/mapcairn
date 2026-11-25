@@ -8,8 +8,9 @@ import {
   forward,
   inverse,
   latInBand,
-  roundedNorthing,
+  placeOnGrid,
   roundToCentimetre,
+  truncatedNorthing,
   wrapLng,
 } from "./utm";
 
@@ -33,6 +34,13 @@ const SQUARE_SIDE = 100_000;
  * The digits of a one-metre reference, the finest MGRS writes.
  */
 const FINEST_DIGITS = 5;
+
+/**
+ * The fewest digits of a reference the reader accepts: two for the easting
+ * and two for the northing, a 1 km square. Fewer would let a date or an
+ * address ("1 Dec 15", "12 Rue 10") read as a position.
+ */
+const MIN_DIGITS = 4;
 
 /**
  * The northing cycle of the row letters, in metres: the letters repeat
@@ -69,17 +77,21 @@ function columnSet(zone: number): string {
  * and 37 are widened to twelve degrees each while zones 32, 34 and 36
  * cover nothing.
  *
- * @returns The reference, or `null` when the position is outside the MGRS
- *   grid, which is the UTM grid: 80° S to 84° N.
+ * @returns The reference, or `null` when the position is not finite or is
+ *   outside the MGRS grid, which is the UTM grid: 80° S to 84° N. A longitude
+ *   outside −180 to 180 is wrapped first.
  */
 export function formatMgrs(position: LatLng): string | null {
-  const band = bandLetterFor(position.lat);
-  if (band === null) {
+  const place = placeOnGrid(position);
+  if (place === null) {
     return null;
   }
-  const point = forward(position);
-  const easting = Math.round(point.easting);
-  const northing = roundedNorthing(point.northing);
+  const band = bandLetterFor(place.lat) as string;
+  const point = forward(place);
+  // The digits are truncated, not rounded: the reference names the one-metre
+  // square that holds the point, as the MGRS convention has it.
+  const easting = Math.floor(point.easting);
+  const northing = truncatedNorthing(point.northing);
   // Within the grid the easting stays between about 127 000 and 834 000 m,
   // so the column index is always 0 to 7 and the row 0 to 19, and the
   // letters are always there.
@@ -94,16 +106,20 @@ export function formatMgrs(position: LatLng): string | null {
 }
 
 /**
- * An MGRS reference: zone, band letter, two square letters, then the
- * digits of the easting and the northing, written together or apart.
+ * An MGRS reference: the grid zone designator (zone and band letter, written
+ * together, as "31U"), two square letters, then the digits of the easting and
+ * the northing, written together or apart. The designator is one token, so
+ * "1 Dec 2015" and "12 Rue 1012", which a date or an address might be, never
+ * read as a reference.
  */
-const MGRS_PATTERN = /^(\d{1,2})\s*([A-Z])\s*([A-Z]{2})\s*([\d\s]{2,11})$/i;
+const MGRS_PATTERN = /^(\d{1,2})([A-Z])\s*([A-Z]{2})\s*([\d\s]{4,11})$/i;
 
 /**
  * Reads an MGRS reference and returns the position, or `null` when the
- * text is not one. The zone, band letter, 100 km square and digits may be
- * written with or without spaces, in either letter case, at any precision
- * from 10 km (two digits) to 1 m (ten). A bare 100 km square ("31U CT")
+ * text is not one. The zone and band letter are written together ("31U");
+ * the 100 km square and the digits may be written with or without spaces,
+ * in either letter case, at any precision from 1 km (four digits) to 1 m
+ * (ten), and runs of white space are read as one space. A bare 100 km square ("31U CT")
  * names an area rather than a point and is refused.
  *
  * A reference is refused when its zone is outside 1 to 60, its band letter
@@ -117,7 +133,7 @@ const MGRS_PATTERN = /^(\d{1,2})\s*([A-Z])\s*([A-Z]{2})\s*([\d\s]{2,11})$/i;
  * @internal
  */
 export function parseMgrs(text: string): LatLng | null {
-  const match = MGRS_PATTERN.exec(text.trim());
+  const match = MGRS_PATTERN.exec(text.trim().replace(/\s+/g, " "));
   if (match === null) {
     return null;
   }
@@ -129,7 +145,11 @@ export function parseMgrs(text: string): LatLng | null {
   // count of digits. (A regex split would be greedy: "041865" would come
   // apart as "04186" and "5".)
   const digits = (match[4] as string).replace(/\s+/g, "");
-  if (digits.length < 2 || digits.length > 10 || digits.length % 2 !== 0) {
+  if (
+    digits.length < MIN_DIGITS ||
+    digits.length > 10 ||
+    digits.length % 2 !== 0
+  ) {
     return null;
   }
   const eastingDigits = digits.slice(0, digits.length / 2);

@@ -11,27 +11,27 @@ import { parseCoordinates } from "./parseCoordinates";
  * package.
  */
 
+const GRID_SLACK = 1.02;
+
 describe("formatMgrs", () => {
   it("writes the zone, band letter, 100 km square and one-metre digits", () => {
     // published: forward of the equator crossing of zone 31
     expect(formatMgrs({ lat: 0, lng: 0 })).toBe("31N AA 66021 00000");
     // published: forward of 0.00001 degrees north of it
     expect(formatMgrs({ lat: 0.00001, lng: 0 })).toBe("31N AA 66021 00001");
-    // The proj4js mgrs suite publishes forward of Las Vegas as
-    // "11SPA7234911844"; PROJ puts the northing at 4 011 844.975 m, which
-    // rounds to ...11845, so the suite's last digit is a metre off and the
-    // string here follows the rounding the other published anchors use.
+    // published: forward of Las Vegas. PROJ puts the northing at
+    // 4 011 844.975 m, and the digits are truncated, not rounded.
     expect(formatMgrs({ lat: 36.2361322, lng: -115.0820944 })).toBe(
-      "11S PA 72349 11845",
+      "11S PA 72349 11844",
     );
     expect(formatMgrs({ lat: 51.5074, lng: -0.1278 })).toBe(
-      "30U XC 99316 10164",
+      "30U XC 99316 10163",
     );
     expect(formatMgrs({ lat: -33.9249, lng: 18.4241 })).toBe(
-      "34H BH 61882 43182",
+      "34H BH 61881 43182",
     );
     expect(formatMgrs({ lat: -0.1807, lng: -78.4678 })).toBe(
-      "17M QV 81861 80008",
+      "17M QV 81861 80007",
     );
     expect(formatMgrs({ lat: 38.8895, lng: -77.0347 })).toBe(
       "18S UJ 23530 06482",
@@ -39,18 +39,63 @@ describe("formatMgrs", () => {
   });
 
   it("writes the Norway exception zones", () => {
-    expect(formatMgrs({ lat: 60.391, lng: 5.322 })).toBe("32V KN 97347 00615");
-    expect(formatMgrs({ lat: 60, lng: 1.5 })).toBe("31V DG 16338 52360");
-    expect(formatMgrs({ lat: 60, lng: 11.9 })).toBe("32V PM 61721 54957");
+    expect(formatMgrs({ lat: 60.391, lng: 5.322 })).toBe("32V KN 97346 00615");
+    expect(formatMgrs({ lat: 60, lng: 1.5 })).toBe("31V DG 16338 52359");
+    expect(formatMgrs({ lat: 60, lng: 11.9 })).toBe("32V PM 61720 54956");
   });
 
   it("writes the Svalbard exception zones", () => {
     expect(formatMgrs({ lat: 78.2232, lng: 15.6267 })).toBe(
-      "33X WG 14279 83355",
+      "33X WG 14278 83355",
     );
-    expect(formatMgrs({ lat: 78.2232, lng: 5 })).toBe("31X EG 45560 84058");
-    expect(formatMgrs({ lat: 78.2232, lng: 25 })).toBe("35X MG 54440 84058");
-    expect(formatMgrs({ lat: 78.2232, lng: 40 })).toBe("37X EG 22783 83474");
+    expect(formatMgrs({ lat: 78.2232, lng: 5 })).toBe("31X EG 45560 84057");
+    expect(formatMgrs({ lat: 78.2232, lng: 25 })).toBe("35X MG 54439 84057");
+    expect(formatMgrs({ lat: 78.2232, lng: 40 })).toBe("37X EG 22783 83473");
+  });
+
+  it("truncates to the metre, as the convention has it", () => {
+    // The centre of a one-metre square sits 0.5 m short of its far edges.
+    // Rounding would name the next square along; truncation names this one.
+    const centre = parseCoordinates("31U CT 12345 67890");
+    expect(formatMgrs(centre as { lat: number; lng: number })).toBe(
+      "31U CT 12345 67890",
+    );
+  });
+
+  it("wraps a longitude outside -180 to 180 before choosing the zone", () => {
+    expect(formatMgrs({ lat: 10, lng: 363 })).toBe(
+      formatMgrs({ lat: 10, lng: 3 }),
+    );
+  });
+
+  it("refuses a position that is not a number", () => {
+    expect(formatMgrs({ lat: Number.NaN, lng: 0 })).toBeNull();
+    expect(formatMgrs({ lat: 10, lng: Number.NaN })).toBeNull();
+    expect(formatMgrs({ lat: 10, lng: Number.POSITIVE_INFINITY })).toBeNull();
+  });
+
+  it("keeps the antimeridian in range when it reads back", () => {
+    const text = formatMgrs({ lat: 0, lng: 180 });
+    expect(
+      Math.abs(parseCoordinates(text ?? "")?.lng ?? 999),
+    ).toBeLessThanOrEqual(180);
+  });
+
+  it("writes a position a hair south of the equator below the false northing", () => {
+    expect(formatMgrs({ lat: -1e-7, lng: 0 })).toBe("31M AV 66021 99999");
+  });
+
+  it("round-trips a point whose 100 km row starts above its band's central-meridian top", () => {
+    // Band V stops at 7 097 014 m on the central meridian, but at 63.9999
+    // degrees north, 3 degrees east of zone 32's meridian, the northing is
+    // about 7 100 460 m, in the row that starts at 7 100 000 m, above that
+    // top. Reading the row back needs the allowance for the grid's growth.
+    const position = { lat: 63.9999, lng: 11.99 };
+    const text = formatMgrs(position);
+    expect(text?.startsWith("32V")).toBe(true);
+    const back = parseCoordinates(text ?? "");
+    expect(back?.lat).toBeCloseTo(position.lat, 4);
+    expect(back?.lng).toBeCloseTo(position.lng, 4);
   });
 
   it("refuses latitudes outside the UTM grid", () => {
@@ -64,7 +109,7 @@ describe("formatMgrs", () => {
 
 describe("parseCoordinates of MGRS references", () => {
   it("reads a published reference", () => {
-    const position = parseCoordinates("11 SPA 72349 11844");
+    const position = parseCoordinates("11S PA 72349 11844");
     expect(position?.lat).toBeCloseTo(36.2361322, 4);
     expect(position?.lng).toBeCloseTo(-115.0820944, 4);
   });
@@ -75,21 +120,100 @@ describe("parseCoordinates of MGRS references", () => {
       parseCoordinates("4QFJ1234567890"),
     );
     expect(parseCoordinates("11SPA7234911844")).toEqual(
-      parseCoordinates("11 SPA 72349 11844"),
+      parseCoordinates("11S PA 72349 11844"),
     );
   });
 
   it("reads lowercase letters", () => {
     expect(parseCoordinates("11spa7234911844")).toEqual(
-      parseCoordinates("11 SPA 72349 11844"),
+      parseCoordinates("11S PA 72349 11844"),
     );
   });
 
-  it("reads coarser precisions", () => {
-    // published: the centre of the 10 km square 33UXP04
-    const square = parseCoordinates("33U XP 05004 44997");
-    expect(square?.lat).toBeCloseTo(48.24949, 4);
-    expect(square?.lng).toBeCloseTo(16.4145, 4);
+  it("reads coarser precisions as the centre of the square", () => {
+    // The 1 km, 100 m and 10 m squares that hold the published point
+    // 33U XP 05004 44997. The point is somewhere in each square, so it is
+    // within half the square's width of the centre, with a little room for
+    // the grid scale.
+    const point = parseCoordinates("33U XP 05004 44997");
+    expect(point?.lat).toBeCloseTo(48.24949, 4);
+    expect(point?.lng).toBeCloseTo(16.4145, 4);
+    const withinSquare = (text: string, halfWidthMetres: number): void => {
+      const square = parseCoordinates(text);
+      const metresPerDegree = 111_320;
+      expect(
+        Math.abs((square?.lat ?? 0) - (point?.lat ?? 0)) * metresPerDegree,
+      ).toBeLessThanOrEqual(halfWidthMetres * GRID_SLACK);
+      expect(
+        Math.abs((square?.lng ?? 0) - (point?.lng ?? 0)) *
+          metresPerDegree *
+          Math.cos(((point?.lat ?? 0) * Math.PI) / 180),
+      ).toBeLessThanOrEqual(halfWidthMetres * GRID_SLACK);
+    };
+    withinSquare("33UXP0544", 500);
+    withinSquare("33UXP050449", 50);
+    withinSquare("33UXP05004499", 5);
+  });
+
+  it("names a coarser reference by its square's centre, not its corner", () => {
+    // 33UXP0444 is the 1 km square from 4 000 m, 4 000 m to 5 000 m, 5 000 m
+    // of the 100 km square; the corner reads one-metre digits 04000 44000.
+    const centre = parseCoordinates("33UXP0444");
+    const corner = parseCoordinates("33UXP 04000 44000");
+    expect(centre?.lat).toBeGreaterThan(corner?.lat ?? 0);
+    expect(centre?.lng).toBeGreaterThan(corner?.lng ?? 0);
+  });
+
+  it("refuses fewer than four digits", () => {
+    expect(parseCoordinates("33UXP04")).toBeNull();
+    expect(parseCoordinates("33U XP 04")).toBeNull();
+  });
+
+  it("reads references of 4, 6, 8 and 10 digits", () => {
+    for (const text of [
+      "33UXP0444",
+      "33UXP050449",
+      "33UXP05004499",
+      "33UXP0500444997",
+    ]) {
+      expect(parseCoordinates(text)).not.toBeNull();
+    }
+  });
+
+  it("never reads a date or an address as a reference", () => {
+    for (const text of [
+      "1 Dec 15",
+      "7 Jan 12",
+      "1 Feb 10",
+      "1 Dec 2015",
+      "7 Jan 2012",
+      "1 Feb 2010",
+      "3 Jun 1999",
+      "31 Dec 1999",
+      "12 Rue 10",
+      "5 Pub 12",
+      "12 Rue 1012",
+      "5 Pub 1234",
+      "12 Pub 5678",
+    ]) {
+      expect(parseCoordinates(text), text).toBeNull();
+    }
+  });
+
+  it("refuses a space between the zone and the band letter", () => {
+    expect(parseCoordinates("11 SPA 72349 11844")).toBeNull();
+  });
+
+  it("reads runs of white space as one space", () => {
+    expect(parseCoordinates("31U CT 12345  67890")).toEqual(
+      parseCoordinates("31U CT 12345 67890"),
+    );
+    expect(parseCoordinates("31U  CT   12345 \t 67890")).toEqual(
+      parseCoordinates("31U CT 12345 67890"),
+    );
+    expect(parseCoordinates("34H   261882  6243182")).toEqual(
+      parseCoordinates("34H 261882 6243182"),
+    );
   });
 
   it("reads a reference written on a neighbouring zone's grid", () => {

@@ -2,7 +2,10 @@
 // Copyright MapCairn contributors
 import { describe, expect, it } from "vitest";
 import { FakeMessageCatalogue } from "../fakes/FakeMessageCatalogue";
-import { coordinateSearchResult } from "./coordinateSearchResult";
+import {
+  coordinateSearchResult,
+  isCoordinateText,
+} from "./coordinateSearchResult";
 import { parseCoordinates } from "./parseCoordinates";
 
 const messages = new FakeMessageCatalogue();
@@ -36,7 +39,7 @@ describe("coordinateSearchResult", () => {
   });
 
   it("answers an MGRS reference", () => {
-    const result = coordinateSearchResult("11 SPA 72349 11844", messages);
+    const result = coordinateSearchResult("11S PA 72349 11844", messages);
     expect(result?.centre?.lat).toBeCloseTo(36.2361322, 4);
     expect(result?.centre?.lng).toBeCloseTo(-115.0820944, 4);
   });
@@ -114,5 +117,58 @@ describe("coordinateSearchResult", () => {
     expect(coordinateSearchResult("-26.2041, 28.0473", afrikaans)?.label).toBe(
       "Koördinate 26.20410° S, 28.04730° O",
     );
+  });
+});
+
+describe("isCoordinateText", () => {
+  it("is true for text that reads as a position", () => {
+    for (const text of [
+      "-26.2041, 28.0473",
+      "26.2041 south 28.0473 east",
+      "31U 500000 5500000",
+      "11SPA7234911844",
+      "11S PA 72349 11844",
+    ]) {
+      expect(isCoordinateText(text, messages), text).toBe(true);
+    }
+  });
+
+  it("reads the words of the catalogue's language", () => {
+    const afrikaans = new FakeMessageCatalogue({
+      language: "af",
+      overrides: { "format.wordSouth": "suid", "format.wordEast": "oos" },
+    });
+    expect(isCoordinateText("26.2041 suid, 28.0473 oos", afrikaans)).toBe(true);
+  });
+
+  it("is true for a grid reference still being typed, spaced or not", () => {
+    for (const text of [
+      "11SPA",
+      "11SPA72",
+      "11SPA7234911",
+      "11S PA 723",
+      "11S P",
+      "31U",
+      "31U 500",
+      "31 N 5000",
+      "34h26188",
+      "٣١U 500",
+      "31U CT 12345 678",
+    ]) {
+      expect(isCoordinateText(text, messages), text).toBe(true);
+    }
+  });
+
+  it("is false for a place name", () => {
+    for (const text of [
+      "Cape Town",
+      "Paris",
+      "5 Main Street",
+      "10 Downing Street",
+      "12345",
+      "",
+    ]) {
+      expect(isCoordinateText(text, messages), text).toBe(false);
+    }
   });
 });

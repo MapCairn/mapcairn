@@ -161,6 +161,29 @@ describe("useSuggestions", () => {
     },
   );
 
+  it.each([
+    "11SPA7234911844",
+    "11spa7234911844",
+    "11S PA 72349 11844",
+    "11SPA72349",
+    "11SPA",
+    "31U CT 12345 67890",
+    "31U CT 123",
+    "33UXP0544",
+    "31U 500000 5500000",
+    "31N 500000 4200000",
+    "34h261882 6243182",
+    "26.2041 south, 28.0473 east",
+  ])(
+    "asks nothing for %s, a coordinate reference or one being typed",
+    async (query) => {
+      const { result, fake } = setup({ query });
+      await advance(SUGGEST_DEBOUNCE_MS * 2);
+      expect(fake.suggestCalls).toHaveLength(0);
+      expect(result.current).toEqual([]);
+    },
+  );
+
   it.each(["12 Main St", "N1 Highway", "Café"])(
     "asks about %s, which has a word in it",
     async (query) => {

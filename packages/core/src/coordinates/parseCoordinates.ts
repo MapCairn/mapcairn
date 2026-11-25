@@ -492,23 +492,33 @@ function readPair(text: string, words: Words): LatLng | null {
  *   reads back as the same place to about a metre
  * - a UTM reference: the zone, a band letter or a hemisphere letter, then
  *   the easting to the metre and the northing to the metre, with or
- *   without spaces, in either letter case: `31U 500000 4200000`,
- *   `31 N 500000 4200000`, `34h261882 6243182`. South of the equator the
- *   written northing carries the 10 000 000 m offset. A reference without
- *   a letter is ambiguous and refused, as is one whose zone is outside 1
- *   to 60, whose letter is not a band or hemisphere letter, whose northing
+ *   without spaces, in either letter case: `31U 500000 5500000`,
+ *   `31 N 500000 4200000`, `34h261882 6243182`. A letter that is N or S is
+ *   always read as a hemisphere letter, never as band N or band S: S names
+ *   the southern hemisphere, whose northing carries the 10 000 000 m offset.
+ *   A reference another tool wrote with band S (32 to 40 degrees north)
+ *   must therefore be written with N, as `formatUtm` does, or it names a
+ *   place in the southern hemisphere instead. Any other letter is a band
+ *   letter, which names the eight-degree latitude band and with it the
+ *   hemisphere. The easting must be between 100 000 and 900 000 m, wider
+ *   than any zone's grid (about 166 000 to 834 000 m at the equator) so a
+ *   reference written across a zone line still reads. A reference without a
+ *   letter is ambiguous and refused, as is one whose zone is outside 1 to
+ *   60, whose letter is not a band or hemisphere letter, whose northing
  *   contradicts its band, or whose position is outside the UTM grid (80° S
- *   to 84° N). A reference whose position lies in the next zone's
- *   territory still reads, because surveyors work across a zone line on
- *   one zone's grid
- * - an MGRS reference: the zone, band letter, 100 km square and the digits
- *   of the easting and northing, with or without spaces, in either letter
- *   case, at any precision from 10 km (two digits) to 1 m (ten):
- *   `31U CT 12345 67890`, `11SPA7234911844`. A bare 100 km square names an
- *   area rather than a point and is refused, as is a reference whose
- *   square letters do not belong to its zone, whose digits are of unequal
- *   count, or whose position is outside the band the reference names. A
- *   reference written on a neighbouring zone's grid still reads
+ *   to 84° N)
+ * - an MGRS reference: the zone and band letter written together, the
+ *   100 km square and the digits of the easting and northing, with or
+ *   without spaces between the square and the digits (runs of white space
+ *   count as one), in either letter case, at any precision from 1 km (four
+ *   digits) to 1 m (ten): `31U CT 12345 67890`, `11SPA7234911844`. Fewer
+ *   than four digits, or a space between the zone and the band letter, is
+ *   refused, so a date or an address ("1 Dec 2015", "12 Rue 10") is never
+ *   read as a position. A bare 100 km square names an area rather than a
+ *   point and is refused, as is a reference whose square letters do not
+ *   belong to its zone, whose digits are of unequal count, or whose
+ *   position is outside the band the reference names. A reference written
+ *   on a neighbouring zone's grid still reads
  *
  * Every value must carry a mark that says it is a degree value: a decimal
  * point with digits after it, or a degree sign or the word degrees. A bare

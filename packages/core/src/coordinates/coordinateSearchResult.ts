@@ -10,6 +10,7 @@ import {
 import type { LatLng } from "../ports/geometry";
 import type { MessageCatalogue } from "../ports/messages";
 import type { SearchResult } from "../ports/search";
+import { normaliseCoordinateText } from "./normaliseCoordinateText";
 import { parseCoordinates } from "./parseCoordinates";
 
 const ID_DECIMAL_PLACES = 5;
@@ -54,4 +55,30 @@ export function coordinateSearchResult(
     }),
     centre: position,
   };
+}
+
+/**
+ * A grid reference as far as it can have been typed: the zone, one letter (a
+ * band or hemisphere letter), up to two more letters (the 100 km square) and
+ * then digits and spaces. A prefix of "11SPA7234911844" or "31U 500000
+ * 5500000" matches; "Cape Town" and "5 Main Street" do not.
+ */
+const GRID_REFERENCE_UNDER_WAY = /^\d{1,2}\s*[A-Z](?:\s*[A-Z]{1,2})?[\d\s]*$/i;
+
+/**
+ * Whether text is, or may be the start of, a coordinate: text that reads as a
+ * position ({@link coordinateSearchResult}), or a UTM or MGRS reference that
+ * has not been finished. A caller that sends text to a place search service
+ * as it is typed skips this text, so a coordinate is never sent to one, even
+ * a reference whose letters ("SPA") look like a word.
+ */
+export function isCoordinateText(
+  text: string,
+  messages: MessageCatalogue,
+): boolean {
+  const normalised = normaliseCoordinateText(text.trim());
+  return (
+    GRID_REFERENCE_UNDER_WAY.test(normalised) ||
+    coordinateSearchResult(text, messages) !== null
+  );
 }

@@ -94,7 +94,7 @@ const IDLE: SearchState = { status: "idle" };
  * Cancellable place search over the services' `SearchProvider`, run only
  * when the user submits. Text that is a coordinate pair, such as
  * `-26.2041, 28.0473`, `26°12'14.8"S 28°02'50.3"E`, a UTM reference such as
- * `31U 500000 4200000` or an MGRS reference such as `31U CT 12345 67890`,
+ * `31U 500000 5500000` or an MGRS reference such as `31U CT 12345 67890`,
  * is answered here with one result for that place and never reaches the
  * provider, so it sends no request. Nothing is sent to the geocoder while
  * they type, as the OpenStreetMap Foundation's Nominatim policy forbids

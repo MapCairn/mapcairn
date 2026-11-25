@@ -75,6 +75,52 @@ describe("formatUtm", () => {
     expect(formatUtm({ lat: 84, lng: 25 })?.slice(0, 3)).toBe("35X");
   });
 
+  it("starts each zone exception at its edge", () => {
+    const zoneOf = (lat: number, lng: number): string | undefined =>
+      formatUtm({ lat, lng })?.split(" ")[0];
+    // Norway: band V runs 56 to 64 degrees north, zone 32 from 3 to 12 east.
+    expect(zoneOf(56, 3)).toBe("32V");
+    expect(zoneOf(56, 2.9999999)).toBe("31V");
+    expect(zoneOf(60, 12)).toBe("33V");
+    expect(zoneOf(60, 11.9999999)).toBe("32V");
+    expect(zoneOf(55.9999999, 5)).toBe("31U");
+    expect(zoneOf(64, 5)).toBe("31W");
+    expect(zoneOf(63.9999999, 5)).toBe("32V");
+    // Svalbard: band X from 72 north, zones 31, 33, 35 and 37.
+    expect(zoneOf(72, 7)).toBe("31X");
+    expect(zoneOf(72, 9)).toBe("33X");
+    expect(zoneOf(78, 9.5)).toBe("33X");
+    expect(zoneOf(72, 21)).toBe("35X");
+    expect(zoneOf(72, 20.9999999)).toBe("33X");
+    expect(zoneOf(72, 33)).toBe("37X");
+    expect(zoneOf(72, 32.9999999)).toBe("35X");
+    expect(zoneOf(72, 42)).toBe("38X");
+    expect(zoneOf(72, 41.9999999)).toBe("37X");
+    expect(zoneOf(71.9999999, 7)).toBe("32W");
+  });
+
+  it("writes a position a hair south of the equator below the false northing", () => {
+    const text = formatUtm({ lat: -1e-7, lng: 0 });
+    expect(text?.startsWith("31M")).toBe(true);
+    expect(text).toBe("31M 166021 9999999");
+  });
+
+  it("wraps a longitude outside -180 to 180 before choosing the zone", () => {
+    expect(formatUtm({ lat: 10, lng: 363 })).toBe(
+      formatUtm({ lat: 10, lng: 3 }),
+    );
+    expect(formatUtm({ lat: 10, lng: -357 })).toBe(
+      formatUtm({ lat: 10, lng: 3 }),
+    );
+  });
+
+  it("refuses a position that is not a number", () => {
+    expect(formatUtm({ lat: Number.NaN, lng: 0 })).toBeNull();
+    expect(formatUtm({ lat: 10, lng: Number.NaN })).toBeNull();
+    expect(formatUtm({ lat: 10, lng: Number.POSITIVE_INFINITY })).toBeNull();
+    expect(formatUtm({ lat: Number.NEGATIVE_INFINITY, lng: 0 })).toBeNull();
+  });
+
   it("refuses latitudes outside the UTM grid", () => {
     expect(formatUtm({ lat: 84.0000001, lng: 0 })).toBeNull();
     expect(formatUtm({ lat: 85, lng: 0 })).toBeNull();
@@ -130,19 +176,19 @@ describe("parseCoordinates of UTM references", () => {
   });
 
   it("refuses a reference without a letter, which is ambiguous", () => {
-    expect(parseCoordinates("31 500000 4200000")).toBeNull();
+    expect(parseCoordinates("31 500000 5500000")).toBeNull();
   });
 
   it("refuses a zone outside 1 to 60", () => {
-    expect(parseCoordinates("0U 500000 4200000")).toBeNull();
-    expect(parseCoordinates("61U 500000 4200000")).toBeNull();
+    expect(parseCoordinates("0U 500000 5500000")).toBeNull();
+    expect(parseCoordinates("61U 500000 5500000")).toBeNull();
   });
 
   it("refuses a letter outside the bands", () => {
-    expect(parseCoordinates("31Z 500000 4200000")).toBeNull();
-    expect(parseCoordinates("31I 500000 4200000")).toBeNull();
-    expect(parseCoordinates("31O 500000 4200000")).toBeNull();
-    expect(parseCoordinates("31A 500000 4200000")).toBeNull();
+    expect(parseCoordinates("31Z 500000 5500000")).toBeNull();
+    expect(parseCoordinates("31I 500000 5500000")).toBeNull();
+    expect(parseCoordinates("31O 500000 5500000")).toBeNull();
+    expect(parseCoordinates("31A 500000 5500000")).toBeNull();
   });
 
   it("refuses a northing that lands outside the UTM grid", () => {
@@ -159,15 +205,46 @@ describe("parseCoordinates of UTM references", () => {
   });
 
   it("refuses an easting or northing of the wrong shape", () => {
-    expect(parseCoordinates("31U 50000 4200000")).toBeNull();
-    expect(parseCoordinates("31U 0500000 4200000")).toBeNull();
-    expect(parseCoordinates("31U 500000 420000")).toBeNull();
+    expect(parseCoordinates("31U 50000 5500000")).toBeNull();
+    expect(parseCoordinates("31U 0500000 5500000")).toBeNull();
+    expect(parseCoordinates("31U 500000 550000")).toBeNull();
+    expect(parseCoordinates("31U 500000 55000000")).toBeNull();
+    expect(parseCoordinates("31N 500000 55000")).toBeNull();
     expect(parseCoordinates("31U 500000 12345678")).toBeNull();
     expect(parseCoordinates("31U 999999999999 999999999999")).toBeNull();
   });
 
+  it("refuses an easting outside 100 000 to 900 000 metres", () => {
+    expect(parseCoordinates("31U 099999 5500000")).toBeNull();
+    expect(parseCoordinates("31U 900001 5500000")).toBeNull();
+    expect(parseCoordinates("31U 100000 5500000")).not.toBeNull();
+    expect(parseCoordinates("31U 900000 5500000")).not.toBeNull();
+  });
+
+  it("reads the headline example", () => {
+    const position = parseCoordinates("31U 500000 5500000");
+    expect(position?.lat).toBeCloseTo(49.6525, 3);
+    expect(position?.lng).toBeCloseTo(3, 4);
+  });
+
+  it("reads a band M reference in the southern hemisphere", () => {
+    const position = parseCoordinates("17M 781861 9980008");
+    expect(position?.lat).toBeCloseTo(-0.1807, 4);
+    expect(position?.lng).toBeCloseTo(-78.4678, 4);
+  });
+
+  it("reads a trailing S as the southern hemisphere, never band S", () => {
+    // Band S is 32 to 40 degrees north, but the letter S after the zone is
+    // the hemisphere letter: "31S 500000 4200000" is 52 degrees south.
+    expect(parseCoordinates("31S 500000 4200000")?.lat).toBeCloseTo(-52.35, 2);
+    // formatUtm writes band S with N, which reads back as the same place.
+    const text = formatUtm({ lat: 38, lng: 3 });
+    expect(text?.startsWith("31N")).toBe(true);
+    expect(parseCoordinates(text ?? "")?.lat).toBeCloseTo(38, 4);
+  });
+
   it("refuses text with anything left over", () => {
-    expect(parseCoordinates("31U 500000 4200000 extra")).toBeNull();
-    expect(parseCoordinates("UTM 31U 500000 4200000")).toBeNull();
+    expect(parseCoordinates("31U 500000 5500000 extra")).toBeNull();
+    expect(parseCoordinates("UTM 31U 500000 5500000")).toBeNull();
   });
 });

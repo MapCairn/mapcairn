@@ -564,6 +564,26 @@ describe("useSearch", () => {
       },
     );
 
+    it.each([
+      "31U 500000 5500000",
+      "31U CT 12345 67890",
+      "11SPA7234911844",
+      "11spa7234911844",
+      "33UXP0544",
+    ])(
+      "answers the grid reference %j and never asks the geocoder",
+      async (text) => {
+        const { result, services } = setup();
+        await searchFor(result, text);
+        expect(services.fakes.search.searchCalls).toHaveLength(0);
+        const state = result.current.state;
+        expect(state.status).toBe("results");
+        if (state.status === "results") {
+          expect(state.results).toHaveLength(1);
+        }
+      },
+    );
+
     it("never goes through a loading state", async () => {
       const { result } = setup();
       act(() => result.current.setQuery("-26.2041, 28.0473"));
@@ -587,6 +607,18 @@ describe("useSearch", () => {
       await searchFor(result, "51.5, -0.12");
       expect(polite()).toBe("1 result, Coordinates 51.50000° N, 0.12000° W");
     });
+
+    it.each(["1 Dec 2015", "12 Rue 10", "5 Pub 12"])(
+      "sends %j to the geocoder, because it is an address or a date",
+      async (text) => {
+        const { result, services } = setup();
+        services.fakes.search.setDefaultResults([CAPE_TOWN]);
+        await searchFor(result, text);
+        expect(services.fakes.search.searchCalls.map((c) => c.query)).toEqual([
+          text,
+        ]);
+      },
+    );
 
     it.each(["02-123", "00-001", "12-34", "44-100", "12-14", "12 34", "E1 6"])(
       "sends %j to the geocoder, because it is not a coordinate pair",

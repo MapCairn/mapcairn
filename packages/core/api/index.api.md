@@ -1908,6 +1908,9 @@ export function isCompactViewport(viewport: {
 export function isControlEnabled(control: LayerControlDefinition, values: ControlValues): boolean;
 
 // @public
+export function isCoordinateText(text: string, messages: MessageCatalogue): boolean;
+
+// @public
 export function isEmptyGeometry(geometry: Geometry): boolean;
 
 // @public

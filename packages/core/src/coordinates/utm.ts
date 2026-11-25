@@ -122,15 +122,19 @@ function meridianArc(lat: number): number {
 
 /**
  * The range of northings a band letter can name, on the central meridian.
- * Within a zone the northing runs higher than this towards the zone edges,
- * by up to about 4 500 m in the ordinary bands and 12 000 m in band X, so
- * callers that look for the band by northing allow that much above `max`.
  */
 interface BandRange {
   readonly min: number;
   readonly max: number;
 }
 
+/**
+ * The northings, in metres on the zone grid, between which a band letter's
+ * latitudes lie on the central meridian. Within a zone the northing runs
+ * higher than `max` towards the zone edges, by up to about 4 500 m in the
+ * ordinary bands and 12 000 m in band X, so callers that look for the band
+ * by northing allow that much above it. The letter must be a band letter.
+ */
 export function bandRange(letter: string): BandRange {
   const index = bandIndexOf(letter);
   const south = SOUTH_LIMIT + 8 * index;
@@ -286,7 +290,7 @@ export function inverse(
 /**
  * Writes a position as a UTM reference: the zone, its band letter, the
  * easting to the metre and the northing to the metre, for example
- * "31U 166021 0000000". The band letter names the eight-degree latitude
+ * "31U 500000 5500000". The band letter names the eight-degree latitude
  * band (C at 80° S through X at 84° N), which names the hemisphere as
  * well.
  *
@@ -297,17 +301,19 @@ export function inverse(
  *   hemisphere letter N instead, which names the same hemisphere and
  *   reads back as the same position.
  *
- * @returns The reference, or `null` when the position is outside the UTM
- *   grid, which stops at 80° S and 84° N; those latitudes belong to the
- *   polar stereographic zones, which this does not write.
+ * @returns The reference, or `null` when the position is not finite or is
+ *   outside the UTM grid, which stops at 80° S and 84° N; those latitudes
+ *   belong to the polar stereographic zones, which this does not write. A
+ *   longitude outside −180 to 180 is wrapped first.
  */
 export function formatUtm(position: LatLng): string | null {
-  const band = bandLetterFor(position.lat);
-  if (band === null) {
+  const place = placeOnGrid(position);
+  if (place === null) {
     return null;
   }
+  const band = bandLetterFor(place.lat) as string;
   const letter = band === "S" ? "N" : band;
-  const point = forward(position);
+  const point = forward(place);
   return `${point.zone}${letter} ${String(Math.round(point.easting)).padStart(6, "0")} ${String(roundedNorthing(point.northing)).padStart(7, "0")}`;
 }
 
@@ -321,6 +327,43 @@ export function roundedNorthing(northing: number): number {
   return Math.min(Math.round(northing), FALSE_NORTHING - 1);
 }
 
+/**
+ * Truncates a northing to the metre, as the MGRS convention does, so the
+ * reference names the square that holds the point. It stays below the false
+ * northing, which a position a hair south of the equator would otherwise
+ * reach once the float runs out of digits.
+ */
+export function truncatedNorthing(northing: number): number {
+  return Math.min(Math.floor(northing), FALSE_NORTHING - 1);
+}
+
+/**
+ * The position a formatter projects: `null` when the latitude or longitude is
+ * not finite or the latitude is outside the UTM grid, otherwise the position
+ * with its longitude wrapped into [−180, 180), except that exactly 180 stays
+ * (the antimeridian is zone 60).
+ */
+export function placeOnGrid(position: LatLng): LatLng | null {
+  if (!Number.isFinite(position.lat) || !Number.isFinite(position.lng)) {
+    return null;
+  }
+  if (bandLetterFor(position.lat) === null) {
+    return null;
+  }
+  const lng = position.lng === 180 ? 180 : wrapLng(position.lng);
+  return { lat: position.lat, lng };
+}
+
+/**
+ * The eastings a UTM reference may carry, in metres. A zone's grid runs from
+ * about 166 000 m to 834 000 m at the equator and narrows towards the poles,
+ * and a surveyor may work a little across a zone line, so the reader allows
+ * 100 000 m to 900 000 m: wide enough for that, and no reference outside it
+ * is a position any zone's grid names.
+ */
+const MIN_EASTING = 100_000;
+const MAX_EASTING = 900_000;
+
 /** A UTM reference: zone, one letter, a six-digit easting and a six- or seven-digit northing. */
 const UTM_PATTERN = /^(\d{1,2})\s*([A-Z])\s*(\d{6})\s+(\d{6,7})$/i;
 
@@ -330,8 +373,14 @@ const UTM_PATTERN = /^(\d{1,2})\s*([A-Z])\s*(\d{6})\s+(\d{6,7})$/i;
  * or S ("31 N 500000 4200000", "31S 500000 4200000", southern northing
  * with the 10 000 000 m offset included), and otherwise it is the band
  * letter, which names the eight-degree latitude band and with it the
- * hemisphere ("31U 500000 4200000", band U is 48 to 56 degrees north). A
- * reference without a letter is ambiguous and refused.
+ * hemisphere ("31U 500000 5500000", band U is 48 to 56 degrees north). A
+ * reference without a letter is ambiguous and refused. An N or S is always
+ * the hemisphere letter, so a band-S reference (32 to 40 degrees north)
+ * written with its band letter reads as the southern hemisphere; write it
+ * with N, as {@link formatUtm} does. The easting must be between 100 000
+ * and 900 000 m: a zone's grid runs from about 166 000 to 834 000 m at the
+ * equator, so the margin lets a reference written across a zone line read
+ * and refuses an easting no zone names.
  *
  * A reference is refused when its zone is outside 1 to 60, its letter is
  * not a band or hemisphere letter, its position contradicts its band, or
@@ -343,7 +392,7 @@ const UTM_PATTERN = /^(\d{1,2})\s*([A-Z])\s*(\d{6})\s+(\d{6,7})$/i;
  * @internal
  */
 export function parseUtm(text: string): LatLng | null {
-  const match = UTM_PATTERN.exec(text.trim());
+  const match = UTM_PATTERN.exec(text.trim().replace(/\s+/g, " "));
   if (match === null) {
     return null;
   }
@@ -351,7 +400,7 @@ export function parseUtm(text: string): LatLng | null {
   const letter = (match[2] as string).toUpperCase();
   const easting = Number(match[3] as string);
   const northing = Number(match[4] as string);
-  if (zone < 1 || zone > 60) {
+  if (zone < 1 || zone > 60 || easting < MIN_EASTING || easting > MAX_EASTING) {
     return null;
   }
   const isBandLetter = letter !== "N" && letter !== "S";
