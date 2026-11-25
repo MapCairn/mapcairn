@@ -49,7 +49,7 @@ export interface PageHeading {
 export interface PageManifestEntry {
   readonly title: string;
   readonly description: string;
-  /** The page's address on the origin, such as `/docs/guides/extending/`. */
+  /** The page's address on the origin, such as `/guides/extending/`. */
   readonly path: string;
   /** The same address with the origin. */
   readonly url: string;

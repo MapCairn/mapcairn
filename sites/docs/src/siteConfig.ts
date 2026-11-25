@@ -2,21 +2,21 @@
 // Copyright MapCairn contributors
 
 /**
- * The reference site's canonical origin, with no trailing slash. The Worker's
- * route (`cloudflare.config.ts`) and Docusaurus's `url` both come from here,
- * so a change of hostname is one edit; `siteConfig.test.ts` keeps it equal to
- * the reference site's own constant.
+ * The documentation site's canonical origin, with no trailing slash. The
+ * Worker's Custom Domain (`cloudflare.config.ts`) and Docusaurus's `url` both
+ * come from here, so a change of hostname is one edit.
  */
-export const SITE_ORIGIN = "https://mapcairn.timothybrits.co.za";
+export const SITE_ORIGIN = "https://docs.mapcairn.com";
 
-/** The DNS zone that holds the hostname, which the Worker's route names. */
-export const ZONE = "timothybrits.co.za";
+/**
+ * The reference site's origin, with no trailing slash. The documentation
+ * links to its pages by full address, because they are on another origin;
+ * `siteConfig.test.ts` keeps it equal to the reference site's own constant.
+ */
+export const HOST_ORIGIN = "https://mapcairn.com";
 
-/** Where the site is served on the origin, with both slashes. */
-export const BASE_URL = "/docs/";
-
-/** The paths of the reference site that the documentation links to. */
-export const HOST_PATHS: readonly string[] = ["/", "/map", "/privacy"];
+/** Where the site is served on its origin, with both slashes. */
+export const BASE_URL = "/";
 
 /** The project's public repository. */
 export const REPOSITORY_URL = "https://github.com/MapCairn/mapcairn";

@@ -80,7 +80,7 @@ describe("brokenInternalLinks", () => {
       "page/index.html":
         '<a href="/docs/guides/x/#top">x</a><a href="/docs/assets/a.css">c</a>',
     });
-    expect(brokenInternalLinks(root, "/docs/", [])).toEqual([]);
+    expect(brokenInternalLinks(root, "/docs/")).toEqual([]);
   });
 
   it("reports a link to a page that was not built", () => {
@@ -88,18 +88,19 @@ describe("brokenInternalLinks", () => {
       ...files,
       "page/index.html": '<a href="/docs/guides/missing/">m</a>',
     });
-    expect(brokenInternalLinks(root, "/docs/", [])).toEqual([
+    expect(brokenInternalLinks(root, "/docs/")).toEqual([
       { from: "page/index.html", href: "/docs/guides/missing/" },
     ]);
   });
 
-  it("allows a link to the reference site's own pages, and no other path outside the base", () => {
+  it("reports a link outside the base path, so the reference site is linked by its full address", () => {
     const root = site({
       ...files,
-      "page/index.html": '<a href="/map">m</a><a href="/other">o</a>',
+      "page/index.html":
+        '<a href="/map">m</a><a href="https://mapcairn.com/map">m</a>',
     });
-    expect(brokenInternalLinks(root, "/docs/", ["/", "/map"])).toEqual([
-      { from: "page/index.html", href: "/other" },
+    expect(brokenInternalLinks(root, "/docs/")).toEqual([
+      { from: "page/index.html", href: "/map" },
     ]);
   });
 });

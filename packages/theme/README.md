@@ -7,7 +7,7 @@ MapCairn's design tokens: typed references to CSS custom properties for colour, 
 
 Most apps should install [`@mapcairn/sdk`](https://github.com/MapCairn/mapcairn/tree/main/packages/sdk) instead: one install, one import and one stylesheet for the whole SDK, which re-exports this package. Install `@mapcairn/theme` on its own as the advanced option, for a host that wants fewer dependencies.
 
-**Status:** pre-1.0. While the version starts with `0.`, a minor release (the middle number) can contain a breaking change to the public API and a patch release (the last number) is not meant to, so a `^0.1.0` range takes patch releases but not the next minor release. The [changelog](https://github.com/MapCairn/mapcairn/blob/main/CHANGELOG.md) names each breaking change the release finds, and [what counts as the public API](https://mapcairn.timothybrits.co.za/docs/guides/public-api/) says what is covered.
+**Status:** pre-1.0. While the version starts with `0.`, a minor release (the middle number) can contain a breaking change to the public API and a patch release (the last number) is not meant to, so a `^0.1.0` range takes patch releases but not the next minor release. The [changelog](https://github.com/MapCairn/mapcairn/blob/main/CHANGELOG.md) names each breaking change the release finds, and [what counts as the public API](https://docs.mapcairn.com/guides/public-api/) says what is covered.
 
 ## Install
 
@@ -56,7 +56,7 @@ In the repository, the token set and the contrast checks live in `src/tokens.css
 
 ## Licence
 
-`@mapcairn/theme` is licensed under AGPL-3.0-only, an open-source licence that allows commercial use, and the [licence text](https://github.com/MapCairn/mapcairn/blob/main/packages/theme/LICENSE) comes with the package. If you distribute an app that includes the SDK, including by serving it to people's browsers, you must offer them the corresponding source of the code you combine with the SDK and serve with it, under the same licence. If you modify the SDK and let people interact with your modified version over a network, you must offer them its corresponding source. [What the licence means for your project](https://mapcairn.timothybrits.co.za/docs/guides/licence/) says it in plain words and is not legal advice. The SDK packages depend only on permissively licensed packages. The [licence section of the repository README](https://github.com/MapCairn/mapcairn#licence) says more.
+`@mapcairn/theme` is licensed under AGPL-3.0-only, an open-source licence that allows commercial use, and the [licence text](https://github.com/MapCairn/mapcairn/blob/main/packages/theme/LICENSE) comes with the package. If you distribute an app that includes the SDK, including by serving it to people's browsers, you must offer them the corresponding source of the code you combine with the SDK and serve with it, under the same licence. If you modify the SDK and let people interact with your modified version over a network, you must offer them its corresponding source. [What the licence means for your project](https://docs.mapcairn.com/guides/licence/) says it in plain words and is not legal advice. The SDK packages depend only on permissively licensed packages. The [licence section of the repository README](https://github.com/MapCairn/mapcairn#licence) says more.
 
 ## Contributing and changes
 

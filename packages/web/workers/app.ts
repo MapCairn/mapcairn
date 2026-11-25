@@ -2,7 +2,11 @@
 // Copyright MapCairn contributors
 import { createRequestHandler } from "react-router";
 import { SECURITY_HEADERS } from "../src/constants/securityHeaders";
-import { PREVIOUS_HOSTNAME, SITE_URL } from "../src/constants/siteConfig";
+import {
+  DOCS_URL,
+  REDIRECTED_HOSTNAMES,
+  SITE_URL,
+} from "../src/constants/siteConfig";
 import { describeServerError } from "../src/serverErrors";
 
 const requestHandler = createRequestHandler(
@@ -10,27 +14,46 @@ const requestHandler = createRequestHandler(
   import.meta.env?.MODE ?? "production",
 );
 
+/** The path the documentation had on this origin before it had its own. */
+const DOCS_PREFIX = "/docs";
+
 /**
- * Permanently redirects a page request on the previous hostname to the same
- * path and query on the current one, or returns null for any other request.
- * @remarks The address carries no fragment, so the browser keeps the
- *   visitor's own (the map view, basemap and layers live in it). Only GET and
- *   HEAD are redirected: a report from a page still open on the previous
- *   address is a POST, which the app accepts from both origins.
+ * The address a page request should be sent to for good, or null when this
+ * Worker answers it. A path under `/docs` goes to the documentation site on
+ * any hostname, and any other path on a redirected hostname goes to the same
+ * path on {@link SITE_URL}.
  */
-function redirectFromPreviousHostname(request: Request): Response | null {
-  const url = new URL(request.url);
-  const isPageRequest = request.method === "GET" || request.method === "HEAD";
-  if (url.hostname !== PREVIOUS_HOSTNAME || !isPageRequest) {
-    return null;
+function permanentTarget(url: URL): string | null {
+  const { pathname, search } = url;
+  if (pathname === DOCS_PREFIX || pathname.startsWith(`${DOCS_PREFIX}/`)) {
+    const rest = pathname.slice(DOCS_PREFIX.length) || "/";
+    return new URL(rest + search, DOCS_URL).toString();
   }
-  const target = new URL(url.pathname + url.search, SITE_URL);
-  return Response.redirect(target.toString(), 301);
+  if (REDIRECTED_HOSTNAMES.includes(url.hostname)) {
+    return new URL(pathname + search, SITE_URL).toString();
+  }
+  return null;
 }
 
 /**
- * The Cloudflare Workers entry point. Redirects the previous hostname to the
- * current one, then delegates every other request to the built React Router
+ * Permanently redirects a page request that belongs on another address, or
+ * returns null for any other request.
+ * @remarks The address carries no fragment, so the browser keeps the
+ *   visitor's own (the map view, basemap and layers live in it). Only GET and
+ *   HEAD are redirected: a report from a page still open on a redirected
+ *   address is a POST, which the app accepts from every origin it serves.
+ */
+function redirectMovedPage(request: Request): Response | null {
+  const isPageRequest = request.method === "GET" || request.method === "HEAD";
+  if (!isPageRequest) {
+    return null;
+  }
+  const target = permanentTarget(new URL(request.url));
+  return target === null ? null : Response.redirect(target, 301);
+}
+
+/**
+ * The Cloudflare Workers entry point. Redirects a moved page to its address, then delegates every other request to the built React Router
  * server bundle. There are no Cloudflare bindings to thread through, so the
  * request is passed on with no `RouterContextProvider`.
  * @remarks The `try`/`catch` around `requestHandler` is a last-resort net,
@@ -45,7 +68,7 @@ function redirectFromPreviousHostname(request: Request): Response | null {
  */
 export default {
   async fetch(request: Request): Promise<Response> {
-    const redirect = redirectFromPreviousHostname(request);
+    const redirect = redirectMovedPage(request);
     if (redirect) {
       return redirect;
     }

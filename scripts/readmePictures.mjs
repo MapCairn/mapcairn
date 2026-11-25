@@ -9,7 +9,7 @@
  */
 
 /** The deployed reference site's map, the one page the pictures are taken from. */
-export const LIVE_MAP_URL = "https://mapcairn.timothybrits.co.za/map";
+export const LIVE_MAP_URL = "https://mapcairn.com/map";
 
 /** The size of each still, in CSS pixels, at one device pixel per pixel. */
 export const STILL_SIZE = Object.freeze({ width: 1440, height: 900 });

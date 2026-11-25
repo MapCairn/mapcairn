@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
-import { REPOSITORY_URL } from "./siteConfig";
+import { BASE_URL, HOST_ORIGIN, REPOSITORY_URL } from "./siteConfig";
 
 /** One link of the header: its label and where it goes. */
 export interface HeaderLink {
@@ -17,8 +17,8 @@ export interface HeaderLink {
  * keeps the labels and the order equal to the product page's.
  */
 export const HEADER_LINKS: readonly HeaderLink[] = [
-  { text: "Playground", href: "/map" },
-  { text: "Docs", href: "/docs/", current: true },
+  { text: "Playground", href: `${HOST_ORIGIN}/map` },
+  { text: "Docs", href: BASE_URL, current: true },
   { text: "GitHub", href: REPOSITORY_URL },
 ];
 

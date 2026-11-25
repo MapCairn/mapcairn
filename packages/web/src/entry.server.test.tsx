@@ -30,7 +30,7 @@ vi.mock("react-dom/server", () => ({
 async function handleOnce(handle?: unknown) {
   const handleRequest = (await import("./entry.server")).default;
   const response = await handleRequest(
-    new Request("https://mapcairn.timothybrits.co.za/"),
+    new Request("https://mapcairn.com/"),
     200,
     new Headers(),
     {
@@ -139,7 +139,7 @@ describe("entry.server error logging", () => {
       .mockImplementation(() => {});
     const handleRequest = (await import("./entry.server")).default;
     await handleRequest(
-      new Request("https://mapcairn.timothybrits.co.za/"),
+      new Request("https://mapcairn.com/"),
       200,
       new Headers(),
       { staticHandlerContext: { matches: [] }, routeModules: {} } as never,
@@ -163,7 +163,7 @@ describe("entry.server error logging", () => {
     controller.abort();
     const handleRequest = (await import("./entry.server")).default;
     await handleRequest(
-      new Request("https://mapcairn.timothybrits.co.za/", {
+      new Request("https://mapcairn.com/", {
         signal: controller.signal,
       }),
       200,

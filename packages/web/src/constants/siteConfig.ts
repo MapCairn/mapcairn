@@ -7,7 +7,7 @@
  *   `robots.txt`/`sitemap.xml`/`llms.txt` routes, so the production domain
  *   can't drift out of sync between them.
  */
-export const SITE_URL = "https://mapcairn.timothybrits.co.za";
+export const SITE_URL = "https://mapcairn.com";
 
 /**
  * What the site is, in a sentence or two, for search results and link
@@ -25,10 +25,11 @@ export const PRODUCT_PATH = "/";
 export const PLAYGROUND_PATH = "/map";
 
 /**
- * Where the documentation site is served on this origin, with both slashes. A
- * second Worker answers it (`sites/docs`), so it is not a route of this app.
+ * Where the documentation site is served, with a trailing slash. A second
+ * Worker answers it (`sites/docs`) on its own hostname, so it is not a route
+ * of this app.
  */
-export const DOCS_PATH = "/docs/";
+export const DOCS_URL = "https://docs.mapcairn.com/";
 
 /** The public repository that holds the site's source code, linked from Help. */
 export const SOURCE_REPOSITORY_URL = "https://github.com/MapCairn/mapcairn";
@@ -40,20 +41,25 @@ export const SOURCE_REPOSITORY_URL = "https://github.com/MapCairn/mapcairn";
 export const MASTODON_PROFILE_URL = "https://en.osm.town/@mapcairn";
 
 /**
- * The hostname the site had before its name changed. It stays attached to the
- * Worker, which redirects pages on it to {@link SITE_URL}, so the address that
- * was shared widely keeps working.
+ * The hostnames that stay attached to the Worker only to redirect: the two
+ * the site had before it moved to its own domain, and the `www` form of the
+ * current one. A page on any of them goes to {@link SITE_URL}, so an address
+ * that was shared widely keeps working.
  */
-export const PREVIOUS_HOSTNAME = "karta.timothybrits.co.za";
+export const REDIRECTED_HOSTNAMES: readonly string[] = [
+  "karta.timothybrits.co.za",
+  "mapcairn.timothybrits.co.za",
+  "www.mapcairn.com",
+];
 
 /**
  * Every origin the Worker serves the site on. A client error report from any
- * of them is accepted, so a page still open on the previous address can
+ * of them is accepted, so a page still open on a redirected address can
  * report an error.
  */
 export const SITE_ORIGINS: readonly string[] = [
   new URL(SITE_URL).origin,
-  `https://${PREVIOUS_HOSTNAME}`,
+  ...REDIRECTED_HOSTNAMES.map((hostname) => `https://${hostname}`),
 ];
 
 /** Pixel width of `public/og-image.png`, the Open Graph/Twitter card preview image (`scripts/generateOgImage.ts`), matching its `og:image:width`/`twitter:image` meta tags. */

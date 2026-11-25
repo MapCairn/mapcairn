@@ -9,7 +9,7 @@ Most apps should install [`@mapcairn/sdk`](https://github.com/MapCairn/mapcairn/
 
 It never imports a map engine, an adapter or a browser service. Everything it needs comes from the `Services` bundle that `ServicesProvider` supplies, so the same components run against real adapters in an app and against fakes in a test. It is built on [`@mapcairn/core`](https://github.com/MapCairn/mapcairn/tree/main/packages/core), [`@mapcairn/react`](https://github.com/MapCairn/mapcairn/tree/main/packages/react) and [`@mapcairn/theme`](https://github.com/MapCairn/mapcairn/tree/main/packages/theme).
 
-**Status:** pre-1.0. While the version starts with `0.`, a minor release (the middle number) can contain a breaking change to the public API and a patch release (the last number) is not meant to, so a `^0.1.0` range takes patch releases but not the next minor release. The [changelog](https://github.com/MapCairn/mapcairn/blob/main/CHANGELOG.md) names each breaking change the release finds, and [what counts as the public API](https://mapcairn.timothybrits.co.za/docs/guides/public-api/) says what is covered.
+**Status:** pre-1.0. While the version starts with `0.`, a minor release (the middle number) can contain a breaking change to the public API and a patch release (the last number) is not meant to, so a `^0.1.0` range takes patch releases but not the next minor release. The [changelog](https://github.com/MapCairn/mapcairn/blob/main/CHANGELOG.md) names each breaking change the release finds, and [what counts as the public API](https://docs.mapcairn.com/guides/public-api/) says what is covered.
 
 ## Install
 
@@ -35,7 +35,7 @@ import "@mapcairn/map/styles.css";
 The JavaScript imports no CSS, so the components render on the server as plain modules. A few things are yours to provide:
 
 - `MapChrome` fills its container, so give `html`, `body` and the element you render into a height.
-- The tokens name the IBM Plex Sans Variable font, which your app loads (for example from `@fontsource-variable/ibm-plex-sans`; [Get started](https://mapcairn.timothybrits.co.za/docs/#add-the-font-optional) shows how). Without it the type uses the system font through the fallback stack, whose metric-matched face `tokens.css` already declares.
+- The tokens name the IBM Plex Sans Variable font, which your app loads (for example from `@fontsource-variable/ibm-plex-sans`; [Get started](https://docs.mapcairn.com/#add-the-font-optional) shows how). Without it the type uses the system font through the fallback stack, whose metric-matched face `tokens.css` already declares.
 - The map engine and its styles. The package never imports one; your app supplies a `MapAdapter` over MapLibre GL JS in the `Services` bundle. The MapLibre adapter is [`@mapcairn/adapter-maplibre`](https://github.com/MapCairn/mapcairn/tree/main/packages/adapter-maplibre), which `@mapcairn/sdk` re-exports at `@mapcairn/sdk/adapter-maplibre`.
 
 The styles of the primitives (buttons, chips, surfaces and list rows) sit in a cascade layer, so an unlayered rule in your own CSS, such as `button { background: transparent; border: 0; padding: 0 }` or `:focus-visible { outline: none }`, beats them. Put your app's base styles and resets in an `@layer` that is declared before `@mapcairn/map/styles.css` is imported, and they rank below the primitives. This is a known trade-off; see [Overriding a primitive](https://github.com/MapCairn/mapcairn/blob/main/DESIGN.md#overriding-a-primitive).
@@ -168,7 +168,7 @@ The `MapChrome` slots, the sheet detents and the accessibility contract of each 
 
 ## Licence
 
-`@mapcairn/map` is licensed under AGPL-3.0-only, an open-source licence that allows commercial use, and the [licence text](https://github.com/MapCairn/mapcairn/blob/main/packages/map/LICENSE) comes with the package. If you distribute an app that includes the SDK, including by serving it to people's browsers, you must offer them the corresponding source of the code you combine with the SDK and serve with it, under the same licence. If you modify the SDK and let people interact with your modified version over a network, you must offer them its corresponding source. [What the licence means for your project](https://mapcairn.timothybrits.co.za/docs/guides/licence/) says it in plain words and is not legal advice. The SDK packages depend only on permissively licensed packages. The [licence section of the repository README](https://github.com/MapCairn/mapcairn#licence) says more.
+`@mapcairn/map` is licensed under AGPL-3.0-only, an open-source licence that allows commercial use, and the [licence text](https://github.com/MapCairn/mapcairn/blob/main/packages/map/LICENSE) comes with the package. If you distribute an app that includes the SDK, including by serving it to people's browsers, you must offer them the corresponding source of the code you combine with the SDK and serve with it, under the same licence. If you modify the SDK and let people interact with your modified version over a network, you must offer them its corresponding source. [What the licence means for your project](https://docs.mapcairn.com/guides/licence/) says it in plain words and is not legal advice. The SDK packages depend only on permissively licensed packages. The [licence section of the repository README](https://github.com/MapCairn/mapcairn#licence) says more.
 
 ## Contributing and changes
 

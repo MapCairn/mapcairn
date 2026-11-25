@@ -52,7 +52,7 @@ function makeRequest(
 
 const VALID_REPORT = {
   message: "boom",
-  url: "https://mapcairn.timothybrits.co.za/",
+  url: "https://mapcairn.com/",
   source: "error",
 } as const;
 
@@ -72,7 +72,7 @@ describe("/log-error route action", () => {
       makeRequest({
         message: "boom",
         stack: "Error: boom\n at foo",
-        url: "https://mapcairn.timothybrits.co.za/",
+        url: "https://mapcairn.com/",
         source: "error",
       }),
     );
@@ -85,7 +85,7 @@ describe("/log-error route action", () => {
     const response = await action(
       makeRequest({
         message: "boom",
-        url: "https://mapcairn.timothybrits.co.za/",
+        url: "https://mapcairn.com/",
         source: "unhandledrejection",
       }),
     );
@@ -101,7 +101,7 @@ describe("/log-error route action", () => {
       "a field longer than the maximum length",
       {
         message: "x".repeat(CLIENT_ERROR_REPORT_MAX_FIELD_LENGTH + 1),
-        url: "https://mapcairn.timothybrits.co.za/",
+        url: "https://mapcairn.com/",
         source: "error",
       },
       undefined,
@@ -122,7 +122,7 @@ describe("/log-error route action", () => {
   it("accepts a same-origin request with a matching Origin header", async () => {
     const response = await action(
       makeRequest(VALID_REPORT, "POST", undefined, {
-        Origin: "https://mapcairn.timothybrits.co.za",
+        Origin: "https://mapcairn.com",
       }),
     );
 
@@ -203,7 +203,7 @@ describe("/log-error route action", () => {
     const response = await action(
       makeRequest({
         ...VALID_REPORT,
-        url: "https://mapcairn.timothybrits.co.za/map?at=1#map=18/-33.92530/18.42410",
+        url: "https://mapcairn.com/map?at=1#map=18/-33.92530/18.42410",
       }),
     );
 
@@ -211,7 +211,7 @@ describe("/log-error route action", () => {
     expect(consoleErrorSpy).toHaveBeenCalledWith(
       "[client-error]",
       expect.objectContaining({
-        url: "https://mapcairn.timothybrits.co.za/map",
+        url: "https://mapcairn.com/map",
       }),
     );
     expect(JSON.stringify(consoleErrorSpy.mock.calls)).not.toContain(
@@ -240,7 +240,7 @@ describe("/log-error route action", () => {
       makeRequest({
         message: "boom\nFAKE LOG LINE: [client-error] injected",
         stack: "Error: boom\r\n at foo",
-        url: "https://mapcairn.timothybrits.co.za/\tinjected",
+        url: "https://mapcairn.com/\tinjected",
         source: "error",
       }),
     );
@@ -251,7 +251,7 @@ describe("/log-error route action", () => {
       expect.objectContaining({
         message: "boom FAKE LOG LINE: [client-error] injected",
         stack: "Error: boom   at foo",
-        url: "https://mapcairn.timothybrits.co.za/ injected",
+        url: "https://mapcairn.com/ injected",
       }),
     );
   });

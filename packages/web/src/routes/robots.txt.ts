@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
-import { DOCS_PATH, SITE_URL } from "../constants/siteConfig";
+import { DOCS_URL, SITE_URL } from "../constants/siteConfig";
 import { staticTextResponse } from "./staticTextResponse";
 
 const ROBOTS_TXT_BODY = `# MapCairn is open source. Search engines and AI crawlers are welcome to read
@@ -9,7 +9,7 @@ User-agent: *
 Allow: /
 
 Sitemap: ${SITE_URL}/sitemap.xml
-Sitemap: ${SITE_URL}${DOCS_PATH}sitemap.xml
+Sitemap: ${DOCS_URL}sitemap.xml
 `;
 
 /**

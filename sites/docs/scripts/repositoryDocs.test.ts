@@ -44,7 +44,7 @@ function linksToMissingPages(files: ReadonlyMap<string, string>): string[] {
 }
 
 const COPY_CONTEXT: CopyContext = {
-  origin: "https://mapcairn.timothybrits.co.za",
+  origin: "https://mapcairn.com",
   baseUrl: "/docs/",
   version: "0.2.0",
   title: "MapCairn documentation",
@@ -82,7 +82,7 @@ const ARCH_TEXT = [
   "",
   "## Layers and rules",
   "",
-  "Layers are stacked. See [ports](#ports), [a guide](https://mapcairn.timothybrits.co.za/docs/guides/extending/#add-a-basemap) and [a file](packages/web/src/x.ts).",
+  "Layers are stacked. See [ports](#ports), [a guide](https://docs.mapcairn.com/guides/extending/#add-a-basemap) and [a file](packages/web/src/x.ts).",
   "",
   "```ts",
   "const a = 1;",

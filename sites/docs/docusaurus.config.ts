@@ -8,7 +8,12 @@ import { remarkSdkVersion } from "./plugins/remarkSdkVersion";
 import searchIndexPlugin from "./plugins/searchIndexPlugin";
 import securityHeadersPlugin from "./plugins/securityHeadersPlugin";
 import { SDK_VERSION as sdkVersion } from "./scripts/sdkVersion";
-import { BASE_URL, REPOSITORY_URL, SITE_ORIGIN } from "./src/siteConfig";
+import {
+  BASE_URL,
+  HOST_ORIGIN,
+  REPOSITORY_URL,
+  SITE_ORIGIN,
+} from "./src/siteConfig";
 import { THEME_BRIDGE_SCRIPT } from "./src/themeBridge";
 
 /**
@@ -20,13 +25,13 @@ import { THEME_BRIDGE_SCRIPT } from "./src/themeBridge";
 const classOnlyPrismTheme = { plain: {}, styles: [] };
 
 /**
- * A link to a page of the reference site, which shares this origin but is not
+ * A link to a page of the reference site, which is on another origin and not
  * part of this site. The framework puts its base path in front of an `href`
  * in the footer, so these two are written as HTML, which it leaves as
  * written. The header's links are in `src/headerLinks.ts`.
  */
 function hostLink(path: string, label: string, className: string): string {
-  return `<a class="${className}" href="${path}">${label}</a>`;
+  return `<a class="${className}" href="${HOST_ORIGIN}${path}">${label}</a>`;
 }
 
 const config: Config = {

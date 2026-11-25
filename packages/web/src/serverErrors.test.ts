@@ -76,7 +76,7 @@ describe("serverErrors", () => {
   });
 
   describe("handleServerError", () => {
-    const request = new Request("https://mapcairn.timothybrits.co.za/.env");
+    const request = new Request("https://mapcairn.com/.env");
 
     it("does not log an unknown path (404)", () => {
       handleServerError(
@@ -202,9 +202,7 @@ describe("serverErrors", () => {
     const handle = createRequestHandler(build, "production");
 
     it("keeps an unknown path silent and answers 404", async () => {
-      const response = await handle(
-        new Request("https://mapcairn.timothybrits.co.za/.env"),
-      );
+      const response = await handle(new Request("https://mapcairn.com/.env"));
 
       expect(response.status).toBe(404);
       expect(consoleError).not.toHaveBeenCalled();
@@ -212,7 +210,7 @@ describe("serverErrors", () => {
 
     it("keeps a wrong method silent and answers 405", async () => {
       const response = await handle(
-        new Request("https://mapcairn.timothybrits.co.za/boom", {
+        new Request("https://mapcairn.com/boom", {
           method: "POST",
         }),
       );
@@ -223,7 +221,7 @@ describe("serverErrors", () => {
 
     it("logs a loader that throws, with its stack", async () => {
       const response = await handle(
-        new Request("https://mapcairn.timothybrits.co.za/boom?_data=boom"),
+        new Request("https://mapcairn.com/boom?_data=boom"),
       );
 
       expect(response.status).toBe(500);

@@ -1,7 +1,7 @@
 {
   "name": "@mapcairn/docs",
   "version": "1.0.0",
-  "description": "MapCairn documentation site: Docusaurus, built to static files and served at /docs/ by a second Worker",
+  "description": "MapCairn documentation site: Docusaurus, built to static files and served at docs.mapcairn.com by a second Worker",
   "license": "AGPL-3.0-only",
   "private": true,
   "scripts": {

@@ -125,8 +125,8 @@ describe("PrivacyPage in the active language", () => {
     expect(policy).toHaveAttribute("target", "_blank");
     expect(policy).toHaveAccessibleName(/nuwe oortjie/);
     expect(
-      view.getByRole("link", { name: "mapcairn@timothybrits.co.za" }),
-    ).toHaveAttribute("href", "mailto:mapcairn@timothybrits.co.za");
+      view.getByRole("link", { name: "hello@mapcairn.com" }),
+    ).toHaveAttribute("href", "mailto:hello@mapcairn.com");
     expect(view.getByRole("link", { name: "GitHub" })).toHaveAttribute(
       "href",
       "https://github.com/MapCairn/mapcairn/issues",

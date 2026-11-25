@@ -46,8 +46,8 @@ describe("findMovedGuideReferences", () => {
     const text = [
       "`docs/guides/releasing.md` and `docs/guides/working-with-agents.md`",
       "`sites/docs/docs/guides/extending.md`",
-      "https://mapcairn.timothybrits.co.za/docs/guides/extending/",
-      "https://mapcairn.timothybrits.co.za/docs/guides/extending.md",
+      "https://docs.mapcairn.com/guides/extending/",
+      "https://docs.mapcairn.com/guides/extending.md",
       "`docs/guides/extending-things.md`",
     ].join("\n");
     expect(found(text)).toEqual([]);

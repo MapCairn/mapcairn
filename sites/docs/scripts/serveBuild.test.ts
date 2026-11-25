@@ -47,35 +47,35 @@ function kindOf(path: string): "file" | "directory" | "none" {
 
 describe("resolveTarget", () => {
   it("serves the index of the base path", () => {
-    expect(resolveTarget("/docs/", kindOf)).toEqual({
+    expect(resolveTarget("/", kindOf)).toEqual({
       kind: "file",
       path: "index.html",
     });
   });
 
   it("serves the index of a folder given with a trailing slash", () => {
-    expect(resolveTarget("/docs/tasks/example-task/", kindOf)).toEqual({
+    expect(resolveTarget("/tasks/example-task/", kindOf)).toEqual({
       kind: "file",
       path: "tasks/example-task/index.html",
     });
   });
 
   it("redirects a folder given without its trailing slash", () => {
-    expect(resolveTarget("/docs/tasks/example-task", kindOf)).toEqual({
+    expect(resolveTarget("/tasks/example-task", kindOf)).toEqual({
       kind: "redirect",
-      location: "/docs/tasks/example-task/",
+      location: "/tasks/example-task/",
     });
   });
 
   it("serves a file whose name has an extension as it is, with no slash added", () => {
-    expect(resolveTarget("/docs/assets/fonts/plex.woff2", kindOf)).toEqual({
+    expect(resolveTarget("/assets/fonts/plex.woff2", kindOf)).toEqual({
       kind: "file",
       path: "assets/fonts/plex.woff2",
     });
   });
 
   it("answers an unknown address, or one outside the base path, with the 404 page", () => {
-    expect(resolveTarget("/docs/nope/", kindOf)).toEqual({
+    expect(resolveTarget("/nope/", kindOf)).toEqual({
       kind: "missing",
       path: "404.html",
     });
@@ -86,7 +86,7 @@ describe("resolveTarget", () => {
   });
 
   it("refuses a path that climbs out of the build folder", () => {
-    expect(resolveTarget("/docs/../package.json", kindOf)).toEqual({
+    expect(resolveTarget("/../package.json", kindOf)).toEqual({
       kind: "missing",
       path: "404.html",
     });

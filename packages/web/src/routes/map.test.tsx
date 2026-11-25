@@ -6,7 +6,7 @@ import { renderToString } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import MapRoute, { handle, links, meta } from "./map";
 
-const SITE = "https://mapcairn.timothybrits.co.za";
+const SITE = "https://mapcairn.com";
 
 describe("map route title", () => {
   it("names the catalogue key its tab title follows the language through", () => {

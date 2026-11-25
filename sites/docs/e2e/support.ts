@@ -24,7 +24,7 @@ export const AUDIT_WIDTHS = [320, 390, 1280] as const;
 /** Viewport height used for every check. */
 export const VIEWPORT_HEIGHT = 800;
 
-/** One page of the site the audit visits, by a name and a path under `/docs/`. */
+/** One page of the site the audit visits, by a name and a path on the site. */
 export interface AuditedPage {
   readonly name: string;
   readonly path: string;
@@ -41,26 +41,26 @@ export interface AuditedPage {
  * unknown address).
  */
 export const AUDITED_PAGES: readonly AuditedPage[] = [
-  { name: "Get started", path: "/docs/" },
-  { name: "task page", path: "/docs/tasks/choose-a-basemap/" },
+  { name: "Get started", path: "/" },
+  { name: "task page", path: "/tasks/choose-a-basemap/" },
   {
     name: "task page with a long sample",
-    path: "/docs/tasks/follow-the-system-theme/",
+    path: "/tasks/follow-the-system-theme/",
   },
-  { name: "API function", path: "/docs/api/core/addStop/" },
-  { name: "API type", path: "/docs/api/core/ClipboardPort/" },
-  { name: "roadmap", path: "/docs/roadmap/" },
-  { name: "Architecture overview", path: "/docs/architecture/" },
-  { name: "Architecture part", path: "/docs/architecture/ports-part-1/" },
+  { name: "API function", path: "/api/core/addStop/" },
+  { name: "API type", path: "/api/core/ClipboardPort/" },
+  { name: "roadmap", path: "/roadmap/" },
+  { name: "Architecture overview", path: "/architecture/" },
+  { name: "Architecture part", path: "/architecture/ports-part-1/" },
   {
     name: "Architecture diagram part",
-    path: "/docs/architecture/data-layers/",
+    path: "/architecture/data-layers/",
   },
-  { name: "Design part", path: "/docs/design/tokens/" },
-  { name: "Design tokens, visually", path: "/docs/design/visual-tokens/" },
-  { name: "Extend the SDK", path: "/docs/guides/extending/" },
-  { name: "Layer definitions", path: "/docs/guides/layer-definitions/" },
-  { name: "404", path: "/docs/this-page-does-not-exist/" },
+  { name: "Design part", path: "/design/tokens/" },
+  { name: "Design tokens, visually", path: "/design/visual-tokens/" },
+  { name: "Extend the SDK", path: "/guides/extending/" },
+  { name: "Layer definitions", path: "/guides/layer-definitions/" },
+  { name: "404", path: "/this-page-does-not-exist/" },
 ];
 
 /**

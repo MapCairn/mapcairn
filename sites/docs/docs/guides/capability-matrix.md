@@ -215,7 +215,7 @@ For clustering and tile archives see [#183] and [#192]. The reference site's Lig
 | Ports with fakes and shared contract suites, and coverage floors | has    | `packages/core/src/contracts`, `AGENTS.md`                                                                               | none       |
 | An example app and guides                                        | has    | `examples/embed`, `sites/docs/docs/guides`                                                                               | none       |
 | Packages published with generated API documentation              | has    | published to npm, with an API report for each entry point in `packages/*/api` and a generated API reference on this site | none       |
-| A documentation site                                             | has    | `sites/docs`, served at `/docs/`                                                                                         | [#199]     |
+| A documentation site                                             | has    | `sites/docs`, served at `docs.mapcairn.com`                                                                              | [#199]     |
 | Component documentation for consumers                            | lacks  | none                                                                                                                     | [#174]     |
 
 ## Deliberately out of scope

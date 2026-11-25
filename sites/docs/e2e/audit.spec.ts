@@ -27,7 +27,7 @@ for (const theme of THEMES) {
       page,
     }) => {
       await prepare(page, theme, width);
-      await open(page, "/docs/");
+      await open(page, "/");
       await page.getByRole("button", { name: "Search" }).click();
       const dialog = page.getByRole("dialog", {
         name: "Search the documentation",

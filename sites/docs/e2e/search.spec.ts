@@ -6,7 +6,7 @@ import { open } from "./support";
 test("search opens with /, takes a query and opens a result with ArrowDown and Enter", async ({
   page,
 }) => {
-  await open(page, "/docs/");
+  await open(page, "/");
   const dialog = page.getByRole("dialog", { name: "Search the documentation" });
   const input = dialog.getByRole("searchbox", {
     name: "Search the documentation",
@@ -23,7 +23,7 @@ test("search opens with /, takes a query and opens a result with ArrowDown and E
   await page.keyboard.press("ArrowDown");
   await expect(results.first()).toBeFocused();
   const target = await results.first().getAttribute("href");
-  expect(target).toMatch(/^\/docs\//);
+  expect(target).toMatch(/^\//);
 
   await page.keyboard.press("Enter");
   await expect(dialog).toBeHidden();
@@ -34,7 +34,7 @@ test("search opens with /, takes a query and opens a result with ArrowDown and E
 test("Escape closes the search dialog and focus returns to the Search button", async ({
   page,
 }) => {
-  await open(page, "/docs/");
+  await open(page, "/");
   const button = page.getByRole("button", { name: "Search" });
   await page.keyboard.press("/");
   const dialog = page.getByRole("dialog", { name: "Search the documentation" });

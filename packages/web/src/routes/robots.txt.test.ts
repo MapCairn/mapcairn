@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
 import { describe, expect, it } from "vitest";
-import { SITE_URL } from "../constants/siteConfig";
+import { DOCS_URL, SITE_URL } from "../constants/siteConfig";
 import { loader } from "./robots.txt";
 
 describe("/robots.txt route", () => {
@@ -20,7 +20,7 @@ describe("/robots.txt route", () => {
   it("also names the documentation site's sitemap, because a crawler reads only this file", async () => {
     const body = await loader().text();
 
-    expect(body).toContain(`Sitemap: ${SITE_URL}/docs/sitemap.xml`);
+    expect(body).toContain(`Sitemap: ${DOCS_URL}sitemap.xml`);
   });
 
   it("welcomes search and AI crawlers in a comment and blocks nothing", async () => {

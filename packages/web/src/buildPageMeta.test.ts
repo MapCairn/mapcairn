@@ -34,13 +34,13 @@ describe("buildPageMeta", () => {
       expect.arrayContaining([
         {
           property: "og:image",
-          content: "https://mapcairn.timothybrits.co.za/og-sdk.png",
+          content: "https://mapcairn.com/og-sdk.png",
         },
         { property: "og:image:width", content: "1200" },
         { property: "og:image:height", content: "630" },
         {
           name: "twitter:image",
-          content: "https://mapcairn.timothybrits.co.za/og-sdk.png",
+          content: "https://mapcairn.com/og-sdk.png",
         },
         expect.objectContaining({ property: "og:image:alt" }),
         expect.objectContaining({ name: "twitter:image:alt" }),
