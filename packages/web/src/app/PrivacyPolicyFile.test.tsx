@@ -69,6 +69,12 @@ describe("PRIVACY.md mirrors the privacy page", () => {
     );
   });
 
+  it("says the product page sends no error reports and the other pages do", () => {
+    expectBothCopies(
+      "The product page at the site's root runs no script that reports errors, so it sends no reports. The map and the other pages send them as described here.",
+    );
+  });
+
   it("says tile layers send no referrer while basemap tiles keep the site's address", () => {
     expectBothCopies(
       "Their tile requests carry no referrer, unlike basemap tile requests, which keep this site's address as the referrer because a basemap provider may ask for one.",
