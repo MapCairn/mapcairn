@@ -2,6 +2,7 @@
 // Copyright MapCairn contributors
 import { createHash } from "node:crypto";
 import {
+  existsSync,
   mkdtempSync,
   rmSync,
   symlinkSync,
@@ -26,6 +27,7 @@ import {
   parsePublishedArguments,
   parseRegistryDist,
   provenanceReport,
+  publishedTypeProblems,
   tarballDigests,
   // @ts-expect-error The scripts are dependency-free JavaScript with JSDoc types.
 } from "../../../../scripts/release/verifyPublished.mjs";
@@ -744,5 +746,49 @@ describe("parsePackageTags", () => {
     ]) {
       expect(parsePackageTags({ expected: "latest", ...input })).toBeNull();
     }
+  });
+});
+
+describe("publishedTypeProblems", () => {
+  it("downloads every SDK package at the version into one folder and runs publint and attw on that folder", () => {
+    const seen: { version: string; folder: string }[] = [];
+    const checked: string[] = [];
+    const problems = publishedTypeProblems({
+      version: "0.2.0",
+      download: (version: string, folder: string) => {
+        seen.push({ version, folder });
+      },
+      typeCheck: (folder: string) => {
+        checked.push(folder);
+        return [];
+      },
+    });
+    expect(problems).toEqual([]);
+    expect(seen).toHaveLength(1);
+    expect(seen[0].version).toBe("0.2.0");
+    expect(checked).toEqual([seen[0].folder]);
+  });
+
+  it("returns what the tools found, and removes the folder either way", () => {
+    let folder = "";
+    const problems = publishedTypeProblems({
+      version: "0.2.0",
+      download: (_version: string, destination: string) => {
+        folder = destination;
+        writeFileSync(path.join(destination, "x.tgz"), "x");
+      },
+      typeCheck: () => ["core: attw failed"],
+    });
+    expect(problems).toEqual(["core: attw failed"]);
+    expect(existsSync(folder)).toBe(false);
+    expect(() =>
+      publishedTypeProblems({
+        version: "0.2.0",
+        download: () => {
+          throw new Error("npm pack failed");
+        },
+        typeCheck: () => [],
+      }),
+    ).toThrow("npm pack failed");
   });
 });
