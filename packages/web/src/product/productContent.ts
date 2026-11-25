@@ -196,6 +196,15 @@ export const HEADER_LINKS: readonly InlineLink[] = [
   { text: "GitHub", href: SOURCE_REPOSITORY_URL },
 ];
 
+/**
+ * What the playground's search and directions run on, and that a host should
+ * not copy it for production. One sentence, so the FAQ, `/llms.txt` and the
+ * guide to the reference site say it in the same words
+ * (`publicServicesNote.test.ts` reads it from here).
+ */
+export const PUBLIC_SERVICES_NOTE =
+  "The playground's search and directions use public community services (Nominatim for search and the FOSSGIS Valhalla server for directions) that are not meant for other sites' production traffic, so a site of your own should supply its own providers.";
+
 /** The umbrella package's page on npm. */
 export const NPM_PACKAGE_URL = "https://www.npmjs.com/package/@mapcairn/sdk";
 
@@ -696,7 +705,8 @@ export const SECTIONS: readonly Section[] = [
             summary: "What does the playground use?",
             detail: [
               [
-                "The playground is the reference site, built from these packages. Its search, directions and data layers are this site's adapters and definitions, built on public community services (Nominatim for search and the FOSSGIS Valhalla server for directions) that are not meant for other sites' production traffic.",
+                "The playground is the reference site, built from these packages. Its search, directions and data layers are this site's adapters and definitions. " +
+                  PUBLIC_SERVICES_NOTE,
               ],
               [
                 "It counts page views with Cloudflare Web Analytics, which is cookieless, and its browser contacts the map tile providers, the search and routing services when you use them, and a layer's provider when you turn it on, as ",

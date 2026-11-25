@@ -42,6 +42,7 @@ import {
   NPM_PACKAGE_URL,
   PLATE_CREDITS_LEAD,
   PLATES,
+  PUBLIC_SERVICES_NOTE,
   plateAlt,
   plateCredits,
   plateCreditsText,
@@ -621,6 +622,7 @@ describe("the product page stands on its own", () => {
     expect(questions).toHaveTextContent(
       "Its search, directions and data layers are this site's adapters and definitions",
     );
+    expect(questions).toHaveTextContent(PUBLIC_SERVICES_NOTE);
     expect(questions).toHaveTextContent(
       "Nominatim for search and the FOSSGIS Valhalla server for directions",
     );
