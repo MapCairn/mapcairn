@@ -37,6 +37,7 @@ jobs:
         run: npm ci
 
       - name: Run mutation tests
+        shell: bash
         run: npm run test:mutation | tee "${RUNNER_TEMP}/mutation.txt"
 
       - name: Write the score to the job summary
@@ -55,3 +56,4 @@ jobs:
           name: mutation-report
           path: reports/mutation
           if-no-files-found: ignore
+          retention-days: 14
