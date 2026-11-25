@@ -199,7 +199,7 @@ export const HEADER_LINKS: readonly InlineLink[] = [
 /** The umbrella package's page on npm. */
 export const NPM_PACKAGE_URL = "https://www.npmjs.com/package/@mapcairn/sdk";
 
-/** The package's page on npm, which `/llms.txt` lists among its links; the page itself does not link it. */
+/** The package's page on npm, a quiet link in the hero beside the repository and in `/index.md` and `/llms.txt`. */
 export const NPM_ACTION: InlineLink = {
   text: "View on npm",
   href: NPM_PACKAGE_URL,

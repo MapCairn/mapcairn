@@ -24,6 +24,8 @@ export class ProductPage {
   readonly headerGitHub: Locator;
   /** The hero's View on GitHub, a quiet text link. */
   readonly heroGitHub: Locator;
+  /** The hero's View on npm, the same quiet text link beside it. */
+  readonly heroNpm: Locator;
   /** The hero's Try the playground, the page's one filled button. */
   readonly heroPlayground: Locator;
   /** The excerpt of the embedding example. */
@@ -48,6 +50,7 @@ export class ProductPage {
     this.headerDocs = this.header.getByRole("link", { name: "Docs" });
     this.headerGitHub = this.header.getByRole("link", { name: "GitHub" });
     this.heroGitHub = this.main.getByRole("link", { name: "View on GitHub" });
+    this.heroNpm = this.main.getByRole("link", { name: "View on npm" });
     this.heroPlayground = this.main.getByRole("link", {
       name: "Try the playground",
     });

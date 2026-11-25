@@ -535,6 +535,14 @@ export const tertiaryLink = style([
   },
 ]);
 
+/** The repository and package links side by side, wrapping onto a second line when the column is narrow. */
+export const quietLinks = style({
+  display: "flex",
+  flexWrap: "wrap",
+  alignItems: "center",
+  columnGap: tokens.space.md,
+});
+
 /** The badges and the release line, a quiet group at the end of the hero. */
 export const trust = style({
   display: "flex",
