@@ -581,7 +581,7 @@ export interface FeatureOutline {
 }
 
 // @internal
-export function featureOutlines(feature: LayerFeature): FeatureOutline[];
+export function featureOutlines(feature: LayerFeature, maxPoints?: number): FeatureOutline[];
 
 // @internal
 export function featurePosition(feature: LayerFeature): LatLng | null;
@@ -652,6 +652,9 @@ export interface HiddenSelection {
     readonly ref: FeatureRef;
     readonly status: "not-shown";
 }
+
+// @public
+export const HIGHLIGHT_OUTLINE_POINTS = 100;
 
 // @public
 export function Icon(input: IconProps): JSX.Element;
@@ -973,6 +976,9 @@ export interface MarkerGlyphProps {
 }
 
 // @public
+export const MAX_HIGHLIGHTED_FEATURES = 200;
+
+// @public
 export const MAX_IDENTIFY_LAYERS = 4;
 
 // @public
@@ -1180,6 +1186,9 @@ export interface SelectedFeature {
     readonly feature: LayerFeature;
     readonly layer: DataLayerState;
 }
+
+// @public
+export function SelectionHighlights(): JSX.Element | null;
 
 // @public
 export function SelectionMarker(input: SelectionMarkerProps): JSX.Element | null;
