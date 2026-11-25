@@ -95,6 +95,7 @@ export const sidebar: SidebarEntry[] = [
     label: "Reference",
     items: [
       "guides/public-api",
+      "guides/supported-versions",
       "guides/capability-matrix",
       "guides/performance",
       "guides/machine-readable-data",
