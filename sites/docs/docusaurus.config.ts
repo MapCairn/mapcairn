@@ -14,7 +14,6 @@ import {
   REPOSITORY_URL,
   SITE_ORIGIN,
 } from "./src/siteConfig";
-import { THEME_BRIDGE_SCRIPT } from "./src/themeBridge";
 
 /**
  * An empty Prism theme. Highlighting is done by stylesheet rules on the token
@@ -51,9 +50,6 @@ const config: Config = {
       rspackPersistentCache: true,
     },
   },
-  // No namespace suffix on storage keys, so the framework's choice is stored
-  // under the plain `theme` key that `src/themeBridge.ts` writes to.
-  storage: { type: "localStorage", namespace: false },
   onBrokenLinks: "throw",
   onBrokenAnchors: "throw",
   onDuplicateRoutes: "throw",
@@ -69,7 +65,6 @@ const config: Config = {
     localeConfigs: { en: { htmlLang: "en-GB" } },
   },
   headTags: [
-    { tagName: "script", attributes: {}, innerHTML: THEME_BRIDGE_SCRIPT },
     {
       tagName: "link",
       attributes: { rel: "icon", href: "/favicon.svg", type: "image/svg+xml" },

@@ -181,6 +181,22 @@ describe.each(SOURCES)("%s", (_name, read) => {
   });
 });
 
+describe("the map credits beside the pictures", () => {
+  /** The credits the pictures' basemaps show, with the OpenStreetMap credit first as the map words it. */
+  const CREDITS =
+    "Map credits: © OpenStreetMap contributors, OpenFreeMap, OpenMapTiles, MapLibre.";
+
+  it.each([
+    ["/index.md", () => markdownLoader().text()],
+    ["/llms-full.txt", () => fullLoader().text()],
+  ] as const)(
+    "%s names every credit the picture's map shows",
+    async (_name, read) => {
+      expect(await read()).toContain(CREDITS);
+    },
+  );
+});
+
 describe("links to the repository's front page", () => {
   it.each([
     [
