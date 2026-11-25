@@ -44,7 +44,7 @@ export const SECTION_HEADINGS = [
 ];
 
 /** The heading whose entries are changes a person must make. */
-const UPGRADE_HEADING = "What to change when you upgrade";
+export const UPGRADE_HEADING = "What to change when you upgrade";
 
 const COMMIT_PREFIX =
   /^[ \t]*(?:(?:[-*]|\d+\.)[ \t]*)?(feat|fix|perf|refactor|docs|chore|build|ci|test|style|revert)(\([^)]*\))?!?:/;
@@ -379,7 +379,7 @@ function showsBeforeAndAfter(entry) {
  * @param {string} text
  * @returns {import("./changelog.mjs").Line[][]}
  */
-function upgradeGroups(text) {
+export function upgradeGroups(text) {
   /** @type {import("./changelog.mjs").Line[][]} */
   const groups = [];
   let inside = false;

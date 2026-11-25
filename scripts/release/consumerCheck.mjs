@@ -25,6 +25,13 @@
  * the versions of third-party tools come from the root lockfile, which this
  * repository has already installed and tested.
  *
+ * On a Release pull request it also upgrades (`checkUpgrade`): the latest
+ * published release is installed into an app written for it, the packed
+ * tarballs are installed over it, and the app must still type-check, build and
+ * draw a map, or the notes of the version being released must name what it
+ * needed. `--upgrade-from <version>` runs it from another version, and on a
+ * branch whose version is not newer.
+ *
  * The umbrella app also draws a real map in a browser (`checkRealMap`): the
  * one leg that starts a server, a static one on 127.0.0.1, and the repository's
  * Playwright Chromium, and so does the quickstart leg (`checkQuickstart`). The
@@ -54,6 +61,7 @@ import {
   UMBRELLA_PACKAGE,
 } from "../sdkPackages.mjs";
 import { BROWSER_STYLE_URL } from "./browserLeg.mjs";
+import { extractNotes } from "./changelog.mjs";
 import {
   BROWSER_TIMEOUT,
   browserLegPlan,
@@ -81,8 +89,16 @@ import {
   webpackBuildScript,
 } from "./entryPoints.mjs";
 import { isolatedEnvironment, runNpm } from "./npm.mjs";
-import { findTarballs, packTarballs } from "./packCheck.mjs";
+import { findTarballs, packTarballs, readTarballFile } from "./packCheck.mjs";
 import { readmeQuickstart } from "./quickstartLeg.mjs";
+import {
+  fixtureAtTag,
+  latestPublished,
+  migrationNotes,
+  runStep,
+  upgradePlan,
+  upgradeProblems,
+} from "./upgradeLeg.mjs";
 import { SDK_NAMES } from "./workspaces.mjs";
 
 const REPO = path.resolve(
@@ -152,6 +168,9 @@ export const LANDMARKS = [
   { name: "the zoom in button", pattern: /aria-label="Zoom in"/ },
   { name: "the attribution", pattern: /OpenStreetMap|Attribution/i },
 ];
+
+/** Milliseconds in a second, for the time a leg reports. */
+const MILLISECONDS = 1000;
 
 /** The characters of a page a failure message shows. */
 const EXCERPT = 1500;
@@ -1226,7 +1245,21 @@ function checkRealMap(app, prefix) {
     [vite, "build", "browser", "--outDir", "../dist/browser", "--emptyOutDir"],
     app,
   );
-  const lines = JSON.parse(
+  return drawBuiltPage(app, executable).map(
+    (line) => `${prefix}real map in Chromium, ${line}`,
+  );
+}
+
+/**
+ * Draws the built browser page (`dist/browser` in the app) in Chromium under
+ * the strict policy, as `browserRun.mjs` does.
+ *
+ * @param {string} app The app the page was built in.
+ * @param {string} executable The Chromium binary.
+ * @returns {string[]} What the run saw, a line for each.
+ */
+function drawBuiltPage(app, executable) {
+  return JSON.parse(
     runNode(
       "draw the map in Chromium",
       [
@@ -1238,7 +1271,6 @@ function checkRealMap(app, prefix) {
       BROWSER_TIMEOUT,
     ),
   );
-  return lines.map((line) => `${prefix}real map in Chromium, ${line}`);
 }
 
 /**
@@ -1307,6 +1339,136 @@ function checkQuickstart(app, prefix) {
     ),
   );
   return lines.map((line) => `${prefix}README quickstart in Chromium, ${line}`);
+}
+
+/** The folder of the page the upgrade leg starts from, in the repository. */
+const UPGRADE_PAGE_FOLDER = "scripts/release/consumer-browser";
+
+/**
+ * Type-checks the browser page and builds it with Vite, in the app, and says
+ * what went wrong instead of throwing, so the upgrade leg can read it against
+ * the release notes.
+ *
+ * @param {string} app
+ * @returns {{ ok: boolean, output: string }}
+ */
+function buildBrowserPage(app) {
+  const tsc = path.join(app, "node_modules", "typescript", "bin", "tsc");
+  const typeCheck = runStep({
+    args: [tsc, "-p", "browser/tsconfig.json"],
+    cwd: app,
+  });
+  if (!typeCheck.ok) {
+    return typeCheck;
+  }
+  const vite = path.join(app, "node_modules", "vite", "bin", "vite.js");
+  return runStep({
+    args: [
+      vite,
+      "build",
+      "browser",
+      "--outDir",
+      "../dist/browser",
+      "--emptyOutDir",
+    ],
+    cwd: app,
+  });
+}
+
+/**
+ * The upgrade leg: an app written for the latest release, with that release
+ * installed, is upgraded in place to the packed tarballs. It must still
+ * type-check, build and draw a map. If it does not, the notes of the version
+ * being released must name what broke, under "What to change when you
+ * upgrade", or the leg fails. A break the notes name stops the leg there: the
+ * app is not changed for the person, so it is not built or drawn.
+ *
+ * The app is the page as the latest release's tag left it
+ * (`consumer-browser`), so it holds only what that release had.
+ *
+ * @param {{ root: string, packed: Record<string, string>, versions: Record<string, string>, plan: { from: string, to: string }, notes: string }} input
+ *   `notes` is `migrationNotes` of the packed version's release notes.
+ * @returns {string[]} One line for each check.
+ */
+function checkUpgrade({ root, packed, versions, plan, notes }) {
+  const prefix = `upgrade from ${plan.from} to ${plan.to}: `;
+  const app = path.join(root, "upgrade");
+  const page = path.join(app, "browser");
+  for (const { file, text } of fixtureAtTag({
+    root: REPO,
+    tag: `v${plan.from}`,
+    folder: UPGRADE_PAGE_FOLDER,
+  })) {
+    mkdirSync(path.dirname(path.join(page, file)), { recursive: true });
+    writeFileSync(path.join(page, file), text);
+  }
+  writeFileSync(
+    path.join(page, ".env.production"),
+    `VITE_STYLE_URL=${BROWSER_STYLE_URL}\n`,
+  );
+  const writeManifest = (/** @type {Record<string, unknown>} */ manifest) =>
+    writeFileSync(
+      path.join(app, "package.json"),
+      `${JSON.stringify(manifest, null, 2)}\n`,
+    );
+  writeManifest(
+    publishedManifest({
+      version: plan.from,
+      versions,
+      direct: [UMBRELLA_PACKAGE],
+    }),
+  );
+  copyFileSync(path.join(REPO, ".npmrc"), path.join(app, ".npmrc"));
+  install(app, installFlags({ published: plan.from }));
+  const before = buildBrowserPage(app);
+  if (!before.ok) {
+    throw new Error(
+      `The app does not build on the published ${plan.from}, so the upgrade proves nothing:\n${before.output}`,
+    );
+  }
+
+  writeManifest(
+    consumerManifest({
+      tarballs: packed,
+      versions,
+      direct: [UMBRELLA_PACKAGE],
+    }),
+  );
+  install(app, []);
+  const after = buildBrowserPage(app);
+  if (!after.ok) {
+    const { problems, documented } = upgradeProblems({
+      output: after.output,
+      notes,
+      version: plan.to,
+    });
+    if (problems.length > 0) {
+      throw new Error(
+        `${prefix}the app no longer builds, and the notes do not cover it:\n${problems.join("\n")}`,
+      );
+    }
+    return [
+      `${prefix}the app needs the changes the notes name (${documented.join(", ")}), so it was not built or drawn`,
+    ];
+  }
+  const executable = chromiumExecutable(REPO);
+  const draw = browserLegPlan({
+    playwright: playwrightAvailable(REPO),
+    executable,
+  });
+  if (draw.action === "fail") {
+    throw new Error(draw.message);
+  }
+  const built = `${prefix}the app type-checks and builds with no change`;
+  if (draw.action === "skip") {
+    return [built, `${prefix}${draw.line}`];
+  }
+  return [
+    built,
+    ...drawBuiltPage(app, executable).map(
+      (line) => `${prefix}real map in Chromium, ${line}`,
+    ),
+  ];
 }
 
 /**
@@ -1478,6 +1640,51 @@ function checkMixed({ root, packed, published, versions }) {
 }
 
 /**
+ * Decides whether the upgrade leg runs, and runs it: it needs the version the
+ * tarballs hold, the latest published release, and the release notes of the
+ * packed version (`CHANGELOG.md`, the text the GitHub Release carries).
+ *
+ * @param {{ root: string, packed: Record<string, string>, versions: Record<string, string>, upgradeFrom: string | null }} input
+ * @returns {string[]} One line for each check, or the one line that says it was skipped.
+ */
+function runUpgradeLeg({ root, packed, versions, upgradeFrom }) {
+  const manifest = JSON.parse(
+    readTarballFile(
+      path.join(root, "tarballs", packed[UMBRELLA_PACKAGE]),
+      "package.json",
+    ) ?? "{}",
+  );
+  const plan = upgradePlan({
+    packed: manifest.version,
+    latest:
+      upgradeFrom === null
+        ? latestPublished(`@mapcairn/${UMBRELLA_PACKAGE}`, REPO)
+        : null,
+    from: upgradeFrom,
+  });
+  if (plan.action === "skip") {
+    return [plan.line];
+  }
+  const releaseNotes = extractNotes(
+    readFileSync(path.join(REPO, "CHANGELOG.md"), "utf8"),
+    plan.to,
+  );
+  const started = Date.now();
+  const lines = checkUpgrade({
+    root,
+    packed,
+    versions,
+    plan,
+    notes: migrationNotes(releaseNotes ?? ""),
+  });
+  const seconds = Math.round((Date.now() - started) / MILLISECONDS);
+  return [
+    ...lines,
+    `upgrade from ${plan.from} to ${plan.to}: took ${seconds} seconds${releaseNotes === null ? `; CHANGELOG.md has no section for ${plan.to}, so no notes covered a break` : ""}`,
+  ];
+}
+
+/**
  * Runs every check and returns one line for each. With `published`, it
  * installs that version of the four packages from the registry instead of
  * packing the repository's, skips the pnpm install, and audits the
@@ -1485,10 +1692,14 @@ function checkMixed({ root, packed, published, versions }) {
  * for the published packages too, because their three-day release age would
  * refuse a release made today; with `tarballs` they run on the tarballs.
  *
- * @param {{ published?: string | null, tarballs?: string | null }} [options] `tarballs` is a folder of the four packed tarballs to check, copied so the originals are untouched; without it the packages are packed here.
+ * @param {{ published?: string | null, tarballs?: string | null, upgradeFrom?: string | null }} [options] `tarballs` is a folder of the four packed tarballs to check, copied so the originals are untouched; without it the packages are packed here. `upgradeFrom` is the published version the upgrade leg starts from, instead of the latest release, and runs it even when the packed version is not newer.
  * @returns {string[]} What was checked, and what was skipped and why.
  */
-export function runConsumerCheck({ published = null, tarballs = null } = {}) {
+export function runConsumerCheck({
+  published = null,
+  tarballs = null,
+  upgradeFrom = null,
+} = {}) {
   const report = [];
   const root = mkdtempSync(path.join(tmpdir(), "mapcairn-consumer-"));
   if (realpathSync(root).startsWith(realpathSync(REPO) + path.sep)) {
@@ -1585,6 +1796,9 @@ export function runConsumerCheck({ published = null, tarballs = null } = {}) {
       ...checkOldestReact({ root, packed, published, versions }),
       ...checkMixed({ root, packed, published, versions }),
     );
+    if (published === null) {
+      report.push(...runUpgradeLeg({ root, packed, versions, upgradeFrom }));
+    }
   } finally {
     rmSync(root, { recursive: true, force: true });
   }
@@ -1595,8 +1809,10 @@ if (isEntryPoint(import.meta.url)) {
   try {
     const flag = process.argv.indexOf("--tarballs");
     const folder = flag === -1 ? null : (process.argv[flag + 1] ?? null);
+    const from = process.argv.indexOf("--upgrade-from");
     for (const line of runConsumerCheck({
       tarballs: folder === null ? null : path.resolve(folder),
+      upgradeFrom: from === -1 ? null : (process.argv[from + 1] ?? null),
     })) {
       console.log(line);
     }
