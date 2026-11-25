@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
 
-/** A decimal number as `String(number)` writes it, and nothing looser such as `0x10` or an empty cell. */
-export const DECIMAL = /^-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?$/;
+/** A GPX decimal (`xsd:decimal`): an optional sign, digits and an optional fraction, with no exponent, hex or empty text. */
+const GPX_DECIMAL = /^[+-]?\d+(?:\.\d+)?$/;
 
 /**
  * How deeply GPX elements may nest. The deepest place a position can sit is
@@ -104,8 +104,8 @@ function readAttributes(text: string, from: number): StartTag | null {
 /** One position, longitude first, with NaN for a number that is not plain decimal text. */
 function position({ lat, lon }: StartTag): number[] {
   return [
-    DECIMAL.test(lon) ? Number(lon) : Number.NaN,
-    DECIMAL.test(lat) ? Number(lat) : Number.NaN,
+    GPX_DECIMAL.test(lon) ? Number(lon) : Number.NaN,
+    GPX_DECIMAL.test(lat) ? Number(lat) : Number.NaN,
   ];
 }
 
@@ -266,11 +266,14 @@ class GpxWalker {
  *   work is linear in the text. Entities are never expanded and nothing
  *   external is fetched: attribute values are read as they stand and only a
  *   plain decimal `lat` and `lon` give a number, so `&#49;` or a name defined
- *   in a `DOCTYPE` is not one. A `DOCTYPE` makes the text not GPX. Names,
+ *   in a `DOCTYPE` is not one, nor is an exponent or hex form (the GPX
+ *   schema's `xsd:decimal` allows neither). A `DOCTYPE` makes the text not GPX. Names,
  *   descriptions, extensions and any text between elements are never read,
  *   so there is no markup to show. Elements are matched by their full path
  *   (`gpx/wpt`, `gpx/rte/rtept`, `gpx/trk/trkseg/trkpt`), so a lookalike
- *   inside an extension is ignored. The text must be well formed as far as
+ *   inside an extension is ignored. Names are matched as written, so an
+ *   element with a namespace prefix (`<gpx:wpt>`, `<ns:gpx>`) is not read: a
+ *   prefixed root makes the text `not-gpx`, and a prefixed child is ignored. The text must be well formed as far as
  *   elements go: a tag left open, closed twice or out of order is `unreadable`.
  */
 export function readGpx(

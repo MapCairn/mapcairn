@@ -1388,6 +1388,41 @@ describe("parseShapeFile with GPX", () => {
     ).toEqual({ ok: false, refusal: "too-many-points" });
   });
 
+  it("refuses a file of too many shapes before it reads on to damaged text", () => {
+    const text = `<gpx>${'<wpt lat="1" lon="2"/>'.repeat(MAX_IMPORT_SHAPES + 1)}<wpt>`;
+    expect(parseShapeFile(text)).toEqual({
+      ok: false,
+      refusal: "too-many-shapes",
+    });
+  });
+
+  it("accepts a file of exactly the most shapes and exactly the most points", () => {
+    const waypoints = '<wpt lat="1" lon="2"/>'.repeat(MAX_IMPORT_SHAPES);
+    expect(parseShapeFile(gpx(waypoints))).toMatchObject({
+      ok: true,
+      shapes: expect.arrayContaining([{ kind: "point", vertices: [p(2, 1)] }]),
+    });
+    const segments = Array.from(
+      { length: MAX_IMPORT_POINTS / MAX_IMPORT_SHAPE_POINTS },
+      () =>
+        `<trkseg>${Array.from(
+          { length: MAX_IMPORT_SHAPE_POINTS },
+          (_, at) => `<trkpt lat="${at / 100}" lon="0"/>`,
+        ).join("")}</trkseg>`,
+    ).join("");
+    const result = parseShapeFile(gpx(`<trk>${segments}</trk>`));
+    expect(result).toMatchObject({ ok: true, skipped: {} });
+    expect(result.ok && result.shapes).toHaveLength(10);
+  });
+
+  it("skips a position outside the world", () => {
+    expect(parseShapeFile(gpx('<wpt lat="1" lon="181"/>'))).toMatchObject({
+      ok: true,
+      shapes: [],
+      skipped: { "out-of-range": 1 },
+    });
+  });
+
   it("refuses text that nests elements too deeply", () => {
     expect(parseShapeFile(gpx("<a>".repeat(MAX_IMPORT_DEPTH + 1)))).toEqual({
       ok: false,

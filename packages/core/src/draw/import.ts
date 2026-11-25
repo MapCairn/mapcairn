@@ -11,7 +11,7 @@ import { shortestLongitudeSpan } from "../globe/longitude";
 import type { Bounds, LatLng } from "../ports/geometry";
 import type { Message } from "../ports/messages";
 import { SHAPES_CSV_HEADER } from "./export";
-import { DECIMAL, readGpx } from "./gpx";
+import { readGpx } from "./gpx";
 import type { DrawShapeInput } from "./reducer";
 import { shapeRing, validateShape } from "./shape";
 import type { DrawIssue } from "./types";
@@ -120,6 +120,9 @@ const WKT_COLUMN = "wkt";
 
 /** The header of the CSV the draw tool wrote before circles carried their radius. */
 const LEGACY_CSV_HEADER = "id,type,area_m2,length_m,geometry";
+
+/** A decimal number as `String(number)` writes it, and nothing looser such as `0x10` or an empty cell. */
+const DECIMAL = /^-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?$/;
 
 const GEOMETRY_TYPES: ReadonlySet<unknown> = new Set([
   "Point",

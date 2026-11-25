@@ -88,18 +88,39 @@ describe("readGpx", () => {
     expect(geometries).toEqual([{ type: "Point", coordinates: [2, 1] }]);
   });
 
-  it("gives a point whose position is not a plain number a position no shape can use", () => {
+  it("reads a leading plus sign, as the GPX schema's decimal allows", () => {
     const { geometries } = read(
-      gpx(
-        '<wpt lat="&#49;" lon="2"/><wpt lon="2"/><wpt lat="0x1" lon="2"/><wpt lat="1e1" lon="2"/>',
-      ),
+      gpx('<wpt lat="+51.5" lon="+0.1"/><wpt lat="-1" lon="+2"/>'),
     );
     expect(geometries.map((geometry) => geometry.coordinates)).toEqual([
-      [2, Number.NaN],
-      [2, Number.NaN],
-      [2, Number.NaN],
-      [2, 10],
+      [0.1, 51.5],
+      [2, -1],
     ]);
+  });
+
+  it("gives a point whose position is not a plain decimal a position no shape can use", () => {
+    const bad = [
+      "&#49;",
+      "",
+      "++1",
+      "+",
+      "+-1",
+      "0x1",
+      "1e1",
+      "1.",
+      ".5",
+      " 1",
+    ];
+    const { geometries } = read(
+      gpx(
+        bad.map((lat) => `<wpt lat="${lat}" lon="2"/>`).join("") +
+          '<wpt lon="2"/>',
+      ),
+    );
+    expect(geometries).toHaveLength(bad.length + 1);
+    for (const geometry of geometries) {
+      expect(geometry.coordinates).toEqual([2, Number.NaN]);
+    }
   });
 
   it("never expands an entity or follows an external reference", () => {
@@ -108,7 +129,10 @@ describe("readGpx", () => {
       (_, level) => `<!ENTITY lol${level + 1} "${`&lol${level};`.repeat(10)}">`,
     ).join("");
     const doctype = `<!DOCTYPE gpx [<!ENTITY lol "lol">${laughs}<!ENTITY x SYSTEM "file:///etc/passwd">]>`;
-    expect(read(`${doctype}<gpx><wpt lat="&x;" lon="&lol9;"/></gpx>`)).toEqual({
+    const document =
+      '<gpx><wpt lat="1" lon="2"><name>&lol9;</name></wpt></gpx>';
+    expect(read(document).result).toBe("ok");
+    expect(read(`${doctype}${document}`)).toEqual({
       result: "not-gpx",
       geometries: [],
     });
@@ -124,6 +148,7 @@ describe("readGpx", () => {
       "<kml><Placemark/></kml>",
       "<GPX/>",
       "<gpxx/>",
+      "<ns:gpx><ns:wpt lat='1' lon='2'/></ns:gpx>",
       "plain",
       "<",
       "<!DOCTYPE gpx><gpx/>",
@@ -152,6 +177,8 @@ describe("readGpx", () => {
       "<gpx></ gpx>",
       "<gpx",
       "<gpx>text",
+      "<gpx/>x",
+      "<gpx/> x",
       "<gpx><!x></gpx>",
     ]) {
       expect(read(text).result, text).toBe("unreadable");
@@ -185,19 +212,61 @@ describe("readGpx", () => {
     expect(readGpx("<gpx><rte/><rte/></gpx>", () => false)).toBe("stopped");
   });
 
-  it("walks a large hostile text in time linear in its length", () => {
-    const cases = [
-      `<gpx>${"<!--".repeat(100_000)}</gpx>`,
-      `<gpx>${"<a b='".repeat(100_000)}</gpx>`,
-      `<gpx>${"<![CDATA[".repeat(100_000)}</gpx>`,
-      `<gpx>${"<wpt ".repeat(100_000)}</gpx>`,
-      `<gpx>${'<wpt lat="1" lon="2"/>'.repeat(40_000)}</gpx>`,
-      `<gpx>${"<a>".repeat(31)}${"<wpt lat='1' lon='2'/>".repeat(40_000)}</gpx>`,
-    ];
-    const started = performance.now();
-    for (const text of cases) {
-      readGpx(text, () => true);
-    }
-    expect(performance.now() - started).toBeLessThan(1_000);
+  it("ignores elements with a namespace prefix", () => {
+    const { geometries } = read(
+      gpx('<gpx:wpt lat="1" lon="2"/><wpt lat="3" lon="4"/>'),
+    );
+    expect(geometries).toEqual([{ type: "Point", coordinates: [4, 3] }]);
   });
+
+  it("matches point paths exactly, not by their ending", () => {
+    const { geometries } = read(
+      '<gpx><rte><trkpt lat="1" lon="2"/><extensions><rtept lat="3" lon="4"/></extensions></rte></gpx>',
+    );
+    expect(geometries).toEqual([{ type: "LineString", coordinates: [] }]);
+  });
+
+  it("stops at a line that an end tag finishes", () => {
+    expect(readGpx("<gpx><rte></rte><rte>", () => false)).toBe("stopped");
+  });
+
+  it("allows 31 levels of elements inside gpx and no more", () => {
+    const nested = (levels: number) =>
+      `<gpx>${"<a>".repeat(levels)}${"</a>".repeat(levels)}</gpx>`;
+    expect(read(nested(31)).result).toBe("ok");
+    expect(read(nested(32)).result).toBe("too-deep");
+    expect(read(nested(33)).result).toBe("too-deep");
+    expect(read(nested(30)).result).toBe("ok");
+  });
+
+  it("walks hostile text in time that grows in proportion to its length", () => {
+    const small = 10_000;
+    const factor = 16;
+    const builders: ((count: number) => string)[] = [
+      (count) => `<gpx>${'<wpt lat="1" lon="2"/>'.repeat(count)}</gpx>`,
+      (count) => `<gpx>${"<a></a>".repeat(count)}</gpx>`,
+      (count) => `<gpx>${"<!-- x -->".repeat(count)}</gpx>`,
+      (count) => `<gpx>${"<![CDATA[ x ]]>".repeat(count)}</gpx>`,
+      (count) => `<gpx><wpt ${'a="1" '.repeat(count)}/></gpx>`,
+      (count) => `<gpx>${"<a>".repeat(30)}${"<b/>".repeat(count)}</gpx>`,
+    ];
+    /** The fastest of a few runs, so a pause from other work does not count. */
+    const fastest = (text: string) => {
+      let best = Number.POSITIVE_INFINITY;
+      for (let run = 0; run < 3; run += 1) {
+        const started = performance.now();
+        readGpx(text, () => true);
+        best = Math.min(best, performance.now() - started);
+      }
+      return best;
+    };
+    readGpx(builders[0]?.(small) ?? "", () => true);
+    for (const build of builders) {
+      const base = fastest(build(small));
+      const large = fastest(build(small * factor));
+      // Linear growth is a factor of 16 and quadratic 256: a bound four times
+      // the linear one holds under load and still catches quadratic work.
+      expect(large / Math.max(base, 1)).toBeLessThan(factor * 4);
+    }
+  }, 30_000);
 });
