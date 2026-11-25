@@ -163,7 +163,7 @@ export function upgradeProblems({ output, notes, version }) {
     }
     if (covered.length === 0) {
       problems.push(
-        `The upgrade to ${version} needs a change the notes do not mention: ${line.trim()}. Name it under "${UPGRADE_HEADING}" in the ${version} section of CHANGELOG.md, with a Before and an After.`,
+        `The upgrade to ${version} needs a change the notes do not mention: ${line.trim().replace(/\.$/, "")}. Name it under "${UPGRADE_HEADING}" in the ${version} section of CHANGELOG.md, with a Before and an After.`,
       );
     }
   }
