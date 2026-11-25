@@ -201,4 +201,4 @@ If the map stays blank, check that `src/page.css` is imported and that no other 
 
 ## Status
 
-The SDK is pre-1.0. While the version starts with `0.`, a minor release can contain a breaking change to the public API, and a patch release is not meant to. A `^0.1.0` range takes patch releases but not the next minor release.
+The SDK is pre-1.0. While the version starts with `0.`, a minor release can contain a breaking change to the public API, and a patch release is not meant to. A caret range takes patch releases but not the next minor release.

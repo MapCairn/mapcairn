@@ -22,7 +22,7 @@ This repository also holds the playground, a reference site built from the SDK's
 npm install @mapcairn/sdk react react-dom maplibre-gl
 ```
 
-That needs React 19, `maplibre-gl` 6.18 or later and an ESM bundler that handles CSS imports (tested with Vite), and a TypeScript `moduleResolution` of `bundler`, `node16` or `nodenext`. [Supported versions](https://docs.mapcairn.com/guides/supported-versions/) lists what is tested, and [Embed a map](#embed-a-map) shows a whole app.
+[`@mapcairn/sdk`](https://www.npmjs.com/package/@mapcairn/sdk) is the umbrella package on npm. It needs React 19, `maplibre-gl` 6.18 or later and an ESM bundler that handles CSS imports (tested with Vite), and a TypeScript `moduleResolution` of `bundler`, `node16` or `nodenext`. [Supported versions](https://docs.mapcairn.com/guides/supported-versions/) lists what is tested, and [Embed a map](#embed-a-map) shows a whole app.
 
 <p>
   <picture>
@@ -33,7 +33,7 @@ That needs React 19, `maplibre-gl` 6.18 or later and an ESM bundler that handles
 
 The playground in its light and dark themes, with the earthquakes layer on and a distance measured. Map data and tile credits are in [`ATTRIBUTIONS.md`](ATTRIBUTIONS.md).
 
-**Status:** pre-1.0. While the version starts with `0.`, a minor release (the middle number) can contain a breaking change to the public API and a patch release (the last number) is not meant to, so a `^0.1.0` range takes patch releases but not the next minor release. The [changelog](CHANGELOG.md) names each breaking change the release finds, and [what counts as the public API](https://docs.mapcairn.com/guides/public-api/) says what is covered.
+**Status:** pre-1.0. While the version starts with `0.`, a minor release (the middle number) can contain a breaking change to the public API and a patch release (the last number) is not meant to, so a caret range takes patch releases but not the next minor release. The [changelog](CHANGELOG.md) names each breaking change the release finds, and [what counts as the public API](https://docs.mapcairn.com/guides/public-api/) says what is covered.
 
 ## Embed a map
 

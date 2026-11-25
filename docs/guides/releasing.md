@@ -178,7 +178,7 @@ Only the maintainer does these; an agent lists them and waits.
    - It replaced the release-candidate Status line in the six package READMEs and the root with the line below; the root README writes the two links as relative paths (`CHANGELOG.md`, [The public API](https://docs.mapcairn.com/guides/public-api/)). The lint requires the release-candidate wording only while a version is a release candidate, and `packageReadmes.test.ts` checks that every README carries this line.
 
      ```markdown
-     **Status:** pre-1.0. While the version starts with `0.`, a minor release (the middle number) can contain a breaking change to the public API and a patch release (the last number) is not meant to, so a `^0.1.0` range takes patch releases but not the next minor release. The [changelog](https://github.com/MapCairn/mapcairn/blob/main/CHANGELOG.md) names each breaking change the release finds, and [what counts as the public API](https://docs.mapcairn.com/guides/public-api/) says what is covered.
+     **Status:** pre-1.0. While the version starts with `0.`, a minor release (the middle number) can contain a breaking change to the public API and a patch release (the last number) is not meant to, so a caret range takes patch releases but not the next minor release. The [changelog](https://github.com/MapCairn/mapcairn/blob/main/CHANGELOG.md) names each breaking change the release finds, and [what counts as the public API](https://docs.mapcairn.com/guides/public-api/) says what is covered.
      ```
 
    - It changed the sentence in [The public API](https://docs.mapcairn.com/guides/public-api/) ("The package READMEs are written for the npm page") that said the Status line calls the packages a release candidate.
