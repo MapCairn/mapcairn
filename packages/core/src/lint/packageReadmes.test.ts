@@ -573,6 +573,25 @@ describe("the README of @mapcairn/sdk", () => {
   });
 });
 
+/**
+ * The packages that depend on another MapCairn package at its exact version
+ * (`dependencyRanges.test.ts`), so an app that lists one at another version
+ * gets a second copy installed without a warning. The READMEs of these
+ * packages, and of core, which the others share, say how to keep one.
+ */
+describe.each(["core", "map", "adapter-maplibre"])(
+  "the README of @mapcairn/%s on keeping one copy",
+  (name) => {
+    const readme = readmeOf(name);
+
+    it("tells the app to keep every MapCairn package at one version, and how to check it", () => {
+      expect(readme).toContain("`npm ls @mapcairn/core`");
+      expect(readme).toMatch(/at one version/);
+      expect(readme).toContain("`instanceof`");
+    });
+  },
+);
+
 describe("the README of @mapcairn/map", () => {
   const readme = readmeOf("map");
 

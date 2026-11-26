@@ -23,6 +23,8 @@ The examples below import from `@mapcairn/core` and `@mapcairn/theme` too, so in
 
 The package is ESM only: it has no `main` field and no CommonJS build. A TypeScript project needs `moduleResolution` set to `node16`, `nodenext` or `bundler`; `node10` is not supported.
 
+The six MapCairn packages share one version, and this package depends on `@mapcairn/core`, `@mapcairn/react` and `@mapcairn/theme` at that exact version, so keep every `@mapcairn/*` package you list at one version. If you list `@mapcairn/core` at another version, npm installs a second copy of it under this package and prints no warning. Errors from one copy then fail an `instanceof` check against the other (`MapEngineError`, `LayerError`, `SearchError`), and the `Fake*` classes of the two copies do not mix. `npm ls @mapcairn/core` shows one version when all is well.
+
 ## Set up
 
 Import the two stylesheets once, in your entry module. The first holds the design tokens and the second the styles of every component. Both are plain CSS, so an app needs no vanilla-extract plugin.
