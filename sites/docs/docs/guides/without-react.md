@@ -27,7 +27,7 @@ npm install @mapcairn/core @mapcairn/adapter-maplibre maplibre-gl
 - The adapter pins `@mapcairn/core` to its own version, so install both at the same version.
 - `maplibre-gl` is a required peer of the adapter, with the range its `package.json` gives. npm installs it for you, and a strict package manager wants it listed.
 - The packages are ESM only, and a TypeScript project needs `moduleResolution` set to `bundler`, `node16` or `nodenext`.
-- The declarations of `core` use the global types `Blob` and `AbortSignal`, so the project's `lib` includes `DOM`, as the example's `tsconfig.json` does.
+- The declarations of `core` use the global types `Blob` and `AbortSignal`, so the project's `lib` includes `DOM`, as the example's `tsconfig.json` does, or the project has `@types/node`. A project with neither fails with `Cannot find name 'Blob'` from `node_modules/@mapcairn/core`.
 - The first line of `main.ts`, `/// <reference types="vite/client" />`, gives TypeScript the types of the `?worker&url` import and of a plain CSS import. A Vite project made from a template already lists `vite/client` in its `tsconfig`, so the line only matters when your project does not already.
 
 ## The page

@@ -20,6 +20,10 @@ playwright-report/
 blob-report/
 playwright/.cache/
 
+# Environment files with tokens, such as GH_TOKEN for a second agent
+.env
+.env.local
+
 # Cloudflare API token
 .env.cloudflare
 
