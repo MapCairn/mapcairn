@@ -110,7 +110,10 @@ test.describe("vector tiles that declare their encoding", () => {
     await expect(status).toHaveText(FORMAT_STATUS);
 
     answer.body = MLT_TILE;
-    await page.getByRole("button", { name: "Zoom in" }).click();
+    // Zoom from the keyboard: a phone has no zoom buttons, and the open sheet
+    // covers the map, so the map region is focused rather than clicked.
+    await mapPage.focusMap();
+    await page.keyboard.press("+");
     await expect(status).toHaveCount(0);
     await expect(mapPage.politeAnnouncer).toContainText(
       "Sample tiles: imagery is showing again.",
