@@ -68,6 +68,11 @@ export default defineConfig({
           functions: 80,
           lines: 80,
         },
+        // The scripts that decide what a change may do hold the line floor
+        // one by one, so a healthy group average cannot hide one without
+        // tests (#937). Add a script here when its own tests reach 80%.
+        "scripts/{harmony/scan,apiReports,licenceHeaders,moved-guides-check,qualityBarCheck,agents/{web-guidance,port,thread,docs-refs,guardWrites}}.mjs":
+          { lines: 80, perFile: true },
         // The host sits a little lower on branches because its layout and
         // touch-gesture code is also covered by Playwright, not only by jsdom.
         // Set below the measured figures so ordinary changes do not trip it,

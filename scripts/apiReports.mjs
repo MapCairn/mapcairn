@@ -313,26 +313,27 @@ export function changedLines(committed, generated, limit = MAX_CHANGED_LINES) {
  * @param {string} name The package folder name.
  * @param {Array<{ id: string, text: string, file: string | undefined, line: number | undefined }>} messages
  * @param {boolean} verbose Whether to list every message.
+ * @param {string} root Repository root used for relative message paths.
+ * @param {Record<string, string | undefined>} env Command environment.
+ * @param {(line: string) => void} log Receives the messages and counts.
  */
-function printMessages(name, messages, verbose) {
+function printMessages(name, messages, verbose, root, env, log) {
   if (verbose && messages.length > 0) {
-    console.log(`::group::@mapcairn/${name} documentation warnings`);
+    log(`::group::@mapcairn/${name} documentation warnings`);
     for (const message of messages) {
       const where = message.file
-        ? ` (${path.relative(REPO, message.file)}${message.line ? `:${message.line}` : ""})`
+        ? ` (${path.relative(root, message.file)}${message.line ? `:${message.line}` : ""})`
         : "";
-      console.log(`${message.id}: ${message.text}${where}`);
+      log(`${message.id}: ${message.text}${where}`);
     }
-    console.log("::endgroup::");
+    log("::endgroup::");
   }
   const counts = [...summariseMessages(messages)]
     .map(([id, count]) => `${count} ${id}`)
     .join(", ");
-  console.log(`@mapcairn/${name}: ${counts || "no warnings"}.`);
-  if (counts && process.env.GITHUB_ACTIONS === "true") {
-    console.log(
-      `::warning title=API documentation::@mapcairn/${name}: ${counts}.`,
-    );
+  log(`@mapcairn/${name}: ${counts || "no warnings"}.`);
+  if (counts && env.GITHUB_ACTIONS === "true") {
+    log(`::warning title=API documentation::@mapcairn/${name}: ${counts}.`);
   }
 }
 
@@ -343,15 +344,31 @@ function printMessages(name, messages, verbose) {
  *
  * @param {"check" | "update"} mode
  * @param {boolean} [verbose] List every warning, not only the counts.
+ * @param {object} [options]
+ * @param {string} [options.root] Repository root.
+ * @param {typeof generateReports} [options.generate] Generates one package's reports.
+ * @param {Record<string, string | undefined>} [options.env] Command environment.
+ * @param {(line: string) => void} [options.log] Receives warning messages.
+ * @param {(line: string) => void} [options.error] Receives report differences.
  * @returns {Promise<boolean>} Whether every report matches (always true when
  *   updating).
  */
-export async function run(mode, verbose = false) {
+export async function run(
+  mode,
+  verbose = false,
+  {
+    root = REPO,
+    generate = generateReports,
+    env = process.env,
+    log = console.log,
+    error = console.error,
+  } = {},
+) {
   let clean = true;
   for (const name of SDK_BUILD_ORDER) {
-    const folder = path.join(REPO, "packages", name);
-    const { reports, messages } = await generateReports(folder);
-    printMessages(name, messages, verbose);
+    const folder = path.join(root, "packages", name);
+    const { reports, messages } = await generate(folder);
+    printMessages(name, messages, verbose, root, env, log);
     if (mode === "update") {
       writeReports(folder, reports);
       continue;
@@ -365,35 +382,45 @@ export async function run(mode, verbose = false) {
       for (const file of files) {
         clean = false;
         const target = path.join(folder, REPORT_FOLDER, file);
-        console.error(`packages/${name}/${REPORT_FOLDER}/${file}: ${kind}.`);
+        error(`packages/${name}/${REPORT_FOLDER}/${file}: ${kind}.`);
         if (files === changed) {
           const lines = changedLines(
             readFileSync(target, "utf8"),
             reports.get(file.slice(0, -REPORT_SUFFIX.length)) ?? "",
           );
-          console.error(lines.join("\n"));
+          error(lines.join("\n"));
         }
       }
     }
   }
   if (!clean) {
-    console.error(
+    error(
       'The public API changed. Run "npm run api:update", read the diff of packages/*/api, and commit it.',
     );
   }
   return clean;
 }
 
-if (isEntryPoint(import.meta.url)) {
-  const [mode, flag] = process.argv.slice(2);
+/**
+ * Runs the report check or update from command-line arguments.
+ *
+ * @param {string[]} args
+ * @param {typeof run} [runReports] Runs the check or update.
+ * @param {(line: string) => void} [error] Receives a usage error.
+ * @returns {Promise<number>} The exit code.
+ */
+export async function main(args, runReports = run, error = console.error) {
+  const [mode, flag] = args;
   if (
     (mode !== "check" && mode !== "update") ||
     (flag && flag !== "--verbose")
   ) {
-    console.error(
-      "Usage: node scripts/apiReports.mjs check|update [--verbose]",
-    );
-    process.exit(2);
+    error("Usage: node scripts/apiReports.mjs check|update [--verbose]");
+    return 2;
   }
-  process.exit((await run(mode, flag === "--verbose")) ? 0 : 1);
+  return (await runReports(mode, flag === "--verbose")) ? 0 : 1;
+}
+
+if (isEntryPoint(import.meta.url)) {
+  process.exit(await main(process.argv.slice(2)));
 }

@@ -37,10 +37,17 @@ export function parsePort(text) {
   return port >= 1 && port <= MAX_PORT ? port : undefined;
 }
 
-/** Whether a connection to the address and port is accepted. */
-function accepts(host, port) {
+/**
+ * Whether a connection to the address and port is accepted.
+ *
+ * @param {string} host
+ * @param {number} port
+ * @param {typeof net.connect} [connect] Opens the socket.
+ * @returns {Promise<boolean>}
+ */
+export function accepts(host, port, connect = net.connect) {
   return new Promise((resolve) => {
-    const socket = net.connect({ host, port, timeout: CONNECT_TIMEOUT_MS });
+    const socket = connect({ host, port, timeout: CONNECT_TIMEOUT_MS });
     socket.once("connect", () => {
       socket.destroy();
       resolve(true);
@@ -67,19 +74,31 @@ export async function isListening(port) {
   return results.some(Boolean);
 }
 
-/** Prints whether the port in the first argument is free and sets the exit code. */
-async function main() {
-  const port = parsePort(process.argv[2]);
+/**
+ * Prints whether the port in the first argument is free.
+ *
+ * @param {string[]} args
+ * @param {(port: number) => Promise<boolean>} [listen] Probes the port.
+ * @param {(line: string) => void} [log] Receives the result.
+ * @param {(line: string) => void} [error] Receives a usage error.
+ * @returns {Promise<number>} The exit code.
+ */
+export async function main(
+  args,
+  listen = isListening,
+  log = console.log,
+  error = console.error,
+) {
+  const port = parsePort(args[0]);
   if (port === undefined) {
-    console.error("usage: node scripts/agents/port.mjs <port from 1 to 65535>");
-    process.exitCode = 2;
-    return;
+    error("usage: node scripts/agents/port.mjs <port from 1 to 65535>");
+    return 2;
   }
-  const inUse = await isListening(port);
-  console.log(`port ${port} is ${inUse ? "in use" : "free"}`);
-  process.exitCode = inUse ? 1 : 0;
+  const inUse = await listen(port);
+  log(`port ${port} is ${inUse ? "in use" : "free"}`);
+  return inUse ? 1 : 0;
 }
 
 if (isEntryPoint(import.meta.url)) {
-  await main();
+  process.exitCode = await main(process.argv.slice(2));
 }

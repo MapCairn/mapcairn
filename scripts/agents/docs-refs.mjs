@@ -242,36 +242,48 @@ export function parseArguments(args) {
   return { ref, files: rest.map(forwardSlashes) };
 }
 
-/** Prints each dead reference as `file:line - ref` and sets the exit code. */
-function main() {
-  const { ref, files } = parseArguments(process.argv.slice(2));
-  const wantsRef = process.argv.includes("--ref");
+/**
+ * Prints each dead reference as `file:line - ref`.
+ *
+ * @param {string[]} args
+ * @param {(ref: string | undefined) => ReturnType<typeof source>} [readSource] Reads the working tree or commit.
+ * @param {(line: string) => void} [log] Receives the references.
+ * @param {(line: string) => void} [error] Receives a usage or read error.
+ * @returns {number} The exit code.
+ */
+export function main(
+  args,
+  readSource = source,
+  log = console.log,
+  error = console.error,
+) {
+  const { ref, files } = parseArguments(args);
+  const wantsRef = args.includes("--ref");
   if (files.length === 0 || (wantsRef && ref === undefined)) {
-    console.error(
+    error(
       "usage: node scripts/agents/docs-refs.mjs [--ref <commit>] <file.md>...",
     );
-    process.exitCode = 2;
-    return;
+    return 2;
   }
   try {
-    const { files: all, read } = source(ref);
+    const { files: all, read } = readSource(ref);
     const context = buildContext(all.filter(Boolean), read);
     const lines = files.flatMap((file) =>
       findDeadReferences(file, read(file), context).map(
         ({ line, ref: target }) => `${file}:${line} - ${target}`,
       ),
     );
-    console.log(lines.slice(0, MAX_PRINTED).join("\n") || "no dead references");
+    log(lines.slice(0, MAX_PRINTED).join("\n") || "no dead references");
     if (lines.length > MAX_PRINTED) {
-      console.log(`${lines.length - MAX_PRINTED} more`);
+      log(`${lines.length - MAX_PRINTED} more`);
     }
-    process.exitCode = lines.length === 0 ? 0 : 1;
-  } catch (error) {
-    console.error(`docs-refs: ${error.message.split("\n")[0]}`);
-    process.exitCode = 2;
+    return lines.length === 0 ? 0 : 1;
+  } catch (failure) {
+    error(`docs-refs: ${failure.message.split("\n")[0]}`);
+    return 2;
   }
 }
 
 if (isEntryPoint(import.meta.url)) {
-  main();
+  process.exitCode = main(process.argv.slice(2));
 }

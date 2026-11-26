@@ -88,13 +88,24 @@ export function findMovedGuideReferences(file, text, moved) {
   return references;
 }
 
-/** Reports every reference in the tracked files and exits 1 if there is one. */
-function main() {
-  const root = execFileSync("git", ["rev-parse", "--show-toplevel"], {
+/**
+ * Reports every reference in the tracked files.
+ *
+ * @param {typeof execFileSync} [exec] Runs git.
+ * @param {(line: string) => void} [log] Receives a clean result.
+ * @param {(line: string) => void} [error] Receives the references.
+ * @returns {number} The exit code.
+ */
+export function main(
+  exec = execFileSync,
+  log = console.log,
+  error = console.error,
+) {
+  const root = exec("git", ["rev-parse", "--show-toplevel"], {
     encoding: "utf8",
   }).trim();
   const moved = readMovedGuides(root);
-  const files = execFileSync("git", ["ls-files", "-z"], {
+  const files = exec("git", ["ls-files", "-z"], {
     cwd: root,
     encoding: "utf8",
     maxBuffer: 64 * 1024 * 1024,
@@ -113,16 +124,17 @@ function main() {
     ),
   );
   if (reports.length > 0) {
-    console.error(
+    error(
       `moved guides: ${reports.length} reference(s) to a guide that moved\n${reports.join("\n")}`,
     );
-    process.exit(1);
+    return 1;
   }
-  console.log(
+  log(
     `moved guides: ${files.length} files checked, none point at a moved guide`,
   );
+  return 0;
 }
 
 if (isEntryPoint(import.meta.url)) {
-  main();
+  process.exitCode = main();
 }

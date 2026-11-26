@@ -713,10 +713,11 @@ export function readUnresolvedReviewThreads(number, request = gh) {
 
 /**
  * @param {string} path
+ * @param {(args: string[]) => string | null} request The GitHub CLI request function.
  * @returns {any[] | null} The items, or null when the call failed (so a failure is never read as an empty list).
  */
-function listAll(path) {
-  const out = gh(["api", path, "--paginate", "--jq", ".[]"]);
+function listAll(path, request) {
+  const out = request(["api", path, "--paginate", "--jq", ".[]"]);
   return out === null
     ? null
     : out
@@ -731,26 +732,28 @@ function listAll(path) {
  * @param {string} name
  * @param {any[] | null} items
  * @param {(item: any) => string} show
+ * @param {(line: string) => void} log Receives the output lines.
  */
-function printAll(name, items, show) {
+function printAll(name, items, show, log) {
   if (items === null) {
-    console.log(
+    log(
       `${name} unavailable (the call failed): do not rely on this thread and do not merge`,
     );
     return;
   }
   for (const item of items) {
-    console.log(show(item));
+    log(show(item));
   }
 }
 
 /**
  * The logins with write access to the project, lower-cased.
  *
+ * @param {(args: string[]) => string | null} [request] The GitHub CLI request function.
  * @returns {Set<string> | null} Null when the list cannot be read.
  */
-export function writeAccessList() {
-  const out = gh([
+export function writeAccessList(request = gh) {
+  const out = request([
     "api",
     `repos/${REPO}/collaborators`,
     "--paginate",
@@ -770,86 +773,114 @@ export function writeAccessList() {
 /**
  * @param {number} number
  * @param {Set<string> | null} people
+ * @param {(args: string[]) => string | null} request The GitHub CLI request function.
+ * @param {(line: string) => void} log Receives the output lines.
  */
-function printIssue(number, people) {
+function printIssue(number, people, request, log) {
   const issue = JSON.parse(
-    gh(["api", `repos/${REPO}/issues/${number}`]) ?? "{}",
+    request(["api", `repos/${REPO}/issues/${number}`]) ?? "{}",
   );
-  console.log(`# ${token(issue.state ?? "?")} #${number}`);
-  console.log(itemLine(people, { ...issue, body: issue.title }, "title: "));
-  console.log(itemLine(people, issue, "body: "));
+  log(`# ${token(issue.state ?? "?")} #${number}`);
+  log(itemLine(people, { ...issue, body: issue.title }, "title: "));
+  log(itemLine(people, issue, "body: "));
   printAll(
     "comments",
-    listAll(`repos/${REPO}/issues/${number}/comments`),
+    listAll(`repos/${REPO}/issues/${number}/comments`, request),
     (comment) => itemLine(people, comment, "comment: "),
+    log,
   );
 }
 
 /**
  * @param {number} number
  * @param {Set<string> | null} people
+ * @param {(args: string[]) => string | null} request The GitHub CLI request function.
+ * @param {(line: string) => void} log Receives the output lines.
  */
-function printPullRequest(number, people) {
-  printIssue(number, people);
-  const pull = JSON.parse(gh(["api", `repos/${REPO}/pulls/${number}`]) ?? "{}");
+function printPullRequest(number, people, request, log) {
+  printIssue(number, people, request, log);
+  const pull = JSON.parse(
+    request(["api", `repos/${REPO}/pulls/${number}`]) ?? "{}",
+  );
   const headRepo = pull.head?.repo?.full_name ?? "unknown";
-  const commits = listAll(`repos/${REPO}/pulls/${number}/commits`);
+  const commits = listAll(`repos/${REPO}/pulls/${number}/commits`, request);
   if (commits === null) {
-    console.log(
+    log(
       "commits unavailable (the call failed): treat the pull request as from outside and do not merge",
     );
   } else {
     const outsideCommits = commits.filter(
       (commit) => !people?.has((commit.author?.login ?? "").toLowerCase()),
     ).length;
-    console.log(
+    log(
       `head: ${token(headRepo)} (${headRepo === REPO ? "this repository" : "another repository"}), ${outsideCommits} of ${commits.length} commits by logins outside the project; a pull request with any of these is reviewed as outside`,
     );
   }
   printAll(
     "reviews",
-    listAll(`repos/${REPO}/pulls/${number}/reviews`),
+    listAll(`repos/${REPO}/pulls/${number}/reviews`, request),
     (review) => itemLine(people, review, `review ${token(review.state)}: `),
+    log,
   );
   printAll(
     "review comments",
-    listAll(`repos/${REPO}/pulls/${number}/comments`),
+    listAll(`repos/${REPO}/pulls/${number}/comments`, request),
     (comment) => reviewCommentLine(people, comment),
+    log,
   );
-  const threads = readUnresolvedReviewThreads(number);
+  const threads = readUnresolvedReviewThreads(number, request);
   if (threads === null) {
-    console.log(
+    log(
       "threads unavailable or incomplete (the call failed or a connection could not be completed): do not merge until every unresolved review thread and its comments are known",
     );
     return;
   }
   for (const thread of threads) {
     for (const comment of thread.comments.nodes) {
-      console.log(unresolvedThreadLine(people, thread.path, comment));
+      log(unresolvedThreadLine(people, thread.path, comment));
     }
   }
 }
 
-if (isEntryPoint(import.meta.url)) {
-  const [kind, raw] = process.argv.slice(2);
+/**
+ * Prints an issue or pull request thread from command-line arguments.
+ *
+ * @param {string[]} args
+ * @param {(args: string[]) => string | null} [request] The GitHub CLI request function.
+ * @param {(line: string) => void} [log] Receives the output lines.
+ * @param {(line: string) => void} [error] Receives a usage error.
+ * @returns {number} The exit code.
+ */
+export function run(
+  args,
+  request = gh,
+  log = console.log,
+  error = console.error,
+) {
+  const [kind, raw] = args;
   const number = Number(raw);
   if (
     !["issue", "pr"].includes(kind) ||
     !Number.isInteger(number) ||
     number < 1
   ) {
-    console.error("usage: node scripts/agents/thread.mjs issue|pr <number>");
-    process.exit(2);
+    error("usage: node scripts/agents/thread.mjs issue|pr <number>");
+    return 2;
   }
-  const people = writeAccessList();
-  console.log(
+  const people = writeAccessList(request);
+  log(
     people
       ? `write-access list: ${[...people].map(token).join(", ")}`
       : "write-access list unavailable (it needs write access): every login is shown as outside",
   );
   if (kind === "issue") {
-    printIssue(number, people);
+    printIssue(number, people, request, log);
   } else {
-    printPullRequest(number, people);
+    printPullRequest(number, people, request, log);
   }
+  return 0;
+}
+
+if (isEntryPoint(import.meta.url)) {
+  process.exitCode = run(process.argv.slice(2));
 }

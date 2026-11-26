@@ -1,13 +1,22 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
 import { spawnSync } from "node:child_process";
-import { readFileSync } from "node:fs";
+import {
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
+import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 import {
   findMovedGuideReferences,
   isChecked,
+  main,
+  readMovedGuides,
   // @ts-expect-error The scripts are dependency-free JavaScript with JSDoc types.
 } from "../../../../scripts/moved-guides-check.mjs";
 
@@ -92,6 +101,85 @@ describe("isChecked", () => {
     "package-lock.json",
   ])("skips %s", (file) => {
     expect(isChecked(file)).toBe(false);
+  });
+});
+
+describe("main", () => {
+  let root: string | undefined;
+
+  afterEach(() => {
+    if (root !== undefined) {
+      rmSync(root, { recursive: true, force: true });
+      root = undefined;
+    }
+  });
+
+  function put(file: string, text: string): void {
+    const target = path.join(root as string, file);
+    mkdirSync(path.dirname(target), { recursive: true });
+    writeFileSync(target, text);
+  }
+
+  function fixture(files: Record<string, string>): void {
+    root = mkdtempSync(path.join(tmpdir(), "moved-guides-"));
+    put("scripts/movedGuides.json", JSON.stringify(MOVED));
+    for (const [file, text] of Object.entries(files)) {
+      put(file, text);
+    }
+  }
+
+  function run(files: string[]) {
+    const output: string[] = [];
+    const errors: string[] = [];
+    const code = main(
+      (_command: string, args: string[]) => {
+        if (args[0] === "rev-parse") {
+          return `${root}\n`;
+        }
+        return `${files.join("\0")}\0`;
+      },
+      (line: string) => output.push(line),
+      (line: string) => errors.push(line),
+    );
+    return { code, output, errors };
+  }
+
+  it("reads the moved-guide list from the repository root", () => {
+    fixture({});
+    expect(readMovedGuides(root)).toEqual(MOVED);
+  });
+
+  it("reports references from the tracked text files that still exist", () => {
+    fixture({
+      "README.md": "See docs/guides/extending.md.\n",
+      "docs/guides/other.md": "[x](public-api.md)\n",
+      "ignored.svg": "docs/guides/extending.md",
+    });
+    const result = run([
+      "README.md",
+      "docs/guides/other.md",
+      "ignored.svg",
+      "deleted.md",
+      "scripts/movedGuides.json",
+    ]);
+
+    expect(result.code).toBe(1);
+    expect(result.errors[0]).toContain("2 reference(s)");
+    expect(result.errors[0]).toContain("README.md:1:");
+    expect(result.errors[0]).toContain("docs/guides/other.md:1:");
+    expect(result.errors[0]).not.toContain("ignored.svg");
+    expect(result.output).toEqual([]);
+  });
+
+  it("returns 0 and counts the checked files when none reference a moved guide", () => {
+    fixture({ "README.md": "https://docs.mapcairn.com/guides/extending/\n" });
+    const result = run(["README.md", "scripts/movedGuides.json"]);
+
+    expect(result).toEqual({
+      code: 0,
+      output: ["moved guides: 1 files checked, none point at a moved guide"],
+      errors: [],
+    });
   });
 });
 

@@ -8,6 +8,7 @@ import { describe, expect, it } from "vitest";
 import {
   findQualityBarChanges,
   isAcknowledged,
+  main,
   readDiff,
   runFromEnvironment,
   runQualityBarCheck,
@@ -517,5 +518,91 @@ describe("readDiff and runFromEnvironment", () => {
     expect(code).toBe(0);
     expect(lines).toHaveLength(1);
     expect(lines[0]).toContain("::warning title=Quality bar check skipped::");
+  });
+
+  it("checks the environment and a readable diff", () => {
+    const lines: string[] = [];
+    const summary: string[] = [];
+    const code = runFromEnvironment(
+      {
+        BASE_REF: "develop",
+        PR_AUTHOR: "someone",
+        PR_LABELS: "one,two",
+        PR_TITLE: "feat: x",
+        PR_BODY: "",
+      },
+      (line: string) => lines.push(line),
+      (text: string) => summary.push(text),
+      (base: string) => {
+        expect(base).toBe("develop");
+        return fileDiff("a.ts", hunk(1, "+// @ts-ignore"));
+      },
+    );
+
+    expect(code).toBe(0);
+    expect(lines).toHaveLength(1);
+    expect(lines[0]).toContain("Added a suppression comment");
+    expect(summary.join("")).toContain("a.ts:1");
+  });
+
+  it("warns and passes when reading the diff throws", () => {
+    const lines: string[] = [];
+    const code = runFromEnvironment(
+      {},
+      (line: string) => lines.push(line),
+      () => undefined,
+      () => {
+        throw new Error("git failed\nwith detail");
+      },
+    );
+
+    expect(code).toBe(0);
+    expect(lines).toEqual([
+      "::warning title=Quality bar check skipped::git failed%0Awith detail",
+    ]);
+  });
+});
+
+describe("main", () => {
+  it("appends a summary to the file named by the environment", () => {
+    const appended: string[] = [];
+    const code = main(
+      { GITHUB_STEP_SUMMARY: "summary.md" },
+      (
+        _env: Record<string, string>,
+        _log: () => undefined,
+        summarise: (text: string) => void,
+      ) => {
+        summarise("summary text");
+        return 0;
+      },
+      () => undefined,
+      (file: string, text: string) => appended.push(`${file}:${text}`),
+    );
+
+    expect(code).toBe(0);
+    expect(appended).toEqual(["summary.md:summary text"]);
+  });
+
+  it("does not append when there is no summary file", () => {
+    let appended = false;
+    const code = main(
+      {},
+      (
+        _env: Record<string, string>,
+        _log: () => undefined,
+        summarise: (text: string) => void,
+      ) => {
+        summarise("summary text");
+        return 0;
+      },
+      () => undefined,
+      () => {
+        appended = true;
+      },
+    );
+
+    expect(code).toBe(0);
+    expect(appended).toBe(false);
   });
 });

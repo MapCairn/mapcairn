@@ -1,12 +1,17 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
-import { describe, expect, it } from "vitest";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import path from "node:path";
+import { afterEach, describe, expect, it } from "vitest";
 // @ts-expect-error The scanner is dependency-free JavaScript with JSDoc types.
 import { scanSource } from "../../../../scripts/harmony/rules.mjs";
 // @ts-expect-error The scanner is dependency-free JavaScript with JSDoc types.
 import {
   applyAllowList,
   isExemptSurface,
+  listSourceFiles,
+  scanRepo,
 } from "../../../../scripts/harmony/scan.mjs";
 
 /** One failing and one passing snippet for a rule. */
@@ -737,5 +742,107 @@ describe("allow-list", () => {
     };
     const result = applyAllowList([violation], () => lines, [entry]);
     expect(result.unused).toEqual([entry]);
+  });
+
+  it("does not excuse a violation whose source line is unavailable", () => {
+    const entry = {
+      rule: violation.rule,
+      file: violation.file,
+      contains: "zIndex: 10",
+      reason: "test",
+    };
+    const result = applyAllowList(
+      [{ ...violation, line: lines.length + 1 }],
+      () => lines,
+      [entry],
+    );
+    expect(result.violations).toEqual([{ ...violation, line: 3 }]);
+    expect(result.unused).toEqual([entry]);
+  });
+});
+
+describe("repository scanning", () => {
+  const folders: string[] = [];
+
+  function repository(): string {
+    const root = mkdtempSync(path.join(tmpdir(), "harmony-scan-"));
+    folders.push(root);
+    mkdirSync(path.join(root, "packages"), { recursive: true });
+    mkdirSync(path.join(root, "examples"), { recursive: true });
+    return root;
+  }
+
+  function put(root: string, file: string, text = ""): void {
+    const target = path.join(root, file);
+    mkdirSync(path.dirname(target), { recursive: true });
+    writeFileSync(target, text);
+  }
+
+  afterEach(() => {
+    for (const folder of folders.splice(0)) {
+      rmSync(folder, { recursive: true, force: true });
+    }
+  });
+
+  it("lists source files in packages and examples, sorted and without skipped trees", () => {
+    const root = repository();
+    const expected = [
+      "examples/embed/public/page.html",
+      "examples/embed/src/a.ts",
+      "packages/map/src/nested/a.tsx",
+      "packages/map/src/z.css",
+    ];
+    for (const file of expected) {
+      put(root, file);
+    }
+    put(root, "packages/map/src/not-source.js");
+    for (const directory of [
+      "node_modules",
+      "build",
+      "dist",
+      "coverage",
+      ".react-router",
+      "test-results",
+      "playwright-report",
+      ".cloudflare",
+      "e2e",
+      "scripts",
+      "project.inlang",
+      "paraglide",
+    ]) {
+      put(root, `packages/map/${directory}/skipped.ts`);
+    }
+
+    expect(listSourceFiles(root)).toEqual(expected);
+  });
+
+  it("scans only non-exempt files and applies the allow-list to their own lines", () => {
+    const root = repository();
+    const allowedFile = "packages/map/src/ui/A/A.css.ts";
+    const keptFile = "packages/map/src/ui/B/B.css.ts";
+    const source = css("  zIndex: 10,");
+    put(root, allowedFile, source);
+    put(root, keptFile, source);
+    put(root, "packages/map/src/ui/A/A.test.ts", source);
+    const allowed = {
+      rule: "z-index",
+      file: allowedFile,
+      contains: "zIndex: 10",
+      reason: "allowed in this fixture",
+    };
+    const stale = {
+      rule: "radius",
+      file: keptFile,
+      contains: "borderRadius",
+      reason: "stale in this fixture",
+    };
+
+    const result = scanRepo({ root, allowList: [allowed, stale] });
+
+    expect(result.scanned).toBe(2);
+    expect(result.violations).toEqual([
+      expect.objectContaining({ file: keptFile, line: 4, rule: "z-index" }),
+    ]);
+    expect(result.unused).toEqual([stale]);
   });
 });

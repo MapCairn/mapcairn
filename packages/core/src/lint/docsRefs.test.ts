@@ -9,6 +9,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import {
   buildContext,
   findDeadReferences,
+  main,
   parseArguments,
   // @ts-expect-error The scripts are dependency-free JavaScript with JSDoc types.
 } from "../../../../scripts/agents/docs-refs.mjs";
@@ -157,6 +158,85 @@ describe("parseArguments", () => {
       ref: undefined,
       files: ["a.md"],
     });
+  });
+});
+
+describe("main", () => {
+  function sourceFor(document: string) {
+    return {
+      files: ["package.json", "doc.md"],
+      read: (file: string) => {
+        if (file === "package.json") {
+          return JSON.stringify({ scripts: { lint: "x" } });
+        }
+        if (file === "doc.md") {
+          return document;
+        }
+        throw new Error(`missing ${file}`);
+      },
+    };
+  }
+
+  function runMain(args: string[], source = () => sourceFor("`npm run lint`")) {
+    const output: string[] = [];
+    const errors: string[] = [];
+    const code = main(
+      args,
+      source,
+      (line: string) => output.push(line),
+      (line: string) => errors.push(line),
+    );
+    return { code, output, errors };
+  }
+
+  it("returns 0 and reports when every reference resolves", () => {
+    expect(runMain(["doc.md"])).toEqual({
+      code: 0,
+      output: ["no dead references"],
+      errors: [],
+    });
+  });
+
+  it("returns 1, prints fifty dead references and counts the rest", () => {
+    const result = runMain(["doc.md"], () =>
+      sourceFor("`npm run nothing`\n".repeat(53)),
+    );
+
+    expect(result.code).toBe(1);
+    expect(result.output[0].split("\n")).toHaveLength(50);
+    expect(result.output[1]).toBe("3 more");
+    expect(result.errors).toEqual([]);
+  });
+
+  it("prints exactly fifty dead references with no count of the rest", () => {
+    const result = runMain(["doc.md"], () =>
+      sourceFor("`npm run nothing`\n".repeat(50)),
+    );
+
+    expect(result.code).toBe(1);
+    expect(result.output).toHaveLength(1);
+    expect(result.output[0].split("\n")).toHaveLength(50);
+  });
+
+  it("returns 2 for usage errors without reading the repository", () => {
+    let called = false;
+    const result = runMain([], () => {
+      called = true;
+      return sourceFor("");
+    });
+
+    expect(result.code).toBe(2);
+    expect(called).toBe(false);
+    expect(result.errors[0]).toContain("usage:");
+    expect(runMain(["--ref"], () => sourceFor("")).code).toBe(2);
+  });
+
+  it("returns 2 with the first line of a read failure", () => {
+    const result = runMain(["missing.md"]);
+
+    expect(result.code).toBe(2);
+    expect(result.output).toEqual([]);
+    expect(result.errors).toEqual(["docs-refs: missing missing.md"]);
   });
 });
 

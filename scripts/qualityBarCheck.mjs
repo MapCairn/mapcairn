@@ -484,11 +484,12 @@ export function readDiff(baseRef, root = ".") {
  * @param {Record<string, string | undefined>} env
  * @param {(line: string) => void} log
  * @param {(text: string) => void} summarise
+ * @param {(baseRef: string) => string | null} [read] Reads the pull request diff.
  * @returns {number}
  */
-export function runFromEnvironment(env, log, summarise) {
+export function runFromEnvironment(env, log, summarise, read = readDiff) {
   try {
-    const diff = readDiff(env.BASE_REF ?? "main");
+    const diff = read(env.BASE_REF ?? "main");
     if (diff === null) {
       log(
         "::warning title=Quality bar check skipped::The base branch or its history could not be read.",
@@ -513,13 +514,29 @@ export function runFromEnvironment(env, log, summarise) {
   }
 }
 
+/**
+ * Runs the check from the command-line environment.
+ *
+ * @param {Record<string, string | undefined>} env
+ * @param {typeof runFromEnvironment} [run] Runs the check.
+ * @param {(line: string) => void} [log] Receives annotations.
+ * @param {typeof appendFileSync} [append] Appends the job summary.
+ * @returns {number} The exit code.
+ */
+export function main(
+  env,
+  run = runFromEnvironment,
+  log = console.log,
+  append = appendFileSync,
+) {
+  const summaryFile = env.GITHUB_STEP_SUMMARY;
+  return run(env, log, (text) => {
+    if (summaryFile !== undefined) {
+      append(summaryFile, text);
+    }
+  });
+}
+
 if (isEntryPoint(import.meta.url)) {
-  const summaryFile = process.env.GITHUB_STEP_SUMMARY;
-  process.exit(
-    runFromEnvironment(process.env, console.log, (text) => {
-      if (summaryFile !== undefined) {
-        appendFileSync(summaryFile, text);
-      }
-    }),
-  );
+  process.exit(main(process.env));
 }

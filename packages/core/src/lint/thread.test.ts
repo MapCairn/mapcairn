@@ -5,8 +5,10 @@ import {
   cleanText,
   formatItem,
   inspectText,
+  REPO,
   readUnresolvedReviewThreads,
   reviewCommentLine,
+  run,
   token,
   unresolvedThreadLine,
   // @ts-expect-error The agent scripts are dependency-free JavaScript with JSDoc types.
@@ -778,6 +780,205 @@ describe("unsupported markup", () => {
     const line = formatItem("someone", "NONE", "Cafe\u0301", null);
     expect(line).toContain(
       "Unicode normalisation may change how the text is rendered",
+    );
+  });
+});
+
+describe("command line", () => {
+  const complete = { hasNextPage: false, endCursor: "end" };
+  const unresolved = {
+    id: "thread-1",
+    isResolved: false,
+    path: "src/a.ts",
+    comments: {
+      pageInfo: complete,
+      nodes: [{ author: { login: "maintainer" }, body: "thread comment" }],
+    },
+  };
+
+  function execute(args: string[], routes: Record<string, string | null>) {
+    const output: string[] = [];
+    const errors: string[] = [];
+    const code = run(
+      args,
+      (callArgs: string[]) => {
+        const key = callArgs[1] === "graphql" ? "api graphql" : callArgs[1];
+        return Object.hasOwn(routes, key) ? routes[key] : null;
+      },
+      (line: string) => output.push(line),
+      (line: string) => errors.push(line),
+    );
+    return { code, output, errors };
+  }
+
+  function issueRoutes(): Record<string, string> {
+    return {
+      [`repos/${REPO}/collaborators`]: "Maintainer\n",
+      [`repos/${REPO}/issues/7`]: JSON.stringify({
+        state: "open",
+        title: "Issue title",
+        body: "Issue body",
+        user: { login: "Maintainer" },
+        author_association: "MEMBER",
+      }),
+      [`repos/${REPO}/issues/7/comments`]: JSON.stringify({
+        user: { login: "Maintainer" },
+        author_association: "MEMBER",
+        body: "Issue comment",
+      }),
+    };
+  }
+
+  it.each([
+    { args: [] },
+    { args: ["repo", "1"] },
+    { args: ["issue", "0"] },
+    { args: ["issue", "1.5"] },
+    { args: ["issue", "abc"] },
+  ])("returns 2 for invalid arguments $args", ({ args }) => {
+    let called = false;
+    const output: string[] = [];
+    const errors: string[] = [];
+    const code = run(
+      args,
+      () => {
+        called = true;
+        return null;
+      },
+      (line: string) => output.push(line),
+      (line: string) => errors.push(line),
+    );
+
+    expect(code).toBe(2);
+    expect(called).toBe(false);
+    expect(output).toEqual([]);
+    expect(errors).toEqual([
+      "usage: node scripts/agents/thread.mjs issue|pr <number>",
+    ]);
+  });
+
+  it("prints an issue with its write-access list, body and comments", () => {
+    const result = execute(["issue", "7"], issueRoutes());
+
+    expect(result.code).toBe(0);
+    expect(result.errors).toEqual([]);
+    expect(result.output).toEqual([
+      "write-access list: maintainer",
+      "# open #7",
+      'title: project Maintainer (MEMBER): "Issue title"',
+      'body: project Maintainer (MEMBER): "Issue body"',
+      'comment: project Maintainer (MEMBER): "Issue comment"',
+    ]);
+  });
+
+  it("prints a pull request, its outside-commit count and every review thread", () => {
+    const routes: Record<string, string> = {
+      ...issueRoutes(),
+      [`repos/${REPO}/issues/7/comments`]: "",
+      [`repos/${REPO}/pulls/7`]: JSON.stringify({
+        head: { repo: { full_name: REPO } },
+      }),
+      [`repos/${REPO}/pulls/7/commits`]: [
+        JSON.stringify({ author: { login: "maintainer" } }),
+        JSON.stringify({ author: { login: "Maintainer" } }),
+        JSON.stringify({ author: { login: "someone" } }),
+      ].join("\n"),
+      [`repos/${REPO}/pulls/7/reviews`]: JSON.stringify({
+        state: "APPROVED",
+        user: { login: "maintainer" },
+        author_association: "MEMBER",
+        body: "Review body",
+      }),
+      [`repos/${REPO}/pulls/7/comments`]: JSON.stringify({
+        path: "src/a.ts",
+        line: 4,
+        user: { login: "maintainer" },
+        author_association: "MEMBER",
+        body: "Review comment",
+      }),
+      "api graphql": graphQlResponse(
+        { pageInfo: complete, nodes: [unresolved] },
+        "reviewThreads",
+      ),
+    };
+
+    const result = execute(["pr", "7"], routes);
+
+    expect(result.code).toBe(0);
+    expect(result.errors).toEqual([]);
+    expect(result.output).toContain(
+      `head: ${REPO} (this repository), 1 of 3 commits by logins outside the project; a pull request with any of these is reviewed as outside`,
+    );
+    expect(result.output).toContain(
+      'review APPROVED: project maintainer (MEMBER): "Review body"',
+    );
+    expect(result.output).toContain(
+      'review comment src/a.ts:4: project maintainer (MEMBER): "Review comment"',
+    );
+    expect(result.output).toContain(
+      'unresolved thread src/a.ts: project maintainer (n/a): "thread comment"',
+    );
+  });
+
+  it("labels a head in another repository, with its commits counted", () => {
+    const routes: Record<string, string> = {
+      ...issueRoutes(),
+      [`repos/${REPO}/issues/7/comments`]: "",
+      [`repos/${REPO}/pulls/7`]: JSON.stringify({
+        head: { repo: { full_name: "fork/mapcairn" } },
+      }),
+      [`repos/${REPO}/pulls/7/commits`]: JSON.stringify({
+        author: { login: "someone" },
+      }),
+      [`repos/${REPO}/pulls/7/reviews`]: "",
+      [`repos/${REPO}/pulls/7/comments`]: "",
+      "api graphql": graphQlResponse(
+        { pageInfo: complete, nodes: [] },
+        "reviewThreads",
+      ),
+    };
+
+    const result = execute(["pr", "7"], routes);
+
+    expect(result.output).toContain(
+      "head: fork/mapcairn (another repository), 1 of 1 commits by logins outside the project; a pull request with any of these is reviewed as outside",
+    );
+  });
+
+  it("fails closed when access, lists, commits or review threads are unavailable", () => {
+    const routes: Record<string, string | null> = {
+      ...issueRoutes(),
+      [`repos/${REPO}/collaborators`]: null,
+      [`repos/${REPO}/issues/7/comments`]: null,
+      [`repos/${REPO}/pulls/7`]: JSON.stringify({
+        head: { repo: { full_name: "fork/mapcairn" } },
+      }),
+      [`repos/${REPO}/pulls/7/commits`]: null,
+      [`repos/${REPO}/pulls/7/reviews`]: null,
+      [`repos/${REPO}/pulls/7/comments`]: null,
+      "api graphql": null,
+    };
+
+    const result = execute(["pr", "7"], routes);
+
+    expect(result.code).toBe(0);
+    expect(result.output).toContain(
+      "write-access list unavailable (it needs write access): every login is shown as outside",
+    );
+    expect(result.output).toContain(
+      "comments unavailable (the call failed): do not rely on this thread and do not merge",
+    );
+    expect(result.output).toContain(
+      "commits unavailable (the call failed): treat the pull request as from outside and do not merge",
+    );
+    expect(result.output).toContain(
+      "reviews unavailable (the call failed): do not rely on this thread and do not merge",
+    );
+    expect(result.output).toContain(
+      "review comments unavailable (the call failed): do not rely on this thread and do not merge",
+    );
+    expect(result.output).toContain(
+      "threads unavailable or incomplete (the call failed or a connection could not be completed): do not merge until every unresolved review thread and its comments are known",
     );
   });
 });
