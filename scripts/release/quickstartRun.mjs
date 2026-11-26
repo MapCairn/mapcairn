@@ -172,9 +172,10 @@ export async function openUnder(
  * region away from the chrome (the left edge, halfway down).
  *
  * @param {import("playwright-core").Page} page
+ * @param {{ pixel?: boolean }} [options] `pixel: false` leaves out the pixel read, for WebKit, where Playwright's screenshot adds an inline `style` element that the policy refuses.
  * @returns {Promise<string[]>} The problems with the drawn frame.
  */
-export async function drawnFrame(page) {
+export async function drawnFrame(page, { pixel = true } = {}) {
   const host = page.locator("[data-map-host]");
   await page.waitForFunction(
     () => {
@@ -195,13 +196,22 @@ export async function drawnFrame(page) {
   if (region === null) {
     return ["the map region has no box"];
   }
+  const canvas = await page.locator("canvas.maplibregl-canvas").boundingBox();
+  if (canvas === null || canvas.width === 0 || canvas.height === 0) {
+    return ["the engine's canvas has no size"];
+  }
+  if (!pixel) {
+    return [];
+  }
   await page.evaluate(
     () =>
       new Promise((resolve) =>
         requestAnimationFrame(() => requestAnimationFrame(resolve)),
       ),
   );
+  // `caret: "initial"` because the default hides the caret with a `style` element Playwright adds, which the policy refuses in WebKit.
   const shot = await page.screenshot({
+    caret: "initial",
     clip: {
       x: region.x + 8,
       y: region.y + region.height / 2,

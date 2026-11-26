@@ -10,6 +10,9 @@
  *   node scripts/release/bundleRun.mjs built <folder> <Chromium binary>
  *   node scripts/release/bundleRun.mjs dev   <app>    <Chromium binary>
  *
+ * A fourth argument, `webkit` or `firefox`, runs the same mode in that
+ * engine (the Chromium argument is then ignored).
+ *
  * `page` takes a folder that holds the example page (`index.html`), the
  * leg's own pages (`consumer-bundle/`) and the bundle's files in `mapcairn/`,
  * served as a plain static server would, under `BUNDLE_POLICY`. `built` draws
@@ -34,6 +37,7 @@ import {
   cycleProblems,
   fileRequestProblems,
   hostilePageProblems,
+  hostParityProblems,
   leakProblems,
   MOVED_ZOOM,
 } from "./bundleLeg.mjs";
@@ -55,6 +59,9 @@ const SERVER_TIMEOUT = 60 * 1000;
 const REFUSAL_TIMEOUT = 10 * 1000;
 const SETTLE_TIMEOUT = 10 * 1000;
 const POLL_INTERVAL = 250;
+
+/** What the frame check reads: WebKit's is without the pixel (`drawnFrame`). */
+const frame = { pixel: true };
 
 /** How long the second map has to say it moved, in ms. */
 const MOVE_TIMEOUT = 10 * 1000;
@@ -180,6 +187,13 @@ async function readChrome(page) {
   );
   await page.keyboard.press("Tab");
   await page.keyboard.press("Tab");
+  // Safari's Tab skips buttons unless the person asks otherwise; focus is moved by script after the keys, which still counts as keyboard focus.
+  await page.evaluate(() => {
+    const map = document.getElementById("map");
+    if (map !== null && !map.contains(document.activeElement)) {
+      map.querySelector("button")?.focus();
+    }
+  });
   return page.evaluate(() => {
     const map = /** @type {HTMLElement} */ (document.getElementById("map"));
     const round = (/** @type {number} */ value) => Math.round(value * 10) / 10;
@@ -232,7 +246,7 @@ async function drawProblems(open, { checkCreated = false } = {}) {
   /** @type {string[]} */
   const problems = [];
   const run = await open(async (page) => {
-    problems.push(...(await drawnFrame(page)));
+    problems.push(...(await drawnFrame(page, frame)));
     // The glyph and sprite requests follow the first frame; let them land.
     await page.waitForLoadState("networkidle");
     if (checkCreated) {
@@ -271,7 +285,7 @@ async function checkPlainPage(browser, folder) {
     { checkCreated: true },
   );
   problems.push(
-    ...example.problems,
+    ...example.problems.map((line) => `example page: ${line}`),
     ...fileRequestProblems(
       example.run.requests,
       FILES_FOLDER,
@@ -316,7 +330,7 @@ async function checkPlainPage(browser, folder) {
   }
   problems.push(
     ...leakProblems(cycles.map(({ cycle }) => cycle)),
-    ...violationProblems(two),
+    ...violationProblems(two).map((line) => `two maps: ${line}`),
   );
 
   /** @type {Record<string, import("./bundleLeg.mjs").Chrome>} */
@@ -331,10 +345,13 @@ async function checkPlainPage(browser, folder) {
       },
       { path: `/${name}.html` },
     );
-    problems.push(...violationProblems(seen));
+    problems.push(
+      ...violationProblems(seen).map((line) => `${name} page: ${line}`),
+    );
   }
   if (chrome.clean !== undefined && chrome.hostile !== undefined) {
     problems.push(
+      ...hostParityProblems(chrome.clean),
       ...hostilePageProblems({ clean: chrome.clean, hostile: chrome.hostile }),
     );
   }
@@ -350,7 +367,7 @@ async function checkPlainPage(browser, folder) {
     "without blob: in worker-src the page reports a violation, so the directive is needed: ok",
     `two maps drew in one page, one was destroyed and the other kept drawing, and after both were destroyed no canvas, live region or attribute of either was left (a pair held ${first?.cycle.both.regions} live regions): ok`,
     `a second pair of maps left no more listeners on the window and the document than the first (${first?.cycle.end.listeners} after one pair, ${second?.cycle.end.listeners} after two), and the engine's worker was ended with the last map (${second?.cycle.end.workers.made} made, ${second?.cycle.end.workers.ended} ended): ok`,
-    "a page with rules on *, button, svg, h1, box-sizing and [data-theme=dark] left every button at 44 px or more, the focus ring showing and the map's theme and chrome as they are with no rules: ok",
+    "the zoom and credits buttons have the boxes the reference host's /map gives them (48 by 48, Zoom out 48 by 49 with its hairline, credits 44 by 44), and a page with rules on *, button, svg, h1, box-sizing and [data-theme=dark] left every button at 44 px or more, the focus ring showing and the map's theme and chrome as they are with no rules: ok",
   ];
 }
 
@@ -491,14 +508,23 @@ async function checkDevPage(browser, app) {
  *
  * @param {"page" | "built" | "dev"} mode
  * @param {string} folder
- * @param {string} executablePath Chromium.
+ * @param {string} executablePath Chromium's binary; the other engines are Playwright's own.
+ * @param {"chromium" | "webkit" | "firefox"} [engine]
  * @returns {Promise<string[]>}
  */
-export async function runBundle(mode, folder, executablePath) {
-  const { chromium } = createRequire(path.join(REPO, "package.json"))(
+export async function runBundle(
+  mode,
+  folder,
+  executablePath,
+  engine = "chromium",
+) {
+  const playwright = createRequire(path.join(REPO, "package.json"))(
     "playwright-core",
   );
-  const browser = await chromium.launch({ executablePath });
+  frame.pixel = engine !== "webkit";
+  const browser = await playwright[engine].launch(
+    engine === "chromium" ? { executablePath } : {},
+  );
   try {
     const target = path.resolve(folder);
     if (mode === "page") {
@@ -514,11 +540,20 @@ export async function runBundle(mode, folder, executablePath) {
 
 if (isEntryPoint(import.meta.url)) {
   try {
-    const [mode, folder, executable] = process.argv.slice(2);
+    const [mode, folder, executable, engine = "chromium"] =
+      process.argv.slice(2);
     if (mode !== "page" && mode !== "built" && mode !== "dev") {
       throw new Error("The first argument is page, built or dev.");
     }
-    const lines = await runBundle(mode, folder ?? "", executable ?? "");
+    if (!["chromium", "webkit", "firefox"].includes(engine)) {
+      throw new Error("The fourth argument is chromium, webkit or firefox.");
+    }
+    const lines = await runBundle(
+      mode,
+      folder ?? "",
+      executable ?? "",
+      /** @type {"chromium" | "webkit" | "firefox"} */ (engine),
+    );
     process.stdout.write(JSON.stringify(lines));
   } catch (error) {
     console.error(error instanceof Error ? error.message : error);

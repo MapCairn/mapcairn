@@ -13,6 +13,7 @@ import {
   FIRST_LOAD_BUILD,
   fileRequestProblems,
   hostilePageProblems,
+  hostParityProblems,
   leakProblems,
   // @ts-expect-error The scripts are dependency-free JavaScript with JSDoc types.
 } from "../../../../scripts/release/bundleLeg.mjs";
@@ -327,5 +328,42 @@ describe("the page activity counter", () => {
     for (const name of ["listeners", "workers", "created"]) {
       expect(COUNT_PAGE_ACTIVITY).toContain(`${name}:`);
     }
+  });
+});
+
+describe("hostParityProblems", () => {
+  const button = (
+    name: string,
+    width: number,
+    height: number,
+    boxSizing: string,
+  ) => ({
+    name,
+    width,
+    height,
+    boxSizing,
+    margin: "0px",
+    background: "x",
+    icon: null,
+  });
+  const chrome = (zoomOutHeight = 49, zoomOutBox = "content-box") => ({
+    theme: "light",
+    focus: undefined,
+    buttons: [
+      button("Zoom in", 48, 48, "border-box"),
+      button("Zoom out", 48, zoomOutHeight, zoomOutBox),
+      button("Map credits", 44, 44, "border-box"),
+    ],
+  });
+
+  it("passes the boxes the reference host gives, Zoom out's hairline included", () => {
+    expect(hostParityProblems(chrome())).toEqual([]);
+  });
+
+  it("names a box that differs, and a button that is missing", () => {
+    expect(hostParityProblems(chrome(48, "border-box")).join("\n")).toMatch(
+      /"Zoom out" has height 48 in the bundle and 49 in the reference host/,
+    );
+    expect(hostParityProblems({ ...chrome(), buttons: [] })).toHaveLength(3);
   });
 });

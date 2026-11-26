@@ -83,6 +83,7 @@ import {
   bunVersionProblem,
   chromiumExecutable,
   corepackCliPath,
+  engineAvailable,
   INSTALL_TIMEOUT,
   miniflareAvailable,
   oldestReactVersions,
@@ -1445,9 +1446,10 @@ const BROWSER_EXAMPLE = path.join(REPO, "examples", "browser");
  * @param {string} folder
  * @param {string} executable The Chromium binary.
  * @param {string} cwd Where to run it.
+ * @param {"chromium" | "webkit" | "firefox"} [engine]
  * @returns {string[]} What the run saw, a line for each.
  */
-function runBundleRun(mode, folder, executable, cwd) {
+function runBundleRun(mode, folder, executable, cwd, engine = "chromium") {
   return JSON.parse(
     runNode(
       `draw ${mode} (browser bundle)`,
@@ -1456,6 +1458,7 @@ function runBundleRun(mode, folder, executable, cwd) {
         mode,
         folder,
         executable,
+        engine,
       ],
       cwd,
       BROWSER_TIMEOUT,
@@ -1515,6 +1518,19 @@ function checkBrowserBundle(app, prefix) {
       (line) => `the example page in Chromium, ${line}`,
     ),
   );
+  for (const engine of /** @type {const} */ (["webkit", "firefox"])) {
+    if (engineAvailable(REPO, engine)) {
+      lines.push(
+        ...runBundleRun("page", page, chromium, app, engine).map(
+          (line) => `the example page in ${engine}, ${line}`,
+        ),
+      );
+    } else {
+      lines.push(
+        `the example page in ${engine}: skipped, ${engine} is not installed (npm run playwright:install -w @mapcairn/web)`,
+      );
+    }
+  }
   const served = path.join(page, "mapcairn");
   const sizes = bundleLoadSizes(
     Object.fromEntries(

@@ -6,7 +6,7 @@ A plain HTML page that draws a map with `mountMap` from `@mapcairn/sdk/browser`.
 npm run dev -w @mapcairn/example-browser
 ```
 
-`copyFiles.mjs` copies the files a page serves out of the installed `@mapcairn/sdk` into `mapcairn/`: `browser.css` and every `browser*.js` beside it. Serve all of them from one folder. The map's engine is loaded on demand from that folder, and its worker is made from a script inside the bundle, so the page's policy needs `blob:` in `worker-src` and no file is served for it:
+`copyFiles.mjs` copies the files a page serves out of the installed `@mapcairn/sdk` into `mapcairn/`: `browser.css` and every `browser*.js` beside it. Serve all of them from one folder. The map's engine is loaded on demand from that folder. Its worker is made from a script inside the bundle, so the page's policy needs `worker-src` to include `blob:`, and there is no worker file to serve:
 
 ```text
 default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data: blob: https://tiles.openfreemap.org; font-src 'self'; connect-src 'self' https://tiles.openfreemap.org; worker-src 'self' blob:

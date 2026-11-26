@@ -377,3 +377,39 @@ export function bundleLoadSizes(files) {
     { name: ENGINE_BUILD, gzipBytes: gzipped(LAZY) },
   ];
 }
+
+/**
+ * The boxes of the end stack's buttons as the reference host's `/map` has them
+ * at 1440 by 900 px (read from the built host in Chromium, with the same
+ * computed `box-sizing`, border, padding and margin): the zoom buttons are 48
+ * px with a one pixel hairline above Zoom out, which is `content-box` on
+ * purpose so the line does not eat into the 48 px target (`ControlGroup.css.ts`),
+ * and the credits button is 44 px. The bundle has no host stylesheet behind
+ * it, so its own rules must give the same boxes.
+ */
+export const HOST_BOXES = {
+  "Zoom in": { width: 48, height: 48, boxSizing: "border-box" },
+  "Zoom out": { width: 48, height: 49, boxSizing: "content-box" },
+  "Map credits": { width: 44, height: 44, boxSizing: "border-box" },
+};
+
+/**
+ * The problems with the bundle's buttons read against the host's boxes.
+ *
+ * @param {Chrome} chrome The bundle on a page with no rules of its own.
+ * @returns {string[]}
+ */
+export function hostParityProblems(chrome) {
+  return Object.entries(HOST_BOXES).flatMap(([name, expected]) => {
+    const button = chrome.buttons.find((each) => each.name === name);
+    if (button === undefined) {
+      return [`the bundle has no "${name}" button to compare with the host's`];
+    }
+    return Object.entries(expected)
+      .filter(([property, value]) => button[property] !== value)
+      .map(
+        ([property, value]) =>
+          `"${name}" has ${property} ${button[property]} in the bundle and ${value} in the reference host`,
+      );
+  });
+}

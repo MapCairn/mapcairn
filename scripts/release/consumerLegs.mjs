@@ -254,6 +254,26 @@ export function chromiumExecutable(root, remote = REMOTE_SESSION_CHROMIUM) {
 }
 
 /**
+ * Whether Playwright's own WebKit or Firefox is installed (`npm run
+ * playwright:install -w @mapcairn/web` installs the engines the web host's
+ * projects use; Firefox is there only when it was asked for).
+ *
+ * @param {string} root The repository root.
+ * @param {"webkit" | "firefox"} engine
+ * @returns {boolean}
+ */
+export function engineAvailable(root, engine) {
+  try {
+    const playwright = createRequire(path.join(root, "package.json"))(
+      "playwright-core",
+    );
+    return existsSync(playwright[engine].executablePath());
+  } catch {
+    return false;
+  }
+}
+
+/**
  * Whether Playwright resolves from a repository root.
  *
  * @param {string} root The repository root.

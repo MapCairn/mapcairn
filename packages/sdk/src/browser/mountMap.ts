@@ -27,12 +27,7 @@ export function mountMap(
   options: MountMapOptions = {},
 ): MapHandle {
   return mount(element, options, {
-    createMapAdapter: (workerUrl) => () =>
-      createMapLibreMapAdapter({
-        loadWorkerUrl: () =>
-          workerUrl === undefined
-            ? embeddedWorkerUrl()
-            : Promise.resolve(workerUrl),
-      }),
+    createMapAdapter: () =>
+      createMapLibreMapAdapter({ loadWorkerUrl: embeddedWorkerUrl }),
   });
 }

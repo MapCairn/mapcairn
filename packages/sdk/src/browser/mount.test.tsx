@@ -354,46 +354,6 @@ describe("what it refuses, and says how to fix", () => {
     );
   });
 
-  it("a worker on another origin", () => {
-    expect(() =>
-      mountOn(container(), harness(), {
-        workerUrl: "https://cdn.example/browser-worker.js",
-      }),
-    ).toThrow(
-      /workerUrl must be on this page's origin\. Leave workerUrl out to use the bundle's own worker\./,
-    );
-  });
-
-  it("a worker on this origin, or a blob that this origin made", async () => {
-    vi.spyOn(console, "warn").mockImplementation(() => {});
-    const tools = harness();
-    mountOn(container(), tools, { workerUrl: "/files/browser-worker.js" });
-    mountOn(container(), tools, {
-      workerUrl: "blob:http://localhost:3000/abc",
-    });
-    expect(tools.workerUrls[0]).toBe(
-      new URL("/files/browser-worker.js", document.baseURI).href,
-    );
-    expect(tools.workerUrls[1]).toBe("blob:http://localhost:3000/abc");
-  });
-
-  it.each([
-    ["another port", "http://localhost:3001/browser-worker.js"],
-    [
-      "the same host on another scheme",
-      "https://localhost:3000/browser-worker.js",
-    ],
-    ["a blob from another origin", "blob:https://cdn.example/abc"],
-    [
-      "a protocol-relative address on another host",
-      "//cdn.example/browser-worker.js",
-    ],
-  ])("a worker on %s", (_name, workerUrl) => {
-    expect(() => mountOn(container(), harness(), { workerUrl })).toThrow(
-      /workerUrl must be on this page's origin/,
-    );
-  });
-
   it("a basemap that is not offered", () => {
     expect(() =>
       mountOn(container(), harness(), { basemap: "nowhere" }),
@@ -541,7 +501,6 @@ describe("options that are not usable", () => {
       { view: { center: { lat: 0, lng: 0 }, zoom: 1, bearing: 400 } },
       /view\.bearing/,
     ],
-    [{ workerUrl: "http://[bad" }, /workerUrl must be an address/],
   ])("%j", (options, message) => {
     expect(() => mountOn(container(), harness(), options)).toThrow(message);
   });

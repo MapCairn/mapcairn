@@ -26,7 +26,6 @@ import {
   assertBasemap,
   assertPartialView,
   assertTheme,
-  sameOriginWorkerUrl,
   validateOptions,
 } from "./validate";
 
@@ -36,10 +35,8 @@ const THEME_ATTRIBUTE_NAME = "data-theme";
 
 /** What `mount` needs from outside, so a test can give it a fake engine. */
 export interface MountDependencies {
-  /** Makes the factory of the map adapter, given the address of the engine's worker when the page names one. */
-  readonly createMapAdapter: (
-    workerUrl: string | undefined,
-  ) => MapAdapterFactory;
+  /** The factory of the map adapter. */
+  readonly createMapAdapter: MapAdapterFactory;
   /** For tests: replaces the services before the interface sees them. */
   readonly decorateServices?: (services: Services) => Services;
 }
@@ -95,10 +92,6 @@ export function mount(
     );
   }
   const valid = validateOptions(options);
-  const workerUrl =
-    options.workerUrl === undefined
-      ? undefined
-      : sameOriginWorkerUrl(options.workerUrl);
 
   const listeners: Listeners = {
     viewchange: new Set(),
@@ -125,7 +118,7 @@ export function mount(
     element,
     basemaps: valid.basemaps,
     settings,
-    createMapAdapter: tap.wrap(dependencies.createMapAdapter(workerUrl)),
+    createMapAdapter: tap.wrap(dependencies.createMapAdapter),
     provided: options.services ?? {},
     layers: valid.tools.has("map-options")
       ? layers.catalogue

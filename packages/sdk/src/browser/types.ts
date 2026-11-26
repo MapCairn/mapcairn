@@ -79,8 +79,6 @@ export interface MountMapOptions {
   readonly theme?: ThemeChoice;
   /** The name of this map. Give each of several maps on a page its own. */
   readonly label?: string;
-  /** A worker script the page serves from its own origin. When left out, the bundle starts its own copy of the worker from a `blob:` address, which the page's policy allows in `worker-src`. */
-  readonly workerUrl?: string;
   /** The tools to add. None when left out: zoom, the compass, the credits and the scale are always there. */
   readonly tools?: readonly MapTool[];
   /** The providers the page writes. */

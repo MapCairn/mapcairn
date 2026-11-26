@@ -25,24 +25,7 @@ function container(): HTMLElement {
 }
 
 describe("mountMap", () => {
-  it("gives the MapLibre adapter the worker the page names, and nothing else to load", async () => {
-    const factory = createFakeMapAdapterFactory();
-    adapterFactory.mockImplementation(() => factory());
-    const handle = mountMap(container(), {
-      workerUrl: "/mapcairn/browser-worker.js",
-    });
-    await handle.ready;
-    expect(adapterFactory).toHaveBeenCalledTimes(1);
-    const options: { loadWorkerUrl: () => Promise<string> } =
-      adapterFactory.mock.calls[0]?.[0];
-    const { loadWorkerUrl } = options;
-    await expect(loadWorkerUrl()).resolves.toBe(
-      new URL("/mapcairn/browser-worker.js", document.baseURI).href,
-    );
-    handle.destroy();
-  });
-
-  it("starts the engine's worker from one blob made from the bundle's own copy when the page names none", async () => {
+  it("starts the engine's worker from one blob made from the bundle's own copy, for every map on the page", async () => {
     const createObjectURL = vi
       .spyOn(URL, "createObjectURL")
       .mockReturnValue("blob:http://localhost:3000/worker");

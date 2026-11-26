@@ -13,7 +13,6 @@ import type { MapHandle, MountMapOptions } from "./types";
 export interface Harness {
   readonly dependencies: MountDependencies;
   readonly adapters: FakeMapAdapter[];
-  readonly workerUrls: string[];
 }
 
 /** Dependencies for `mount` that draw with the fake engine and record what they make. */
@@ -21,7 +20,6 @@ export function harness(
   factory?: (onCreate: (adapter: FakeMapAdapter) => void) => MapAdapterFactory,
 ): Harness {
   const adapters: FakeMapAdapter[] = [];
-  const workerUrls: string[] = [];
   const onCreate = (adapter: FakeMapAdapter) => {
     vi.spyOn(adapter, "mount");
     vi.spyOn(adapter, "setBasemap");
@@ -29,12 +27,8 @@ export function harness(
   };
   return {
     adapters,
-    workerUrls,
     dependencies: {
-      createMapAdapter: (workerUrl) => {
-        workerUrls.push(workerUrl ?? "");
-        return (factory ?? createFakeMapAdapterFactory)(onCreate);
-      },
+      createMapAdapter: (factory ?? createFakeMapAdapterFactory)(onCreate),
     },
   };
 }
