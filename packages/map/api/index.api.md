@@ -498,7 +498,7 @@ export interface EndStackDirections {
 }
 
 // @public
-export function endStackMinHeightForZoom(compassShown: boolean, directionsShown?: boolean, drawShown?: boolean): number;
+export function endStackMinHeightForZoom(compassShown: boolean, directionsShown?: boolean, drawShown?: boolean, toolsShown?: number): number;
 
 // @public
 export interface EndStackProps {
@@ -507,20 +507,20 @@ export interface EndStackProps {
     readonly canZoomOut: boolean;
     readonly directions?: EndStackDirections;
     readonly drawing?: boolean;
-    readonly locating: boolean;
-    readonly mapOptionsControls: string;
-    readonly mapOptionsOpen: boolean;
-    readonly measuring: boolean;
+    readonly locating?: boolean;
+    readonly mapOptionsControls?: string;
+    readonly mapOptionsOpen?: boolean;
+    readonly measuring?: boolean;
     readonly onDraw?: () => void;
-    readonly onLocate: () => void;
-    readonly onMapOptions: () => void;
-    readonly onMeasure: () => void;
+    readonly onLocate?: () => void;
+    readonly onMapOptions?: () => void;
+    readonly onMeasure?: () => void;
     readonly onResetBearing: () => void;
-    readonly onSettings: () => void;
+    readonly onSettings?: () => void;
     readonly onZoomIn: () => void;
     readonly onZoomOut: () => void;
-    readonly settingsControls: string;
-    readonly settingsOpen: boolean;
+    readonly settingsControls?: string;
+    readonly settingsOpen?: boolean;
 }
 
 // @public

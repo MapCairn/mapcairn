@@ -140,6 +140,218 @@ describe("EndStack directions button", () => {
   });
 });
 
+describe("EndStack tools a host leaves out", () => {
+  const TOOLS = [
+    ["Map options", "onMapOptions"],
+    ["Measure distance and area", "onMeasure"],
+    ["Locate me", "onLocate"],
+    ["Settings", "onSettings"],
+  ] as const;
+
+  it.each(TOOLS)(
+    "shows %s only when its handler is passed",
+    (name, handler) => {
+      renderChrome(
+        withRegistry(<EndStack {...props({ [handler]: undefined })} />),
+      );
+      expect(screen.queryByRole("button", { name })).toBeNull();
+      expect(
+        within(screen.getByRole("region", { name: "Map tools" })).getAllByRole(
+          "button",
+        ),
+      ).toHaveLength(5);
+    },
+  );
+
+  it("keeps the order of the tools that are passed", () => {
+    renderChrome(
+      withRegistry(
+        <EndStack
+          {...props({ onMapOptions: undefined, onMeasure: undefined })}
+        />,
+      ),
+    );
+    const main = screen.getByRole("group", { name: "Map controls" });
+    expect(
+      within(main)
+        .getAllByRole("button")
+        .map((button) => button.getAttribute("aria-label")),
+    ).toEqual(["Locate me", "Settings"]);
+  });
+
+  it("renders no Map controls group when no tool is passed", () => {
+    renderChrome(
+      withRegistry(
+        <EndStack
+          bearing={0}
+          onResetBearing={vi.fn()}
+          canZoomIn
+          canZoomOut
+          onZoomIn={vi.fn()}
+          onZoomOut={vi.fn()}
+        />,
+      ),
+    );
+    expect(screen.queryByRole("group", { name: "Map controls" })).toBeNull();
+    const zoom = screen.getByRole("group", { name: "Zoom controls" });
+    expect(within(zoom).getAllByRole("button")).toHaveLength(2);
+  });
+
+  it("shows the Map controls group for Directions alone", () => {
+    renderChrome(
+      withRegistry(
+        <EndStack
+          bearing={0}
+          onResetBearing={vi.fn()}
+          directions={{ active: false, controls: "x", onToggle: vi.fn() }}
+          canZoomIn
+          canZoomOut
+          onZoomIn={vi.fn()}
+          onZoomOut={vi.fn()}
+        />,
+      ),
+    );
+    const main = screen.getByRole("group", { name: "Map controls" });
+    expect(within(main).getAllByRole("button")).toHaveLength(1);
+  });
+
+  it("sets no aria-controls on a tool passed without the id of its surface", () => {
+    renderChrome(
+      withRegistry(<EndStack {...props({ mapOptionsControls: undefined })} />),
+    );
+    expect(
+      screen.getByRole("button", { name: "Map options" }),
+    ).not.toHaveAttribute("aria-controls");
+  });
+
+  it("counts the tools shown when it works out the room the zoom buttons need", () => {
+    const four = endStackMinHeightForZoom(false);
+    expect(endStackMinHeightForZoom(false, false, false, 4)).toBe(four);
+    // Each tool is one 48 px control and one hairline.
+    expect(four - endStackMinHeightForZoom(false, false, false, 3)).toBe(49);
+    expect(four - endStackMinHeightForZoom(false, false, false, 1)).toBe(147);
+    // With no tool there is no group, so no gap and no hairlines of its own.
+    expect(endStackMinHeightForZoom(false, false, false, 0)).toBe(2 * 48 + 3);
+    // Directions or Draw alone make the group exist.
+    expect(endStackMinHeightForZoom(false, true, false, 0)).toBe(
+      endStackMinHeightForZoom(false, false, false, 1),
+    );
+  });
+
+  it("lets the zoom buttons show on a stack too short for four tools but tall enough for two", () => {
+    renderChrome(
+      withRegistry(
+        <EndStack
+          {...props({ onMapOptions: undefined, onMeasure: undefined })}
+        />,
+        endStackMinHeightForZoom(false, false, false, 2),
+      ),
+    );
+    expect(
+      screen.getByRole("group", { name: "Zoom controls" }),
+    ).toBeInTheDocument();
+  });
+});
+
+describe("EndStack with a changing set of tools", () => {
+  it("registers a tool that appears after the first render as a focus target", () => {
+    const { rerenderChrome } = renderChrome(
+      withRegistry(<EndStack {...props({ onSettings: undefined })} />),
+    );
+    rerenderChrome(withRegistry(<EndStack {...props()} />));
+    fireEvent.click(screen.getByText("back to settings"));
+    expect(document.activeElement).toBe(
+      screen.getByRole("button", { name: "Settings" }),
+    );
+  });
+
+  it("releases a tool that goes, and keeps the others registered", () => {
+    const { rerenderChrome } = renderChrome(
+      withRegistry(<EndStack {...props()} />),
+    );
+    rerenderChrome(
+      withRegistry(<EndStack {...props({ onMapOptions: undefined })} />),
+    );
+    const measure = screen.getByRole("button", {
+      name: "Measure distance and area",
+    });
+    fireEvent.click(screen.getByText("back to options"));
+    expect(document.activeElement).not.toBe(measure);
+    expect(screen.queryByRole("button", { name: "Map options" })).toBeNull();
+    fireEvent.click(screen.getByText("back to measure"));
+    expect(document.activeElement).toBe(measure);
+  });
+
+  it("registers Directions and Draw shapes when they appear", () => {
+    const { rerenderChrome } = renderChrome(
+      withRegistry(<EndStack {...props()} />),
+    );
+    rerenderChrome(
+      withRegistry(
+        <EndStack
+          {...props({
+            onDraw: vi.fn(),
+            directions: { active: false, controls: "x", onToggle: vi.fn() },
+          })}
+        />,
+      ),
+    );
+    expect(
+      screen
+        .getByRole("button", { name: "Directions" })
+        .hasAttribute("data-focus-target"),
+    ).toBe(true);
+    expect(
+      screen
+        .getByRole("button", { name: "Draw shapes" })
+        .hasAttribute("data-focus-target"),
+    ).toBe(true);
+  });
+});
+
+describe("EndStack room for the zoom buttons with fewer tools", () => {
+  const twoTools = { onMapOptions: undefined, onMeasure: undefined };
+
+  it("yields the zoom group one pixel under what two tools need, and shows it at that height", () => {
+    const needed = endStackMinHeightForZoom(false, false, false, 2);
+    const { rerenderChrome } = renderChrome(
+      withRegistry(<EndStack {...props(twoTools)} />, needed - 1),
+    );
+    expect(screen.queryByRole("group", { name: "Zoom controls" })).toBeNull();
+    rerenderChrome(withRegistry(<EndStack {...props(twoTools)} />, needed));
+    expect(
+      screen.getByRole("group", { name: "Zoom controls" }),
+    ).toBeInTheDocument();
+  });
+
+  it("counts Draw shapes with the tools that are left", () => {
+    const needed = endStackMinHeightForZoom(false, false, true, 2);
+    expect(needed).toBe(endStackMinHeightForZoom(false, false, false, 3));
+    const { rerenderChrome } = renderChrome(
+      withRegistry(
+        <EndStack {...props({ ...twoTools, onDraw: vi.fn() })} />,
+        needed - 1,
+      ),
+    );
+    expect(screen.queryByRole("group", { name: "Zoom controls" })).toBeNull();
+    rerenderChrome(
+      withRegistry(
+        <EndStack {...props({ ...twoTools, onDraw: vi.fn() })} />,
+        needed,
+      ),
+    );
+    expect(
+      screen.getByRole("group", { name: "Zoom controls" }),
+    ).toBeInTheDocument();
+  });
+
+  it("counts Directions and Draw shapes together with the compass", () => {
+    expect(endStackMinHeightForZoom(true, true, true, 1)).toBe(
+      endStackMinHeightForZoom(false, false, false, 3) + 48 + 12,
+    );
+  });
+});
+
 describe("EndStack", () => {
   it("groups the main controls and the zoom controls, top to bottom", () => {
     renderChrome(withRegistry(<EndStack {...props()} />));

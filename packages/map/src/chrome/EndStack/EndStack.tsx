@@ -12,7 +12,7 @@ import {
   Ruler,
   Stack,
 } from "@phosphor-icons/react";
-import { useCallback, useEffect, useRef } from "react";
+import { useEffect, useRef } from "react";
 import { useLandmarkName } from "../../host/useLandmarkName";
 import { useMessages, usePreferences, useSettings } from "../../services";
 import { ControlGroup, IconButton, Surface } from "../../ui";
@@ -43,21 +43,21 @@ export interface EndStackProps {
    * while Settings is open, and while a pin card or Directions is shown in the
    * sheet.
    */
-  readonly mapOptionsOpen: boolean;
-  /** The id of the sheet or panel that Map options opens. */
-  readonly mapOptionsControls: string;
-  /** Opens or closes the Map options sheet or panel. */
-  readonly onMapOptions: () => void;
+  readonly mapOptionsOpen?: boolean;
+  /** The id of the sheet or panel that Map options opens. Without it the button sets no `aria-controls`. */
+  readonly mapOptionsControls?: string;
+  /** Opens or closes the Map options sheet or panel. Leaving it out hides the Map options button. */
+  readonly onMapOptions?: () => void;
   /** The settings sheet or panel (Settings and Help) is open. */
-  readonly settingsOpen: boolean;
-  /** The id of the sheet or panel that Settings opens. */
-  readonly settingsControls: string;
-  /** Opens or closes the settings sheet or panel. */
-  readonly onSettings: () => void;
+  readonly settingsOpen?: boolean;
+  /** The id of the sheet or panel that Settings opens. Without it the button sets no `aria-controls`. */
+  readonly settingsControls?: string;
+  /** Opens or closes the settings sheet or panel. Leaving it out hides the Settings button. */
+  readonly onSettings?: () => void;
   /** Measuring is on. */
-  readonly measuring: boolean;
-  /** Turns measuring on or off. */
-  readonly onMeasure: () => void;
+  readonly measuring?: boolean;
+  /** Turns measuring on or off. Leaving it out hides the Measure button. */
+  readonly onMeasure?: () => void;
   /**
    * The Directions button, between Measure and Locate me. Leave it out and
    * the button is not shown, for a host with no routing service.
@@ -71,9 +71,12 @@ export interface EndStackProps {
   /** Turns drawing on or off. Leaving it out hides the Draw shapes button. */
   readonly onDraw?: () => void;
   /** A location request is in progress. Presses are ignored meanwhile. */
-  readonly locating: boolean;
-  /** Asks for the person's location. Called only from a press, because the browser may prompt. */
-  readonly onLocate: () => void;
+  readonly locating?: boolean;
+  /**
+   * Asks for the person's location. Called only from a press, because the
+   * browser may prompt. Leaving it out hides the Locate me button.
+   */
+  readonly onLocate?: () => void;
   /** False at the maximum zoom, which disables the Zoom in button. */
   readonly canZoomIn: boolean;
   /** False at the minimum zoom, which disables the Zoom out button. */
@@ -88,7 +91,8 @@ export interface EndStackProps {
  * The end-stack slot content, a landmark named "Map tools" holding, top to
  * bottom: the compass (only while the map is rotated and the engine can
  * rotate), the "Map controls" group (Map options, Measure, Directions and Draw
- * shapes when the host offers them, Locate me, Settings) and the "Zoom
+ * shapes, Locate me and Settings, each shown only when the host passes what it
+ * needs, and the group left out when none is shown) and the "Zoom
  * controls" group. The zoom group is never placed anywhere else.
  *
  * @remarks The zoom group follows `shouldShowZoomButtons`: the user's
@@ -102,18 +106,18 @@ export interface EndStackProps {
 export function EndStack({
   bearing,
   onResetBearing,
-  mapOptionsOpen,
+  mapOptionsOpen = false,
   mapOptionsControls,
   onMapOptions,
-  settingsOpen,
+  settingsOpen = false,
   settingsControls,
   onSettings,
-  measuring,
+  measuring = false,
   onMeasure,
   directions,
   drawing = false,
   onDraw,
-  locating,
+  locating = false,
   onLocate,
   canZoomIn,
   canZoomOut,
@@ -141,31 +145,56 @@ export function EndStack({
       showCompass,
       directions !== undefined,
       onDraw !== undefined,
+      [onMapOptions, onMeasure, onLocate, onSettings].filter(
+        (handler) => handler !== undefined,
+      ).length,
     ),
   });
+  const showMainControls =
+    onMapOptions !== undefined ||
+    onMeasure !== undefined ||
+    directions !== undefined ||
+    onDraw !== undefined ||
+    onLocate !== undefined ||
+    onSettings !== undefined;
 
-  // IconButton takes no ref, so the buttons are found through the stack.
-  const setRoot = useCallback(
-    (root: HTMLElement | null) => {
-      rootRef.current = root;
-      const find = (target: string) =>
-        root
-          ? root.querySelector<HTMLElement>(`[data-focus-target="${target}"]`)
-          : null;
-      registerMapOptions(find("map-options"));
-      registerMeasure(find("measure"));
-      registerDirections(find("directions"));
-      registerDraw(find("draw"));
-      registerSettings(find("settings"));
-    },
-    [
-      registerMapOptions,
-      registerMeasure,
-      registerDirections,
-      registerDraw,
-      registerSettings,
-    ],
-  );
+  // IconButton takes no ref, so the buttons are found through the stack. A
+  // button that appears or goes (a host changing what it passes) is registered
+  // or released as it does.
+  const hasMapOptions = onMapOptions !== undefined;
+  const hasMeasure = onMeasure !== undefined;
+  const hasDirections = directions !== undefined;
+  const hasDraw = onDraw !== undefined;
+  const hasSettings = onSettings !== undefined;
+  useEffect(() => {
+    const root = rootRef.current;
+    const find = (target: string) =>
+      root?.querySelector<HTMLElement>(`[data-focus-target="${target}"]`) ??
+      null;
+    registerMapOptions(hasMapOptions ? find("map-options") : null);
+    registerMeasure(hasMeasure ? find("measure") : null);
+    registerDirections(hasDirections ? find("directions") : null);
+    registerDraw(hasDraw ? find("draw") : null);
+    registerSettings(hasSettings ? find("settings") : null);
+    return () => {
+      registerMapOptions(null);
+      registerMeasure(null);
+      registerDirections(null);
+      registerDraw(null);
+      registerSettings(null);
+    };
+  }, [
+    hasMapOptions,
+    hasMeasure,
+    hasDirections,
+    hasDraw,
+    hasSettings,
+    registerMapOptions,
+    registerMeasure,
+    registerDirections,
+    registerDraw,
+    registerSettings,
+  ]);
 
   useEffect(() => {
     rootRef.current?.style.setProperty("--chrome-bearing", `${bearing}deg`);
@@ -174,7 +203,7 @@ export function EndStack({
 
   return (
     <section
-      ref={setRoot}
+      ref={rootRef}
       aria-label={landmarkName}
       data-testid="end-stack"
       data-zoom-yielded={zoom.yieldedToHeight ? "true" : "false"}
@@ -194,60 +223,70 @@ export function EndStack({
           />
         </Surface>
       ) : null}
-      <ControlGroup
-        label={t("chrome.endStack.controls", {})}
-        data-chrome="end-stack-controls"
-        className={styles.group}
-      >
-        <IconButton
-          label={t("chrome.endStack.mapOptions", {})}
-          icon={Stack}
-          expanded={mapOptionsOpen}
-          controls={mapOptionsControls}
-          data-focus-target="map-options"
-          onClick={onMapOptions}
-        />
-        <IconButton
-          label={t("chrome.endStack.measure", {})}
-          icon={Ruler}
-          pressed={measuring}
-          data-focus-target="measure"
-          onClick={onMeasure}
-        />
-        {directions ? (
-          <IconButton
-            label={t("chrome.endStack.directions", {})}
-            icon={Path}
-            pressed={directions.active}
-            controls={directions.controls}
-            data-focus-target="directions"
-            onClick={directions.onToggle}
-          />
-        ) : null}
-        {onDraw ? (
-          <IconButton
-            label={t("chrome.endStack.draw", {})}
-            icon={Polygon}
-            pressed={drawing}
-            data-focus-target="draw"
-            onClick={onDraw}
-          />
-        ) : null}
-        <IconButton
-          label={t("chrome.endStack.locate", {})}
-          icon={GpsFix}
-          busy={locating}
-          onClick={onLocate}
-        />
-        <IconButton
-          label={t("chrome.endStack.settings", {})}
-          icon={Gear}
-          expanded={settingsOpen}
-          controls={settingsControls}
-          data-focus-target="settings"
-          onClick={onSettings}
-        />
-      </ControlGroup>
+      {showMainControls ? (
+        <ControlGroup
+          label={t("chrome.endStack.controls", {})}
+          data-chrome="end-stack-controls"
+          className={styles.group}
+        >
+          {onMapOptions ? (
+            <IconButton
+              label={t("chrome.endStack.mapOptions", {})}
+              icon={Stack}
+              expanded={mapOptionsOpen}
+              controls={mapOptionsControls}
+              data-focus-target="map-options"
+              onClick={onMapOptions}
+            />
+          ) : null}
+          {onMeasure ? (
+            <IconButton
+              label={t("chrome.endStack.measure", {})}
+              icon={Ruler}
+              pressed={measuring}
+              data-focus-target="measure"
+              onClick={onMeasure}
+            />
+          ) : null}
+          {directions ? (
+            <IconButton
+              label={t("chrome.endStack.directions", {})}
+              icon={Path}
+              pressed={directions.active}
+              controls={directions.controls}
+              data-focus-target="directions"
+              onClick={directions.onToggle}
+            />
+          ) : null}
+          {onDraw ? (
+            <IconButton
+              label={t("chrome.endStack.draw", {})}
+              icon={Polygon}
+              pressed={drawing}
+              data-focus-target="draw"
+              onClick={onDraw}
+            />
+          ) : null}
+          {onLocate ? (
+            <IconButton
+              label={t("chrome.endStack.locate", {})}
+              icon={GpsFix}
+              busy={locating}
+              onClick={onLocate}
+            />
+          ) : null}
+          {onSettings ? (
+            <IconButton
+              label={t("chrome.endStack.settings", {})}
+              icon={Gear}
+              expanded={settingsOpen}
+              controls={settingsControls}
+              data-focus-target="settings"
+              onClick={onSettings}
+            />
+          ) : null}
+        </ControlGroup>
+      ) : null}
       {zoom.show ? (
         <ControlGroup
           label={t("chrome.endStack.zoomControls", {})}
