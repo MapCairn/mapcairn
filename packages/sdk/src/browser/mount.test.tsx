@@ -274,7 +274,11 @@ describe("destroy", () => {
       (reason: unknown) => reason,
     );
     handle.destroy();
-    const error = await outcome;
+    // A promise that never settles must fail this test by assertion, not by timeout.
+    const error = await Promise.race([
+      outcome,
+      new Promise((resolve) => setTimeout(() => resolve("still pending"), 100)),
+    ]);
     expect(error).toBeInstanceOf(MountMapError);
     expect((error as MountMapError).kind).toBe("destroyed");
   });
@@ -423,7 +427,8 @@ describe("what it refuses, and says how to fix", () => {
     );
   });
 
-  it("a worker on this origin, or a blob", async () => {
+  it("a worker on this origin, or a blob that this origin made", async () => {
+    vi.spyOn(console, "warn").mockImplementation(() => {});
     const tools = harness();
     mountOn(container(), tools, { workerUrl: "/files/browser-worker.js" });
     mountOn(container(), tools, {
@@ -433,6 +438,23 @@ describe("what it refuses, and says how to fix", () => {
       new URL("/files/browser-worker.js", document.baseURI).href,
     );
     expect(tools.workerUrls[1]).toBe("blob:http://localhost:3000/abc");
+  });
+
+  it.each([
+    ["another port", "http://localhost:3001/browser-worker.js"],
+    [
+      "the same host on another scheme",
+      "https://localhost:3000/browser-worker.js",
+    ],
+    ["a blob from another origin", "blob:https://cdn.example/abc"],
+    [
+      "a protocol-relative address on another host",
+      "//cdn.example/browser-worker.js",
+    ],
+  ])("a worker on %s", (_name, workerUrl) => {
+    expect(() => mountOn(container(), harness(), { workerUrl })).toThrow(
+      /workerUrl must be on this page's origin/,
+    );
   });
 
   it("the default worker when it is on another origin", () => {
@@ -664,5 +686,120 @@ describe("after a destroy that came before the engine", () => {
     handle.destroy();
     await new Promise((resolve) => setTimeout(resolve, 20));
     expect(handle.getView().zoom).toBeLessThan(4);
+  });
+});
+
+/** A `matchMedia` whose dark query the test flips, and whose listeners it can see. */
+function stubColourScheme(initial: "light" | "dark") {
+  let dark = initial === "dark";
+  const lists: {
+    query: string;
+    added: EventListenerOrEventListenerObject[];
+    removed: EventListenerOrEventListenerObject[];
+    listeners: Set<EventListenerOrEventListenerObject>;
+  }[] = [];
+  vi.spyOn(window, "matchMedia").mockImplementation((query: string) => {
+    const entry = {
+      query,
+      added: [] as EventListenerOrEventListenerObject[],
+      removed: [] as EventListenerOrEventListenerObject[],
+      listeners: new Set<EventListenerOrEventListenerObject>(),
+    };
+    lists.push(entry);
+    return {
+      media: query,
+      get matches() {
+        return query.includes("dark") && dark;
+      },
+      addEventListener: (
+        _type: string,
+        listener: EventListenerOrEventListenerObject,
+      ) => {
+        entry.added.push(listener);
+        entry.listeners.add(listener);
+      },
+      removeEventListener: (
+        _type: string,
+        listener: EventListenerOrEventListenerObject,
+      ) => {
+        entry.removed.push(listener);
+        entry.listeners.delete(listener);
+      },
+    } as unknown as MediaQueryList;
+  });
+  return {
+    lists,
+    setDark(next: boolean) {
+      dark = next;
+      for (const entry of lists) {
+        for (const listener of [...entry.listeners]) {
+          (listener as EventListener)(new Event("change"));
+        }
+      }
+    },
+  };
+}
+
+describe("the theme", () => {
+  it("follows the device's colour scheme by default, and its changes", async () => {
+    const scheme = stubColourScheme("dark");
+    const element = container();
+    const handle = mountOn(element, harness());
+    await drawn(handle);
+    expect(element.getAttribute("data-theme")).toBe("dark");
+    scheme.setDark(false);
+    await vi.waitFor(() =>
+      expect(element.getAttribute("data-theme")).toBe("light"),
+    );
+    scheme.setDark(true);
+    await vi.waitFor(() =>
+      expect(element.getAttribute("data-theme")).toBe("dark"),
+    );
+  });
+
+  it("does not follow the device when the page chose a theme", async () => {
+    const scheme = stubColourScheme("dark");
+    const element = container();
+    const handle = mountOn(element, harness(), { theme: "light" });
+    await drawn(handle);
+    scheme.setDark(true);
+    expect(element.getAttribute("data-theme")).toBe("light");
+  });
+
+  it("stops listening for the device's colour scheme when the map is destroyed", async () => {
+    const scheme = stubColourScheme("light");
+    const handle = mountOn(container(), harness());
+    await drawn(handle);
+    const dark = scheme.lists.filter((entry) =>
+      entry.query.includes("color-scheme"),
+    );
+    expect(dark.length).toBeGreaterThan(0);
+    expect(dark.some((entry) => entry.added.length > 0)).toBe(true);
+    handle.destroy();
+    for (const entry of dark) {
+      expect(entry.removed).toEqual(entry.added);
+      expect(entry.listeners.size).toBe(0);
+    }
+  });
+
+  it("is each map's own: one map's choice reaches no other", async () => {
+    stubColourScheme("light");
+    const first = container();
+    const second = container();
+    const a = mountOn(first, harness(), { theme: "light", label: "A" });
+    await drawn(a);
+    const b = mountOn(second, harness(), { theme: "dark", label: "B" });
+    await drawn(b);
+    expect(first.getAttribute("data-theme")).toBe("light");
+    expect(second.getAttribute("data-theme")).toBe("dark");
+    a.update({ theme: "dark" });
+    await vi.waitFor(() =>
+      expect(first.getAttribute("data-theme")).toBe("dark"),
+    );
+    b.update({ theme: "light" });
+    await vi.waitFor(() =>
+      expect(second.getAttribute("data-theme")).toBe("light"),
+    );
+    expect(first.getAttribute("data-theme")).toBe("dark");
   });
 });

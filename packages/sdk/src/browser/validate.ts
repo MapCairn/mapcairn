@@ -127,8 +127,8 @@ export function validateOptions(options: MountMapOptions): ValidOptions {
 
 /**
  * The absolute address of the engine's worker, which must be on the page's
- * origin (or a `blob:` address), because a worker from another origin cannot
- * start.
+ * origin, because a worker from another origin cannot start. A `blob:` address
+ * counts as the origin that made it, which `URL` reports as its `origin`.
  *
  * @throws MountMapError when it is on another origin or is not an address.
  */
@@ -141,7 +141,7 @@ export function sameOriginWorkerUrl(candidate: string): string {
       "workerUrl must be an address, such as /mapcairn/browser-worker.js.",
     );
   }
-  if (url.protocol !== "blob:" && url.origin !== new URL(document.URL).origin) {
+  if (url.origin !== new URL(document.URL).origin) {
     invalid(
       "workerUrl must be on this page's origin. Serve the browser files from your own site.",
     );
