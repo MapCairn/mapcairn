@@ -10,6 +10,10 @@ import {
   // @ts-expect-error The scripts are dependency-free JavaScript with JSDoc types.
 } from "../../../../scripts/buildInputs.mjs";
 import {
+  assertBuilt,
+  // @ts-expect-error The scripts are dependency-free JavaScript with JSDoc types.
+} from "../../../../scripts/buildSdk.mjs";
+import {
   BUILT_SDK_PACKAGES,
   // @ts-expect-error The scripts are dependency-free JavaScript with JSDoc types.
 } from "../../../../scripts/sdkPackages.mjs";
@@ -104,6 +108,10 @@ function exportTargets(exportsField: Manifest["exports"]): string[] {
 }
 
 describe.each(BUILT_PACKAGES)("@mapcairn/%s dist", (name) => {
+  it("is built from the current sources and build scripts", () => {
+    expect(() => assertBuilt(name)).not.toThrow();
+  });
+
   it("holds every file its exports point at", () => {
     const files = new Set(distFiles(name));
     const missing = exportTargets(manifestOf(name).exports)

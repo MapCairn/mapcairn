@@ -5,7 +5,11 @@ import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
-import { describe, expect, it } from "vitest";
+import { beforeAll, describe, expect, it } from "vitest";
+import {
+  assertBuilt,
+  // @ts-expect-error The scripts are dependency-free JavaScript with JSDoc types.
+} from "../../../../scripts/buildSdk.mjs";
 
 /**
  * Reads the built bundle of `@mapcairn/sdk/browser` in `packages/sdk/dist`
@@ -51,6 +55,8 @@ function specifiersOf(source: string): string[] {
 }
 
 describe("the files of @mapcairn/sdk/browser", () => {
+  beforeAll(() => assertBuilt("sdk"));
+
   it("are the module, one lazy engine chunk, the stylesheet, the worker and their declarations, with no source map", () => {
     const files = bundleFiles();
     for (const file of [
@@ -163,6 +169,8 @@ describe("the files of @mapcairn/sdk/browser", () => {
 });
 
 describe("THIRD-PARTY-NOTICES.md", () => {
+  beforeAll(() => assertBuilt("sdk"));
+
   const notices = () =>
     readFileSync(path.join(SDK, "THIRD-PARTY-NOTICES.md"), "utf8");
 
