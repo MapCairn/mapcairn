@@ -542,13 +542,14 @@ export interface MapEvents {
    * the service answers in another encoding, for example Mapbox Vector Tiles
    * from a static host to a source that says `mlt`, or the reverse. It is
    * reported when the map settles, at most once each time the layer is drawn,
-   * and never once any tile of the layer has loaded. The layer's failures raise
+   * and never once any tile of the layer has loaded. If a tile loads later (the
+   * server was fixed), `tileLayerRecovered` follows. The layer's failures raise
    * no general `tileError`, so the ui can say what is wrong with that layer.
    */
   tileLayerWrongFormat: MapTileLayerWrongFormat;
   /**
    * A tile of a tile data layer loaded after the layer reported
-   * `tileLayerSlow` or `tileLayerUnavailable` for the same tiles, for example
+   * `tileLayerSlow`, `tileLayerUnavailable` or `tileLayerWrongFormat` for the same tiles, for example
    * once a transient failure has passed and the person pans. It is emitted once
    * for each drawing that reported, when the first tile loads, however many
    * of the two it reported, and never for a layer that has not

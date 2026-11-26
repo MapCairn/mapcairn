@@ -254,7 +254,8 @@ export interface DataLayers {
   reportTilesWrongFormat(id: string, tiles: string): void;
   /**
    * Records that a tile loaded for the `tiles` a layer had reported slow or
-   * with no tiles, which `MapDataLayers` calls from the adapter's report. The
+   * with no tiles, or a vector layer reported in another format, which
+   * `MapDataLayers` calls from the adapter's report. The
    * layer's status goes and the layer says so once, politely. A recovery for
    * any other tiles, or for a layer that is not showing the status, is ignored.
    */
@@ -1173,6 +1174,7 @@ export function useDataLayers(options: UseDataLayersOptions = {}): DataLayers {
       const current = stateRef.current;
       if (
         !definition ||
+        !isRasterTileLayer(definition) ||
         !current.enabled.includes(id) ||
         current.tilesSlow[id] === tiles ||
         current.tilesUnavailable[id] === tiles
@@ -1200,6 +1202,7 @@ export function useDataLayers(options: UseDataLayersOptions = {}): DataLayers {
       const current = stateRef.current;
       if (
         !definition ||
+        !isRasterTileLayer(definition) ||
         !current.enabled.includes(id) ||
         current.tilesUnavailable[id] === tiles
       ) {
@@ -1258,7 +1261,8 @@ export function useDataLayers(options: UseDataLayersOptions = {}): DataLayers {
       if (
         !definition ||
         (current.tilesUnavailable[id] !== tiles &&
-          current.tilesSlow[id] !== tiles)
+          current.tilesSlow[id] !== tiles &&
+          current.tilesWrongFormat[id] !== tiles)
       ) {
         return;
       }
@@ -1266,6 +1270,7 @@ export function useDataLayers(options: UseDataLayersOptions = {}): DataLayers {
         ...previous,
         tilesUnavailable: reportedTilesFor(previous.tilesUnavailable, id, null),
         tilesSlow: reportedTilesFor(previous.tilesSlow, id, null),
+        tilesWrongFormat: reportedTilesFor(previous.tilesWrongFormat, id, null),
       }));
       announce(announceTilesRecovered(textOrMessage(definition.name)), {
         priority: "polite",

@@ -954,7 +954,8 @@ export class FakeMapAdapter implements MapAdapter {
 
   /**
    * Emits `tileLayerRecovered` for the tile layer `layerId`, as an engine does
-   * when a tile loads after the layer reported slow tiles or no tiles. A layer
+   * when a tile loads after the layer reported slow tiles or no tiles, or a
+   * vector layer reported its tiles in the wrong format. A layer
    * that has not reported (or has since been set to other tiles, or removed)
    * emits nothing, and the reports of one drawing are ended by one recovery.
    */
@@ -964,6 +965,12 @@ export class FakeMapAdapter implements MapAdapter {
     if (layer?.kind === "tiles" && tiles === layer.overlay.tiles) {
       this.#reportedTiles.delete(layerId);
       this.#emit("tileLayerRecovered", { layerId, tiles });
+    }
+    if (layer?.kind === "vector" && this.#reportedFormats.delete(layerId)) {
+      this.#emit("tileLayerRecovered", {
+        layerId,
+        tiles: layer.layer.source.tiles,
+      });
     }
   }
 

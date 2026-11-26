@@ -46,12 +46,14 @@ export interface FailureDetectionOptions {
  * Classifies the engine's `error` events and judges the map by its tiles.
  *
  * Engine `error` events are classified once:
- * - a tile or source failure leaves the map working (`tileError`), except a
- *   tile of a vector tile data layer that could not be read, which that layer
- *   reports itself as `tileLayerWrongFormat` when the map settles (see
- *   {@link TileFormatWatch}), and one of a raster tile data layer, which that layer reports itself as
- *   `tileLayerUnavailable` when the map settles, or as `tileLayerSlow` when it
- *   has waited with nothing loaded (see {@link TileLayerTraffic});
+ * - a tile or source failure leaves the map working (`tileError`), except:
+ *   - a tile of a vector tile data layer that could not be read, which that
+ *     layer reports itself as `tileLayerWrongFormat` when the map settles (and
+ *     as `tileLayerRecovered` when a tile loads later; see
+ *     {@link TileFormatWatch});
+ *   - one of a raster tile data layer, which that layer reports itself as
+ *     `tileLayerUnavailable` when the map settles, or as `tileLayerSlow` when
+ *     it has waited with nothing loaded (see {@link TileLayerTraffic});
  * - a source-less error before the pending style document has loaded
  *   (`style.load`) means that document failed: it rejects the pending mount or
  *   swap, and a failed swap puts the last basemap that loaded back. A worker

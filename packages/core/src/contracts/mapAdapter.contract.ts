@@ -1100,6 +1100,26 @@ export function runMapAdapterContract(
         expect(tileErrors).toBe(0);
       });
 
+      it("reports one recovery when a tile of a vector layer loads after its report, and none for a layer that never reported", async () => {
+        const { adapter, controls } = await mounted();
+        const recoveries: MapEvents["tileLayerRecovered"][] = [];
+        adapter.on("tileLayerRecovered", (report) => recoveries.push(report));
+        adapter.setVectorLayer("districts", VECTOR);
+        adapter.setVectorLayer("quiet", VECTOR);
+        await controls.settle();
+        controls.simulateTileLayerRecovery("quiet");
+        await controls.settle();
+        expect(recoveries).toEqual([]);
+        controls.simulateTileFormatFailure("districts");
+        await controls.settle();
+        controls.simulateTileLayerRecovery("districts");
+        controls.simulateTileLayerRecovery("districts");
+        await controls.settle();
+        expect(recoveries).toEqual([
+          { layerId: "districts", tiles: VECTOR.source.tiles },
+        ]);
+      });
+
       it("reports a vector layer again when it is drawn again, and reports nothing for one that was removed or never set", async () => {
         const { adapter, controls } = await mounted();
         const reports: MapEvents["tileLayerWrongFormat"][] = [];

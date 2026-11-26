@@ -10,9 +10,10 @@ const PARSE_FAILURE = new Error(
 
 function setUp() {
   const wrongFormat = vi.fn();
-  const watch = new TileFormatWatch({ wrongFormat });
+  const recovered = vi.fn();
+  const watch = new TileFormatWatch({ wrongFormat, recovered });
   watch.register("src", "roads", TILES);
-  return { watch, wrongFormat };
+  return { watch, wrongFormat, recovered };
 }
 
 describe("TileFormatWatch", () => {
@@ -56,6 +57,28 @@ describe("TileFormatWatch", () => {
     watch.recordFailed("src", PARSE_FAILURE);
     watch.reportSettled();
     expect(wrongFormat).not.toHaveBeenCalled();
+  });
+
+  it("reports a recovery once, when the first tile loads after the layer was reported", () => {
+    const { watch, recovered } = setUp();
+    watch.recordFailed("src", PARSE_FAILURE);
+    watch.reportSettled();
+    expect(recovered).not.toHaveBeenCalled();
+    watch.recordLoaded("src");
+    watch.recordLoaded("src");
+    expect(recovered).toHaveBeenCalledExactlyOnceWith({
+      layerId: "roads",
+      tiles: TILES,
+    });
+  });
+
+  it("reports no recovery for a layer that was never reported", () => {
+    const { watch, recovered } = setUp();
+    watch.recordLoaded("src");
+    watch.recordFailed("src", PARSE_FAILURE);
+    watch.reportSettled();
+    watch.recordLoaded("src");
+    expect(recovered).not.toHaveBeenCalled();
   });
 
   it("says nothing of a layer that failed no tile", () => {

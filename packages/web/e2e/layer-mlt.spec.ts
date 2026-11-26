@@ -21,7 +21,9 @@ import { viewportDetails, waitForStableLayout } from "./support/states";
  * specs show the passthrough works end to end: a source that declares `mlt`
  * draws, in the map, in a saved image and as a basemap style's own source, and
  * a server that answers in the other encoding gives a readable status in place
- * of a blank layer. The reference site adopts no MapLibre Tile source; the
+ * of a blank layer, which goes once a tile loads. The mismatch specs pin the
+ * engine's wording of an unreadable tile (see `tileFormatWatch.ts`), so run
+ * this spec on every maplibre-gl upgrade. The reference site adopts no MapLibre Tile source; the
  * layers here exist only in the test.
  */
 
@@ -84,6 +86,8 @@ test.describe("vector tiles that declare their encoding", () => {
       await answerTiles(page, { body });
       await mapPage.goto(`#layers=kind-mlt&${AT_CENTRE}`);
       await mapPage.openMapOptions();
+      // Only the engine's own wording of an unreadable tile
+      // (`TILE_UNREADABLE_MESSAGE`) reaches this status, so these specs pin it.
       await expect(page.getByTestId("layer-status-kind-mlt")).toHaveText(
         FORMAT_STATUS,
       );
@@ -92,6 +96,26 @@ test.describe("vector tiles that declare their encoding", () => {
       );
     });
   }
+
+  test("clears the status when the server is fixed and a tile loads", async ({
+    page,
+    mapPage,
+  }) => {
+    await scriptLayers(page, [vectorLayer("kind-mlt", "mlt")]);
+    const answer = { body: MVT_TILE };
+    await answerTiles(page, answer);
+    await mapPage.goto(`#layers=kind-mlt&${AT_CENTRE}`);
+    await mapPage.openMapOptions();
+    const status = page.getByTestId("layer-status-kind-mlt");
+    await expect(status).toHaveText(FORMAT_STATUS);
+
+    answer.body = MLT_TILE;
+    await page.getByRole("button", { name: "Zoom in" }).click();
+    await expect(status).toHaveCount(0);
+    await expect(mapPage.politeAnnouncer).toContainText(
+      "Sample tiles: imagery is showing again.",
+    );
+  });
 
   test("keeps the layer in the saved image", async ({ page, mapPage }) => {
     await scriptLayers(page, [vectorLayer("kind-mlt", "mlt")]);

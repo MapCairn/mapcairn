@@ -10,6 +10,12 @@ import type { MapTileLayerWrongFormat } from "@mapcairn/core";
  * as an `error` with the tile's source id and no type of its own, so the
  * message is the only way to tell it from a network failure. A tile the
  * server answers with 404 is an empty tile to the engine and raises none.
+ *
+ * It fires for any parse failure, an HTML error page or a corrupt tile as
+ * much as the wrong encoding, so the report says only that the tiles could not
+ * be read. The Playwright spec `layer-mlt.spec.ts` pins this message against
+ * the real engine, in both directions, and must be run on every maplibre-gl
+ * upgrade: a reworded message fails it.
  */
 const TILE_UNREADABLE_MESSAGE = "Unable to parse the tile at ";
 
@@ -17,6 +23,8 @@ const TILE_UNREADABLE_MESSAGE = "Unable to parse the tile at ";
 export interface TileFormatReports {
   /** The layer's tiles could not be read, and none of them could. */
   wrongFormat(report: MapTileLayerWrongFormat): void;
+  /** A tile of a layer reported as wrong format loaded after all, as once the server is fixed. */
+  recovered(report: MapTileLayerWrongFormat): void;
 }
 
 /** What one watched vector source has had so far since it was last drawn. */
@@ -25,6 +33,7 @@ interface WatchedSource {
   readonly tiles: string;
   unreadable: number;
   loaded: number;
+  /** Whether {@link TileFormatReports.wrongFormat} was reported for this drawing. */
   reported: boolean;
 }
 
@@ -59,8 +68,16 @@ export class TileFormatWatch {
   /** Counts a tile of `source` that loaded. */
   recordLoaded(source: string): void {
     const watched = this.sources.get(source);
-    if (watched) {
-      watched.loaded += 1;
+    if (!watched) {
+      return;
+    }
+    const recovered = watched.reported && watched.loaded === 0;
+    watched.loaded += 1;
+    if (recovered) {
+      this.reports.recovered({
+        layerId: watched.layerId,
+        tiles: watched.tiles,
+      });
     }
   }
 

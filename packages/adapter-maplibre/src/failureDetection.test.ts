@@ -90,6 +90,24 @@ describe("FailureDetection.handleError", () => {
     expect(reports.basemapUnavailable).not.toHaveBeenCalled();
   });
 
+  it("reports the layer recovered when a tile loads after it was reported", () => {
+    const { detection, reports, map } = setUp();
+    detection.handleError(
+      engineError({
+        error: UNREADABLE,
+        tile: {},
+        sourceId: VECTOR_LAYER_SOURCE,
+      }),
+      map,
+    );
+    detection.settled();
+    detection.tileLoaded({ tile: {}, sourceId: VECTOR_LAYER_SOURCE });
+    expect(reports.recovered).toHaveBeenCalledExactlyOnceWith({
+      layerId: "roads",
+      tiles: VECTOR_TILES,
+    });
+  });
+
   it("does not report a vector layer that has loaded a tile", () => {
     const { detection, reports, map } = setUp();
     detection.tileLoaded({ tile: {}, sourceId: VECTOR_LAYER_SOURCE });

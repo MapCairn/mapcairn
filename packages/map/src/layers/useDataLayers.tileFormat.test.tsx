@@ -86,4 +86,39 @@ describe("a vector tile layer whose tiles are in another format", () => {
     expect(status()).toBe("tiles-format");
     expect(announce).toHaveBeenCalledTimes(3);
   });
+
+  it("clears when a tile loads for the same tiles, and says once that the layer is showing again", () => {
+    const { result, status } = setup();
+    act(() => result.current.reportTilesWrongFormat(VECTOR, TILES));
+    announce.mockClear();
+    act(() => result.current.reportTilesRecovered(VECTOR, TILES));
+    expect(status()).toBe("on");
+    expect(announce).toHaveBeenCalledExactlyOnceWith(
+      "Sample districts: imagery is showing again.",
+      { priority: "polite" },
+    );
+    act(() => result.current.reportTilesRecovered(VECTOR, TILES));
+    expect(announce).toHaveBeenCalledTimes(1);
+  });
+
+  it("ignores a recovery for other tiles", () => {
+    const { result, status } = setup();
+    act(() => result.current.reportTilesWrongFormat(VECTOR, TILES));
+    announce.mockClear();
+    act(() =>
+      result.current.reportTilesRecovered(VECTOR, "https://other.test/{z}"),
+    );
+    expect(status()).toBe("tiles-format");
+    expect(announce).not.toHaveBeenCalled();
+  });
+
+  it("takes no slow or unavailable report for a vector layer, which has its own", () => {
+    const { result, status } = setup();
+    act(() => {
+      result.current.reportTilesSlow(VECTOR, TILES);
+      result.current.reportTilesUnavailable(VECTOR, TILES);
+    });
+    expect(status()).toBe("on");
+    expect(announce).not.toHaveBeenCalled();
+  });
 });
