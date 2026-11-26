@@ -249,14 +249,22 @@ describe("the host's layer definitions", () => {
       const section = ATTRIBUTIONS.split("## Saving features")[1] ?? "";
       const body = section.split("\n## ")[0] ?? "";
       for (const id of SAVEABLE_LAYER_IDS) {
-        expect(body, id).toContain(`\`${id}\``);
+        const row = body.split("\n").find((line) => line.includes(`\`${id}\``));
+        expect(row, id).toContain("| Allowed ");
       }
     });
 
     it("carries the credit the provider asks for into the file", () => {
+      const credits: Record<string, string> = {
+        earthquakes: "Credit: U.S. Geological Survey",
+        "world-countries": "Made with Natural Earth",
+      };
       for (const id of SAVEABLE_LAYER_IDS) {
         const definition = LAYER_DEFINITIONS.find((d) => d.id === id);
-        expect(definition?.attribution.length, id).toBeGreaterThan(0);
+        expect(
+          definition?.attribution.map((credit) => credit.text),
+          id,
+        ).toContain(credits[id]);
       }
     });
   });
