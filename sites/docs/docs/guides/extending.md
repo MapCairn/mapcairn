@@ -263,7 +263,7 @@ A search provider sends data to whatever its service is, so the host's privacy t
 - A `bias` box is sent only if the host gives `SearchPill` a `getBias` function and the provider passes it on, and it shows roughly which area the person is looking at.
 - The visitor's language is sent only if the adapter sends it (see the [translation guide](translate-the-sdk.md)).
 
-The words are the host's. `PinCard` takes a `lookupNote` for the line under "Look up address", and `SheetContent` and `SettingsSection` take a `privacyNote` for Settings. The defaults name no service because the SDK does not know which one a host uses.
+The words are the host's. `PinCard` takes a `lookupNote` for the line under "Look up address", and `SheetContent` and `SettingsSection` take a `privacyNote` for Settings. They also take `privacyHref` for the policy link (`/privacy` by default; an empty string draws none, for a page with no such route), and `SheetContent` and `HelpSection` take `hasSearch` (true by default) so Help can leave out the Search topic when there is no search box. The defaults name no service because the SDK does not know which one a host uses.
 
 ## Add search suggestions
 

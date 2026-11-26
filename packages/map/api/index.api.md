@@ -643,6 +643,7 @@ export function HelpSection(input: HelpSectionProps): JSX.Element;
 // @public
 export interface HelpSectionProps {
     readonly about?: HelpAbout;
+    readonly hasSearch?: boolean;
     readonly headingLevel?: HeadingLevel;
     readonly headingRef?: Ref<HTMLHeadingElement>;
     readonly onStartTour?: () => void;
@@ -1246,6 +1247,7 @@ export interface SheetContentProps {
     readonly basemapId: string;
     readonly draw?: UseDraw;
     readonly hasPin: boolean;
+    readonly hasSearch?: boolean;
     readonly imageCredits?: string;
     readonly intro?: string;
     readonly layers?: DataLayers;
