@@ -35,6 +35,8 @@ const TEXT_FILE = /\.(?:md|mjs|cjs|yml|yaml|json)$/;
 const SYSTEM_SPECIFIC_SCRIPT = /^scripts\/.*\.(?:sh|ps1|cmd|bat|py)$/;
 /** Web addresses are removed from a line before it is read, so a URL segment such as `/home/` is not a path. */
 const URL_TEXT = /\bhttps?:\/\/\S+/g;
+/** The agent guides must show this environment correction literally. */
+const PWD_CORRECTION = "export PWD=$(pwd -P)";
 
 /** A pattern and what is wrong with it. */
 const RULES = [
@@ -95,7 +97,9 @@ export function isSystemSpecificScript(path) {
 export function findProblems(text) {
   const problems = [];
   text.split(/\r?\n/).forEach((content, index) => {
-    const visible = content.replace(URL_TEXT, "");
+    const visible = content
+      .replace(URL_TEXT, "")
+      .replaceAll(PWD_CORRECTION, "");
     const rule = RULES.find(({ pattern }) => pattern.test(visible));
     if (rule !== undefined) {
       problems.push({ line: index + 1, message: rule.message });
