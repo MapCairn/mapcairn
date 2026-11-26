@@ -11,3 +11,4 @@ Open plans:
 - [0007: Multi-feature selection](0007-multi-feature-selection.md), tracking issue [#49](https://github.com/MapCairn/mapcairn/issues/49).
 - [0014: Release the SDK packages on GitHub and npm](0014-sdk-release.md), tracking issue [#1](https://github.com/MapCairn/mapcairn/issues/1).
 - [0017: A documentation site on its own hostname](0017-documentation-site.md), tracking issue [#199](https://github.com/MapCairn/mapcairn/issues/199).
+- [0018: A mount function, a prebuilt browser bundle and a custom element](0018-mount-map-and-custom-element.md), tracking issues [#44](https://github.com/MapCairn/mapcairn/issues/44) and [#675](https://github.com/MapCairn/mapcairn/issues/675).
