@@ -129,6 +129,28 @@ describe("the files of @mapcairn/sdk/browser", () => {
     expect(sheet).not.toMatch(/@import/);
   });
 
+  it("hold the engine's rules once, ahead of the adapter's overrides", () => {
+    const sheet = read("browser.css");
+    const installed = path.join(
+      path.dirname(
+        createRequire(import.meta.url).resolve("maplibre-gl/package.json"),
+      ),
+      "dist",
+      "maplibre-gl.css",
+    );
+    const engine = readFileSync(installed, "utf8");
+    const adapter = readFileSync(
+      path.join(REPO, "packages", "adapter-maplibre", "dist", "styles.css"),
+      "utf8",
+    );
+    const count = (text: string) =>
+      text.split(".maplibregl-canvas-container").length - 1;
+    // One copy of MapLibre's rules and one of the adapter's, and no second copy of either.
+    expect(count(sheet)).toBe(count(engine) + count(adapter));
+    expect(sheet.startsWith(engine)).toBe(true);
+    expect(sheet.indexOf("[data-map-host]")).toBeGreaterThan(engine.length);
+  });
+
   it("serve the engine's worker as a copy of the installed file", () => {
     const installed = path.join(
       path.dirname(

@@ -57,7 +57,8 @@ async function bundleModules({ folder, entries, stylesheet }) {
         load(id) {
           return id === EMPTY_STYLESHEET_MODULE ? "export {};" : null;
         },
-        enforce: "post",
+        // Before Vite's own resolver, which would otherwise find the file first.
+        enforce: "pre",
         generateBundle: {
           order: "post",
           handler(_options, bundle) {
