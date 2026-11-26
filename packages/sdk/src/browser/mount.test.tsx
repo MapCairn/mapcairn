@@ -1,0 +1,531 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright MapCairn contributors
+import {
+  BASEMAPS,
+  createFakeMapAdapterFactory,
+  type FakeMapAdapter,
+  type MapAdapterFactory,
+  MapEngineError,
+  type Services,
+} from "@mapcairn/core";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { MountMapError } from "./MountMapError";
+import { type MountDependencies, mount } from "./mount";
+import type { MapHandle } from "./types";
+
+const WORKER = "/mapcairn/browser-worker.js";
+
+interface Harness {
+  readonly dependencies: MountDependencies;
+  readonly adapters: FakeMapAdapter[];
+  readonly workerUrls: string[];
+}
+
+function harness(
+  factory?: (onCreate: (adapter: FakeMapAdapter) => void) => MapAdapterFactory,
+): Harness {
+  const adapters: FakeMapAdapter[] = [];
+  const workerUrls: string[] = [];
+  const onCreate = (adapter: FakeMapAdapter) => {
+    vi.spyOn(adapter, "mount");
+    vi.spyOn(adapter, "setBasemap");
+    adapters.push(adapter);
+  };
+  return {
+    adapters,
+    workerUrls,
+    dependencies: {
+      createMapAdapter: (workerUrl) => {
+        workerUrls.push(workerUrl);
+        return (factory ?? createFakeMapAdapterFactory)(onCreate);
+      },
+      defaultWorkerUrl: () => new URL(WORKER, document.baseURI).href,
+    },
+  };
+}
+
+/** An element with a height, as happy-dom lays out none. */
+function container(height = 300): HTMLElement {
+  const element = document.createElement("div");
+  element.getBoundingClientRect = () =>
+    ({
+      height,
+      width: 400,
+      top: 0,
+      left: 0,
+      right: 400,
+      bottom: height,
+    }) as DOMRect;
+  document.body.append(element);
+  return element;
+}
+
+const mounted: MapHandle[] = [];
+
+function mountOn(
+  element: HTMLElement,
+  tools: Harness,
+  options: Parameters<typeof mount>[1] = {},
+): MapHandle {
+  const handle = mount(element, options, tools.dependencies);
+  mounted.push(handle);
+  return handle;
+}
+
+async function drawn(handle: MapHandle): Promise<void> {
+  await handle.ready;
+}
+
+afterEach(() => {
+  for (const handle of mounted.splice(0)) {
+    handle.destroy();
+  }
+  document.body.replaceChildren();
+  vi.restoreAllMocks();
+});
+
+describe("mount with no options", () => {
+  it("draws a map with the zoom, the compass, the credits and the scale", async () => {
+    const tools = harness();
+    const element = container();
+    await drawn(mountOn(element, tools));
+    expect(tools.adapters).toHaveLength(1);
+    expect(element.querySelector("[data-map-host]")).not.toBeNull();
+    expect(
+      element.querySelector('[role="group"][aria-label="Zoom controls"]'),
+    ).not.toBeNull();
+    expect(
+      element.querySelector('button[aria-label="Map credits"]'),
+    ).not.toBeNull();
+  });
+
+  it("shows only the buttons it has a handler for", async () => {
+    const element = container();
+    await drawn(mountOn(element, harness()));
+    for (const name of [
+      "Map options",
+      "Measure distance and area",
+      "Locate me",
+      "Settings",
+    ]) {
+      expect(element.querySelector(`button[aria-label="${name}"]`)).toBeNull();
+    }
+    expect(
+      element.querySelector('[role="group"][aria-label="Map controls"]'),
+    ).toBeNull();
+  });
+
+  it("leaves the page's main landmark to the page", async () => {
+    const element = container();
+    await drawn(mountOn(element, harness()));
+    expect(element.querySelector("main")).toBeNull();
+  });
+
+  it("starts on a view of the world and writes the theme and the marker on its element only", async () => {
+    const element = container();
+    const handle = mountOn(element, harness());
+    await drawn(handle);
+    expect(handle.getView().zoom).toBeLessThan(4);
+    expect(element.getAttribute("data-theme")).toBe("light");
+    expect(element.hasAttribute("data-mapcairn")).toBe(true);
+    expect(document.documentElement.hasAttribute("data-theme")).toBe(false);
+  });
+});
+
+describe("two maps on one page", () => {
+  it("keep their own state, regions and ids", async () => {
+    const tools = harness();
+    const first = container();
+    const second = container();
+    const one = mountOn(first, tools, { label: "North" });
+    const two = mountOn(second, tools, { label: "South" });
+    await Promise.all([drawn(one), drawn(two)]);
+    const [a, b] = tools.adapters;
+    a?.setView({ zoom: 7 });
+    expect(one.getView().zoom).toBe(7);
+    expect(two.getView().zoom).not.toBe(7);
+    expect(first.querySelectorAll('[role="status"]')).toHaveLength(1);
+    expect(second.querySelectorAll('[role="status"]')).toHaveLength(1);
+    const ids = [...document.querySelectorAll("[id]")].map((node) => node.id);
+    expect(new Set(ids).size).toBe(ids.length);
+    expect(b).toBeDefined();
+  });
+
+  it("keep working when the other is destroyed", async () => {
+    const tools = harness();
+    const one = mountOn(container(), tools, { label: "One" });
+    const two = mountOn(container(), tools, { label: "Two" });
+    await Promise.all([drawn(one), drawn(two)]);
+    one.destroy();
+    tools.adapters[1]?.setView({ zoom: 5 });
+    expect(two.getView().zoom).toBe(5);
+  });
+
+  it("warn once, through the console, about a second map with no label", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const tools = harness();
+    mountOn(container(), tools);
+    expect(warn).not.toHaveBeenCalled();
+    mountOn(container(), tools);
+    expect(warn).toHaveBeenCalledTimes(1);
+    expect(String(warn.mock.calls[0]?.[0])).toContain("label");
+  });
+});
+
+describe("destroy", () => {
+  it("empties the element, removes what the mount set and destroys the adapter once", async () => {
+    const tools = harness();
+    const element = container();
+    element.className = "page-class";
+    const handle = mountOn(element, tools);
+    await drawn(handle);
+    handle.destroy();
+    expect(element.childNodes).toHaveLength(0);
+    expect(element.hasAttribute("data-theme")).toBe(false);
+    expect(element.hasAttribute("data-mapcairn")).toBe(false);
+    expect(element.className).toBe("page-class");
+    expect(tools.adapters[0]?.destroyed).toBe(true);
+    expect(document.querySelectorAll('[role="status"]')).toHaveLength(0);
+  });
+
+  it("leaves no listener on the document or the window, and no timer", async () => {
+    const added: string[] = [];
+    const removed: string[] = [];
+    const track = (target: EventTarget, name: string) => {
+      const add = target.addEventListener.bind(target);
+      const remove = target.removeEventListener.bind(target);
+      vi.spyOn(target, "addEventListener").mockImplementation(
+        (
+          type: string,
+          listener: EventListenerOrEventListenerObject | null,
+          options?: boolean | AddEventListenerOptions,
+        ) => {
+          added.push(`${name}:${type}`);
+          add(type, listener, options);
+        },
+      );
+      vi.spyOn(target, "removeEventListener").mockImplementation(
+        (
+          type: string,
+          listener: EventListenerOrEventListenerObject | null,
+          options?: boolean | AddEventListenerOptions,
+        ) => {
+          removed.push(`${name}:${type}`);
+          remove(type, listener, options);
+        },
+      );
+    };
+    track(document, "document");
+    track(window, "window");
+    vi.useFakeTimers();
+    try {
+      const handle = mount(container(), {}, harness().dependencies);
+      await vi.advanceTimersByTimeAsync(0);
+      handle.destroy();
+      await vi.advanceTimersByTimeAsync(0);
+      for (const entry of new Set(added)) {
+        expect(removed, entry).toContain(entry);
+      }
+      expect(vi.getTimerCount()).toBe(0);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("is safe to call twice, and later calls do nothing", async () => {
+    const tools = harness();
+    const handle = mountOn(container(), tools);
+    await drawn(handle);
+    handle.setView({ zoom: 6 });
+    handle.destroy();
+    handle.destroy();
+    const last = handle.getView();
+    expect(last.zoom).toBe(6);
+    handle.setView({ zoom: 9 });
+    handle.update({ theme: "dark" });
+    expect(handle.getView()).toEqual(last);
+    const listener = vi.fn();
+    handle.on("viewchange", listener)();
+    expect(tools.adapters).toHaveLength(1);
+  });
+
+  it("rejects ready with a destroyed error when it comes before the engine is drawing", async () => {
+    const tools = harness();
+    const handle = mountOn(container(), tools);
+    const outcome = handle.ready.then(
+      () => "ready",
+      (reason: unknown) => reason,
+    );
+    handle.destroy();
+    const error = await outcome;
+    expect(error).toBeInstanceOf(MountMapError);
+    expect((error as MountMapError).kind).toBe("destroyed");
+  });
+
+  it("raises no unhandled rejection for a handle nobody awaits", async () => {
+    // Vitest fails the run on an unhandled rejection, so reaching the end is the proof.
+    const handle = mountOn(container(), harness());
+    handle.destroy();
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(handle.getView().zoom).toBeLessThan(4);
+  });
+
+  it("lets the element hold a new map afterwards", async () => {
+    const element = container();
+    const handle = mountOn(element, harness());
+    handle.destroy();
+    const again = mountOn(element, harness());
+    await drawn(again);
+    expect(element.querySelector("[data-map-host]")).not.toBeNull();
+  });
+});
+
+describe("the handle", () => {
+  it("moves the map and reports where it is", async () => {
+    const tools = harness();
+    const handle = mountOn(container(), tools);
+    await drawn(handle);
+    handle.setView({ center: { lat: 10, lng: 20 }, zoom: 6 });
+    expect(handle.getView().center).toEqual({ lat: 10, lng: 20 });
+    expect(handle.getView().zoom).toBe(6);
+  });
+
+  it("applies a move asked for before the engine is drawing once it is", async () => {
+    const handle = mountOn(container(), harness());
+    handle.setView({ zoom: 5 });
+    await drawn(handle);
+    await vi.waitFor(() => expect(handle.getView().zoom).toBe(5));
+  });
+
+  it("starts where it was told", async () => {
+    const tools = harness();
+    const handle = mountOn(container(), tools, {
+      view: { center: { lat: 51, lng: -0.1 }, zoom: 9, bearing: 0 },
+    });
+    await drawn(handle);
+    expect(handle.getView().center).toEqual({ lat: 51, lng: -0.1 });
+  });
+
+  it("switches the theme on its element", async () => {
+    const element = container();
+    const handle = mountOn(element, harness(), { theme: "light" });
+    await drawn(handle);
+    handle.update({ theme: "dark" });
+    await vi.waitFor(() =>
+      expect(element.getAttribute("data-theme")).toBe("dark"),
+    );
+    expect(document.documentElement.hasAttribute("data-theme")).toBe(false);
+  });
+
+  it("starts on the basemap it is given, and switches", async () => {
+    const tools = harness();
+    const handle = mountOn(container(), tools, {
+      basemaps: [
+        { ...BASEMAPS[0], id: "plain" },
+        { ...BASEMAPS[1], id: "other" },
+      ] as never,
+      basemap: "other",
+    });
+    await drawn(handle);
+    const adapter = tools.adapters[0];
+    if (adapter === undefined) {
+      throw new Error("No adapter was built.");
+    }
+    expect(vi.mocked(adapter.mount).mock.calls[0]?.[1].basemap.id).toBe(
+      "other",
+    );
+    handle.update({ basemap: "plain" });
+    await vi.waitFor(() =>
+      expect(vi.mocked(adapter.setBasemap).mock.calls.at(-1)?.[0].id).toBe(
+        "plain",
+      ),
+    );
+  });
+});
+
+describe("events", () => {
+  it("reports a view change and stops when the listener is removed", async () => {
+    const tools = harness();
+    const handle = mountOn(container(), tools);
+    await drawn(handle);
+    const listener = vi.fn();
+    const off = handle.on("viewchange", listener);
+    tools.adapters[0]?.setView({ zoom: 6 });
+    await vi.waitFor(() => expect(listener).toHaveBeenCalled());
+    expect(listener.mock.calls.at(-1)?.[0].zoom).toBe(6);
+    off();
+    listener.mockClear();
+    tools.adapters[0]?.setView({ zoom: 7 });
+    await new Promise((resolve) => setTimeout(resolve, 10));
+    expect(listener).not.toHaveBeenCalled();
+  });
+
+  it("reports a click as a position", async () => {
+    const tools = harness();
+    const handle = mountOn(container(), tools);
+    await drawn(handle);
+    const listener = vi.fn();
+    handle.on("click", listener);
+    tools.adapters[0]?.simulateClick({ lat: 3, lng: 4 });
+    await vi.waitFor(() =>
+      expect(listener).toHaveBeenCalledWith({ lat: 3, lng: 4 }),
+    );
+  });
+
+  it("rejects ready and emits an error when the engine cannot start", async () => {
+    const tools = harness((onCreate) => () => {
+      const adapter = createFakeMapAdapterFactory(onCreate)();
+      (adapter as unknown as { mount: () => Promise<void> }).mount = () =>
+        Promise.reject(new MapEngineError("webgl-unavailable"));
+      return adapter;
+    });
+    const handle = mountOn(container(), tools);
+    const listener = vi.fn();
+    handle.on("error", listener);
+    await expect(handle.ready).rejects.toBeInstanceOf(MapEngineError);
+    await vi.waitFor(() => expect(listener).toHaveBeenCalled());
+  });
+});
+
+describe("what it refuses, and says how to fix", () => {
+  it("a second map on one element", () => {
+    const element = container();
+    mountOn(element, harness());
+    expect(() => mountOn(element, harness())).toThrow(
+      /already holds a map\. Call destroy\(\) on its handle first\./,
+    );
+  });
+
+  it("a worker on another origin", () => {
+    expect(() =>
+      mountOn(container(), harness(), {
+        workerUrl: "https://cdn.example/browser-worker.js",
+      }),
+    ).toThrow(
+      /workerUrl must be on this page's origin\. Serve the browser files from your own site\./,
+    );
+  });
+
+  it("a worker on this origin, or a blob", async () => {
+    const tools = harness();
+    mountOn(container(), tools, { workerUrl: "/files/browser-worker.js" });
+    mountOn(container(), tools, {
+      workerUrl: "blob:http://localhost:3000/abc",
+    });
+    expect(tools.workerUrls[0]).toBe(
+      new URL("/files/browser-worker.js", document.baseURI).href,
+    );
+    expect(tools.workerUrls[1]).toBe("blob:http://localhost:3000/abc");
+  });
+
+  it("the default worker when it is on another origin", () => {
+    const tools = harness();
+    expect(() =>
+      mount(
+        container(),
+        {},
+        {
+          ...tools.dependencies,
+          defaultWorkerUrl: () => "https://cdn.example/browser-worker.js",
+        },
+      ),
+    ).toThrow(MountMapError);
+  });
+
+  it("a basemap that is not offered", () => {
+    expect(() =>
+      mountOn(container(), harness(), { basemap: "nowhere" }),
+    ).toThrow(/basemap "nowhere" is not offered\. Use one of: /);
+  });
+
+  it("a view that is not a view", () => {
+    expect(() =>
+      mountOn(container(), harness(), {
+        view: { center: { lat: 200, lng: 0 }, zoom: 2, bearing: 0 },
+      }),
+    ).toThrow(/view\.center\.lat/);
+  });
+
+  it("a theme that is not one", () => {
+    expect(() =>
+      mountOn(container(), harness(), { theme: "blue" as never }),
+    ).toThrow(/theme must be "light", "dark" or "system"/);
+  });
+
+  it("an element that is not an element", () => {
+    expect(() => mount(null as never, {}, harness().dependencies)).toThrow(
+      MountMapError,
+    );
+  });
+
+  it("updates to a basemap that is not offered", async () => {
+    const handle = mountOn(container(), harness());
+    await drawn(handle);
+    expect(() => handle.update({ basemap: "nowhere" })).toThrow(MountMapError);
+  });
+
+  it("warns once about an element with no height", () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    mountOn(container(0), harness(), { label: "Flat" });
+    expect(warn).toHaveBeenCalledTimes(1);
+    expect(String(warn.mock.calls[0]?.[0])).toContain(
+      "Give it a height in CSS.",
+    );
+  });
+});
+
+describe("the services it builds", () => {
+  it("hands every stand-in the interface never calls an object that fails on any call", async () => {
+    const calls: string[] = [];
+    const tools = harness();
+    const handle = mount(
+      container(),
+      {},
+      {
+        ...tools.dependencies,
+        decorateServices: (services: Services): Services => {
+          const failing = <T extends object>(name: string): T =>
+            new Proxy({} as T, {
+              get: (_target, property) => {
+                calls.push(`${name}.${String(property)}`);
+                return () => {
+                  throw new Error(`${name}.${String(property)} was called`);
+                };
+              },
+            });
+          return {
+            ...services,
+            clipboard: failing("clipboard"),
+            fileSaver: failing("fileSaver"),
+            layerSource: failing("layerSource"),
+            location: failing("location"),
+            search: failing("search"),
+          };
+        },
+      },
+    );
+    mounted.push(handle);
+    await drawn(handle);
+    expect(calls).toEqual([]);
+  });
+
+  it("passes the page's own providers through", async () => {
+    const search = { search: vi.fn() };
+    let seen: Services | undefined;
+    const tools = harness();
+    const handle = mount(
+      container(),
+      { services: { search: search as never } },
+      {
+        ...tools.dependencies,
+        decorateServices: (services: Services) => {
+          seen = services;
+          return services;
+        },
+      },
+    );
+    mounted.push(handle);
+    await drawn(handle);
+    expect(seen?.search).toBe(search);
+  });
+});

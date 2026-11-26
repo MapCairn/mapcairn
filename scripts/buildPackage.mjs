@@ -12,6 +12,7 @@ import {
 } from "node:fs";
 import { createRequire } from "node:module";
 import path from "node:path";
+import { buildBundle, bundleOf } from "./buildBundle.mjs";
 import { hashBuildScripts } from "./buildInputs.mjs";
 import { isEntryPoint } from "./entryPoint.mjs";
 import {
@@ -47,9 +48,11 @@ const DECLARATION_FOLDER = ".declarations";
  * as the name of the built file (`index`, `contracts`) and its source.
  *
  * @param {Record<string, unknown>} exportsField The manifest `exports`.
+ * @param {readonly string[]} [copied] The names of files the build copies into
+ *   `dist` as they are. An export of one has no source to build from.
  * @returns {Record<string, string>} Output name to source path.
  */
-export function entryPointsOf(exportsField) {
+export function entryPointsOf(exportsField, copied = []) {
   /** @type {Record<string, string>} */
   const entries = {};
   for (const target of Object.values(exportsField)) {
@@ -61,12 +64,28 @@ export function entryPointsOf(exportsField) {
     if (typeof built === "string" && built.endsWith(".css")) {
       continue;
     }
+    if (typeof built === "string" && copied.includes(path.basename(built))) {
+      continue;
+    }
     if (typeof source !== "string" || typeof built !== "string") {
       throw new Error(`An export needs ${SOURCE_CONDITION} and default.`);
     }
     entries[path.basename(built, ".js")] = source;
   }
   return entries;
+}
+
+/**
+ * The entry points of a package, with the files its bundle copies left out.
+ *
+ * @param {Record<string, any>} manifest The package manifest.
+ * @returns {Record<string, string>} Output name to source path.
+ */
+export function entryPointsOfManifest(manifest) {
+  return entryPointsOf(
+    manifest.exports ?? {},
+    Object.keys(bundleOf(manifest)?.copy ?? {}),
+  );
 }
 
 /**
@@ -215,8 +234,16 @@ function emitDeclarations(folder) {
  * @param {string} name The built file name.
  * @param {string} source The entry point's source path.
  * @param {string} packageJsonFullPath The manifest path.
+ * @param {string[]} [bundledPackages] Packages whose declarations are inlined,
+ *   so the file imports none of them.
  */
-async function rollUpDeclarations(folder, name, source, packageJsonFullPath) {
+async function rollUpDeclarations(
+  folder,
+  name,
+  source,
+  packageJsonFullPath,
+  bundledPackages = [],
+) {
   const { Extractor, ExtractorConfig, ExtractorLogLevel } = await import(
     "@microsoft/api-extractor"
   );
@@ -229,6 +256,7 @@ async function rollUpDeclarations(folder, name, source, packageJsonFullPath) {
     configObject: {
       projectFolder: folder,
       mainEntryPointFilePath: path.join("<projectFolder>", entry),
+      bundledPackages,
       compiler: {
         overrideTsconfig: {
           compilerOptions: ROLLUP_COMPILER_OPTIONS,
@@ -275,7 +303,17 @@ export async function buildPackage(folder) {
   const started = new Date();
   const manifestPath = path.join(folder, "package.json");
   const manifest = JSON.parse(readFileSync(manifestPath, "utf8"));
-  const entries = entryPointsOf(manifest.exports ?? {});
+  const bundle = bundleOf(manifest);
+  const allEntries = entryPointsOfManifest(manifest);
+  const bundleNames = new Set(bundle?.entries ?? []);
+  /** @param {boolean} bundled */
+  const entriesWhere = (bundled) =>
+    Object.fromEntries(
+      Object.entries(allEntries).filter(
+        ([name]) => bundleNames.has(name) === bundled,
+      ),
+    );
+  const entries = entriesWhere(false);
   const stylesheet = stylesheetOf(manifest.exports ?? {});
   const handWritten = hasHandWrittenStylesheet(folder, stylesheet);
   const dist = path.join(folder, "dist");
@@ -294,11 +332,35 @@ export async function buildPackage(folder) {
       path.join(dist, `${stylesheet}.css`),
     );
   }
+  if (bundle !== undefined) {
+    await buildBundle({ folder, bundle, entries: entriesWhere(true) });
+    // The stylesheet and the worker are files a page links, and a project that
+    // checks side-effect imports needs something to resolve them to.
+    const stubs = [
+      ...bundle.entries.map((name) => `${name}.css.d.ts`),
+      ...Object.keys(bundle.copy).map((file) => file.replace(/\.js$/, ".d.ts")),
+    ];
+    for (const stub of stubs) {
+      writeFileSync(path.join(dist, stub), "export {};\n");
+    }
+  }
   emitDeclarations(folder);
   const declarationOf = (/** @type {string} */ source) =>
     path
       .join(dist, DECLARATION_FOLDER, source.replace(/^\.\/src\//, ""))
       .replace(/\.tsx?$/, ".d.ts");
+  const bundledPackages = Object.keys(manifest.dependencies ?? {}).filter(
+    (dependency) => dependency.startsWith("@mapcairn/"),
+  );
+  for (const [name, source] of Object.entries(entriesWhere(true))) {
+    await rollUpDeclarations(
+      folder,
+      name,
+      source,
+      manifestPath,
+      bundledPackages,
+    );
+  }
   // The main entry rolls up first, so the others can import its types from the
   // package by name instead of repeating them.
   const ordered = Object.entries(entries).sort(

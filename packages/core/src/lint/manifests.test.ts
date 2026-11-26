@@ -155,6 +155,19 @@ const BUILT_ENTRY_POINTS: Readonly<
       types: "./dist/styles.css.d.ts",
       default: "./dist/styles.css",
     },
+    "./browser": {
+      [SOURCE_CONDITION]: "./src/browser/index.ts",
+      types: "./dist/browser.d.ts",
+      default: "./dist/browser.js",
+    },
+    "./browser/styles.css": {
+      types: "./dist/browser.css.d.ts",
+      default: "./dist/browser.css",
+    },
+    "./browser/worker": {
+      types: "./dist/browser-worker.d.ts",
+      default: "./dist/browser-worker.js",
+    },
   },
 };
 
@@ -327,7 +340,11 @@ describe("SDK package manifests", () => {
     "@mapcairn/%s ships dist only, without its build stamp, and declares its side effects",
     (name) => {
       const manifest = manifestOf(name);
-      expect(manifest.files).toEqual(["dist", "!dist/.built"]);
+      expect(manifest.files).toEqual(
+        name === "sdk"
+          ? ["dist", "!dist/.built", "THIRD-PARTY-NOTICES.md"]
+          : ["dist", "!dist/.built"],
+      );
       expect(manifest.sideEffects).toEqual(SIDE_EFFECTS[name]);
       expect(manifest.publishConfig).toEqual({ access: "public" });
       expect(manifest).not.toHaveProperty("main");

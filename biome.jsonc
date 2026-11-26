@@ -388,6 +388,20 @@
       }
     },
     {
+      // The two browser adapters the bundled map builds for itself (the
+      // theme source and the device preferences) are where media queries
+      // belong. Nothing else in the bundle's source may read one.
+      "includes": [
+        "packages/sdk/src/browser/BrowserThemeSource.ts",
+        "packages/sdk/src/browser/BrowserDevicePreferences.ts"
+      ],
+      "linter": {
+        "rules": {
+          "nursery": { "noJsRestrictedProperties": "off" }
+        }
+      }
+    },
+    {
       "includes": [
         "packages/core/src/**/*.test.ts",
         "packages/core/src/**/*.test.tsx"

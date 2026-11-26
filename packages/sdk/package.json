@@ -66,15 +66,39 @@
     "./styles.css": {
       "types": "./dist/styles.css.d.ts",
       "default": "./dist/styles.css"
+    },
+    "./browser": {
+      "@mapcairn/source": "./src/browser/index.ts",
+      "types": "./dist/browser.d.ts",
+      "default": "./dist/browser.js"
+    },
+    "./browser/styles.css": {
+      "types": "./dist/browser.css.d.ts",
+      "default": "./dist/browser.css"
+    },
+    "./browser/worker": {
+      "types": "./dist/browser-worker.d.ts",
+      "default": "./dist/browser-worker.js"
     }
   },
   "files": [
     "dist",
-    "!dist/.built"
+    "!dist/.built",
+    "THIRD-PARTY-NOTICES.md"
   ],
   "sideEffects": [
     "**/*.css"
   ],
+  "mapcairn": {
+    "bundle": {
+      "entries": [
+        "browser"
+      ],
+      "copy": {
+        "browser-worker.js": "maplibre-gl/dist/maplibre-gl-worker.mjs"
+      }
+    }
+  },
   "scripts": {
     "build": "node ../../scripts/buildPackage.mjs",
     "test": "vitest run",

@@ -140,8 +140,11 @@ module.exports = {
       name: "umbrella-reexports-entry-points-only",
       severity: "error",
       comment:
-        "The umbrella package holds only re-exports of the four packages' and the MapLibre adapter's entry points: no npm package, no file inside a package, no code of its own.",
-      from: { path: "^packages/sdk/src" },
+        "The umbrella package holds only re-exports of the four packages' and the MapLibre adapter's entry points: no npm package, no file inside a package, no code of its own. The one exception is the browser folder, which umbrella-browser-uses-entry-points-only holds to the packages' entry points.",
+      from: {
+        path: "^packages/sdk/src",
+        pathNot: "^packages/sdk/src/browser/",
+      },
       to: {
         pathNot: [
           FOUR_PACKAGE_ENTRY_POINTS,
@@ -151,13 +154,42 @@ module.exports = {
       },
     },
     {
+      name: "umbrella-browser-uses-entry-points-only",
+      severity: "error",
+      comment:
+        "The umbrella's browser folder is built as a self-contained bundle. It may import React and its own files, and the SDK packages only through their entry points, never a file inside one.",
+      from: { path: "^packages/sdk/src/browser/" },
+      to: {
+        path: "^packages/",
+        pathNot: [
+          FOUR_PACKAGE_ENTRY_POINTS,
+          `^packages/(${ADAPTER_ENTRY_POINTS})$`,
+          "^packages/sdk/src/browser/",
+        ],
+      },
+    },
+    {
+      name: "umbrella-browser-is-imported-by-itself-only",
+      severity: "error",
+      comment:
+        "The umbrella's root and its re-export files never import the browser folder, so an app that imports the root carries no bundle, no React of its own making and no engine.",
+      from: {
+        path: "^packages/sdk/src",
+        pathNot: "^packages/sdk/src/browser/",
+      },
+      to: { path: "^packages/sdk/src/browser/" },
+    },
+    {
       name: "umbrella-root-has-no-adapter",
       severity: "error",
       comment:
         "Only the umbrella's adapter-maplibre subpath file may import the MapLibre adapter package. The root and the other subpaths stay free of the engine, so an app that does not import the subpath carries none. This rule sees direct imports of scripts only: it does not parse src/styles.css (an @import), and the drift tests in packages/core/src/lint/umbrella.test.ts catch a re-export of the adapter through another file.",
       from: {
         path: "^packages/sdk/src",
-        pathNot: "^packages/sdk/src/adapterMaplibre\\.ts$",
+        pathNot: [
+          "^packages/sdk/src/adapterMaplibre\\.ts$",
+          "^packages/sdk/src/browser/",
+        ],
       },
       to: { path: "^packages/adapter-maplibre/" },
     },

@@ -14,6 +14,8 @@ import { spawnSync } from "node:child_process";
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { gzipSync } from "node:zlib";
+import { bundleOf, NOTICES_FILE } from "../buildBundle.mjs";
 import { isEntryPoint } from "../entryPoint.mjs";
 import { SDK_PACKAGES } from "../sdkPackages.mjs";
 import { parsePackListing, runNpm } from "./npm.mjs";
@@ -43,6 +45,21 @@ export const SIZE_CEILINGS = {
   sdk: 25_000,
 };
 
+/**
+ * The most the files of a package's bundle may weigh, in gzipped bytes: each
+ * of its `dist` files that starts with the name of a bundle entry (`browser`),
+ * and the notices file, each gzipped alone and added up. About one and a half
+ * times what the bundle weighs now, so ordinary growth passes and a second
+ * copy of React or the engine does not. The rest of such a package stays under
+ * `SIZE_CEILINGS`, which counts the tarball less this. Raising one is a
+ * deliberate edit in a pull request.
+ *
+ * @type {Record<string, number>}
+ */
+export const BUNDLE_CEILINGS = {
+  sdk: 1_030_000,
+};
+
 /** The `files` every SDK package declares: the build, without its stamp. */
 export const EXPECTED_FILES_FIELD = ["dist", "!dist/.built"];
 
@@ -65,13 +82,15 @@ const TEST_NAME = /(?:\.(?:test|spec)\.|\.snap\.|(?:^|\/)__\w+__\/)/;
  * built ending, and no dotfile (a `.built` stamp or `.env` file) anywhere.
  *
  * @param {string} file The path in the tarball, with forward slashes.
+ * @param {readonly string[]} [extraRootFiles] Root files this package may
+ *   hold besides npm's three: the notices file of a bundle.
  * @returns {string | undefined}
  */
-export function classifyFile(file) {
+export function classifyFile(file, extraRootFiles = []) {
   if (file.split("/").some((part) => part.startsWith("."))) {
     return `${file}: a dotfile`;
   }
-  if (ROOT_FILES.has(file)) {
+  if (ROOT_FILES.has(file) || extraRootFiles.includes(file)) {
     return undefined;
   }
   if (!file.startsWith("dist/")) {
@@ -265,6 +284,25 @@ export function checkSourceMap(file, text) {
 }
 
 /**
+ * Whether a path in the tarball is a file of the package's bundle: under
+ * `dist`, named for one of the bundle's entries, such as `dist/browser.js`,
+ * `dist/browser-engine-AbC.js` or `dist/browser-worker.js`.
+ *
+ * @param {string} file
+ * @param {{ entries: string[] } | undefined} bundle
+ * @returns {boolean}
+ */
+function isBundleFile(file, bundle) {
+  if (bundle === undefined || !file.startsWith("dist/")) {
+    return false;
+  }
+  const name = file.slice("dist/".length);
+  return bundle.entries.some(
+    (entry) => name.startsWith(`${entry}.`) || name.startsWith(`${entry}-`),
+  );
+}
+
+/**
  * What is wrong with the files under `dist`, beyond their names: a script
  * needs a readable source map that names files in `src` (an entry point and
  * rolldown's helper module are the two exceptions), a map needs its script,
@@ -276,17 +314,22 @@ export function checkSourceMap(file, text) {
  *   targets: string[],
  *   readFile: (file: string) => string | undefined,
  *   sourceExists: (source: string) => boolean,
+ *   bundle?: { entries: string[] },
  * }} input
  * @returns {string[]}
  */
-function buildProblems({ paths, targets, readFile, sourceExists }) {
+function buildProblems({ paths, targets, readFile, sourceExists, bundle }) {
   /** @type {string[]} */
   const problems = [];
   const present = new Set(paths);
   const named = new Set(targets);
   for (const file of paths.filter((entry) => entry.startsWith("dist/"))) {
     if (file.endsWith(".js") && !present.has(`${file}.map`)) {
-      if (named.has(file) || file.startsWith(UNMAPPED_SCRIPT_FOLDER)) {
+      if (
+        named.has(file) ||
+        file.startsWith(UNMAPPED_SCRIPT_FOLDER) ||
+        isBundleFile(file, bundle)
+      ) {
         continue;
       }
       if (
@@ -320,12 +363,27 @@ function buildProblems({ paths, targets, readFile, sourceExists }) {
 }
 
 /**
+ * What the given files weigh gzipped, each alone, added up.
+ *
+ * @param {string[]} files Paths in the tarball.
+ * @param {(file: string) => string | undefined} readFile
+ * @returns {number}
+ */
+function gzippedBytes(files, readFile) {
+  return files.reduce(
+    (total, file) => total + gzipSync(readFile(file) ?? "").length,
+    0,
+  );
+}
+
+/**
  * Everything wrong with one package's tarball and manifest.
  *
  * @param {{
  *   manifest: Record<string, any>,
  *   listing: { size: number, unpackedSize?: number, files: { path: string }[] },
  *   ceiling: number,
+ *   bundleCeiling?: number,
  *   readFile: (file: string) => string | undefined,
  *   sourceExists: (source: string) => boolean,
  * }} input `listing` is one element of `npm pack --dry-run --json`;
@@ -337,20 +395,23 @@ export function checkPackage({
   manifest,
   listing,
   ceiling,
+  bundleCeiling,
   readFile,
   sourceExists,
 }) {
   /** @type {string[]} */
   const problems = [];
+  const bundle = bundleOf(manifest);
+  const extraRootFiles = bundle === undefined ? [] : [NOTICES_FILE];
   const paths = listing.files.map((file) => file.path.replaceAll("\\", "/"));
   for (const file of paths) {
-    const reason = classifyFile(file);
+    const reason = classifyFile(file, extraRootFiles);
     if (reason !== undefined) {
       problems.push(reason);
     }
   }
   const present = new Set(paths);
-  for (const required of ROOT_FILES) {
+  for (const required of [...ROOT_FILES, ...extraRootFiles]) {
     if (!present.has(required)) {
       problems.push(`${required}: missing from the tarball`);
     }
@@ -363,15 +424,29 @@ export function checkPackage({
       );
     }
   }
-  problems.push(...buildProblems({ paths, targets, readFile, sourceExists }));
-  if (listing.size > ceiling) {
+  problems.push(
+    ...buildProblems({ paths, targets, readFile, sourceExists, bundle }),
+  );
+  const bundleBytes = gzippedBytes(
+    paths.filter(
+      (file) => isBundleFile(file, bundle) || extraRootFiles.includes(file),
+    ),
+    readFile,
+  );
+  if (listing.size - bundleBytes > ceiling) {
     problems.push(
-      `size: ${listing.size} bytes is over the ceiling of ${ceiling}`,
+      `size: ${listing.size - bundleBytes} bytes is over the ceiling of ${ceiling}${bundle === undefined ? "" : ", not counting the bundle"}`,
     );
   }
-  if (JSON.stringify(manifest.files) !== JSON.stringify(EXPECTED_FILES_FIELD)) {
+  if (bundle !== undefined && bundleBytes > (bundleCeiling ?? 0)) {
     problems.push(
-      `files: must be ${JSON.stringify(EXPECTED_FILES_FIELD)}, found ${JSON.stringify(manifest.files)}`,
+      `bundle: ${bundleBytes} bytes gzipped is over the ceiling of ${bundleCeiling ?? 0}`,
+    );
+  }
+  const expectedFiles = [...EXPECTED_FILES_FIELD, ...extraRootFiles];
+  if (JSON.stringify(manifest.files) !== JSON.stringify(expectedFiles)) {
+    problems.push(
+      `files: must be ${JSON.stringify(expectedFiles)}, found ${JSON.stringify(manifest.files)}`,
     );
   }
   if (manifest.publishConfig?.access !== "public") {
@@ -528,6 +603,7 @@ export function packResultsFromTarballs(folder, root = REPO) {
           files: files.map((p) => ({ path: p })),
         },
         ceiling: SIZE_CEILINGS[folderName] ?? 0,
+        bundleCeiling: BUNDLE_CEILINGS[folderName],
         readFile: (inside) => readTarballFile(file, inside),
         sourceExists: (source) =>
           existsSync(path.join(root, "packages", folderName, source)),
@@ -558,6 +634,7 @@ export function packResults(root = REPO) {
         manifest,
         listing,
         ceiling: SIZE_CEILINGS[folderName] ?? 0,
+        bundleCeiling: BUNDLE_CEILINGS[folderName],
         readFile: (file) => readIfPresent(path.join(folder, file)),
         sourceExists: (source) => existsSync(path.join(folder, source)),
       }),

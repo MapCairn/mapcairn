@@ -14,7 +14,10 @@ import {
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { entryPointsOf, ROLLUP_COMPILER_OPTIONS } from "./buildPackage.mjs";
+import {
+  entryPointsOfManifest,
+  ROLLUP_COMPILER_OPTIONS,
+} from "./buildPackage.mjs";
 import { SDK_BUILD_ORDER } from "./buildSdk.mjs";
 import { isEntryPoint } from "./entryPoint.mjs";
 
@@ -98,7 +101,7 @@ export async function generateReports(folder) {
   /** @type {Array<{ id: string, text: string, file: string | undefined, line: number | undefined }>} */
   const messages = [];
   try {
-    for (const name of Object.keys(entryPointsOf(manifest.exports ?? {}))) {
+    for (const name of Object.keys(entryPointsOfManifest(manifest))) {
       const declaration = path.join(folder, "dist", `${name}.d.ts`);
       if (!existsSync(declaration)) {
         throw new Error(
