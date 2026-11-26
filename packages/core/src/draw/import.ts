@@ -11,14 +11,16 @@ import { shortestLongitudeSpan } from "../globe/longitude";
 import type { Bounds, LatLng } from "../ports/geometry";
 import type { Message } from "../ports/messages";
 import { SHAPES_CSV_HEADER } from "./export";
-import { readGpx } from "./gpx";
+import { type GpxGeometry, type GpxReading, readGpx } from "./gpx";
+import { type KmlGeometry, type KmlReading, readKml } from "./kml";
 import type { DrawShapeInput } from "./reducer";
 import { shapeRing, validateShape } from "./shape";
 import type { DrawIssue } from "./types";
 
 /**
- * The file types the import offers in the picker: GeoJSON, CSV, WKT and GPX,
- * by extension and by media type. WKT has no media type of its own, so it is
+ * The file types the import offers in the picker: GeoJSON, CSV, WKT, GPX and
+ * KML, by extension and by media type. KMZ, which is KML in a zip file, is not
+ * offered. WKT has no media type of its own, so it is
  * offered by the extensions `.wkt` and `.txt`.
  */
 export const SHAPE_FILE_TYPES: readonly string[] = [
@@ -28,9 +30,11 @@ export const SHAPE_FILE_TYPES: readonly string[] = [
   ".wkt",
   ".txt",
   ".gpx",
+  ".kml",
   "application/geo+json",
   "application/gpx+xml",
   "application/json",
+  "application/vnd.google-earth.kml+xml",
   "text/csv",
 ];
 
@@ -71,6 +75,7 @@ export type ShapeImportRefusal =
   | "not-recognised"
   | "wkt-unreadable"
   | "gpx-unreadable"
+  | "kml-unreadable"
   | "too-many-shapes"
   | "too-many-points";
 
@@ -722,22 +727,38 @@ function addWktText(
   return "wkt-unreadable";
 }
 
-/** Adds what GPX text holds, or says why the whole text is refused. */
-function addGpxText(
+/** Adds what GPX or KML text holds, or says why the whole text is refused. GPX is tried first; text with another root is read as KML. */
+function addXmlText(
   collector: Collector,
   body: string,
 ): ShapeImportRefusal | null {
-  const reading = readGpx(body, (geometry) => {
+  const onGeometry = (geometry: GpxGeometry | KmlGeometry): boolean => {
     addGeometry(collector, geometry, false);
     return collector.refusal === null;
-  });
+  };
+  const gpx = readGpx(body, onGeometry);
+  if (gpx !== "not-gpx") {
+    return refusalFor(gpx, "gpx-unreadable");
+  }
+  const kml = readKml(body, onGeometry);
+  return kml === "not-kml"
+    ? "not-recognised"
+    : refusalFor(kml, "kml-unreadable");
+}
+
+/** The refusal an XML reading ends in: none when the text was read, as far as it was asked to be. */
+function refusalFor(
+  reading: GpxReading | KmlReading,
+  unreadable: ShapeImportRefusal,
+): ShapeImportRefusal | null {
   switch (reading) {
     case "too-deep":
       return "too-deep";
     case "not-gpx":
+    case "not-kml":
       return "not-recognised";
     case "unreadable":
-      return "gpx-unreadable";
+      return unreadable;
     case "ok":
     case "stopped":
       return null;
@@ -746,8 +767,8 @@ function addGpxText(
 
 /**
  * Adds what the text holds, read as the format its start shows: the draw
- * tool's CSV, GeoJSON (it starts with a brace), GPX (it starts with a tag), a
- * CSV with a column of WKT, or else WKT itself. Says why the whole text is refused, if it is.
+ * tool's CSV, GeoJSON (it starts with a brace), GPX or KML (it starts with a
+ * tag), a CSV with a column of WKT, or else WKT itself. Says why the whole text is refused, if it is.
  */
 function addFileBody(
   collector: Collector,
@@ -762,7 +783,7 @@ function addFileBody(
     return addGeoJsonText(collector, body);
   }
   if (body.startsWith("<")) {
-    return addGpxText(collector, body);
+    return addXmlText(collector, body);
   }
   const wktColumn = wktColumnLayout(body);
   if (wktColumn) {
@@ -773,8 +794,8 @@ function addFileBody(
 }
 
 /**
- * Reads the shapes in a GeoJSON file, in Well-Known Text (WKT), in GPX or in a
- * CSV, ready for the draw reducer's `import` action. Pure and bounded, and never
+ * Reads the shapes in a GeoJSON file, in Well-Known Text (WKT), in GPX, in KML
+ * or in a CSV, ready for the draw reducer's `import` action. Pure and bounded, and never
  * throws: text from a file is hostile until proven otherwise.
  *
  * @remarks The format is told from the content. GeoJSON may be a
@@ -811,13 +832,27 @@ function addFileBody(
  *   scan, not an XML parser: entities are never expanded and nothing external
  *   is followed, and names, descriptions and extensions are never read. A
  *   route or segment with a position that is not a number is skipped as
- *   `malformed`; a `DOCTYPE` or any other XML, such as KML, is
- *   `not-recognised`, and GPX whose elements are damaged is refused whole as
- *   `gpx-unreadable`.
+ *   `malformed`; a `DOCTYPE` or any other XML is `not-recognised`, and GPX
+ *   whose elements are damaged is refused whole as `gpx-unreadable`.
+ *
+ *   KML (a tag with a `kml` root, tried after GPX; see `readKml`) gives a
+ *   point for each Placemark's `Point`, a line for each `LineString` and a
+ *   polygon for each `Polygon`, from `Placemark`s anywhere in `Document` and
+ *   `Folder`s. A `MultiGeometry` gives one shape per part, nested ones
+ *   included. It is read by the same kind of hand-written scan as GPX, so
+ *   entities are never expanded and nothing external is followed: a
+ *   `NetworkLink`, an `Icon` or any `href` is never read, and names,
+ *   descriptions, styles and extended data are never kept. A polygon keeps its
+ *   outer boundary, its inner boundaries left out and counted. A Point that
+ *   does not have exactly one position, or a position that is not plain
+ *   decimal text (an entity, or a space after the comma), is skipped as
+ *   `malformed`. A `gx:Track` or `gx:MultiTrack` is skipped and counted once
+ *   as `unsupported`. KMZ, which is zipped, is `not-recognised`. KML whose
+ *   elements are damaged is refused whole as `kml-unreadable`.
  *
  *   The text is refused whole when it is longer than
  *   {@link MAX_IMPORT_BYTES} characters, nests deeper than
- *   {@link MAX_IMPORT_DEPTH} (JSON measured before parsing, GPX elements as they are walked), or holds more than
+ *   {@link MAX_IMPORT_DEPTH} (JSON measured before parsing, GPX and KML elements as they are walked), or holds more than
  *   {@link MAX_IMPORT_SHAPES} shapes or {@link MAX_IMPORT_POINTS} points; a
  *   shape of more than {@link MAX_IMPORT_SHAPE_POINTS} points is skipped.
  *   Keys are read only when they are an object's own, so a `__proto__` key

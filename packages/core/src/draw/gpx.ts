@@ -95,7 +95,7 @@ class GpxHandler implements XmlHandler {
     return false;
   }
 
-  text(): void {}
+  characters(): void {}
 }
 
 const READINGS: Readonly<Record<XmlReading, GpxReading>> = {

@@ -418,16 +418,19 @@ describe("describeShapeImport", () => {
     expect(
       english(describeShapeImport({ ok: false, refusal: "too-deep" })),
     ).toBe(
-      "The file is nested too deeply to read. Check that it is a GeoJSON or GPX file.",
+      "The file is nested too deeply to read. Check that it is a GeoJSON, GPX or KML file.",
     );
     expect(
       english(describeShapeImport({ ok: false, refusal: "not-recognised" })),
     ).toBe(
-      "This is not GeoJSON, GPX, WKT or a CSV of shapes from this map. Choose a .geojson, .json, .gpx, .wkt, .txt or .csv file.",
+      "This is not GeoJSON, GPX, KML, WKT or a CSV of shapes from this map. Choose a .geojson, .json, .gpx, .kml, .wkt, .txt or .csv file. A KMZ file is not read: unzip it and choose the .kml inside.",
     );
     expect(
       english(describeShapeImport({ ok: false, refusal: "gpx-unreadable" })),
     ).toBe("The GPX could not be read, so none of the file was imported.");
+    expect(
+      english(describeShapeImport({ ok: false, refusal: "kml-unreadable" })),
+    ).toBe("The KML could not be read, so none of the file was imported.");
     expect(
       english(
         describeShapeImport({

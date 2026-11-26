@@ -146,7 +146,7 @@ export interface XmlHandler {
   /** Whether the text and CDATA directly inside the open element are wanted. */
   wantsText(): boolean;
   /** A piece of the wanted text; a CDATA section arrives as it is, without its markers. */
-  text(piece: string): void;
+  characters(piece: string): void;
 }
 
 /** The elements open so far, and the handler they are reported to, while XML text is walked. */
@@ -176,8 +176,8 @@ class XmlWalk {
     return this.rootClosed;
   }
 
-  text(piece: string): void {
-    this.handler.text(piece);
+  characters(piece: string): void {
+    this.handler.characters(piece);
   }
 
   private leave(): boolean {
@@ -248,7 +248,7 @@ export function walkXml(text: string, handler: XmlHandler): XmlReading {
       return walk.damaged();
     }
     if (walk.wantsText()) {
-      walk.text(between);
+      walk.characters(between);
     }
     if (lt < 0) {
       break;
@@ -258,7 +258,7 @@ export function walkXml(text: string, handler: XmlHandler): XmlReading {
       if (end < 0) {
         return "unreadable";
       }
-      walk.text(text.slice(lt + CDATA_OPEN.length, end));
+      walk.characters(text.slice(lt + CDATA_OPEN.length, end));
       at = end + CDATA_CLOSE.length;
       continue;
     }

@@ -25,6 +25,10 @@ const GEOJSON_RESULT =
 /** The words the GPX fixture's import ends with: its last segment has one position. */
 const GPX_RESULT = "4 shapes imported. 1 skipped: 1 with too few points.";
 
+/** The words the KML fixture's import ends with: its track is not read and its polygon's hole is left out. */
+const KML_RESULT =
+  "5 shapes imported. 1 skipped: 1 of a type that cannot be drawn. Holes in 1 polygon were left out.";
+
 /** A WKT file in Sydney that writes latitude first, so read longitude first its position is outside the world. */
 const LATITUDE_FIRST_FILE = {
   name: "sydney.wkt",
@@ -57,7 +61,7 @@ async function importFrom(
 ): Promise<void> {
   const chooser = page.waitForEvent("filechooser");
   await page
-    .getByRole("button", { name: "Import GeoJSON, GPX, CSV or WKT" })
+    .getByRole("button", { name: "Import GeoJSON, GPX, KML, CSV or WKT" })
     .click();
   await (await chooser).setFiles(files);
 }
@@ -136,6 +140,63 @@ test.describe("draw import", () => {
     });
     await expect(page.getByTestId("shapes-import-feedback")).toHaveText(
       "The GPX could not be read, so none of the file was imported.",
+    );
+    await expect(mapPage.drawShapes).toHaveCount(0);
+  });
+
+  test("imports a KML file as points, lines and a polygon, shows no name or description and fits the map to it", async ({
+    page,
+    mapPage,
+  }) => {
+    const requests: string[] = [];
+    page.on("request", (request) => requests.push(request.url()));
+    await mapPage.goto(FAR_AWAY);
+    await mapPage.mapOptionsButton.click();
+    await expect(mapPage.shapesSection).toBeVisible();
+    await importFrom(page, resolve(FILES, "walk.kml"));
+
+    await expect(page.getByTestId("shapes-import-feedback")).toHaveText(
+      KML_RESULT,
+    );
+    await expect(mapPage.shapesSection.getByTestId("shapes-row")).toHaveText([
+      /^Point 1/,
+      /^Line 1/,
+      /^Polygon 1/,
+      /^Point 2/,
+      /^Line 2/,
+    ]);
+    await expect(mapPage.drawShapes).toHaveCount(5);
+    await expect
+      .poll(() => page.url())
+      .toMatch(/#map=[\d.]+\/48\.[5-9][\d.]*\/2\./);
+    await expect(page.getByText("Start")).toHaveCount(0);
+    await expect(page.locator("img[src='x']")).toHaveCount(0);
+    await expect(page.getByText("alert(1)")).toHaveCount(0);
+    // A link inside the file is never followed.
+    expect(requests.filter((url) => url.includes("never.kml"))).toEqual([]);
+  });
+
+  test("refuses damaged KML whole, and a zipped KMZ in words, and adds nothing", async ({
+    page,
+    mapPage,
+  }) => {
+    await mapPage.goto();
+    await mapPage.mapOptionsButton.click();
+    await importFrom(page, {
+      name: "broken.kml",
+      mimeType: "application/vnd.google-earth.kml+xml",
+      buffer: Buffer.from("<kml><Placemark><Point><coordinates>1,2"),
+    });
+    await expect(page.getByTestId("shapes-import-feedback")).toHaveText(
+      "The KML could not be read, so none of the file was imported.",
+    );
+    await importFrom(page, {
+      name: "tour.kmz",
+      mimeType: "application/vnd.google-earth.kmz",
+      buffer: Buffer.from("PK\u0003\u0004doc.kml"),
+    });
+    await expect(page.getByTestId("shapes-import-feedback")).toContainText(
+      "A KMZ file is not read: unzip it and choose the .kml inside.",
     );
     await expect(mapPage.drawShapes).toHaveCount(0);
   });
@@ -314,7 +375,7 @@ test.describe("draw import", () => {
       buffer: Buffer.from("Bring a torch."),
     });
     await expect(page.getByTestId("shapes-import-feedback")).toContainText(
-      "This is not GeoJSON, GPX, WKT or a CSV of shapes from this map.",
+      "This is not GeoJSON, GPX, KML, WKT or a CSV of shapes from this map.",
     );
     await expect(mapPage.assertiveAnnouncer).toContainText(
       "This is not GeoJSON",
@@ -354,6 +415,23 @@ test.describe("draw import accessibility", () => {
       await importFrom(page, resolve(FILES, "walk.gpx"));
       await expect(page.getByTestId("shapes-import-feedback")).toHaveText(
         GPX_RESULT,
+      );
+      expect(await axeViolations(page)).toEqual([]);
+      const controls = await inspectControls(page);
+      expect(controls.unnamed).toEqual([]);
+      expect(controls.tooSmall).toEqual([]);
+      expect(controls.positiveTabindex).toEqual([]);
+    });
+    test(`the Shapes section with a KML import result passes axe in ${colorScheme} @a11y`, async ({
+      page,
+      mapPage,
+    }) => {
+      await page.emulateMedia({ colorScheme });
+      await mapPage.goto();
+      await mapPage.mapOptionsButton.click();
+      await importFrom(page, resolve(FILES, "walk.kml"));
+      await expect(page.getByTestId("shapes-import-feedback")).toHaveText(
+        KML_RESULT,
       );
       expect(await axeViolations(page)).toEqual([]);
       const controls = await inspectControls(page);

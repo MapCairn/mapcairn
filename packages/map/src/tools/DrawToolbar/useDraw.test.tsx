@@ -692,7 +692,7 @@ describe("useDraw", () => {
     const assertive = () =>
       screen.getByTestId("live-region-assertive").textContent;
 
-    it("opens the picker for GeoJSON, GPX, CSV and WKT within the size cap, and does nothing when cancelled", async () => {
+    it("opens the picker for GeoJSON, GPX, KML, CSV and WKT within the size cap, and does nothing when cancelled", async () => {
       const rig = await setup();
       expect(await importFile(rig, null)).toBeNull();
       const [options] = rig.services.fakes.fileOpener.opens;
@@ -815,7 +815,7 @@ describe("useDraw", () => {
       ).toBeNull();
       expect(rig.result.current.importFeedback).toEqual({
         kind: "error",
-        text: "This is not GeoJSON, GPX, WKT or a CSV of shapes from this map. Choose a .geojson, .json, .gpx, .wkt, .txt or .csv file.",
+        text: "This is not GeoJSON, GPX, KML, WKT or a CSV of shapes from this map. Choose a .geojson, .json, .gpx, .kml, .wkt, .txt or .csv file. A KMZ file is not read: unzip it and choose the .kml inside.",
       });
       await advance(DRAW_ANNOUNCE_DELAY_MS);
       expect(assertive()).toContain("This is not GeoJSON");
