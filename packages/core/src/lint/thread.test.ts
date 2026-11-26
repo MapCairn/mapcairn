@@ -880,6 +880,7 @@ describe("command line", () => {
       }),
       [`repos/${REPO}/pulls/7/commits`]: [
         JSON.stringify({ author: { login: "maintainer" } }),
+        JSON.stringify({ author: { login: "Maintainer" } }),
         JSON.stringify({ author: { login: "someone" } }),
       ].join("\n"),
       [`repos/${REPO}/pulls/7/reviews`]: JSON.stringify({
@@ -906,7 +907,7 @@ describe("command line", () => {
     expect(result.code).toBe(0);
     expect(result.errors).toEqual([]);
     expect(result.output).toContain(
-      `head: ${REPO} (this repository), 1 of 2 commits by logins outside the project; a pull request with any of these is reviewed as outside`,
+      `head: ${REPO} (this repository), 1 of 3 commits by logins outside the project; a pull request with any of these is reviewed as outside`,
     );
     expect(result.output).toContain(
       'review APPROVED: project maintainer (MEMBER): "Review body"',
@@ -916,6 +917,31 @@ describe("command line", () => {
     );
     expect(result.output).toContain(
       'unresolved thread src/a.ts: project maintainer (n/a): "thread comment"',
+    );
+  });
+
+  it("labels a head in another repository, with its commits counted", () => {
+    const routes: Record<string, string> = {
+      ...issueRoutes(),
+      [`repos/${REPO}/issues/7/comments`]: "",
+      [`repos/${REPO}/pulls/7`]: JSON.stringify({
+        head: { repo: { full_name: "fork/mapcairn" } },
+      }),
+      [`repos/${REPO}/pulls/7/commits`]: JSON.stringify({
+        author: { login: "someone" },
+      }),
+      [`repos/${REPO}/pulls/7/reviews`]: "",
+      [`repos/${REPO}/pulls/7/comments`]: "",
+      "api graphql": graphQlResponse(
+        { pageInfo: complete, nodes: [] },
+        "reviewThreads",
+      ),
+    };
+
+    const result = execute(["pr", "7"], routes);
+
+    expect(result.output).toContain(
+      "head: fork/mapcairn (another repository), 1 of 1 commits by logins outside the project; a pull request with any of these is reviewed as outside",
     );
   });
 

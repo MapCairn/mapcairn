@@ -208,6 +208,16 @@ describe("main", () => {
     expect(result.errors).toEqual([]);
   });
 
+  it("prints exactly fifty dead references with no count of the rest", () => {
+    const result = runMain(["doc.md"], () =>
+      sourceFor("`npm run nothing`\n".repeat(50)),
+    );
+
+    expect(result.code).toBe(1);
+    expect(result.output).toHaveLength(1);
+    expect(result.output[0].split("\n")).toHaveLength(50);
+  });
+
   it("returns 2 for usage errors without reading the repository", () => {
     let called = false;
     const result = runMain([], () => {

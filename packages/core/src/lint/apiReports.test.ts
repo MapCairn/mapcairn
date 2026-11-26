@@ -211,6 +211,54 @@ describe("run", () => {
     expect(logs).toContain("@mapcairn/react: no warnings.");
   });
 
+  it.each([
+    { label: "GITHUB_ACTIONS unset", env: {} },
+    { label: "GITHUB_ACTIONS false", env: { GITHUB_ACTIONS: "false" } },
+  ])("raises no annotation outside Actions: $label", async ({ env }) => {
+    const { logs, log, error } = output();
+    for (const name of BUILT_PACKAGES) {
+      writePackageReport(name, "index.api.md", "same\n");
+    }
+    await run("check", true, {
+      root: scratch,
+      env,
+      generate: async () => ({
+        reports: new Map([["index", "same\n"]]),
+        models: new Map(),
+        messages: [{ id: "ae-undocumented", text: "x", file: undefined }],
+      }),
+      log,
+      error,
+    });
+
+    expect(logs).toContain("@mapcairn/core: 1 ae-undocumented.");
+    expect(logs.some((line) => line.startsWith("::warning"))).toBe(false);
+  });
+
+  it("lists no messages and opens no group unless verbose", async () => {
+    const { logs, log, error } = output();
+    for (const name of BUILT_PACKAGES) {
+      writePackageReport(name, "index.api.md", "same\n");
+    }
+    await run("check", false, {
+      root: scratch,
+      env: {},
+      generate: async () => ({
+        reports: new Map([["index", "same\n"]]),
+        models: new Map(),
+        messages: [{ id: "ae-undocumented", text: "x", file: undefined }],
+      }),
+      log,
+      error,
+    });
+
+    expect(logs).toContain("@mapcairn/core: 1 ae-undocumented.");
+    expect(logs.some((line) => line.startsWith("::group::"))).toBe(false);
+    expect(logs.some((line) => line.startsWith("ae-undocumented:"))).toBe(
+      false,
+    );
+  });
+
   it("reports missing, changed and stale reports with a changed-line diff", async () => {
     const { errors, log, error } = output();
     for (const name of BUILT_PACKAGES) {
@@ -303,27 +351,33 @@ describe("main", () => {
   });
 
   it("passes check mode and --verbose to the runner and returns 1 for a diff", async () => {
+    const calls: Array<[string, boolean]> = [];
     const code = await main(
       ["check", "--verbose"],
       async (mode: string, verbose: boolean) => {
-        expect(mode).toBe("check");
-        expect(verbose).toBe(true);
+        calls.push([mode, verbose]);
         return false;
       },
       () => undefined,
     );
 
     expect(code).toBe(1);
+    expect(calls).toEqual([["check", true]]);
   });
 
-  it("returns 0 for a clean update", async () => {
-    expect(
-      await main(
-        ["update"],
-        async () => true,
-        () => undefined,
-      ),
-    ).toBe(0);
+  it("returns 0 for a clean update and passes verbose as false without the flag", async () => {
+    const calls: Array<[string, boolean]> = [];
+    const code = await main(
+      ["update"],
+      async (mode: string, verbose: boolean) => {
+        calls.push([mode, verbose]);
+        return true;
+      },
+      () => undefined,
+    );
+
+    expect(code).toBe(0);
+    expect(calls).toEqual([["update", false]]);
   });
 });
 
