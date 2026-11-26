@@ -228,6 +228,39 @@ describe("the host's layer definitions", () => {
     }
   });
 
+  describe("saving features", () => {
+    /**
+     * The layers whose provider's terms were read and clearly allow
+     * redistributing the data in a saved file. Adding a layer here is a
+     * data-use decision: read its terms, record the basis in its definition
+     * and under "Saving features" in `ATTRIBUTIONS.md`.
+     */
+    const SAVEABLE_LAYER_IDS = ["earthquakes", "world-countries"];
+
+    it("allows saving only for the layers whose terms were read and allow it", () => {
+      const allowed = LAYER_DEFINITIONS.filter(
+        (definition) =>
+          isFeedLayer(definition) && definition.saveFeatures === true,
+      ).map((definition) => definition.id);
+      expect(allowed.sort()).toEqual(SAVEABLE_LAYER_IDS);
+    });
+
+    it("records the basis for each layer that allows saving in ATTRIBUTIONS.md", () => {
+      const section = ATTRIBUTIONS.split("## Saving features")[1] ?? "";
+      const body = section.split("\n## ")[0] ?? "";
+      for (const id of SAVEABLE_LAYER_IDS) {
+        expect(body, id).toContain(`\`${id}\``);
+      }
+    });
+
+    it("carries the credit the provider asks for into the file", () => {
+      for (const id of SAVEABLE_LAYER_IDS) {
+        const definition = LAYER_DEFINITIONS.find((d) => d.id === id);
+        expect(definition?.attribution.length, id).toBeGreaterThan(0);
+      }
+    });
+  });
+
   it("builds a catalogue that lists them all", () => {
     expect(readyLayers(createHostLayerCatalogue().getState())).toEqual(
       LAYER_DEFINITIONS,

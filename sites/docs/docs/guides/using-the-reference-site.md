@@ -55,6 +55,10 @@ While a layer that has a key is on, its key shows on the map, above the scale ba
 
 A phone, held either way up, starts the key as a small chip, "Key, 3 layers", with the symbols of a few of the layers; a tablet or a desktop starts it open. That is decided when the key first appears, so turning the phone does not change it. Choose the chevron to shrink the key to the chip, and the chip to open it again; the button is named "Key, 3 layers" either way. The key remembers your choice until you reload the page; it is not stored between visits and puts nothing in the address. When many layers are on, the key scrolls inside its own height. It steps aside while the map credits are open, and when something else leaves too little room above the scale bar.
 
+## Save a layer's features
+
+The Earthquakes and Countries by population layers, once they have loaded, show "Save as GeoJSON" and "Save as CSV" buttons in their entry in Layers. The file holds the features that are loaded, up to 5,000, with the layer's credit and the day you saved it, and is made in your browser: nothing is sent. The other layers do not offer it: the alert layers because their provider states no right to redistribute the data, and the imagery layers because they have no features to save. A layer offers it only after its provider's terms were read and allow it.
+
 ## Turn layers off
 
 In the Layers section, "Turn off all layers" at the top turns every layer off at once, and shows how many are on ("3 on"); it is greyed out when none is. Each group heading has the same action for its own layers, such as "Turn off 2 in Fires", while any of them is on. There is no confirmation. Below the button, "Turned off 3 layers." appears with an Undo, which turns those layers back on; their settings stay as they were, because a layer keeps its settings while it is off. A layer you turn on again yourself leaves the Undo, and the count drops. The Undo stays for ten seconds, and waits while a mouse is over it or it has keyboard focus. There is no "turn on all", because each layer you turn on asks its provider for data.
