@@ -1,12 +1,15 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
 import { spawnSync } from "node:child_process";
+import { EventEmitter } from "node:events";
 import net from "node:net";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterEach, describe, expect, it } from "vitest";
 import {
+  accepts,
   isListening,
+  main,
   parsePort,
   // @ts-expect-error The scripts are dependency-free JavaScript with JSDoc types.
 } from "../../../../scripts/agents/port.mjs";
@@ -50,12 +53,71 @@ describe("parsePort", () => {
   );
 });
 
+describe("accepts", () => {
+  it.each([
+    ["connect", true],
+    ["timeout", false],
+    ["error", false],
+  ])("settles on %s and closes a completed socket", async (event, expected) => {
+    const socket = new EventEmitter() as net.Socket;
+    let destroyed = false;
+    socket.destroy = () => {
+      destroyed = true;
+      return socket;
+    };
+    const pending = accepts("127.0.0.1", 5190, () => socket);
+
+    socket.emit(event);
+
+    expect(await pending).toBe(expected);
+    expect(destroyed).toBe(event !== "error");
+  });
+});
+
 describe("isListening", () => {
   it("is true while something listens and false after it stops", async () => {
     const port = await listen("127.0.0.1");
     expect(await isListening(port)).toBe(true);
     await close();
     expect(await isListening(port)).toBe(false);
+  });
+});
+
+describe("main", () => {
+  it("reports an invalid port without probing it", async () => {
+    const errors: string[] = [];
+    let called = false;
+    const code = await main(
+      ["nope"],
+      async () => {
+        called = true;
+        return false;
+      },
+      () => undefined,
+      (line: string) => errors.push(line),
+    );
+
+    expect(code).toBe(2);
+    expect(called).toBe(false);
+    expect(errors).toEqual([
+      "usage: node scripts/agents/port.mjs <port from 1 to 65535>",
+    ]);
+  });
+
+  it.each([
+    [true, 1, "in use"],
+    [false, 0, "free"],
+  ])("reports a port that is %s", async (inUse, code, text) => {
+    const output: string[] = [];
+    expect(
+      await main(
+        ["5190"],
+        async () => inUse,
+        (line: string) => output.push(line),
+        () => undefined,
+      ),
+    ).toBe(code);
+    expect(output).toEqual([`port 5190 is ${text}`]);
   });
 });
 

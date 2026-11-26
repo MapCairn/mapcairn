@@ -8,6 +8,7 @@ import {
   childEnvironment,
   invocation,
   isAllowedCommand,
+  main,
   // @ts-expect-error The scripts are dependency-free JavaScript with JSDoc types.
 } from "../../../../scripts/agents/web-guidance.mjs";
 
@@ -71,6 +72,58 @@ describe("invocation", () => {
     });
     expect(env.DISABLE_TELEMETRY).toBe("1");
     expect(env.ENABLE_FILE_LOGGING).toBe("false");
+  });
+});
+
+describe("main", () => {
+  it("refuses a command without starting the packaged command line", () => {
+    const errors: string[] = [];
+    let called = false;
+    const code = main(
+      ["install"],
+      {},
+      () => {
+        called = true;
+        return { status: 0 };
+      },
+      (line: string) => errors.push(line),
+    );
+
+    expect(code).toBe(2);
+    expect(called).toBe(false);
+    expect(errors).toEqual([
+      "usage: node scripts/agents/web-guidance.mjs <search|list|retrieve> [arguments]",
+    ]);
+  });
+
+  it("passes the invocation and guarded environment to the child and returns its status", () => {
+    const code = main(
+      ["search", "popover"],
+      { DISABLE_TELEMETRY: "0", ENABLE_FILE_LOGGING: "true" },
+      (file: string, args: string[], options: Record<string, unknown>) => {
+        expect(file).toBe(process.execPath);
+        expect(args.slice(1)).toEqual(["search", "popover"]);
+        expect(options).toMatchObject({
+          stdio: "inherit",
+          env: { DISABLE_TELEMETRY: "1", ENABLE_FILE_LOGGING: "false" },
+        });
+        return { status: 7 };
+      },
+      () => undefined,
+    );
+
+    expect(code).toBe(7);
+  });
+
+  it("returns 1 when the child has no exit status", () => {
+    expect(
+      main(
+        ["list"],
+        {},
+        () => ({ status: null }),
+        () => undefined,
+      ),
+    ).toBe(1);
   });
 });
 

@@ -17,6 +17,8 @@ import {
   changedLines,
   compareReports,
   generateReports,
+  main,
+  run,
   summariseMessages,
   // @ts-expect-error The scripts are dependency-free JavaScript with JSDoc types.
 } from "../../../../scripts/apiReports.mjs";
@@ -65,6 +67,16 @@ afterEach(() => {
 function writeReport(name: string, text: string): void {
   mkdirSync(path.join(scratch, "api"), { recursive: true });
   writeFileSync(path.join(scratch, "api", name), text);
+}
+
+function writePackageReport(
+  packageName: string,
+  reportName: string,
+  text: string,
+): void {
+  const folder = path.join(scratch, "packages", packageName, "api");
+  mkdirSync(folder, { recursive: true });
+  writeFileSync(path.join(folder, reportName), text);
 }
 
 describe("compareReports", () => {
@@ -140,6 +152,178 @@ describe("summariseMessages", () => {
     ]) as Map<string, number>;
     expect(summary.get("ae-undocumented")).toBe(2);
     expect(summary.get("tsdoc-param-tag-with-invalid-name")).toBe(1);
+  });
+});
+
+describe("run", () => {
+  function output() {
+    const logs: string[] = [];
+    const errors: string[] = [];
+    return {
+      logs,
+      errors,
+      log: (line: string) => logs.push(line),
+      error: (line: string) => errors.push(line),
+    };
+  }
+
+  it("checks matching reports and prints verbose warnings and their counts", async () => {
+    const { logs, errors, log, error } = output();
+    for (const name of BUILT_PACKAGES) {
+      writePackageReport(name, "index.api.md", "same\n");
+    }
+    const clean = await run("check", true, {
+      root: scratch,
+      env: { GITHUB_ACTIONS: "true" },
+      generate: async (folder: string) => ({
+        reports: new Map([["index", "same\n"]]),
+        models: new Map(),
+        messages:
+          path.basename(folder) === "core"
+            ? [
+                {
+                  id: "ae-undocumented",
+                  text: "missing documentation",
+                  file: path.join(folder, "src/a.ts"),
+                  line: 3,
+                },
+              ]
+            : [],
+      }),
+      log,
+      error,
+    });
+
+    expect(clean).toBe(true);
+    expect(errors).toEqual([]);
+    expect(logs).toContain("::group::@mapcairn/core documentation warnings");
+    expect(
+      logs.some(
+        (line) =>
+          line.includes("ae-undocumented: missing documentation") &&
+          line.includes("src/a.ts:3"),
+      ),
+    ).toBe(true);
+    expect(logs).toContain("@mapcairn/core: 1 ae-undocumented.");
+    expect(logs).toContain(
+      "::warning title=API documentation::@mapcairn/core: 1 ae-undocumented.",
+    );
+    expect(logs).toContain("@mapcairn/react: no warnings.");
+  });
+
+  it("reports missing, changed and stale reports with a changed-line diff", async () => {
+    const { errors, log, error } = output();
+    for (const name of BUILT_PACKAGES) {
+      if (name !== "core") {
+        writePackageReport(name, "index.api.md", "new\n");
+      }
+    }
+    writePackageReport("react", "index.api.md", "old\n");
+    writePackageReport("theme", "removed.api.md", "old\n");
+
+    const clean = await run("check", false, {
+      root: scratch,
+      generate: async () => ({
+        reports: new Map([["index", "new\n"]]),
+        models: new Map(),
+        messages: [],
+      }),
+      log,
+      error,
+    });
+
+    expect(clean).toBe(false);
+    expect(errors).toContain("packages/core/api/index.api.md: not committed.");
+    expect(errors).toContain("packages/react/api/index.api.md: out of date.");
+    expect(errors).toContain("- old\n+ new");
+    expect(errors).toContain(
+      "packages/theme/api/removed.api.md: no such entry point.",
+    );
+    expect(errors.at(-1)).toContain("The public API changed.");
+  });
+
+  it("writes current reports and removes stale ones in update mode", async () => {
+    const { errors, log, error } = output();
+    for (const name of BUILT_PACKAGES) {
+      writePackageReport(name, "index.api.md", "old\n");
+      writePackageReport(name, "removed.api.md", "stale\n");
+    }
+
+    const clean = await run("update", false, {
+      root: scratch,
+      generate: async () => ({
+        reports: new Map([["index", "new\n"]]),
+        models: new Map(),
+        messages: [],
+      }),
+      log,
+      error,
+    });
+
+    expect(clean).toBe(true);
+    expect(errors).toEqual([]);
+    for (const name of BUILT_PACKAGES) {
+      expect(
+        readFileSync(
+          path.join(scratch, "packages", name, "api", "index.api.md"),
+          "utf8",
+        ),
+      ).toBe("new\n");
+      expect(
+        existsSync(
+          path.join(scratch, "packages", name, "api", "removed.api.md"),
+        ),
+      ).toBe(false);
+    }
+  });
+});
+
+describe("main", () => {
+  it.each([
+    { args: [] },
+    { args: ["unknown"] },
+    { args: ["check", "--other"] },
+  ])("returns 2 and prints usage for $args", async ({ args }) => {
+    const errors: string[] = [];
+    let called = false;
+    const code = await main(
+      args,
+      async () => {
+        called = true;
+        return true;
+      },
+      (line: string) => errors.push(line),
+    );
+
+    expect(code).toBe(2);
+    expect(called).toBe(false);
+    expect(errors).toEqual([
+      "Usage: node scripts/apiReports.mjs check|update [--verbose]",
+    ]);
+  });
+
+  it("passes check mode and --verbose to the runner and returns 1 for a diff", async () => {
+    const code = await main(
+      ["check", "--verbose"],
+      async (mode: string, verbose: boolean) => {
+        expect(mode).toBe("check");
+        expect(verbose).toBe(true);
+        return false;
+      },
+      () => undefined,
+    );
+
+    expect(code).toBe(1);
+  });
+
+  it("returns 0 for a clean update", async () => {
+    expect(
+      await main(
+        ["update"],
+        async () => true,
+        () => undefined,
+      ),
+    ).toBe(0);
   });
 });
 

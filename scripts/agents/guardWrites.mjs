@@ -287,12 +287,13 @@ export function runHook(raw, env = {}, options = {}) {
 /**
  * Reads the hook input from standard input.
  *
- * @returns {Promise<string>}
+ * @param {AsyncIterable<Buffer>} [input] The standard-input stream.
+ * @returns {Promise<string>} The complete input, or empty text after a read failure.
  */
-async function readInput() {
+export async function readInput(input = process.stdin) {
   const chunks = [];
   try {
-    for await (const chunk of process.stdin) {
+    for await (const chunk of input) {
       chunks.push(chunk);
     }
   } catch {

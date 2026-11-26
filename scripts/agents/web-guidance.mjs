@@ -78,24 +78,35 @@ export function invocation(args, environment) {
   };
 }
 
-/** Runs the command in the arguments and sets the exit code. */
-function main() {
-  const args = process.argv.slice(2);
+/**
+ * Runs the command in the arguments.
+ *
+ * @param {string[]} args
+ * @param {Record<string, string | undefined>} environment
+ * @param {typeof spawnSync} [runChild] Starts the packaged command line.
+ * @param {(line: string) => void} [error] Receives a usage error.
+ * @returns {number} The exit code.
+ */
+export function main(
+  args,
+  environment,
+  runChild = spawnSync,
+  error = console.error,
+) {
   if (!isAllowedCommand(args[0])) {
-    console.error(
+    error(
       `usage: node scripts/agents/web-guidance.mjs <${ALLOWED_COMMANDS.join("|")}> [arguments]`,
     );
-    process.exitCode = REFUSED_EXIT_CODE;
-    return;
+    return REFUSED_EXIT_CODE;
   }
-  const run = invocation(args, process.env);
-  const result = spawnSync(run.file, run.args, {
+  const command = invocation(args, environment);
+  const result = runChild(command.file, command.args, {
     stdio: "inherit",
-    env: run.env,
+    env: command.env,
   });
-  process.exitCode = result.status ?? 1;
+  return result.status ?? 1;
 }
 
 if (isEntryPoint(import.meta.url)) {
-  main();
+  process.exitCode = main(process.argv.slice(2), process.env);
 }

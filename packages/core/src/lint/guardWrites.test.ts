@@ -27,6 +27,7 @@ import {
 import {
   decide,
   READ_ONLY_AGENTS,
+  readInput,
   runHook,
   // @ts-expect-error The scripts are dependency-free JavaScript with JSDoc types.
 } from "../../../../scripts/agents/guardWrites.mjs";
@@ -697,6 +698,26 @@ describe("running the script as a hook", () => {
     const result = hook(undefined, "not json");
     expect(result.status).toBe(0);
     expect(result.stderr).toMatch(/could not read/i);
+  });
+});
+
+describe("readInput", () => {
+  it("joins every chunk of standard input as UTF-8", async () => {
+    async function* chunks() {
+      yield Buffer.from('{"tool_name":');
+      yield Buffer.from('"Bash"}');
+    }
+
+    expect(await readInput(chunks())).toBe('{"tool_name":"Bash"}');
+  });
+
+  it("returns empty input when reading the stream fails", async () => {
+    async function* chunks() {
+      yield Buffer.from("partial");
+      throw new Error("read failed");
+    }
+
+    expect(await readInput(chunks())).toBe("");
   });
 });
 

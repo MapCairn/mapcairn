@@ -299,4 +299,32 @@ describe("the coverage floors", () => {
     });
     expect(unexplained).toEqual([]);
   });
+
+  it.each([
+    "harmony/scan",
+    "apiReports",
+    "licenceHeaders",
+    "moved-guides-check",
+    "qualityBarCheck",
+    "agents/web-guidance",
+    "agents/port",
+    "agents/thread",
+    "agents/docs-refs",
+    "agents/guardWrites",
+  ])("holds scripts/%s.mjs to the line floor on its own", (script) => {
+    const key = config.match(/"scripts\/\{([^"]+)\}\.mjs":\s*\{([^}]*)\}/);
+    expect(key?.[2]).toMatch(/lines: 80,\s*perFile: true/);
+    const names = (key?.[1] ?? "")
+      .replace("agents/{", "agents/")
+      .replace("}", "");
+    for (const part of script.split("/")) {
+      expect(names).toContain(part);
+    }
+  });
+
+  it("says in AGENTS.md that the named scripts hold the line floor each", () => {
+    expect(read("AGENTS.md")).toContain(
+      "at least 80% of lines in each guard script named in `vitest.config.ts`",
+    );
+  });
 });

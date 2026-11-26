@@ -94,38 +94,54 @@ function sourceFiles() {
 /**
  * Lists the files without the right header. With `write`, adds the header to
  * those that have no identifier at all.
+ *
+ * @param {string[]} args
+ * @param {object} [io]
+ * @param {() => string[]} [io.files] Lists the tracked source files.
+ * @param {(path: string) => string} [io.read] Reads one source file.
+ * @param {(path: string, text: string) => void} [io.write] Writes one source file.
+ * @param {(line: string) => void} [io.log] Receives a successful result.
+ * @param {(line: string) => void} [io.error] Receives the files that failed.
+ * @returns {number} The exit code.
  */
-function main() {
-  const write = process.argv.includes("--write");
-  const missing = sourceFiles().filter(
-    (path) => !hasHeader(readFileSync(path, "utf8")),
-  );
+export function main(
+  args,
+  {
+    files = sourceFiles,
+    read = (path) => readFileSync(path, "utf8"),
+    write: writeFile = writeFileSync,
+    log = console.log,
+    error = console.error,
+  } = {},
+) {
+  const write = args.includes("--write");
+  const missing = files().filter((path) => !hasHeader(read(path)));
 
   if (write) {
-    const unlicensed = missing.filter(
-      (path) => !namesAnIdentifier(readFileSync(path, "utf8")),
-    );
+    const unlicensed = missing.filter((path) => !namesAnIdentifier(read(path)));
     for (const path of unlicensed) {
-      writeFileSync(path, withHeader(readFileSync(path, "utf8")));
+      writeFile(path, withHeader(read(path)));
     }
-    console.log(`licence headers: added to ${unlicensed.length} files`);
+    log(`licence headers: added to ${unlicensed.length} files`);
     const wrong = missing.length - unlicensed.length;
     if (wrong > 0) {
-      console.error(
+      error(
         `licence headers: ${wrong} files name a different licence and were not changed`,
       );
-      process.exit(1);
+      return 1;
     }
-  } else if (missing.length > 0) {
-    console.error(
+    return 0;
+  }
+  if (missing.length > 0) {
+    error(
       `licence headers: ${missing.length} files have no AGPL-3.0-only header. Run "npm run licence:write" to add a missing one.\n${missing.join("\n")}`,
     );
-    process.exit(1);
-  } else {
-    console.log("licence headers: every source file has the right one");
+    return 1;
   }
+  log("licence headers: every source file has the right one");
+  return 0;
 }
 
 if (isEntryPoint(import.meta.url)) {
-  main();
+  process.exitCode = main(process.argv.slice(2));
 }
