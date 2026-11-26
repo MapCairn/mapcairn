@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
-import { buffer, type GeometryError } from "../geometry";
+import type { GeometryError } from "../geometry";
 import { RoutingError, type RoutingErrorKind } from "../ports/errors";
 import type { LatLng } from "../ports/geometry";
 import type {
@@ -178,7 +178,7 @@ export class FakeRoutingProvider implements RoutingProvider {
     }
   }
 
-  #answer<T>(holds: Deferred<T>[], scripted: () => T): Promise<T> {
+  #answer<T>(holds: Deferred<T>[], scripted: () => T | Promise<T>): Promise<T> {
     const hold = holds.shift();
     if (hold !== undefined) {
       return hold.promise;
@@ -217,11 +217,14 @@ function defaultRoute(stops: readonly LatLng[], mode: TravelMode): RouteResult {
   };
 }
 
-function defaultArea(
+async function defaultArea(
   origin: LatLng,
   minutes: number,
   mode: TravelMode,
-): ReachableAreaResult {
+): Promise<ReachableAreaResult> {
+  // Loaded on first use, so an app that composes the fakes but never asks for
+  // a reachable area does not carry the geometry library behind `buffer`.
+  const { buffer } = await import("../geometry/operations");
   const reach = SPEEDS[mode] * minutes * 60;
   let ring: ReturnType<typeof buffer>;
   try {
