@@ -398,7 +398,7 @@ describe("the release guide's steps for the stable version", () => {
       ],
       [
         "packages/core/src/lint/packageReadmes.test.ts",
-        "npm install @mapcairn/map @mapcairn/core @mapcairn/theme",
+        "npm install @mapcairn/map @mapcairn/core @mapcairn/react @mapcairn/theme",
       ],
     ] as const) {
       expect(guide, file).toContain(file);
@@ -574,10 +574,9 @@ describe("the README of @mapcairn/sdk", () => {
 });
 
 /**
- * The packages that depend on another MapCairn package at its exact version
- * (`dependencyRanges.test.ts`), so an app that lists one at another version
- * gets a second copy installed without a warning. The READMEs of these
- * packages, and of core, which the others share, say how to keep one.
+ * The packages that take another MapCairn package as an exact peer (and core,
+ * which the others share), so an app lists them at one version. Their READMEs
+ * say how to keep one copy.
  */
 describe.each(["core", "map", "adapter-maplibre"])(
   "the README of @mapcairn/%s on keeping one copy",
@@ -589,15 +588,28 @@ describe.each(["core", "map", "adapter-maplibre"])(
       expect(readme).toMatch(/at one version/);
       expect(readme).toContain("`instanceof`");
     });
+
+    it("says the packages are peers, so the app lists them", () => {
+      expect(readme).toMatch(/exact peers?\b/);
+      expect(readme).toContain("ERESOLVE");
+    });
   },
 );
 
 describe("the README of @mapcairn/map", () => {
   const readme = readmeOf("map");
 
+  it("lists its three peers in every install line, because Yarn does not install peers", () => {
+    for (const verb of INSTALL_VERBS) {
+      expect(readme).toContain(
+        `${verb} @mapcairn/map @mapcairn/core @mapcairn/react @mapcairn/theme`,
+      );
+    }
+  });
+
   it("installs core and theme beside it, because the examples import them", () => {
     expect(readme).toContain(
-      "npm install @mapcairn/map @mapcairn/core @mapcairn/theme",
+      "npm install @mapcairn/map @mapcairn/core @mapcairn/react @mapcairn/theme",
     );
   });
 
@@ -614,6 +626,14 @@ describe("the README of @mapcairn/map", () => {
 
 describe("the README of @mapcairn/adapter-maplibre", () => {
   const readme = readmeOf("adapter-maplibre");
+
+  it("lists its peers in every install line, because Yarn does not install peers", () => {
+    for (const verb of INSTALL_VERBS) {
+      expect(readme).toContain(
+        `${verb} @mapcairn/adapter-maplibre @mapcairn/core @mapcairn/theme maplibre-gl`,
+      );
+    }
+  });
 
   it("shows the factory with its one required option, and the engine's worker as the host's to supply", () => {
     const code = codeBlocks(readme).join("\n");

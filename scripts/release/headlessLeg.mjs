@@ -2,14 +2,15 @@
 // Copyright MapCairn contributors
 /**
  * The pure parts of the consumer check's headless leg (`checkHeadless` in
- * `consumerCheck.mjs`): an app that lists only `@mapcairn/core` and
- * `@mapcairn/adapter-maplibre`, built from `examples/headless`, which must
- * install without React or the interface packages. Kept apart so unit tests
+ * `consumerCheck.mjs`): an app that lists only `@mapcairn/core`,
+ * `@mapcairn/theme` (the adapter's two peers) and `@mapcairn/adapter-maplibre`,
+ * built from `examples/headless`, which must install without React or the
+ * interface packages. Kept apart so unit tests
  * can cover them without an install.
  */
 
 /** The SDK packages the headless app lists, by folder name. */
-export const HEADLESS_DIRECT = ["core", "adapter-maplibre"];
+export const HEADLESS_DIRECT = ["core", "theme", "adapter-maplibre"];
 
 /**
  * The packages a headless install must not hold: React, and the SDK packages
@@ -28,9 +29,9 @@ const HEADLESS_TOOLS = ["typescript", "vite"];
 const HEADLESS_ENGINE = "maplibre-gl";
 
 /**
- * The headless app's `package.json`: the two packages from their tarballs,
- * the engine, and the build tools. Every packed package is overridden, so the
- * adapter's own dependencies (`core` and `theme`) take the tarballs too.
+ * The headless app's `package.json`: the three packages from their tarballs
+ * (the adapter takes `core` and `theme` as peers, which the app lists), the
+ * engine, and the build tools. Every packed package is overridden.
  *
  * @param {{ tarballs: Record<string, string>, versions: Record<string, string>, published?: string | null }} input
  *   `tarballs` maps a folder name such as `core` to its file in `../tarballs`;

@@ -52,9 +52,6 @@
     "typecheck": "npm --prefix ../.. run build:sdk && tsc --noEmit"
   },
   "dependencies": {
-    "@mapcairn/core": "0.2.0",
-    "@mapcairn/react": "0.2.0",
-    "@mapcairn/theme": "0.2.0",
     "@phosphor-icons/react": "^2.1.10",
     "@radix-ui/react-slider": "^1.6.1",
     "@radix-ui/react-switch": "^1.4.1",
@@ -64,10 +61,16 @@
     "@vanilla-extract/recipes": "^0.5.7"
   },
   "peerDependencies": {
+    "@mapcairn/core": "0.2.0",
+    "@mapcairn/react": "0.2.0",
+    "@mapcairn/theme": "0.2.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"
   },
   "devDependencies": {
+    "@mapcairn/core": "0.2.0",
+    "@mapcairn/react": "0.2.0",
+    "@mapcairn/theme": "0.2.0",
     "@testing-library/jest-dom": "^8.0.0",
     "@testing-library/react": "^16.3.3",
     "@types/react": "^19.3.0",

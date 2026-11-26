@@ -12,10 +12,13 @@
  * with one copy of each. The umbrella app also proves that the umbrella's root
  * holds no map engine (its client, server and Worker builds never reach
  * `maplibre-gl` or the adapter), and that its `adapter-maplibre` subpath does.
- * A headless app lists only `core` and `adapter-maplibre`, takes
+ * A headless app lists only `core`, `theme` and `adapter-maplibre`, takes
  * `examples/headless` as its source, and must install with no React and no
  * interface package, and build (`checkHeadless`); it runs against published
- * packages too.
+ * packages too. `map` and the adapter take `core`, `theme` and (for `map`)
+ * `react` as exact peers: the umbrella app must hold one copy of each with no
+ * peer message, and an app that lists `core` at another version beside the
+ * adapter must be refused with ERESOLVE (`checkPeers`).
  *
  *   npm run consumer:check
  *
@@ -99,6 +102,13 @@ import {
 } from "./headlessLeg.mjs";
 import { isolatedEnvironment, runNpm } from "./npm.mjs";
 import { findTarballs, packTarballs, readTarballFile } from "./packCheck.mjs";
+import {
+  mismatchManifest,
+  otherCoreManifest,
+  ownPackageCopies,
+  peerMismatchProblems,
+  sharedCopyProblems,
+} from "./peersLeg.mjs";
 import { readmeQuickstart } from "./quickstartLeg.mjs";
 import {
   fixtureAtTag,
@@ -748,7 +758,11 @@ function prepareApp(app, manifest, { umbrella = false } = {}) {
   copyFileSync(path.join(REPO, ".npmrc"), path.join(app, ".npmrc"));
 }
 
-/** Installs with npm. `extra` adds flags, such as `--legacy-peer-deps`. */
+/**
+ * Installs with npm. `extra` adds flags, such as `--legacy-peer-deps`.
+ *
+ * @returns {string} What npm printed, standard output and error together.
+ */
 function install(app, extra) {
   const result = runNpm(
     ["install", "--no-audit", "--no-fund", "--ignore-scripts", ...extra],
@@ -758,6 +772,34 @@ function install(app, extra) {
     throw new Error(
       `npm install ${extra.join(" ")} failed:\n${result.stdout}\n${result.stderr}`,
     );
+  }
+  return `${result.stdout}\n${result.stderr}`;
+}
+
+/**
+ * Fails unless the app holds one copy of each MapCairn package, with no peer
+ * message in the install's output and nothing `npm ls` calls invalid or
+ * missing: `map` and the adapter take the other SDK packages as peers, so the
+ * umbrella's own dependencies are the only copy.
+ *
+ * @param {string} app The installed app.
+ * @param {string} installOutput What `npm install` printed.
+ * @returns {void}
+ */
+function assertOneCopyOfEach(app, installOutput) {
+  const installed = JSON.parse(
+    readFileSync(path.join(app, "node_modules", ".package-lock.json"), "utf8"),
+  );
+  const listed = runNpm(["ls", "--all", "--json"], { cwd: app });
+  const problems = [
+    ...ownPackageCopies(installed.packages),
+    ...sharedCopyProblems({
+      installOutput,
+      listing: JSON.parse(listed.stdout || "{}"),
+    }),
+  ];
+  if (problems.length > 0) {
+    throw new Error(problems.join("\n"));
   }
 }
 
@@ -1490,7 +1532,7 @@ function checkUpgrade({ root, packed, versions, plan, notes }) {
       direct: [UMBRELLA_PACKAGE],
     }),
   );
-  install(app, []);
+  assertOneCopyOfEach(app, install(app, []));
   const after = buildBrowserPage(app);
   if (after.ok) {
     return [
@@ -1549,9 +1591,9 @@ function checkUmbrella({ root, packed, published, versions }) {
   });
   const app = path.join(root, "umbrella");
   prepareApp(app, manifest, { umbrella: true });
-  install(app, installFlags({ published }));
+  assertOneCopyOfEach(app, install(app, installFlags({ published })));
   const lines = [
-    `${prefix}npm install: ok`,
+    `${prefix}npm install: ok, one copy of each package and no peer message`,
     ...checkApp(app, prefix, { engineStyles: true }),
     ...checkEngineFreeRoot(app, prefix),
     ...checkRealMap(app, prefix),
@@ -1575,8 +1617,8 @@ function checkUmbrella({ root, packed, published, versions }) {
 }
 
 /**
- * The headless route: an app that lists only `@mapcairn/core` and
- * `@mapcairn/adapter-maplibre` (and the engine), built from
+ * The headless route: an app that lists only `@mapcairn/core`,
+ * `@mapcairn/theme` and `@mapcairn/adapter-maplibre` (and the engine), built from
  * `examples/headless`. The install must hold no React and none of the
  * interface packages (`headlessInstallProblems`, read from the installed
  * lock, not from `npm ls`), and the page must type-check and build with plain
@@ -1586,7 +1628,7 @@ function checkUmbrella({ root, packed, published, versions }) {
  * @returns {string[]} One line for each check.
  */
 function checkHeadless({ root, packed, published, versions }) {
-  const prefix = "headless (core and adapter-maplibre only): ";
+  const prefix = "headless (core, theme and adapter-maplibre only): ";
   const app = path.join(root, "headless");
   cpSync(HEADLESS_EXAMPLE, app, {
     recursive: true,
@@ -1647,6 +1689,55 @@ function checkOldestReact({ root, packed, published, versions }) {
   prepareApp(app, manifest, { umbrella: true });
   install(app, installFlags({ published }));
   return [`${prefix}npm install: ok`, ...checkQuickstart(app, prefix)];
+}
+
+/**
+ * The check that a copy of `core` at another version beside the adapter is
+ * refused. The adapter takes `core` as an exact peer, so npm must fail the
+ * install with `ERESOLVE` naming `@mapcairn/core`, where it once installed a
+ * second copy and said nothing. It always runs on the packed tarballs, and a
+ * later change to the range policy cannot regress it unseen.
+ *
+ * @param {{ root: string, packed: Record<string, string>, published: string | null, versions: Record<string, string> }} input
+ * @returns {string[]} The line for the check, or the line that says it was skipped.
+ */
+function checkPeers({ root, packed, published, versions }) {
+  const prefix = "core at another version beside adapter-maplibre: ";
+  if (published !== null) {
+    return [
+      `${prefix}not repeated for the published packages; it needs the tarballs`,
+    ];
+  }
+  const version = JSON.parse(
+    readTarballFile(
+      path.join(root, "tarballs", packed[UMBRELLA_PACKAGE]),
+      "package.json",
+    ) ?? "{}",
+  ).version;
+  const other = path.join(root, "other-core");
+  mkdirSync(other);
+  writeFileSync(
+    path.join(other, "package.json"),
+    `${JSON.stringify(otherCoreManifest(version), null, 2)}\n`,
+  );
+  const app = path.join(root, "peers");
+  mkdirSync(app);
+  writeFileSync(
+    path.join(app, "package.json"),
+    `${JSON.stringify(mismatchManifest({ tarballs: packed, versions, otherCore: "file:../other-core" }), null, 2)}\n`,
+  );
+  copyFileSync(path.join(REPO, ".npmrc"), path.join(app, ".npmrc"));
+  const result = runNpm(
+    ["install", "--no-audit", "--no-fund", "--ignore-scripts"],
+    { cwd: app },
+  );
+  const problems = peerMismatchProblems(result);
+  if (problems.length > 0) {
+    throw new Error(problems.join("\n"));
+  }
+  return [
+    `${prefix}npm refuses the install with ERESOLVE, naming @mapcairn/core: ok`,
+  ];
 }
 
 /**
@@ -1882,6 +1973,7 @@ export function runConsumerCheck({
       ...checkOldestReact({ root, packed, published, versions }),
       ...checkMixed({ root, packed, published, versions }),
       ...checkHeadless({ root, packed, published, versions }),
+      ...checkPeers({ root, packed, published, versions }),
     );
     if (published === null) {
       report.push(...runUpgradeLeg({ root, packed, versions, upgradeFrom }));

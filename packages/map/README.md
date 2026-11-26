@@ -14,16 +14,16 @@ It never imports a map engine, an adapter or a browser service. Everything it ne
 ## Install
 
 ```bash
-npm install @mapcairn/map @mapcairn/core @mapcairn/theme
-pnpm add @mapcairn/map @mapcairn/core @mapcairn/theme
-yarn add @mapcairn/map @mapcairn/core @mapcairn/theme
+npm install @mapcairn/map @mapcairn/core @mapcairn/react @mapcairn/theme
+pnpm add @mapcairn/map @mapcairn/core @mapcairn/react @mapcairn/theme
+yarn add @mapcairn/map @mapcairn/core @mapcairn/react @mapcairn/theme
 ```
 
-The examples below import from `@mapcairn/core` and `@mapcairn/theme` too, so install them beside it. React and React DOM 19 are peer dependencies, and your app already has them.
+`@mapcairn/core`, `@mapcairn/react` and `@mapcairn/theme` are peer dependencies, listed in the install line because Yarn does not install peers; the examples below import from `core` and `theme` too. React and React DOM 19 are peer dependencies as well, and your app already has them.
 
 The package is ESM only: it has no `main` field and no CommonJS build. A TypeScript project needs `moduleResolution` set to `node16`, `nodenext` or `bundler`; `node10` is not supported.
 
-The six MapCairn packages share one version, and this package depends on `@mapcairn/core`, `@mapcairn/react` and `@mapcairn/theme` at that exact version, so keep every `@mapcairn/*` package you list at one version. If you list `@mapcairn/core` at another version, npm installs a second copy of it under this package and prints no warning. Errors from one copy then fail an `instanceof` check against the other (`MapEngineError`, `LayerError`, `SearchError`), and the `Fake*` classes of the two copies do not mix. `npm ls @mapcairn/core` shows one version when all is well.
+The six MapCairn packages share one version, and this package takes `@mapcairn/core`, `@mapcairn/react` and `@mapcairn/theme` as exact peers, so you list them yourself and keep every `@mapcairn/*` package you list at one version. If you list `@mapcairn/core` at another version, the npm install fails with `ERESOLVE`, and pnpm shares one copy and warns. With two copies, which a package manager that ignores peers can leave you with, errors from one copy fail an `instanceof` check against the other (`MapEngineError`, `LayerError`, `SearchError`), and the `Fake*` classes of the two copies do not mix. `npm ls @mapcairn/core` shows one version when all is well.
 
 ## Set up
 
