@@ -53,6 +53,7 @@ Each command and its flags are explained in `docs/guides/repository-reference.md
 - `lint` runs Biome, dependency-cruiser, the harmony scanner and the licence, SDK licence, agent files, roadmap, names, portability, moved guides, prose, release notes and publish checks. Pre-commit runs every check except the roadmap check; neither it nor `commit-msg` runs typecheck, tests or coverage. The pre-push hook runs `npm run typecheck` (about 7 seconds warm, 17 cold) when the push changes a `.ts`, `.tsx`, `.mjs`, `.cjs` or `.json` file, so a type error is caught before CI.
 - Interface text is never written inline in `packages/map` or `packages/web`: look it up through the message catalogue.
 - In a git worktree, `npm ci` fails at its `prepare` script (lefthook cannot install there). Use `npm ci --ignore-scripts` and run `npm run lint` yourself before you commit and `npm run typecheck` before you push, and keep commit messages free of listed names, because the `commit-msg` and `pre-push` hooks do not run there.
+- When `PWD` differs from the physical path (`pwd -P`), run `export PWD=$(pwd -P)` before `npm run typecheck` or `git push`, in the main tree and in a worktree; `docs/guides/working-with-agents.md` has the cause.
 
 CI, and the checks a pull request needs before it merges (`build`, `e2e`, `SDK packages`, `Dependency review`, `TruffleHog (pull request)` and `CLA`), are listed in the guide ("Continuous integration").
 

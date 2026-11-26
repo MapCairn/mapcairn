@@ -64,6 +64,14 @@ describe("findProblems", () => {
     ).toEqual([]);
   });
 
+  it("allows the documented PWD correction and rejects nearby substitutions", () => {
+    expect(
+      findProblems("Run `export PWD=$(pwd -P)` before typechecking."),
+    ).toEqual([]);
+    expect(findProblems("Run `export PWD=$(pwd)` instead.")).toHaveLength(1);
+    expect(findProblems("Run `echo $(pwd -P)` instead.")).toHaveLength(1);
+  });
+
   it("ignores a segment of a web address", () => {
     expect(
       findProblems(
