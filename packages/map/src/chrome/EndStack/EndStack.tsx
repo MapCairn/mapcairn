@@ -12,7 +12,7 @@ import {
   Ruler,
   Stack,
 } from "@phosphor-icons/react";
-import { useCallback, useEffect, useRef } from "react";
+import { useEffect, useRef } from "react";
 import { useLandmarkName } from "../../host/useLandmarkName";
 import { useMessages, usePreferences, useSettings } from "../../services";
 import { ControlGroup, IconButton, Surface } from "../../ui";
@@ -158,28 +158,43 @@ export function EndStack({
     onLocate !== undefined ||
     onSettings !== undefined;
 
-  // IconButton takes no ref, so the buttons are found through the stack.
-  const setRoot = useCallback(
-    (root: HTMLElement | null) => {
-      rootRef.current = root;
-      const find = (target: string) =>
-        root
-          ? root.querySelector<HTMLElement>(`[data-focus-target="${target}"]`)
-          : null;
-      registerMapOptions(find("map-options"));
-      registerMeasure(find("measure"));
-      registerDirections(find("directions"));
-      registerDraw(find("draw"));
-      registerSettings(find("settings"));
-    },
-    [
-      registerMapOptions,
-      registerMeasure,
-      registerDirections,
-      registerDraw,
-      registerSettings,
-    ],
-  );
+  // IconButton takes no ref, so the buttons are found through the stack. A
+  // button that appears or goes (a host changing what it passes) is registered
+  // or released as it does.
+  const hasMapOptions = onMapOptions !== undefined;
+  const hasMeasure = onMeasure !== undefined;
+  const hasDirections = directions !== undefined;
+  const hasDraw = onDraw !== undefined;
+  const hasSettings = onSettings !== undefined;
+  useEffect(() => {
+    const root = rootRef.current;
+    const find = (target: string) =>
+      root?.querySelector<HTMLElement>(`[data-focus-target="${target}"]`) ??
+      null;
+    registerMapOptions(hasMapOptions ? find("map-options") : null);
+    registerMeasure(hasMeasure ? find("measure") : null);
+    registerDirections(hasDirections ? find("directions") : null);
+    registerDraw(hasDraw ? find("draw") : null);
+    registerSettings(hasSettings ? find("settings") : null);
+    return () => {
+      registerMapOptions(null);
+      registerMeasure(null);
+      registerDirections(null);
+      registerDraw(null);
+      registerSettings(null);
+    };
+  }, [
+    hasMapOptions,
+    hasMeasure,
+    hasDirections,
+    hasDraw,
+    hasSettings,
+    registerMapOptions,
+    registerMeasure,
+    registerDirections,
+    registerDraw,
+    registerSettings,
+  ]);
 
   useEffect(() => {
     rootRef.current?.style.setProperty("--chrome-bearing", `${bearing}deg`);
@@ -188,7 +203,7 @@ export function EndStack({
 
   return (
     <section
-      ref={setRoot}
+      ref={rootRef}
       aria-label={landmarkName}
       data-testid="end-stack"
       data-zoom-yielded={zoom.yieldedToHeight ? "true" : "false"}
