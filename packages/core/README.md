@@ -23,6 +23,8 @@ yarn add @mapcairn/core
 
 The package is ESM only: it has no `main` field and no CommonJS build. A TypeScript project needs `moduleResolution` set to `node16`, `nodenext` or `bundler`; `node10` is not supported.
 
+The declarations name the platform types `Blob` and `AbortSignal` (a cancellable port call takes a `signal`, and `MapAdapter.toImage()` returns a `Blob`) and do not declare them. A project gets them from the `"dom"` entry of `lib` in its `tsconfig.json`, or from `@types/node`. A project that sets `types: []` and has neither fails to compile with `Cannot find name 'Blob'` and `Cannot find name 'AbortSignal'`, an error that points into `node_modules/@mapcairn/core` and does not name the cause.
+
 ## Usage
 
 Write unit tests against fakes, with no adapters and no network:
