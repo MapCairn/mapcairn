@@ -231,6 +231,6 @@ describe("saving a layer's features", () => {
     expect(
       status.compareDocumentPosition(button) & Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBeTruthy();
-    expect(scrollIntoView).toHaveBeenCalled();
+    await waitFor(() => expect(scrollIntoView).toHaveBeenCalled());
   });
 });

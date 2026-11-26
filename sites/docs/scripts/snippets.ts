@@ -18,6 +18,10 @@ export const CHECK_MARK = "check";
 /** The marker for a block that is deliberately not compiled, such as an outline. */
 export const NO_CHECK_MARK = "no-check";
 
+const WHOLE_MARK = "whole";
+const LICENCE_HEADER =
+  "// SPDX-License-Identifier: AGPL-3.0-only\n// Copyright MapCairn contributors\n";
+
 /** The TypeScript compiler's entry file, from the repository's own install. */
 const TSC = "node_modules/typescript/bin/tsc";
 
@@ -43,6 +47,8 @@ export interface Snippet {
    * block quotes that file, and `sourceFindings` checks it does.
    */
   readonly source: string | null;
+  /** Whether the block must quote the whole source file. */
+  readonly whole: boolean;
   readonly code: string;
 }
 
@@ -93,6 +99,7 @@ export function extractSnippets(page: string, markdown: string): Snippet[] {
         language,
         mark: markOf(info),
         source,
+        whole: info.split(/\s+/).includes(WHOLE_MARK),
         code: lines.slice(start + 1, index).join("\n"),
       });
     }
@@ -126,13 +133,33 @@ function containsLines(
   );
 }
 
+/** Whether the source is the block's text, with the file's final newline optional. */
+function matchesWholeText(source: string, code: string): boolean {
+  return source === code || source === `${code}\n`;
+}
+
+/** Whether a block is the whole file, apart from an optional licence header. */
+function matchesWholeFile(source: string, code: string): boolean {
+  if (code.trim() === "") {
+    return false;
+  }
+  if (matchesWholeText(source, code)) {
+    return true;
+  }
+  return (
+    source.startsWith(LICENCE_HEADER) &&
+    matchesWholeText(source.slice(LICENCE_HEADER.length), code)
+  );
+}
+
 /**
  * What is wrong with the blocks that quote a source file (a `source="path"`
  * word on the fence): the file is missing, or the block is empty or is not a
  * run of whole lines of the file, so the page shows code the file no longer
- * holds. The file is the one the consumer check builds, so a block that
- * matches it shows code that is built and type-checked from the packed
- * packages. The file's licence header may be left out of the block.
+ * holds. A `whole` word instead requires the complete file, with only its
+ * two-line licence header optional. The file is the one the consumer check
+ * builds, so a block that matches it shows code that is built and type-checked
+ * from the packed packages.
  * @param repo - Absolute path of the repository root.
  * @param snippets - Blocks from `extractSnippets`; those without a source are skipped.
  */
@@ -140,7 +167,7 @@ export function sourceFindings(
   repo: string,
   snippets: readonly Snippet[],
 ): string[] {
-  return snippets.flatMap(({ page, fenceLine, source, code }) => {
+  return snippets.flatMap(({ page, fenceLine, source, whole, code }) => {
     if (source === null) {
       return [];
     }
@@ -149,8 +176,13 @@ export function sourceFindings(
     if (!existsSync(file)) {
       return [`${where} quotes ${source}, which does not exist.`];
     }
-    const lines = readFileSync(file, "utf8").split("\n");
-    return containsLines(lines, code.split("\n"))
+    const text = readFileSync(file, "utf8");
+    if (whole) {
+      return matchesWholeFile(text, code)
+        ? []
+        : [`${where} does not match the whole of ${source}.`];
+    }
+    return containsLines(text.split("\n"), code.split("\n"))
       ? []
       : [`${where} is not a run of whole lines of ${source}.`];
   });
