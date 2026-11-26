@@ -23,6 +23,8 @@ yarn add @mapcairn/core
 
 The package is ESM only: it has no `main` field and no CommonJS build. A TypeScript project needs `moduleResolution` set to `node16`, `nodenext` or `bundler`; `node10` is not supported.
 
+The six MapCairn packages share one version. `@mapcairn/map`, `@mapcairn/adapter-maplibre` and `@mapcairn/sdk` depend on this package at that exact version, so keep every `@mapcairn/*` package you list at one version. If you list this one at another version, npm installs a second copy of it under the package that needs the exact one and prints no warning. Errors from one copy then fail an `instanceof` check against the other (`MapEngineError`, `LayerError`, `SearchError`), and the `Fake*` classes of the two copies do not mix. `npm ls @mapcairn/core` shows one version when all is well.
+
 ## Usage
 
 Write unit tests against fakes, with no adapters and no network:
