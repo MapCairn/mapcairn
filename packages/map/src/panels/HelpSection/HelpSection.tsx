@@ -1,6 +1,11 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
-import { DRAW_KEY_HELP, MAP_KEY_HELP, resolveText } from "@mapcairn/core";
+import {
+  DRAW_KEY_HELP,
+  type MapKeyOptions,
+  mapKeyHelp,
+  resolveText,
+} from "@mapcairn/core";
 import type { Ref } from "react";
 import { useMessages, usePreferences } from "../../services";
 import { Button } from "../../ui/Button";
@@ -13,7 +18,12 @@ import {
   Subheading,
 } from "../Section";
 import { link, prose, subsection } from "../Section/Section.css";
-import { action, keys, shortcut, shortcuts } from "./HelpSection.css";
+import {
+  action,
+  keys,
+  shortcut,
+  shortcuts as shortcutList,
+} from "./HelpSection.css";
 
 /** A link in the About block: where it goes and what it is called. */
 export interface HelpAboutLink {
@@ -45,6 +55,16 @@ export interface HelpAbout {
   readonly homeLink?: HelpAboutLink;
 }
 
+/**
+ * Which shortcut lines Help lists: `pin` (P), `identify` (I) and `drawing`
+ * (the Drawing group), each true by default. A map without that tool sets it
+ * false so Help lists only keys that work.
+ */
+export interface HelpShortcuts extends MapKeyOptions {
+  /** The Drawing group of the keyboard help. */
+  readonly drawing?: boolean;
+}
+
 /** Props for {@link HelpSection}. */
 export interface HelpSectionProps {
   /** The heading level. Defaults to 3, below the sheet's h2 title. */
@@ -64,6 +84,8 @@ export interface HelpSectionProps {
    * leaves out the Search topic and its coordinate formats.
    */
   readonly hasSearch?: boolean;
+  /** Which of the pin, identify and drawing shortcut lines to list. All by default. */
+  readonly shortcuts?: HelpShortcuts;
 }
 
 /**
@@ -81,6 +103,7 @@ export function HelpSection({
   onStartTour,
   about,
   hasSearch = true,
+  shortcuts = {},
 }: HelpSectionProps) {
   const { finePointer } = usePreferences();
   const messages = useMessages();
@@ -119,8 +142,8 @@ export function HelpSection({
           <Subheading level={subLevel}>
             {t("panels.help.keyboardHeading", {})}
           </Subheading>
-          <dl className={shortcuts}>
-            {MAP_KEY_HELP.map((entry) => (
+          <dl className={shortcutList}>
+            {mapKeyHelp(shortcuts).map((entry) => (
               <div key={entry.keys} className={shortcut}>
                 <dt className={keys}>{resolveText(messages, entry.keys)}</dt>
                 <dd className={action}>
@@ -131,12 +154,12 @@ export function HelpSection({
           </dl>
         </div>
       ) : null}
-      {finePointer ? (
+      {finePointer && shortcuts.drawing !== false ? (
         <div className={subsection} data-testid="help-drawing">
           <Subheading level={subLevel}>
             {t("panels.help.drawingHeading", {})}
           </Subheading>
-          <dl className={shortcuts}>
+          <dl className={shortcutList}>
             {DRAW_KEY_HELP.map((entry) => (
               <div key={entry.keys} className={shortcut}>
                 <dt className={keys}>{resolveText(messages, entry.keys)}</dt>

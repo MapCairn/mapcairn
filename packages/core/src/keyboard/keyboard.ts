@@ -118,14 +118,43 @@ export interface ShippedKeyHelpEntry extends MapKeyHelpEntry {
   readonly description: MessageKey;
 }
 
-/** The keyboard shortcuts of the map region, in display order, as message keys. */
-export const MAP_KEY_HELP: readonly ShippedKeyHelpEntry[] = [
-  { keys: "keyHelp.keys.arrowKeys", description: "keyHelp.map.pan" },
-  { keys: "keyHelp.keys.shiftUpDown", description: "keyHelp.map.panFurther" },
-  { keys: "keyHelp.keys.shiftLeftRight", description: "keyHelp.map.rotate" },
-  { keys: "keyHelp.keys.plusMinus", description: "keyHelp.map.zoom" },
-  { keys: "keyHelp.keys.homeOr0", description: "keyHelp.map.north" },
-  { keys: "keyHelp.keys.p", description: "keyHelp.map.pin" },
-  { keys: "keyHelp.keys.i", description: "keyHelp.map.identify" },
-  { keys: "keyHelp.keys.escape", description: "keyHelp.map.escape" },
-];
+/** Which of the optional map keys a host has wired. Each defaults to true. */
+export interface MapKeyOptions {
+  /** The P key, which drops a pin. Without a pin tool, set false. */
+  readonly pin?: boolean;
+  /** The I key, which lists the features at the centre. Without it, set false. */
+  readonly identify?: boolean;
+}
+
+const PIN_KEY_HELP: ShippedKeyHelpEntry = {
+  keys: "keyHelp.keys.p",
+  description: "keyHelp.map.pin",
+};
+
+const IDENTIFY_KEY_HELP: ShippedKeyHelpEntry = {
+  keys: "keyHelp.keys.i",
+  description: "keyHelp.map.identify",
+};
+
+/**
+ * The keyboard shortcuts of the map region, in display order, as message keys,
+ * leaving out the P and I lines for a host that has no pin or identify.
+ */
+export function mapKeyHelp({
+  pin = true,
+  identify = true,
+}: MapKeyOptions = {}): readonly ShippedKeyHelpEntry[] {
+  return [
+    { keys: "keyHelp.keys.arrowKeys", description: "keyHelp.map.pan" },
+    { keys: "keyHelp.keys.shiftUpDown", description: "keyHelp.map.panFurther" },
+    { keys: "keyHelp.keys.shiftLeftRight", description: "keyHelp.map.rotate" },
+    { keys: "keyHelp.keys.plusMinus", description: "keyHelp.map.zoom" },
+    { keys: "keyHelp.keys.homeOr0", description: "keyHelp.map.north" },
+    ...(pin ? [PIN_KEY_HELP] : []),
+    ...(identify ? [IDENTIFY_KEY_HELP] : []),
+    { keys: "keyHelp.keys.escape", description: "keyHelp.map.escape" },
+  ];
+}
+
+/** Every keyboard shortcut of the map region, in display order, as message keys. */
+export const MAP_KEY_HELP: readonly ShippedKeyHelpEntry[] = mapKeyHelp();

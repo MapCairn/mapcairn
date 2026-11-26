@@ -11,7 +11,7 @@ import {
 import { render, screen, within } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { ServicesProvider } from "../../services";
-import { type HelpAbout, HelpSection } from "./HelpSection";
+import { type HelpAbout, HelpSection, type HelpShortcuts } from "./HelpSection";
 
 const english = new FakeMessageCatalogue();
 const words = (text: string) => resolveText(english, text);
@@ -22,9 +22,16 @@ function renderHelp(
     headingLevel?: 3 | 4;
     onStartTour?: () => void;
     hasSearch?: boolean;
+    shortcuts?: HelpShortcuts;
   } = {},
 ) {
-  const { finePointer = true, headingLevel, onStartTour, hasSearch } = options;
+  const {
+    finePointer = true,
+    headingLevel,
+    onStartTour,
+    hasSearch,
+    shortcuts,
+  } = options;
   const services = createFakeServices({
     preferences: new FakeDevicePreferences({ finePointer }),
   });
@@ -34,11 +41,44 @@ function renderHelp(
         headingLevel={headingLevel}
         onStartTour={onStartTour}
         hasSearch={hasSearch}
+        shortcuts={shortcuts}
       />
     </ServicesProvider>,
   );
   return { ...view, services };
 }
+
+describe("HelpSection shortcuts", () => {
+  const terms = (testId: string) =>
+    within(screen.getByTestId(testId))
+      .getAllByRole("term")
+      .map((term) => term.textContent);
+
+  it("lists the pin and identify keys and the Drawing group by default", () => {
+    renderHelp();
+    expect(terms("help-keyboard")).toEqual(expect.arrayContaining(["P", "I"]));
+    expect(screen.getByTestId("help-drawing")).toBeInTheDocument();
+  });
+
+  it("leaves out the P key line when there is no pin", () => {
+    renderHelp({ shortcuts: { pin: false } });
+    expect(terms("help-keyboard")).not.toContain("P");
+    expect(terms("help-keyboard")).toContain("I");
+  });
+
+  it("leaves out the I key line when there is no identify", () => {
+    renderHelp({ shortcuts: { identify: false } });
+    expect(terms("help-keyboard")).not.toContain("I");
+    expect(terms("help-keyboard")).toContain("P");
+  });
+
+  it("leaves out the Drawing group when there is no drawing", () => {
+    renderHelp({ shortcuts: { drawing: false } });
+    expect(screen.queryByTestId("help-drawing")).toBeNull();
+    expect(screen.queryByRole("heading", { name: "Drawing" })).toBeNull();
+    expect(screen.getByTestId("help-keyboard")).toBeInTheDocument();
+  });
+});
 
 describe("HelpSection search topic", () => {
   it("describes Search, with its coordinate formats, by default", () => {
