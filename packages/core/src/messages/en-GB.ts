@@ -123,6 +123,7 @@ export const EN_GB_CATALOGUE: Record<MessageKey, string> = {
   "describe.tilesUnavailable": "Could not load. Check your connection.",
   "describe.tilesSlow":
     "Still waiting for imagery. The provider may be slow or not answering.",
+  "describe.tilesWrongFormat": "This layer's tiles are in another format.",
   // Announcements
   "announce.layerLoaded": "{name}: {count} shown on the map.",
   "announce.layerStatus": "{name}: {status}",

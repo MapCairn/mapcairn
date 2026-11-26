@@ -231,6 +231,9 @@ function toMapSource(
     tiles: tileUrl(definition, controls, now),
     minzoom: definition.source.minzoom ?? 0,
     maxzoom: definition.source.maxzoom,
+    ...(definition.source.encoding
+      ? { encoding: definition.source.encoding }
+      : {}),
   };
 }
 

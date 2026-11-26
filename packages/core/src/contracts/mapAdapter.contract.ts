@@ -66,6 +66,13 @@ export interface MapAdapterControls {
    */
   simulateTileLayerSlow(layerId: string): Promise<void>;
   /**
+   * Makes the engine settle with a tile of the vector layer `layerId` that it
+   * could not read in the encoding the source declares, and none loaded, as
+   * when the service answers in the other encoding. A layer that was never set
+   * has no tiles, so nothing happens.
+   */
+  simulateTileFormatFailure(layerId: string): void;
+  /**
    * Makes the engine load a tile of the tile layer `layerId`, as after a
    * transient failure has passed. A layer that was never set has no tiles, so
    * nothing happens.
@@ -1054,6 +1061,67 @@ export function runMapAdapterContract(
         adapter.removeLayer("districts");
         await controls.settle();
         expect(controls.drawnLayers()).toEqual([]);
+      });
+
+      it("draws a vector tile layer whose source declares its encoding, and one that declares none without it", async () => {
+        const { adapter, controls } = await mounted();
+        adapter.setVectorLayer("plain", VECTOR);
+        adapter.setVectorLayer("tiles-mlt", {
+          ...VECTOR,
+          source: { ...VECTOR_SOURCE, encoding: "mlt" },
+        });
+        await controls.settle();
+        const drawn = controls.drawnLayers();
+        expect(drawn.find((layer) => layer.id === "plain")).not.toHaveProperty(
+          "encoding",
+        );
+        expect(drawn.find((layer) => layer.id === "tiles-mlt")).toMatchObject({
+          kind: "vector",
+          encoding: "mlt",
+        });
+      });
+
+      it("reports a vector layer whose tiles could not be read, naming it and its tiles, once, and raises no general tile error", async () => {
+        const { adapter, controls } = await mounted();
+        const reports: MapEvents["tileLayerWrongFormat"][] = [];
+        let tileErrors = 0;
+        adapter.on("tileLayerWrongFormat", (report) => reports.push(report));
+        adapter.on("tileError", () => {
+          tileErrors += 1;
+        });
+        adapter.setVectorLayer("districts", VECTOR);
+        await controls.settle();
+        controls.simulateTileFormatFailure("districts");
+        controls.simulateTileFormatFailure("districts");
+        await controls.settle();
+        expect(reports).toEqual([
+          { layerId: "districts", tiles: VECTOR.source.tiles },
+        ]);
+        expect(tileErrors).toBe(0);
+      });
+
+      it("reports a vector layer again when it is drawn again, and reports nothing for one that was removed or never set", async () => {
+        const { adapter, controls } = await mounted();
+        const reports: MapEvents["tileLayerWrongFormat"][] = [];
+        adapter.on("tileLayerWrongFormat", (report) => reports.push(report));
+        adapter.setVectorLayer("districts", VECTOR);
+        await controls.settle();
+        controls.simulateTileFormatFailure("districts");
+        await controls.settle();
+        adapter.setVectorLayer("districts", {
+          ...VECTOR,
+          source: { ...VECTOR_SOURCE, encoding: "mlt" },
+        });
+        await controls.settle();
+        controls.simulateTileFormatFailure("districts");
+        await controls.settle();
+        expect(reports).toHaveLength(2);
+        adapter.removeLayer("districts");
+        await controls.settle();
+        controls.simulateTileFormatFailure("districts");
+        controls.simulateTileFormatFailure("never-set");
+        await controls.settle();
+        expect(reports).toHaveLength(2);
       });
 
       it("draws a heatmap from points or from vector tiles", async () => {

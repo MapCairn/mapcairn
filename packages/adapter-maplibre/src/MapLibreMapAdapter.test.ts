@@ -2948,6 +2948,32 @@ describe("MapLibreMapAdapter data layers", () => {
       });
     });
 
+    it("gives the engine the tiles' encoding when the source declares one", async () => {
+      const { adapter, map } = await ready();
+      adapter.setVectorLayer("districts", {
+        ...VECTOR,
+        source: { ...TILE_SOURCE, encoding: "mlt" },
+      });
+      expect(map.sources.get("mapcairn:districts")).toMatchObject({
+        type: "vector",
+        encoding: "mlt",
+      });
+    });
+
+    it("gives a heatmap's vector source the encoding too", async () => {
+      const { adapter, map } = await ready();
+      adapter.setHeatmapLayer("events", {
+        ...HEAT_VECTOR,
+        source: {
+          ...HEAT_VECTOR.source,
+          source: { ...TILE_SOURCE, encoding: "mlt" },
+        },
+      } as MapHeatmap);
+      expect(map.sources.get("mapcairn:events")).toMatchObject({
+        encoding: "mlt",
+      });
+    });
+
     it("converts the layer windows to engine zoom, using the narrower of each", async () => {
       const { adapter, map } = await ready(STREETS);
       adapter.setVectorLayer("districts", VECTOR);
@@ -4029,6 +4055,28 @@ describe("MapLibreMapAdapter data layers", () => {
           "mapcairn:rain",
           "mapcairn:quakes",
         ]);
+      });
+
+      it("keeps the encoding of a vector layer's source and of the basemap's own sources in the render map", async () => {
+        const { adapter, map } = await readyForRender();
+        map.styleSources.set("basemap-tiles", {
+          type: "vector",
+          url: "https://tiles.test/planet.json",
+          encoding: "mlt",
+        });
+        adapter.setVectorLayer("districts", {
+          ...VECTOR,
+          source: { ...TILE_SOURCE, encoding: "mlt" },
+        });
+        await adapter.toImage({ pixelRatio: 2 });
+        const { sources } = renderMap().options.style as ReturnType<
+          FakeMapLibreMap["getStyle"]
+        >;
+        expect(sources["basemap-tiles"]).toMatchObject({ encoding: "mlt" });
+        expect(sources["mapcairn:districts"]).toMatchObject({
+          type: "vector",
+          encoding: "mlt",
+        });
       });
 
       it("gives the render map the images the data layers use, and not the basemap's own", async () => {

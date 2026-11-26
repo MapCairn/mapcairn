@@ -42,6 +42,7 @@ A `vector-tiles` source names a `{z}`, `{x}`, `{y}` template, the zoom window of
 
 - The work moves to the build: a generator turns your data into a tileset at each level, and it has to run again when the data changes. Low zoom tiles hold a lot of geometry, so keep them coarse.
 - Serve the tiles from a cache with a version in the path or the query, and regenerate the whole tileset rather than patching single tiles.
+- The tiles may be Mapbox Vector Tiles (`mvt`, the default) or MapLibre Tiles (`mlt`); the definition's `source.encoding` says which, and the server must answer every tile in that one encoding. A server that picks an encoding from the `Accept` header is safe; a static host or an archive serves one, so set `encoding` to match it. A layer whose tiles cannot be read in the declared encoding says "This layer's tiles are in another format." MapLibre Tile files are smaller after compression on dense tiles, but the browser decodes them more slowly than Mapbox Vector Tiles today, so choose it for the bandwidth, not for speed.
 - Features stay in the tiles, so the layer has a key but no cards or list. Rule colours read tile properties by name, so name them in the tileset as the definition expects. A label template may name only one property, such as `{name}`.
 
 ## GeoJSON by bounding box for features

@@ -12,6 +12,11 @@ const WORKER_ERROR = new Error(
   "Worker failed to load. Check that the worker URL is correct.",
 );
 const TILE_LAYER_SOURCE = `${ENGINE_ID_PREFIX}rain`;
+const VECTOR_LAYER_SOURCE = `${ENGINE_ID_PREFIX}roads`;
+const VECTOR_TILES = "https://v.test/{z}/{x}/{y}.pbf";
+const UNREADABLE = new Error(
+  "Unable to parse the tile at https://v.test/3/4/5.pbf, got error: Unimplemented type: 7",
+);
 
 /** An engine `error` event with the extra fields MapLibre adds to a tile's. */
 function engineError(fields: Record<string, unknown>): { error?: unknown } {
@@ -33,6 +38,7 @@ function setUp(pending?: PendingLoad) {
     slow: vi.fn(),
     recovered: vi.fn(),
     unavailable: vi.fn(),
+    wrongFormat: vi.fn(),
   };
   const host = { pendingLoad: () => pending, failPending: vi.fn() };
   const detection = new FailureDetection(reports, host, {
@@ -44,6 +50,7 @@ function setUp(pending?: PendingLoad) {
     "https://t/{z}",
     "none",
   );
+  detection.vectorSources.register(VECTOR_LAYER_SOURCE, "roads", VECTOR_TILES);
   const idle: { run?: () => void } = {};
   const map = {
     loaded: () => false,
@@ -61,6 +68,67 @@ describe("FailureDetection.handleError", () => {
   });
   afterEach(() => {
     vi.useRealTimers();
+  });
+
+  it("reports a vector layer whose tiles cannot be read once the map settles, with no tileError", () => {
+    const { detection, reports, map } = setUp();
+    detection.handleError(
+      engineError({
+        error: UNREADABLE,
+        tile: {},
+        sourceId: VECTOR_LAYER_SOURCE,
+      }),
+      map,
+    );
+    expect(reports.tileError).not.toHaveBeenCalled();
+    expect(reports.wrongFormat).not.toHaveBeenCalled();
+    detection.settled();
+    expect(reports.wrongFormat).toHaveBeenCalledExactlyOnceWith({
+      layerId: "roads",
+      tiles: VECTOR_TILES,
+    });
+    expect(reports.basemapUnavailable).not.toHaveBeenCalled();
+  });
+
+  it("does not report a vector layer that has loaded a tile", () => {
+    const { detection, reports, map } = setUp();
+    detection.tileLoaded({ tile: {}, sourceId: VECTOR_LAYER_SOURCE });
+    detection.handleError(
+      engineError({
+        error: UNREADABLE,
+        tile: {},
+        sourceId: VECTOR_LAYER_SOURCE,
+      }),
+      map,
+    );
+    detection.settled();
+    expect(reports.wrongFormat).not.toHaveBeenCalled();
+  });
+
+  it("leaves any other failure of a vector layer's tiles a tileError", () => {
+    const { detection, reports, map } = setUp();
+    detection.handleError(
+      engineError({
+        error: new Error("Failed to fetch"),
+        tile: {},
+        sourceId: VECTOR_LAYER_SOURCE,
+      }),
+      map,
+    );
+    detection.settled();
+    expect(reports.tileError).toHaveBeenCalledOnce();
+    expect(reports.wrongFormat).not.toHaveBeenCalled();
+  });
+
+  it("leaves an unreadable tile of the basemap a tileError", () => {
+    const { detection, reports, map } = setUp();
+    detection.handleError(
+      engineError({ error: UNREADABLE, tile: {}, sourceId: "planet" }),
+      map,
+    );
+    expect(reports.tileError).toHaveBeenCalledOnce();
+    detection.settled();
+    expect(reports.wrongFormat).not.toHaveBeenCalled();
   });
 
   it("makes a tile or source failure a tileError and counts it against the basemap", () => {

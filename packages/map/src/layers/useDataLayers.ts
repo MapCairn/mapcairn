@@ -11,6 +11,7 @@ import {
   announceTilesRecovered,
   announceTilesSlow,
   announceTilesUnavailable,
+  announceTilesWrongFormat,
   type Bounds,
   type CatalogueState,
   type ControlValues,
@@ -20,6 +21,7 @@ import {
   isFeedLayer,
   isQueryLayer,
   isRasterTileLayer,
+  isVectorTileLayer,
   type LayerAttribution,
   type LayerDefinition,
   type LayerFeature,
@@ -241,6 +243,16 @@ export interface DataLayers {
    */
   reportTilesUnavailable(id: string, tiles: string): void;
   /**
+   * Records that the engine could not read the tiles of a vector tile layer in
+   * the encoding its source declares, which `MapDataLayers` calls from the
+   * adapter's report. `tiles` is the template those tiles came from: a report
+   * for anything but the layer's current tiles, for a layer that is off or for
+   * a layer that is not a vector tile layer is ignored. The layer then says its
+   * tiles are in another format and announces it once, until its tiles change
+   * or it is turned off.
+   */
+  reportTilesWrongFormat(id: string, tiles: string): void;
+  /**
    * Records that a tile loaded for the `tiles` a layer had reported slow or
    * with no tiles, which `MapDataLayers` calls from the adapter's report. The
    * layer's status goes and the layer says so once, politely. A recovery for
@@ -362,6 +374,8 @@ interface State {
   readonly tilesUnavailable: Readonly<Record<string, string>>;
   /** The tiles each tile layer is still waiting for its first of, by layer id (see `reportTilesSlow`). */
   readonly tilesSlow: Readonly<Record<string, string>>;
+  /** The tiles each vector tile layer was found to have in another format, by layer id (see `reportTilesWrongFormat`). */
+  readonly tilesWrongFormat: Readonly<Record<string, string>>;
   /**
    * What each tile layer found at the last tap that answered for it. It sits
    * apart from `results`, which feeds the list and the drawing, because these
@@ -462,6 +476,7 @@ function initialState(
       retries: {},
       tilesUnavailable: {},
       tilesSlow: {},
+      tilesWrongFormat: {},
       identified: {},
       identifying: false,
       selection: null,
@@ -515,6 +530,7 @@ function withoutTraces(state: State, ids: ReadonlySet<string>): State {
     identified: without(state.identified, ids),
     tilesUnavailable: without(state.tilesUnavailable, ids),
     tilesSlow: without(state.tilesSlow, ids),
+    tilesWrongFormat: without(state.tilesWrongFormat, ids),
   };
 }
 
@@ -679,22 +695,25 @@ function withLoading(state: State, load: WantedLoad): State {
   };
 }
 
-/** The tiles a raster tile layer asks for with these controls, or null for any other layer. */
+/** The tiles a raster or vector tile layer asks for with these controls, or null for any other layer. */
 function tilesOf(
   definition: LayerDefinition,
   controls: ControlValues,
   now: number,
 ): string | null {
-  return isRasterTileLayer(definition)
+  return isRasterTileLayer(definition) || isVectorTileLayer(definition)
     ? tileUrl(definition, controls, now)
     : null;
 }
 
-/** The status of a tile layer that is on: unavailable outranks slow, which outranks nothing reported. */
+/** The status of a tile layer that is on: a wrong format outranks unavailable, which outranks slow, which outranks nothing reported. */
 function tileStatusKind(
   state: State,
   id: string,
-): "on" | "tiles-slow" | "tiles-unavailable" {
+): "on" | "tiles-slow" | "tiles-unavailable" | "tiles-format" {
+  if (state.tilesWrongFormat[id] !== undefined) {
+    return "tiles-format";
+  }
   if (state.tilesUnavailable[id] !== undefined) {
     return "tiles-unavailable";
   }
@@ -1134,6 +1153,11 @@ export function useDataLayers(options: UseDataLayersOptions = {}): DataLayers {
               tiles,
             ),
             tilesSlow: reportedTilesFor(previous.tilesSlow, id, tiles),
+            tilesWrongFormat: reportedTilesFor(
+              previous.tilesWrongFormat,
+              id,
+              tiles,
+            ),
           },
           id,
           tiles,
@@ -1197,6 +1221,32 @@ export function useDataLayers(options: UseDataLayersOptions = {}): DataLayers {
         ),
         { priority: "polite" },
       );
+    },
+    [announce, byId, now],
+  );
+
+  const reportTilesWrongFormat = useCallback(
+    (id: string, tiles: string) => {
+      const definition = byId.get(id);
+      const current = stateRef.current;
+      if (
+        !definition ||
+        !isVectorTileLayer(definition) ||
+        !current.enabled.includes(id) ||
+        current.tilesWrongFormat[id] === tiles
+      ) {
+        return;
+      }
+      if (tilesOf(definition, current.controls[id] ?? {}, now()) !== tiles) {
+        return;
+      }
+      setState((previous) => ({
+        ...previous,
+        tilesWrongFormat: { ...previous.tilesWrongFormat, [id]: tiles },
+      }));
+      announce(announceTilesWrongFormat(textOrMessage(definition.name)), {
+        priority: "polite",
+      });
     },
     [announce, byId, now],
   );
@@ -1617,6 +1667,7 @@ export function useDataLayers(options: UseDataLayersOptions = {}): DataLayers {
     retry,
     reportTilesSlow,
     reportTilesUnavailable,
+    reportTilesWrongFormat,
     reportTilesRecovered,
     select,
     choose,

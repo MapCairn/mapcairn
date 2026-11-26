@@ -108,6 +108,7 @@ const EXPECTED_PLACEHOLDERS: Record<MessageKey, readonly string[]> = {
   "describe.tilesNoImagery": ["when"],
   "describe.tilesUnavailable": [],
   "describe.tilesSlow": [],
+  "describe.tilesWrongFormat": [],
   // Announcements
   "announce.layerLoaded": ["name", "count"],
   "announce.layerStatus": ["name", "status"],

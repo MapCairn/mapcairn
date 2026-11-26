@@ -172,6 +172,8 @@ export class MapLibreMapAdapter implements MapAdapter {
         recovered: (report) => this.emitter.emit("tileLayerRecovered", report),
         unavailable: (report) =>
           this.emitter.emit("tileLayerUnavailable", report),
+        wrongFormat: (report) =>
+          this.emitter.emit("tileLayerWrongFormat", report),
       },
       {
         pendingLoad: () => this.pending,
@@ -185,6 +187,7 @@ export class MapLibreMapAdapter implements MapAdapter {
         this.styleVersion += 1;
       },
       tileSources: this.failure.tileSources,
+      vectorSources: this.failure.vectorSources,
       tileRequests: this.layerTileRequests,
     });
     this.renderMaps = new RenderMapOpener(

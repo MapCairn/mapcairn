@@ -11,6 +11,7 @@ import {
 } from "./engineErrors";
 import type { PendingLoad } from "./pendingLoad";
 import { RepaintUntilIdle } from "./repaintUntilIdle";
+import { type TileFormatReports, TileFormatWatch } from "./tileFormatWatch";
 import { type TileLayerReports, TileLayerTraffic } from "./tileLayerTraffic";
 import {
   WORKER_FAILURE_GRACE_MS,
@@ -18,7 +19,7 @@ import {
 } from "./workerFailureCheck";
 
 /** What failure detection tells the adapter's owner; each maps to a `MapEvents` event. */
-export interface FailureReports extends TileLayerReports {
+export interface FailureReports extends TileLayerReports, TileFormatReports {
   /** A tile or source failed, or something other than the style did; the map keeps working. */
   tileError(): void;
   basemapUnavailable(basemap: BasemapDefinition): void;
@@ -45,8 +46,10 @@ export interface FailureDetectionOptions {
  * Classifies the engine's `error` events and judges the map by its tiles.
  *
  * Engine `error` events are classified once:
- * - a tile or source failure leaves the map working (`tileError`), except one
- *   of a raster tile data layer, which that layer reports itself as
+ * - a tile or source failure leaves the map working (`tileError`), except a
+ *   tile of a vector tile data layer that could not be read, which that layer
+ *   reports itself as `tileLayerWrongFormat` when the map settles (see
+ *   {@link TileFormatWatch}), and one of a raster tile data layer, which that layer reports itself as
  *   `tileLayerUnavailable` when the map settles, or as `tileLayerSlow` when it
  *   has waited with nothing loaded (see {@link TileLayerTraffic});
  * - a source-less error before the pending style document has loaded
@@ -69,6 +72,7 @@ export interface FailureDetectionOptions {
 export class FailureDetection {
   private readonly basemapTiles = new BasemapTiles();
   private readonly traffic: TileLayerTraffic;
+  private readonly formats: TileFormatWatch;
   private readonly repaint = new RepaintUntilIdle();
   private readonly workerCheck: WorkerFailureCheck;
 
@@ -78,6 +82,7 @@ export class FailureDetection {
     options: FailureDetectionOptions = {},
   ) {
     this.traffic = new TileLayerTraffic(reports, options.tileLayerSlowMs);
+    this.formats = new TileFormatWatch(reports);
     this.workerCheck = new WorkerFailureCheck(
       options.workerFailureGraceMs ?? WORKER_FAILURE_GRACE_MS,
       (engineStopped) => {
@@ -100,6 +105,11 @@ export class FailureDetection {
     return this.traffic;
   }
 
+  /** The hook the data layer store reports its vector tile layers to. */
+  get vectorSources(): TileFormatWatch {
+    return this.formats;
+  }
+
   /** A basemap swap was asked for: tiles from here on belong to no basemap until its style has loaded. */
   basemapSwapRequested(): void {
     this.basemapTiles.clear();
@@ -118,6 +128,7 @@ export class FailureDetection {
     }
     this.basemapTiles.recordLoaded(sourceId);
     this.traffic.recordLoaded(sourceId);
+    this.formats.recordLoaded(sourceId);
   }
 
   /** A `sourcedataloading` event: counts the tile if it is a tile layer's, and paints until the map settles. */
@@ -152,12 +163,17 @@ export class FailureDetection {
       this.reports.basemapUnavailable(basemap);
     }
     this.traffic.reportUnavailable();
+    this.formats.reportSettled();
   }
 
   /** Classifies an engine `error` event (see the class). The caller logs it first. */
   handleError(event: object & { error?: unknown }, map: MapLibreMap): void {
     if (isTileOrSourceError(event)) {
       const { sourceId } = event as { sourceId?: unknown };
+      // A vector layer is judged on its own, when the map settles.
+      if (this.formats.recordFailed(sourceId, event.error)) {
+        return;
+      }
       this.basemapTiles.recordFailed(sourceId);
       // A tile layer is judged on its own, when the map settles.
       if (!this.traffic.has(sourceId)) {

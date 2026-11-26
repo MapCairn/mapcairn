@@ -15,6 +15,7 @@ import {
   sampleArea,
   sampleLine,
   samplePoint,
+  type VectorTileLayerDefinition,
 } from "@mapcairn/core";
 import { tokenValues } from "@mapcairn/theme";
 import { describe, expect, it } from "vitest";
@@ -323,6 +324,7 @@ describe("toMapVector", () => {
     });
     expect(vector.minzoom).toBe(2);
     expect(vector.maxzoom).toBe(18);
+    expect(vector.source).not.toHaveProperty("encoding");
     expect(vector.layers.map((layer) => layer.sourceLayer)).toEqual([
       "areas",
       "roads",
@@ -372,6 +374,27 @@ describe("toMapHeatmap", () => {
     expect(
       heatmap.source.kind === "points" && heatmap.source.points,
     ).toHaveLength(1);
+  });
+});
+
+describe("a vector source that declares its encoding", () => {
+  const mlt: VectorTileLayerDefinition = {
+    ...SAMPLE_VECTOR_LAYER,
+    source: { ...SAMPLE_VECTOR_LAYER.source, encoding: "mlt" },
+  };
+
+  it("hands the encoding to the engine's source", () => {
+    expect(toMapVector(mlt, {}, 0).source.encoding).toBe("mlt");
+  });
+
+  it("hands it to a heatmap drawn from the same tiles", () => {
+    const sources = toVectorHeatmaps(mlt, {}, 0).map(
+      (heatmap) => heatmap.source,
+    );
+    expect(sources.length).toBeGreaterThan(0);
+    for (const source of sources) {
+      expect(source.kind === "vector" && source.source.encoding).toBe("mlt");
+    }
   });
 });
 
