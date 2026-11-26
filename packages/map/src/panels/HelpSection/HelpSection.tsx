@@ -59,10 +59,15 @@ export interface HelpSectionProps {
    * host supplies; any other address leaves the link out.
    */
   readonly about?: HelpAbout;
+  /**
+   * Whether the map has a search box. Defaults to true. Without one, Help
+   * leaves out the Search topic and its coordinate formats.
+   */
+  readonly hasSearch?: boolean;
 }
 
 /**
- * Help: what the search box accepts, the keyboard shortcuts, a statement
+ * Help: what the search box accepts (when the map has one), the keyboard shortcuts, a statement
  * of the accessibility target and, when the host supplies one, its About block.
  * @remarks The Keyboard group is shown only when the primary pointer is fine
  *   (a mouse or trackpad), the signal this app uses for "has a keyboard". On a
@@ -75,6 +80,7 @@ export function HelpSection({
   headingRef,
   onStartTour,
   about,
+  hasSearch = true,
 }: HelpSectionProps) {
   const { finePointer } = usePreferences();
   const messages = useMessages();
@@ -100,12 +106,14 @@ export function HelpSection({
           </div>
         </div>
       ) : null}
-      <div className={subsection} data-testid="help-search">
-        <Subheading level={subLevel}>
-          {t("panels.help.searchHeading", {})}
-        </Subheading>
-        <p className={prose}>{t("panels.help.searchDescription", {})}</p>
-      </div>
+      {hasSearch ? (
+        <div className={subsection} data-testid="help-search">
+          <Subheading level={subLevel}>
+            {t("panels.help.searchHeading", {})}
+          </Subheading>
+          <p className={prose}>{t("panels.help.searchDescription", {})}</p>
+        </div>
+      ) : null}
       {finePointer ? (
         <div className={subsection} data-testid="help-keyboard">
           <Subheading level={subLevel}>

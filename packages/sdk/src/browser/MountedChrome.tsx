@@ -212,6 +212,9 @@ function ChromeSlots({
                 onDropPin={() => setPin(map.view.center)}
                 layers={hasLayers ? layers : undefined}
                 intro=""
+                privacyHref=""
+                privacyNote={null}
+                hasSearch={tools.has("search")}
               />
             ) : null}
           </Sheet>

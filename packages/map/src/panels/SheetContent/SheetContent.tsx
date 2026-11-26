@@ -54,7 +54,7 @@ export interface SheetContentProps {
   readonly intro?: string;
   /** The credits drawn into a saved map image (see `creditsLine`). */
   readonly imageCredits?: string;
-  /** Where the privacy policy is. Defaults to `/privacy`. */
+  /** Where the privacy policy is. Defaults to `/privacy`; an empty string draws no link. */
   readonly privacyHref?: string;
   /** The host's privacy statement for Settings, shown in place of the default. */
   readonly privacyNote?: ReactNode;
@@ -65,6 +65,8 @@ export interface SheetContentProps {
    * address must be a trusted http or https one that the host supplies.
    */
   readonly about?: HelpAbout;
+  /** Whether the map has a search box. Defaults to true; without one Help leaves out Search. */
+  readonly hasSearch?: boolean;
 }
 
 /**
@@ -90,6 +92,7 @@ export function SheetContent({
   privacyNote,
   onStartTour,
   about,
+  hasSearch,
 }: SheetContentProps) {
   const { reducedMotion } = usePreferences();
   const { t } = useMessages();
@@ -129,6 +132,7 @@ export function SheetContent({
           headingRef={headingRef("help")}
           onStartTour={onStartTour}
           about={about}
+          hasSearch={hasSearch}
         />
       </div>
     );
