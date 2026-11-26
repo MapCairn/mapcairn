@@ -21,6 +21,7 @@ import { buildServices } from "./services";
 import type { MapEvents, MapHandle, MountMapOptions } from "./types";
 import {
   assertBasemap,
+  assertPartialView,
   assertTheme,
   sameOriginWorkerUrl,
   validateOptions,
@@ -162,6 +163,7 @@ export function mount(
       if (destroyed) {
         return;
       }
+      assertPartialView(view, "view");
       const move = () => tap.mountedAdapter()?.setView(view, moveOptions);
       if (tap.mountedAdapter() === undefined) {
         void tap.ready.then(move, () => {});

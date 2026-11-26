@@ -803,3 +803,41 @@ describe("the theme", () => {
     expect(first.getAttribute("data-theme")).toBe("dark");
   });
 });
+
+describe("setView with a view that is not one", () => {
+  it.each([
+    [{ zoom: Number.NaN }, /view\.zoom/],
+    [{ zoom: "far" }, /view\.zoom/],
+    [{ bearing: 360 }, /view\.bearing/],
+    [{ center: { lat: 95, lng: 0 } }, /view\.center\.lat/],
+    [{ center: { lat: 0 } }, /view\.center\.lng/],
+    [{ center: null }, /view\.center\.lat/],
+    [null, /view must be an object/],
+  ])(
+    "%j is refused at once, before the map is drawing and after",
+    async (view, message) => {
+      const tools = harness();
+      const handle = mountOn(container(), tools);
+      expect(() => handle.setView(view as never)).toThrow(message);
+      await drawn(handle);
+      expect(() => handle.setView(view as never)).toThrow(message);
+      expect(handle.getView().zoom).toBeLessThan(4);
+    },
+  );
+
+  it("accepts any one field, and none", async () => {
+    const handle = mountOn(container(), harness());
+    await drawn(handle);
+    handle.setView({});
+    handle.setView({ bearing: 0 });
+    handle.setView({ center: { lat: 1, lng: 2 }, zoom: 4 });
+    expect(handle.getView().zoom).toBe(4);
+  });
+
+  it("does nothing, and does not throw, after destroy", async () => {
+    const handle = mountOn(container(), harness());
+    await drawn(handle);
+    handle.destroy();
+    expect(() => handle.setView({ zoom: Number.NaN })).not.toThrow();
+  });
+});

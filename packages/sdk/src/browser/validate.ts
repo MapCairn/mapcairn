@@ -39,32 +39,64 @@ function isFiniteNumber(value: unknown): value is number {
   return typeof value === "number" && Number.isFinite(value);
 }
 
+/** Throws a `MountMapError` naming what is wrong with a centre. */
+function assertCenter(center: unknown, name: string): void {
+  const candidate = center as Partial<ViewState["center"]> | null | undefined;
+  if (
+    !candidate ||
+    !isFiniteNumber(candidate.lat) ||
+    Math.abs(candidate.lat) > MAX_LATITUDE
+  ) {
+    invalid(`${name}.center.lat must be a number from -90 to 90.`);
+  }
+  if (
+    !isFiniteNumber(candidate.lng) ||
+    Math.abs(candidate.lng) > MAX_LONGITUDE
+  ) {
+    invalid(`${name}.center.lng must be a number from -360 to 360.`);
+  }
+}
+
+function assertZoom(zoom: unknown, name: string): void {
+  if (!isFiniteNumber(zoom)) {
+    invalid(`${name}.zoom must be a number.`);
+  }
+}
+
+function assertBearing(bearing: unknown, name: string): void {
+  if (!isFiniteNumber(bearing) || bearing < 0 || bearing >= FULL_TURN) {
+    invalid(`${name}.bearing must be a number from 0 to under 360.`);
+  }
+}
+
 /** Throws a `MountMapError` naming the first thing wrong with a view. */
 export function assertView(
   view: unknown,
   name: string,
 ): asserts view is ViewState {
   const candidate = view as Partial<ViewState> | null | undefined;
-  const { center } = candidate ?? {};
-  if (
-    !center ||
-    !isFiniteNumber(center.lat) ||
-    Math.abs(center.lat) > MAX_LATITUDE
-  ) {
-    invalid(`${name}.center.lat must be a number from -90 to 90.`);
+  assertCenter(candidate?.center, name);
+  assertZoom(candidate?.zoom, name);
+  assertBearing(candidate?.bearing, name);
+}
+
+/**
+ * Throws a `MountMapError` naming the first thing wrong with the fields a
+ * partial view holds. A field that is left out is not checked.
+ */
+export function assertPartialView(view: unknown, name: string): void {
+  if (typeof view !== "object" || view === null) {
+    invalid(`${name} must be an object such as { zoom: 5 }.`);
   }
-  if (!isFiniteNumber(center.lng) || Math.abs(center.lng) > MAX_LONGITUDE) {
-    invalid(`${name}.center.lng must be a number from -360 to 360.`);
+  const candidate = view as Partial<ViewState>;
+  if ("center" in candidate) {
+    assertCenter(candidate.center, name);
   }
-  if (!isFiniteNumber(candidate?.zoom)) {
-    invalid(`${name}.zoom must be a number.`);
+  if ("zoom" in candidate) {
+    assertZoom(candidate.zoom, name);
   }
-  if (
-    !isFiniteNumber(candidate?.bearing) ||
-    candidate.bearing < 0 ||
-    candidate.bearing >= FULL_TURN
-  ) {
-    invalid(`${name}.bearing must be a number from 0 to under 360.`);
+  if ("bearing" in candidate) {
+    assertBearing(candidate.bearing, name);
   }
 }
 

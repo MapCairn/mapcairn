@@ -63,7 +63,11 @@ export interface MapEvents {
   readonly viewchange: ViewState;
   /** The map was clicked or tapped at this position. */
   readonly click: LatLng;
-  /** The engine failed, or a call could not be honoured. */
+  /**
+   * The engine failed. Today only a `MapEngineError` is emitted; a
+   * `MountMapError` joins it when a later release reports a layer or a tool that
+   * cannot work after the map is drawing.
+   */
   readonly error: MapEngineError | MountMapError;
 }
 
