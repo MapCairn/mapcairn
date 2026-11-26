@@ -69,12 +69,12 @@ export interface SettingsSectionProps {
   /** The heading level. Defaults to 3, below the sheet's h2 title. */
   readonly headingLevel?: HeadingLevel;
   /**
-   * Where the privacy policy is. Defaults to `/privacy`. `null` draws no link,
-   * for a host that has no such page. With no link and no statement
+   * Where the privacy policy is. Defaults to `/privacy`. An empty string draws
+   * no link, for a host that has no such page. With no link and no statement
    * (`privacyNote` of `null` or an empty string) the Privacy subsection is
    * left out.
    */
-  readonly privacyHref?: string | null;
+  readonly privacyHref?: string;
   /**
    * The host's privacy statement, shown under the Privacy heading. Defaults to
    * the catalogue's `settings.privacy.default`, which names no provider because

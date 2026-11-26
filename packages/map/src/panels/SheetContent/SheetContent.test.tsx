@@ -244,7 +244,7 @@ describe("SheetContent pin, settings and help", () => {
 
   it("passes a hidden privacy link to Settings", () => {
     renderContent({
-      props: { section: "settings", privacyHref: null, privacyNote: null },
+      props: { section: "settings", privacyHref: "", privacyNote: null },
     });
     expect(
       screen.queryByRole("link", { name: "Read the privacy policy" }),

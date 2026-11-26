@@ -54,8 +54,8 @@ export interface SheetContentProps {
   readonly intro?: string;
   /** The credits drawn into a saved map image (see `creditsLine`). */
   readonly imageCredits?: string;
-  /** Where the privacy policy is. Defaults to `/privacy`; `null` draws no link. */
-  readonly privacyHref?: string | null;
+  /** Where the privacy policy is. Defaults to `/privacy`; an empty string draws no link. */
+  readonly privacyHref?: string;
   /** The host's privacy statement for Settings, shown in place of the default. */
   readonly privacyNote?: ReactNode;
   /** Starts the first-visit tour from Help. Without it Help offers no tour. */

@@ -1221,7 +1221,7 @@ export function SettingsSection(input: SettingsSectionProps): JSX.Element;
 export interface SettingsSectionProps {
     readonly headingLevel?: HeadingLevel;
     readonly headingRef?: Ref<HTMLHeadingElement>;
-    readonly privacyHref?: string | null;
+    readonly privacyHref?: string;
     readonly privacyNote?: ReactNode;
 }
 
@@ -1256,7 +1256,7 @@ export interface SheetContentProps {
     readonly onShowOnMap?: () => void;
     readonly onStartTour?: () => void;
     readonly pinCard?: ReactNode;
-    readonly privacyHref?: string | null;
+    readonly privacyHref?: string;
     readonly privacyNote?: ReactNode;
     readonly section?: SheetSection;
     readonly showTurnOffAll?: boolean;
