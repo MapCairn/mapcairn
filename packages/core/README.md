@@ -25,6 +25,8 @@ The package is ESM only: it has no `main` field and no CommonJS build. A TypeScr
 
 The declarations name the platform types `Blob` and `AbortSignal` (a cancellable port call takes a `signal`, and `MapAdapter.toImage()` returns a `Blob`) and do not declare them. A project gets them from the `"dom"` entry of `lib` in its `tsconfig.json`, or from `@types/node`. A project that sets `types: []` and has neither fails to compile with `Cannot find name 'Blob'` and `Cannot find name 'AbortSignal'`, an error that points into `node_modules/@mapcairn/core` and does not name the cause.
 
+The six MapCairn packages share one version. `@mapcairn/map`, `@mapcairn/adapter-maplibre` and `@mapcairn/sdk` depend on this package at that exact version, so keep every `@mapcairn/*` package you list at one version. If you list this one at another version, npm installs a second copy of it under the package that needs the exact one and prints no warning. Errors from one copy then fail an `instanceof` check against the other (`MapEngineError`, `LayerError`, `SearchError`), and the `Fake*` classes of the two copies do not mix. `npm ls @mapcairn/core` shows one version when all is well.
+
 ## Usage
 
 Write unit tests against fakes, with no adapters and no network:
