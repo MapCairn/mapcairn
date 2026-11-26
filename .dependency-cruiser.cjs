@@ -169,6 +169,20 @@ module.exports = {
       },
     },
     {
+      name: "umbrella-browser-uses-react-only",
+      severity: "error",
+      comment:
+        "The umbrella's browser folder is built as a self-contained bundle, so a package it imports is in every page's bundle. Beside the SDK packages it may import React and React DOM and nothing else from npm; a test file may import its test tools.",
+      from: {
+        path: "^packages/sdk/src/browser/",
+        pathNot: "\\.test\\.tsx?$",
+      },
+      to: {
+        path: "(^|/)node_modules/",
+        pathNot: "(^|/)node_modules/(react|react-dom)/",
+      },
+    },
+    {
       name: "umbrella-browser-is-imported-by-itself-only",
       severity: "error",
       comment:
