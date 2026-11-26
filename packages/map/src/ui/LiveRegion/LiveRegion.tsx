@@ -53,11 +53,11 @@ export interface LiveRegionProviderProps {
  * region and a visually hidden assertive `alert` region. Nothing else in the
  * app may create a live region except `StatusMessage`, which is a visible
  * message.
- * @remarks Mount one near the root of each React tree. Trees that are not
- *   nested, such as the separate roots of two maps mounted outside React, each
- *   have their own announcer and their own throttle. A provider nested inside
- *   another logs a warning in development, because both would read the same
- *   message.
+ * @remarks Mount one near the root of each React tree. Separate React roots
+ *   each need their own provider and have their own announcer and throttle. A
+ *   provider nested inside another shadows the outer one for the components
+ *   below it and logs a warning in development, because both would read the
+ *   same message.
  */
 export function LiveRegionProvider({ children }: LiveRegionProviderProps) {
   const [texts, setTexts] = useState<Record<AnnouncePriority, string>>({
