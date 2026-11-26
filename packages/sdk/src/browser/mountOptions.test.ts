@@ -352,6 +352,77 @@ describe("a map with every tool", () => {
     expect(new Set(ids).size).toBe(ids.length);
   });
 
+  it("leaves no listener and no timer after every tool has been used and the map is destroyed", async () => {
+    const added: string[] = [];
+    const removed: string[] = [];
+    const track = (target: EventTarget, name: string) => {
+      const add = target.addEventListener.bind(target);
+      const remove = target.removeEventListener.bind(target);
+      vi.spyOn(target, "addEventListener").mockImplementation(
+        (
+          type: string,
+          listener: EventListenerOrEventListenerObject | null,
+          options?: boolean | AddEventListenerOptions,
+        ) => {
+          added.push(`${name}:${type}`);
+          add(type, listener, options);
+        },
+      );
+      vi.spyOn(target, "removeEventListener").mockImplementation(
+        (
+          type: string,
+          listener: EventListenerOrEventListenerObject | null,
+          options?: boolean | AddEventListenerOptions,
+        ) => {
+          removed.push(`${name}:${type}`);
+          remove(type, listener, options);
+        },
+      );
+    };
+    track(document, "document");
+    track(window, "window");
+    const source = sourceWithFeatures();
+    vi.spyOn(URL, "createObjectURL").mockReturnValue("blob:test/1");
+    const revoke = vi
+      .spyOn(URL, "revokeObjectURL")
+      .mockImplementation(() => {});
+    vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => {});
+    vi.useFakeTimers();
+    try {
+      const element = container();
+      const options = everything(source);
+      const handle = mountOn(element, harness(), {
+        ...options,
+        layers: [SAVEABLE],
+      } as never);
+      await vi.advanceTimersByTimeAsync(0);
+      (await button(element, "Map options")).click();
+      await vi.advanceTimersByTimeAsync(0);
+      (await layerSwitch(element, SAVEABLE.id)).click();
+      await vi.advanceTimersByTimeAsync(0);
+      const save = element.querySelector<HTMLElement>(
+        `[data-testid="layer-save-geojson-${SAVEABLE.id}"]`,
+      );
+      expect(save).not.toBeNull();
+      save?.click();
+      await vi.advanceTimersByTimeAsync(0);
+      (await button(element, "Measure distance and area")).click();
+      await vi.advanceTimersByTimeAsync(0);
+      handle.destroy();
+      await vi.advanceTimersByTimeAsync(0);
+      expect(revoke).toHaveBeenCalledWith("blob:test/1");
+      const kept = new Set(["document:selectionchange"]);
+      for (const entry of new Set(added)) {
+        if (!kept.has(entry)) {
+          expect(removed, entry).toContain(entry);
+        }
+      }
+      expect(vi.getTimerCount()).toBe(0);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it("leaves nothing behind when it is destroyed with the sheet open", async () => {
     vi.useFakeTimers();
     try {
