@@ -8,13 +8,13 @@ export const NOTICES_FILE = "THIRD-PARTY-NOTICES.md";
 /**
  * @typedef {object} BundleSettings
  * @property {string[]} entries The output names built as a bundle, such as `browser`.
- * @property {Record<string, string>} copy Files copied into `dist` as they are, by their name in `dist` and the path inside an installed package.
+ * @property {Record<string, string>} embed Files whose text the bundle holds as a string, by the source module that stands in for each (a path inside the package) and the path of the file inside an installed package.
  */
 
 /**
  * What a manifest says about its bundle (`mapcairn.bundle`): the entries that
- * are built as one self-contained module graph, and the files that are copied
- * beside them.
+ * are built as one self-contained module graph, and the files whose text the
+ * bundle embeds.
  *
  * @param {Record<string, any>} manifest
  * @returns {BundleSettings | undefined} `undefined` for a package that builds no bundle.
@@ -24,18 +24,18 @@ export function bundleOf(manifest) {
   if (bundle === undefined) {
     return undefined;
   }
-  return { entries: bundle.entries ?? [], copy: bundle.copy ?? {} };
+  return { entries: bundle.entries ?? [], embed: bundle.embed ?? {} };
 }
 
 /**
- * Where a copied file comes from: the installed package and the path inside it.
+ * Where an embedded file comes from: the installed package and the path inside it.
  *
  * @param {string} source `maplibre-gl/dist/maplibre-gl-worker.mjs`, or the same under a scope (`@scope/name/file.js`).
  * @param {{ resolve: (request: string) => string }} require Resolves a module request from the package that builds the bundle.
  * @returns {{ packageFolder: string, file: string }} The package folder and the file's absolute path.
  * @throws {Error} When the source names no file inside a package.
  */
-export function copySourceOf(source, require) {
+export function packageFileOf(source, require) {
   const parts = source.split("/");
   const length = parts[0].startsWith("@") ? 2 : 1;
   const inside = parts.slice(length);

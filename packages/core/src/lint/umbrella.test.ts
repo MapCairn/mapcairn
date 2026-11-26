@@ -25,13 +25,9 @@ const PACKAGES = ["core", "map", "react", "theme"] as const;
 const ADAPTER = "adapter-maplibre";
 const SUBPATH_ONLY = [ADAPTER] as const;
 const SOURCE_CONDITION = "@mapcairn/source";
-/** The umbrella's own code: a folder of source, built as a bundle, with its stylesheet and worker. */
+/** The umbrella's own code: a folder of source, built as a bundle, with its stylesheet. */
 const BROWSER_SOURCE_FOLDER = "browser";
-const BROWSER_SUBPATHS = [
-  "./browser",
-  "./browser/styles.css",
-  "./browser/worker",
-] as const;
+const BROWSER_SUBPATHS = ["./browser", "./browser/styles.css"] as const;
 
 interface Manifest {
   readonly name: string;
@@ -236,7 +232,7 @@ describe("@mapcairn/sdk manifest", () => {
     expect(read(`${UMBRELLA}/LICENSE`)).toBe(read("LICENSE"));
   });
 
-  it("exports the root, one subpath for each code entry point of the five packages, its stylesheet, and the browser bundle with its stylesheet and worker", () => {
+  it("exports the root, one subpath for each code entry point of the five packages, its stylesheet, and the browser bundle with its stylesheet", () => {
     expect(Object.keys(manifest.exports).sort()).toEqual(
       [
         ".",
@@ -247,7 +243,7 @@ describe("@mapcairn/sdk manifest", () => {
     );
   });
 
-  it("points the browser subpath at its own source folder and the stylesheet and worker at files the build writes", () => {
+  it("points the browser subpath at its own source folder and the stylesheet at a file the build writes", () => {
     expect(manifest.exports["./browser"]).toEqual({
       [SOURCE_CONDITION]: "./src/browser/index.ts",
       types: "./dist/browser.d.ts",
@@ -256,10 +252,6 @@ describe("@mapcairn/sdk manifest", () => {
     expect(manifest.exports["./browser/styles.css"]).toEqual({
       types: "./dist/browser.css.d.ts",
       default: "./dist/browser.css",
-    });
-    expect(manifest.exports["./browser/worker"]).toEqual({
-      types: "./dist/browser-worker.d.ts",
-      default: "./dist/browser-worker.js",
     });
   });
 

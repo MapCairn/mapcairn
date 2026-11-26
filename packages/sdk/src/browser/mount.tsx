@@ -36,10 +36,10 @@ const THEME_ATTRIBUTE_NAME = "data-theme";
 
 /** What `mount` needs from outside, so a test can give it a fake engine. */
 export interface MountDependencies {
-  /** Makes the factory of the map adapter, given the address of the engine's worker. */
-  readonly createMapAdapter: (workerUrl: string) => MapAdapterFactory;
-  /** The address of the worker the files are served with, used when the page names none. */
-  readonly defaultWorkerUrl: () => string;
+  /** Makes the factory of the map adapter, given the address of the engine's worker when the page names one. */
+  readonly createMapAdapter: (
+    workerUrl: string | undefined,
+  ) => MapAdapterFactory;
   /** For tests: replaces the services before the interface sees them. */
   readonly decorateServices?: (services: Services) => Services;
 }
@@ -95,9 +95,10 @@ export function mount(
     );
   }
   const valid = validateOptions(options);
-  const workerUrl = sameOriginWorkerUrl(
-    options.workerUrl ?? dependencies.defaultWorkerUrl(),
-  );
+  const workerUrl =
+    options.workerUrl === undefined
+      ? undefined
+      : sameOriginWorkerUrl(options.workerUrl);
 
   const listeners: Listeners = {
     viewchange: new Set(),

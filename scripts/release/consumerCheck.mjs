@@ -68,6 +68,11 @@ import {
   UMBRELLA_PACKAGE,
 } from "../sdkPackages.mjs";
 import { BROWSER_STYLE_URL } from "./browserLeg.mjs";
+import {
+  bundleLoadSizes,
+  ENGINE_BUILD,
+  FIRST_LOAD_BUILD,
+} from "./bundleLeg.mjs";
 import { extractNotes } from "./changelog.mjs";
 import {
   BROWSER_TIMEOUT,
@@ -559,8 +564,12 @@ export const ENGINE_CONTROL_BUILDS = [
   "worker via the subpath",
 ];
 
-/** A module id, path or bare specifier, that is the map engine or the adapter package. */
-const ENGINE_MODULE = /(?:^|[\\/])(?:maplibre-gl|adapter-maplibre)(?:[\\/]|$)/;
+/**
+ * A module id, path or bare specifier, that is the map engine, the adapter
+ * package or the umbrella's browser bundle, which carries both.
+ */
+const ENGINE_MODULE =
+  /(?:^|[\\/])(?:maplibre-gl|adapter-maplibre)(?:[\\/]|$)|@mapcairn[\\/]sdk[\\/](?:dist[\\/])?browser/;
 
 /**
  * A module of the SDK packages the umbrella re-exports. The umbrella's own
@@ -662,7 +671,10 @@ export function engineGraphProblems(builds) {
  * subpath` and `worker via the subpath` go through
  * `@mapcairn/sdk/adapter-maplibre`, which adds the adapter and `maplibre-gl`.
  * The client builds are minified; the server and Worker builds are not, and
- * their gzipped size is what counts against a Worker's size limit. Set at about
+ * their gzipped size is what counts against a Worker's size limit. `browser
+ * first load` is the module, its runtime chunk and the stylesheet of
+ * `@mapcairn/sdk/browser`, and `browser engine and worker` the two chunks the
+ * first map loads, each file gzipped alone and added up. Set at about
  * 1.15 times the size each build has, so a bundled dependency or a lost
  * tree-shake fails and ordinary growth does not. Raising one is a deliberate edit in a
  * pull request.
@@ -670,6 +682,8 @@ export function engineGraphProblems(builds) {
  * @type {Record<string, number>}
  */
 export const BUNDLE_CEILINGS = {
+  [FIRST_LOAD_BUILD]: 295_000,
+  [ENGINE_BUILD]: 560_000,
   client: 248_000,
   server: 130_000,
   worker: 373_000,
@@ -678,15 +692,28 @@ export const BUNDLE_CEILINGS = {
 };
 
 /**
+ * The entries of {@link BUNDLE_CEILINGS} that are the browser bundle's files
+ * rather than builds of the app, which `checkBrowserBundle` reports.
+ */
+export const BROWSER_BUNDLE_BUILDS = [FIRST_LOAD_BUILD, ENGINE_BUILD];
+
+/**
  * What is wrong with the sizes of the budgeted builds: one over its ceiling,
  * one missing from the report, or one that measured nothing.
  *
  * @param {{ name: string, gzipBytes: number }[]} builds
+ * @param {string[]} [names] The ceilings to check: the app's builds by default.
  * @returns {string[]}
  */
-export function bundleSizeProblems(builds) {
+export function bundleSizeProblems(
+  builds,
+  names = Object.keys(BUNDLE_CEILINGS).filter(
+    (name) => !BROWSER_BUNDLE_BUILDS.includes(name),
+  ),
+) {
   const byName = new Map(builds.map((build) => [build.name, build]));
-  return Object.entries(BUNDLE_CEILINGS).flatMap(([name, ceiling]) => {
+  return names.flatMap((name) => {
+    const ceiling = BUNDLE_CEILINGS[name] ?? 0;
     const gzipBytes = byName.get(name)?.gzipBytes ?? 0;
     if (gzipBytes === 0) {
       return [
@@ -1403,6 +1430,163 @@ function checkQuickstart(app, prefix) {
   return lines.map((line) => `${prefix}README quickstart in Chromium, ${line}`);
 }
 
+/** The folder of the pages the browser bundle's leg draws, besides the example. */
+const BUNDLE_FIXTURE = path.join(REPO, "scripts", "release", "consumer-bundle");
+
+/** The folder of the plain page, which the browser bundle's leg serves as an adopter would. */
+const BROWSER_EXAMPLE = path.join(REPO, "examples", "browser");
+
+/**
+ * Runs `bundleRun.mjs` in a child process, so a failure leaves no browser or
+ * server behind.
+ *
+ * @param {"page" | "built" | "dev"} mode
+ * @param {string} folder
+ * @param {string} executable The Chromium binary.
+ * @param {string} cwd Where to run it.
+ * @returns {string[]} What the run saw, a line for each.
+ */
+function runBundleRun(mode, folder, executable, cwd) {
+  return JSON.parse(
+    runNode(
+      `draw ${mode} (browser bundle)`,
+      [
+        path.join(REPO, "scripts", "release", "bundleRun.mjs"),
+        mode,
+        folder,
+        executable,
+      ],
+      cwd,
+      BROWSER_TIMEOUT,
+    ),
+  );
+}
+
+/**
+ * The browser bundle (`@mapcairn/sdk/browser`) from the installed umbrella, in
+ * Chromium: the example page served as a plain static server would, under the
+ * strict policy, with two maps, a hostile page and the leak counts
+ * (`bundleRun.mjs`); then a page that imports the subpath in a Vite app,
+ * drawn from `vite` with no setting for it, from a Vite build and from a
+ * webpack build. The gzipped sizes of the files are held to their ceilings.
+ * Skips and fails as `checkRealMap` does.
+ *
+ * @param {string} app The installed umbrella app.
+ * @param {string} prefix Put before each line of the report.
+ * @returns {string[]} One line for each check.
+ */
+function checkBrowserBundle(app, prefix) {
+  const executable = chromiumExecutable(REPO);
+  const plan = browserLegPlan({
+    playwright: playwrightAvailable(REPO),
+    executable,
+  });
+  if (plan.action === "fail") {
+    throw new Error(plan.message);
+  }
+  if (plan.action === "skip") {
+    return [`${prefix}${plan.line}`];
+  }
+  const chromium = String(executable);
+  /** @type {string[]} */
+  const lines = [];
+
+  const page = path.join(app, "bundle-page");
+  mkdirSync(page, { recursive: true });
+  for (const file of ["index.html", "main.js", "page.css", "copyFiles.mjs"]) {
+    copyFileSync(path.join(BROWSER_EXAMPLE, file), path.join(page, file));
+  }
+  for (const entry of readdirSync(BUNDLE_FIXTURE, { withFileTypes: true })) {
+    if (entry.isFile()) {
+      copyFileSync(
+        path.join(BUNDLE_FIXTURE, entry.name),
+        path.join(page, entry.name),
+      );
+    }
+  }
+  runNode(
+    "copy the browser bundle's files (the example's copyFiles.mjs)",
+    [path.join(page, "copyFiles.mjs")],
+    page,
+  );
+  lines.push(
+    ...runBundleRun("page", page, chromium, app).map(
+      (line) => `the example page in Chromium, ${line}`,
+    ),
+  );
+  const served = path.join(page, "mapcairn");
+  const sizes = bundleLoadSizes(
+    Object.fromEntries(
+      readdirSync(served).map((name) => [
+        name,
+        readFileSync(path.join(served, name)),
+      ]),
+    ),
+  );
+  const sizeProblems = bundleSizeProblems(sizes, BROWSER_BUNDLE_BUILDS);
+  if (sizeProblems.length > 0) {
+    throw new Error(sizeProblems.join("\n"));
+  }
+  const kilobytes = (/** @type {string} */ name) =>
+    Math.round(
+      (sizes.find((build) => build.name === name)?.gzipBytes ?? 0) / 1000,
+    );
+  lines.push(
+    `the bundle's files are within their size budget, gzipped (first load ${kilobytes(FIRST_LOAD_BUILD)}, engine and worker ${kilobytes(ENGINE_BUILD)} kB): ok`,
+  );
+
+  const viteApp = path.join(app, "bundle-app");
+  cpSync(path.join(BUNDLE_FIXTURE, "app"), viteApp, { recursive: true });
+  lines.push(
+    ...runBundleRun("dev", viteApp, chromium, app).map(
+      (line) => `vite dev, ${line}`,
+    ),
+  );
+  const vite = path.join(app, "node_modules", "vite", "bin", "vite.js");
+  runNode(
+    "vite build (browser bundle)",
+    [
+      vite,
+      "build",
+      "bundle-app",
+      "--outDir",
+      "../dist/bundle-vite",
+      "--emptyOutDir",
+    ],
+    app,
+  );
+  lines.push(
+    ...runBundleRun(
+      "built",
+      path.join(app, "dist", "bundle-vite"),
+      chromium,
+      app,
+    ).map((line) => `vite build, ${line}`),
+  );
+
+  const webpackApp = path.join(app, "bundle-webpack");
+  cpSync(path.join(BUNDLE_FIXTURE, "webpack"), webpackApp, { recursive: true });
+  writeFileSync(
+    path.join(app, "webpack.page.mjs"),
+    webpackBuildScript("bundle-webpack/main.js", "dist/bundle-webpack"),
+  );
+  runNode("webpack build (browser bundle)", ["webpack.page.mjs"], app);
+  const webpackOut = path.join(app, "dist", "bundle-webpack");
+  for (const [from, to] of [
+    [path.join(webpackApp, "index.html"), "index.html"],
+    [path.join(BUNDLE_FIXTURE, "app", "page.css"), "page.css"],
+    [path.join(served, "browser.css"), "browser.css"],
+  ]) {
+    copyFileSync(from, path.join(webpackOut, to));
+  }
+  lines.push(
+    ...runBundleRun("built", webpackOut, chromium, app).map(
+      (line) => `webpack build, ${line}`,
+    ),
+  );
+  return lines.map((line) => `${prefix}${line}`);
+}
+
 /** The folder of the page the upgrade leg starts from, in the repository. */
 const UPGRADE_PAGE_FOLDER = "scripts/release/consumer-browser";
 
@@ -1605,6 +1789,7 @@ function checkUmbrella({ root, packed, published, versions }) {
     ...checkEngineFreeRoot(app, prefix),
     ...checkRealMap(app, prefix),
     ...checkQuickstart(app, prefix),
+    ...checkBrowserBundle(app, prefix),
   ];
   if (published !== null) {
     return [

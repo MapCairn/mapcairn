@@ -809,6 +809,7 @@ describe("repository scanning", () => {
       "scripts",
       "project.inlang",
       "paraglide",
+      "mapcairn",
     ]) {
       put(root, `packages/map/${directory}/skipped.ts`);
     }

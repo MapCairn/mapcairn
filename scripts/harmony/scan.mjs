@@ -29,6 +29,8 @@ const SKIP_DIRS = new Set([
   "scripts",
   "project.inlang",
   "paraglide",
+  // The SDK's own built files, copied beside the plain page (`examples/browser`).
+  "mapcairn",
 ]);
 
 /**

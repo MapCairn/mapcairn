@@ -9,8 +9,6 @@ import { expect, vi } from "vitest";
 import { type MountDependencies, mount } from "./mount";
 import type { MapHandle, MountMapOptions } from "./types";
 
-const WORKER = "/mapcairn/browser-worker.js";
-
 /** What a test gets from {@link harness}: the dependencies and what they made. */
 export interface Harness {
   readonly dependencies: MountDependencies;
@@ -34,10 +32,9 @@ export function harness(
     workerUrls,
     dependencies: {
       createMapAdapter: (workerUrl) => {
-        workerUrls.push(workerUrl);
+        workerUrls.push(workerUrl ?? "");
         return (factory ?? createFakeMapAdapterFactory)(onCreate);
       },
-      defaultWorkerUrl: () => new URL(WORKER, document.baseURI).href,
     },
   };
 }

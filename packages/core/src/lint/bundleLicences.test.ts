@@ -427,7 +427,7 @@ describe("withDependencies", () => {
 describe("writeNotices", () => {
   const file = () => path.join(root, "NOTICES.md");
 
-  it("names the module graph's packages, the copied files' packages and what each builds in", () => {
+  it("names the module graph's packages, the embedded files' packages and what each builds in", () => {
     const graph = install("react", { license: "MIT" }, { LICENSE: "REACT" });
     const engine = install(
       "engine",
@@ -437,7 +437,7 @@ describe("writeNotices", () => {
     install("earcut", { license: "ISC" }, { LICENSE: "EARCUT" });
     const found: Bundled[] = writeNotices({
       moduleIds: [path.join(graph, "index.js")],
-      copiedFolders: [engine],
+      embeddedFolders: [engine],
       allowlist: {
         ...ALLOWLIST,
         licences: { ...ALLOWLIST.licences, ISC: "x" },
@@ -472,7 +472,7 @@ describe("writeNotices", () => {
     expect(() =>
       writeNotices({
         moduleIds: [],
-        copiedFolders: [engine],
+        embeddedFolders: [engine],
         allowlist: ALLOWLIST,
         file: file(),
       }),

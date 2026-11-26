@@ -470,8 +470,9 @@ function bundleManifest(overrides: Record<string, unknown> = {}) {
     mapcairn: {
       bundle: {
         entries: ["browser"],
-        copy: {
-          "browser-worker.js": "maplibre-gl/dist/maplibre-gl-worker.mjs",
+        embed: {
+          "src/browser/engineWorkerSource.ts":
+            "maplibre-gl/dist/maplibre-gl-worker.mjs",
         },
       },
     },
@@ -489,10 +490,6 @@ function bundleManifest(overrides: Record<string, unknown> = {}) {
       "./browser/styles.css": {
         types: "./dist/browser.css.d.ts",
         default: "./dist/browser.css",
-      },
-      "./browser/worker": {
-        types: "./dist/browser-worker.d.ts",
-        default: "./dist/browser-worker.js",
       },
     },
     files: ["dist", "!dist/.built", "THIRD-PARTY-NOTICES.md"],
@@ -512,8 +509,7 @@ const BUNDLE_FILES = [
   "dist/browser.d.ts",
   "dist/browser.css",
   "dist/browser.css.d.ts",
-  "dist/browser-worker.js",
-  "dist/browser-worker.d.ts",
+  "dist/browser-worker-AbC123.js",
   "dist/browser-engine-AbC123.js",
   "dist/browser-rolldown-runtime-AbC123.js",
 ];

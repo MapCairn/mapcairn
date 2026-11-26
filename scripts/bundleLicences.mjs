@@ -371,16 +371,16 @@ export function withDependencies(packages) {
  *
  * @param {object} input
  * @param {Iterable<string>} input.moduleIds The modules that reached the output.
- * @param {readonly string[]} input.copiedFolders The folders of the packages the copied files come from.
+ * @param {readonly string[]} input.embeddedFolders The folders of the packages the embedded files come from.
  * @param {{ licences: Record<string, string>, packages: Record<string, { licence: string, reason: string }> }} input.allowlist
  * @param {string} input.file Where to write the notices.
  * @returns {BundledPackage[]} What the notices name.
  * @throws {Error} When a package's licence is not allowed, or one has no licence file.
  */
-export function writeNotices({ moduleIds, copiedFolders, allowlist, file }) {
+export function writeNotices({ moduleIds, embeddedFolders, allowlist, file }) {
   const packages = withDependencies([
     ...bundledPackagesOf(moduleIds),
-    ...copiedFolders.map((directory) => ({ directory })),
+    ...embeddedFolders.map((directory) => ({ directory })),
   ]);
   assertBundledLicences(packages, allowlist);
   writeFileSync(file, noticesOf(packages, allowlist));

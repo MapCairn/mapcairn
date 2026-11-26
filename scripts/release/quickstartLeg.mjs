@@ -111,7 +111,7 @@ const REQUIRED = [
  * to anywhere but the page and the basemap's origin, and anything the page
  * reported about itself.
  *
- * @param {{ origin: string, requests: string[], violations: { violatedDirective: string, blockedURI: string }[], consoleErrors: string[], pageErrors: string[] }} run
+ * @param {{ origin: string, requests: string[], violations: { violatedDirective: string, blockedURI: string }[], consoleErrors: string[], pageErrors: string[], skip?: string[] }} run `skip` names kinds of request the page is not expected to make, such as `glyph` for a view with no labels.
  * @returns {string[]}
  */
 export function quickstartProblems({
@@ -120,12 +120,14 @@ export function quickstartProblems({
   violations,
   consoleErrors,
   pageErrors,
+  skip = [],
 }) {
   const basemap = requests
     .filter((url) => url.startsWith(`${OPEN_FREE_MAP_ORIGIN}/`))
     .map((url) => new URL(url).pathname);
   const missing = REQUIRED.filter(
-    ({ matches }) => !basemap.some((path) => matches(path)),
+    ({ kind, matches }) =>
+      !skip.includes(kind) && !basemap.some((path) => matches(path)),
   ).map(
     ({ kind }) =>
       `the page never requested a ${kind} from ${OPEN_FREE_MAP_ORIGIN}`,

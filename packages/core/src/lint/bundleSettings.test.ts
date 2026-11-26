@@ -13,7 +13,7 @@ import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
   bundleOf,
-  copySourceOf,
+  packageFileOf,
   // @ts-expect-error The scripts are dependency-free JavaScript with JSDoc types.
 } from "../../../../scripts/bundleSettings.mjs";
 
@@ -40,26 +40,28 @@ afterEach(() => {
 });
 
 describe("bundleOf", () => {
-  it("reads the entries and the copied files, and none for a package with no bundle", () => {
+  it("reads the entries and the embedded files, and none for a package with no bundle", () => {
     expect(
       bundleOf({
-        mapcairn: { bundle: { entries: ["a"], copy: { "w.js": "p/x.js" } } },
+        mapcairn: {
+          bundle: { entries: ["a"], embed: { "src/w.ts": "p/x.js" } },
+        },
       }),
-    ).toEqual({ entries: ["a"], copy: { "w.js": "p/x.js" } });
+    ).toEqual({ entries: ["a"], embed: { "src/w.ts": "p/x.js" } });
     expect(bundleOf({ mapcairn: { bundle: {} } })).toEqual({
       entries: [],
-      copy: {},
+      embed: {},
     });
     expect(bundleOf({})).toBeUndefined();
   });
 });
 
-describe("copySourceOf", () => {
+describe("packageFileOf", () => {
   const require = () => createRequire(path.join(root, "package.json"));
 
   it("finds a file inside an installed package", () => {
     const folder = install("plain");
-    expect(copySourceOf("plain/dist/file.mjs", require())).toEqual({
+    expect(packageFileOf("plain/dist/file.mjs", require())).toEqual({
       packageFolder: folder,
       file: path.join(folder, "dist", "file.mjs"),
     });
@@ -67,7 +69,7 @@ describe("copySourceOf", () => {
 
   it("finds a file inside a scoped package, taking the scope as part of its name", () => {
     const folder = install("@scope/name");
-    expect(copySourceOf("@scope/name/dist/file.mjs", require())).toEqual({
+    expect(packageFileOf("@scope/name/dist/file.mjs", require())).toEqual({
       packageFolder: folder,
       file: path.join(folder, "dist", "file.mjs"),
     });
@@ -76,13 +78,13 @@ describe("copySourceOf", () => {
   it("refuses a source that names no file inside a package", () => {
     install("plain");
     install("@scope/name");
-    expect(() => copySourceOf("plain", require())).toThrow(
+    expect(() => packageFileOf("plain", require())).toThrow(
       /does not name a file/,
     );
-    expect(() => copySourceOf("@scope/name", require())).toThrow(
+    expect(() => packageFileOf("@scope/name", require())).toThrow(
       /does not name a file/,
     );
-    expect(() => copySourceOf("plain/../other/x.js", require())).toThrow(
+    expect(() => packageFileOf("plain/../other/x.js", require())).toThrow(
       /does not name a file/,
     );
   });

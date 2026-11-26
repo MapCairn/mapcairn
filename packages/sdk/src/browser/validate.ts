@@ -181,7 +181,7 @@ export function sameOriginWorkerUrl(candidate: string): string {
   }
   if (url.origin !== new URL(document.URL).origin) {
     invalid(
-      "workerUrl must be on this page's origin. Serve the browser files from your own site.",
+      "workerUrl must be on this page's origin. Serve the worker file from your own site, or leave workerUrl out.",
     );
   }
   return url.href;

@@ -164,10 +164,6 @@ const BUILT_ENTRY_POINTS: Readonly<
       types: "./dist/browser.css.d.ts",
       default: "./dist/browser.css",
     },
-    "./browser/worker": {
-      types: "./dist/browser-worker.d.ts",
-      default: "./dist/browser-worker.js",
-    },
   },
 };
 
@@ -199,6 +195,7 @@ const INTERNAL_CONSUMERS = [
   "packages/web",
   "examples/embed",
   "examples/headless",
+  "examples/browser",
 ] as const;
 
 interface Manifest {

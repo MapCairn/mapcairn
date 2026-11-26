@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
-import { readFileSync, writeFileSync } from "node:fs";
+import { readFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import path from "node:path";
 import { writeNotices } from "./bundleLicences.mjs";
@@ -9,7 +9,7 @@ import {
   moduleIdsOf,
   withoutSourceMapComment,
 } from "./bundleOutput.mjs";
-import { copySourceOf, NOTICES_FILE } from "./bundleSettings.mjs";
+import { NOTICES_FILE, packageFileOf } from "./bundleSettings.mjs";
 import { ALLOWLIST_FILE } from "./sdkLicences.mjs";
 
 /** The stylesheet the engine's loader imports on demand, which the bundle merges into its own. */
@@ -28,9 +28,10 @@ const EMPTY_STYLESHEET_MODULE = "\0mapcairn-engine-stylesheet";
  * @param {string} input.folder The package folder.
  * @param {Record<string, string>} input.entries Output name to source path.
  * @param {string} input.stylesheet The name of the merged stylesheet, without its extension.
+ * @param {Map<string, string>} input.embedded The text of each embedded file, by the absolute path of the module that stands in for it.
  * @returns {Promise<string[]>} The ids of the modules that reached the output.
  */
-async function bundleModules({ folder, entries, stylesheet }) {
+async function bundleModules({ folder, entries, stylesheet, embedded }) {
   const { build } = await import("vite");
   const engineStylesheet = path.join(
     path.dirname(
@@ -55,7 +56,13 @@ async function bundleModules({ folder, entries, stylesheet }) {
           return source === ENGINE_STYLESHEET ? EMPTY_STYLESHEET_MODULE : null;
         },
         load(id) {
-          return id === EMPTY_STYLESHEET_MODULE ? "export {};" : null;
+          if (id === EMPTY_STYLESHEET_MODULE) {
+            return "export {};";
+          }
+          const text = embedded.get(id);
+          return text === undefined
+            ? null
+            : `export default ${JSON.stringify(text)};`;
         },
         // Before Vite's own resolver, which would otherwise find the file first.
         enforce: "pre",
@@ -107,7 +114,11 @@ async function bundleModules({ folder, entries, stylesheet }) {
         output: {
           codeSplitting: {
             groups: [
-              { name: "engine", test: /node_modules[\\/]maplibre-gl[\\/]/ },
+              {
+                name: "engine",
+                test: /node_modules[\\/]maplibre-gl[\\/]|\0mapcairn-engine-stylesheet/,
+              },
+              { name: "worker", test: (id) => embedded.has(id) },
             ],
           },
           entryFileNames: "[name].js",
@@ -122,7 +133,7 @@ async function bundleModules({ folder, entries, stylesheet }) {
 
 /**
  * Builds the bundle of a package into `dist`: the modules and the stylesheet,
- * the files that are copied, and `THIRD-PARTY-NOTICES.md` at the package root.
+ * and `THIRD-PARTY-NOTICES.md` at the package root.
  * The build fails when a package that reached the bundle has a licence that is
  * not on `scripts/sdkLicences.allowlist.json`.
  *
@@ -140,20 +151,26 @@ export async function buildBundle({
   root = path.resolve(folder, "../.."),
 }) {
   const [stylesheet] = bundle.entries;
-  const moduleIds = await bundleModules({ folder, entries, stylesheet });
   const require = createRequire(path.join(folder, "package.json"));
-  const copiedFolders = [];
-  for (const [name, source] of Object.entries(bundle.copy)) {
-    const { packageFolder, file } = copySourceOf(source, require);
-    copiedFolders.push(packageFolder);
-    writeFileSync(
-      path.join(folder, "dist", name),
+  const embedded = new Map();
+  const embeddedFolders = [];
+  for (const [module, source] of Object.entries(bundle.embed)) {
+    const { packageFolder, file } = packageFileOf(source, require);
+    embeddedFolders.push(packageFolder);
+    embedded.set(
+      path.resolve(folder, module),
       withoutSourceMapComment(readFileSync(file, "utf8")),
     );
   }
+  const moduleIds = await bundleModules({
+    folder,
+    entries,
+    stylesheet,
+    embedded,
+  });
   writeNotices({
     moduleIds,
-    copiedFolders,
+    embeddedFolders,
     allowlist: JSON.parse(
       readFileSync(path.join(root, ALLOWLIST_FILE), "utf8"),
     ),

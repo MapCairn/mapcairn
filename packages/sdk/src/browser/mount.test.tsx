@@ -360,7 +360,7 @@ describe("what it refuses, and says how to fix", () => {
         workerUrl: "https://cdn.example/browser-worker.js",
       }),
     ).toThrow(
-      /workerUrl must be on this page's origin\. Serve the browser files from your own site\./,
+      /workerUrl must be on this page's origin\. Serve the worker file from your own site, or leave workerUrl out\./,
     );
   });
 
@@ -392,20 +392,6 @@ describe("what it refuses, and says how to fix", () => {
     expect(() => mountOn(container(), harness(), { workerUrl })).toThrow(
       /workerUrl must be on this page's origin/,
     );
-  });
-
-  it("the default worker when it is on another origin", () => {
-    const tools = harness();
-    expect(() =>
-      mount(
-        container(),
-        {},
-        {
-          ...tools.dependencies,
-          defaultWorkerUrl: () => "https://cdn.example/browser-worker.js",
-        },
-      ),
-    ).toThrow(MountMapError);
   });
 
   it("a basemap that is not offered", () => {

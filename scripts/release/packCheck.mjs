@@ -49,7 +49,7 @@ export const SIZE_CEILINGS = {
  * The most the files of a package's bundle may weigh, in gzipped bytes: each
  * of its `dist` files that starts with the name of a bundle entry (`browser`),
  * and the notices file, each gzipped alone and added up. About 1.06
- * times what the bundle weighs now (790,000 against about 747,000), so small growth passes and a
+ * times what the bundle weighs now (800,000 against about 752,000), so small growth passes and a
  * second copy of the engine or of React (about 330 and 75 kilobytes gzipped)
  * does not. The rest of such a package is measured the same way and stays
  * under `SIZE_CEILINGS`. Raising one is a deliberate edit in a pull request.
@@ -57,7 +57,7 @@ export const SIZE_CEILINGS = {
  * @type {Record<string, number>}
  */
 export const BUNDLE_CEILINGS = {
-  sdk: 790_000,
+  sdk: 800_000,
 };
 
 /** The `files` every SDK package declares: the build, without its stamp. */
@@ -286,7 +286,7 @@ export function checkSourceMap(file, text) {
 /**
  * Whether a path in the tarball is a file of the package's bundle: under
  * `dist`, named for one of the bundle's entries, such as `dist/browser.js`,
- * `dist/browser-engine-AbC.js` or `dist/browser-worker.js`.
+ * `dist/browser-engine-AbC.js` or `dist/browser-worker-AbC.js`.
  *
  * @param {string} file
  * @param {{ entries: string[] } | undefined} bundle
