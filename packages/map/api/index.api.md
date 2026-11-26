@@ -64,6 +64,7 @@ import { MapHandleDrag } from '@mapcairn/core';
 import { MapHeatmap } from '@mapcairn/core';
 import { MapImageDrawing } from '@mapcairn/core';
 import { MapKeyHelpEntry } from '@mapcairn/core';
+import { MapKeyOptions } from '@mapcairn/core';
 import { MapLookRule } from '@mapcairn/core';
 import type { MapPlacement } from '@mapcairn/core';
 import type { MapProjection } from '@mapcairn/core';
@@ -647,6 +648,12 @@ export interface HelpSectionProps {
     readonly headingLevel?: HeadingLevel;
     readonly headingRef?: Ref<HTMLHeadingElement>;
     readonly onStartTour?: () => void;
+    readonly shortcuts?: HelpShortcuts;
+}
+
+// @public
+export interface HelpShortcuts extends MapKeyOptions {
+    readonly drawing?: boolean;
 }
 
 // @public
@@ -963,6 +970,7 @@ export interface MapViewProps {
     readonly onLongPress?: (event: MapLongPressEvent) => void;
     readonly onPointerMove?: (latlng: LatLng | null) => void;
     readonly onViewChange?: (view: ViewState) => void;
+    readonly shortcuts?: MapKeyOptions;
     readonly testId?: string;
 }
 
@@ -1259,6 +1267,7 @@ export interface SheetContentProps {
     readonly privacyHref?: string;
     readonly privacyNote?: ReactNode;
     readonly section?: SheetSection;
+    readonly shortcuts?: HelpShortcuts;
     readonly showTurnOffAll?: boolean;
 }
 

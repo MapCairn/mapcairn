@@ -2476,9 +2476,18 @@ export interface MapKeyEvent {
 }
 
 // @public
+export function mapKeyHelp(input?: MapKeyOptions): readonly ShippedKeyHelpEntry[];
+
+// @public
 export interface MapKeyHelpEntry {
     readonly description: DefinitionText;
     readonly keys: DefinitionText;
+}
+
+// @public
+export interface MapKeyOptions {
+    readonly identify?: boolean;
+    readonly pin?: boolean;
 }
 
 // @public

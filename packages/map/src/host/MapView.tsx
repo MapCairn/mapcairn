@@ -3,14 +3,15 @@
 import {
   type BasemapDefinition,
   type LatLng,
-  MAP_KEY_HELP,
   type MapAdapter,
   type MapClickEvent,
   type MapEngineError,
   type MapKeyAction,
   type MapKeyHelpEntry,
+  type MapKeyOptions,
   type MessageCatalogue,
   mapKeyAction,
+  mapKeyHelp,
   resolveText,
   type ViewState,
 } from "@mapcairn/core";
@@ -107,6 +108,13 @@ export interface MapViewProps {
    * stop.
    */
   readonly keyHelp?: readonly MapKeyHelpEntry[];
+  /**
+   * Which of the optional map keys the hidden instructions list: `pin` for P
+   * and `identify` for I, each true by default. Set one false when the host
+   * passes no handler for that key, so the instructions list only keys that
+   * work.
+   */
+  readonly shortcuts?: MapKeyOptions;
   /** Defaults to `grab`. */
   readonly cursor?: MapCursor;
   /** Overlays and other content that reads the map through `useMap`. */
@@ -144,8 +152,9 @@ export interface MapViewProps {
 function keyboardInstructions(
   messages: MessageCatalogue,
   extra: readonly MapKeyHelpEntry[],
+  shortcuts: MapKeyOptions,
 ): string {
-  return [...MAP_KEY_HELP, ...extra]
+  return [...mapKeyHelp(shortcuts), ...extra]
     .map(({ keys, description }) =>
       messages.t("host.map.keyInstruction", {
         keys: resolveText(messages, keys),
@@ -226,6 +235,7 @@ export function MapView({
   onEscape,
   onKeyCommand,
   keyHelp,
+  shortcuts = {},
   cursor = "grab",
   children,
   id,
@@ -318,7 +328,7 @@ export function MapView({
 
   const motion = reducedMotion ? "static" : "animated";
 
-  const instructions = keyboardInstructions(messages, keyHelp ?? []);
+  const instructions = keyboardInstructions(messages, keyHelp ?? [], shortcuts);
 
   const region = (
     <>

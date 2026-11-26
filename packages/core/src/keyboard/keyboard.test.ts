@@ -3,7 +3,7 @@
 import { describe, expect, it } from "vitest";
 import { FakeMessageCatalogue } from "../fakes/FakeMessageCatalogue";
 import { isMessageKey, resolveText } from "../messages/resolveText";
-import { MAP_KEY_HELP, mapKeyAction } from "./keyboard";
+import { MAP_KEY_HELP, mapKeyAction, mapKeyHelp } from "./keyboard";
 
 const english = new FakeMessageCatalogue();
 
@@ -180,5 +180,36 @@ describe("keyboard help", () => {
     ]) {
       expect(text).toMatch(topic);
     }
+  });
+});
+
+describe("mapKeyHelp", () => {
+  const keysOf = (entries: typeof MAP_KEY_HELP) =>
+    entries.map((entry) => entry.keys);
+
+  it("lists every shortcut by default, as MAP_KEY_HELP does", () => {
+    expect(mapKeyHelp()).toEqual(MAP_KEY_HELP);
+    expect(mapKeyHelp({})).toEqual(MAP_KEY_HELP);
+  });
+
+  it("leaves out the P key line when pin is false", () => {
+    const keys = keysOf(mapKeyHelp({ pin: false }));
+    expect(keys).not.toContain("keyHelp.keys.p");
+    expect(keys).toContain("keyHelp.keys.i");
+  });
+
+  it("leaves out the I key line when identify is false", () => {
+    const keys = keysOf(mapKeyHelp({ identify: false }));
+    expect(keys).not.toContain("keyHelp.keys.i");
+    expect(keys).toContain("keyHelp.keys.p");
+  });
+
+  it("keeps the order of the other lines", () => {
+    const keys = keysOf(mapKeyHelp({ pin: false, identify: false }));
+    expect(keys).toEqual(
+      keysOf(MAP_KEY_HELP).filter(
+        (key) => key !== "keyHelp.keys.p" && key !== "keyHelp.keys.i",
+      ),
+    );
   });
 });

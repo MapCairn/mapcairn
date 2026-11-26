@@ -22,7 +22,11 @@ import {
   useTheme,
 } from "@mapcairn/map";
 import { useState } from "react";
-import { MountedChrome } from "./MountedChrome";
+import {
+  MOUNTED_SHORTCUTS,
+  MountedChrome,
+  type OpenSheet,
+} from "./MountedChrome";
 import type { MapTool } from "./tools";
 
 /** What one mounted map's interface needs from the mount. */
@@ -69,9 +73,18 @@ export function MountedMap({
   const basemap = resolveBasemapFor(basemaps, basemapId, resolved);
   const [measuring, setMeasuring] = useState(false);
   const [pin, setPin] = useState<LatLng | null>(null);
+  const [open, setOpen] = useState<OpenSheet>(null);
   const layers = useDataLayers();
   const measure = useMeasure(settings.units);
   const locate = useLocate(settings.units, { announceErrors: false });
+  // The sheet returns focus to its opener when it closes.
+  const closeOnEscape = () => {
+    setOpen(null);
+    if (measuring) {
+      measure.clear();
+      setMeasuring(false);
+    }
+  };
   return (
     <MapView
       label={label}
@@ -86,6 +99,8 @@ export function MountedMap({
         onClick(event.latlng);
       }}
       onEngineError={onEngineError}
+      shortcuts={MOUNTED_SHORTCUTS}
+      onEscape={closeOnEscape}
       chrome={(background) => (
         <MountedChrome
           background={background}
@@ -101,6 +116,8 @@ export function MountedMap({
           locate={locate}
           pin={pin}
           setPin={setPin}
+          open={open}
+          setOpen={setOpen}
         />
       )}
     >
