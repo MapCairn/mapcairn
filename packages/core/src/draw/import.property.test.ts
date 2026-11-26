@@ -600,3 +600,97 @@ describe("parseShapeFile with GPX", () => {
     );
   });
 });
+
+const KML_FRAGMENTS = [
+  "<kml>",
+  "</kml>",
+  "<Document>",
+  "</Document>",
+  "<Folder>",
+  "</Folder>",
+  "<Placemark>",
+  "</Placemark>",
+  "<MultiGeometry>",
+  "</MultiGeometry>",
+  "<Point>",
+  "</Point>",
+  "<LineString>",
+  "</LineString>",
+  "<Polygon>",
+  "</Polygon>",
+  "<outerBoundaryIs>",
+  "</outerBoundaryIs>",
+  "<innerBoundaryIs>",
+  "</innerBoundaryIs>",
+  "<LinearRing>",
+  "</LinearRing>",
+  "<coordinates>",
+  "</coordinates>",
+  "<gx:Track>",
+  "</gx:Track>",
+  "1.5,-2,3 ",
+  "0,0 ",
+  "&#49;,&lol;",
+  "<NetworkLink><Link><href>http://x</href></Link></NetworkLink>",
+  "/>",
+  ">",
+  "<!--",
+  "-->",
+  "<![CDATA[",
+  "]]>",
+  "<?",
+  "?>",
+  "<!DOCTYPE",
+  "<!ENTITY",
+];
+
+describe("parseShapeFile with KML", () => {
+  it("reads text made of KML's own parts without throwing", () => {
+    fc.assert(
+      fc.property(textFromFragments(KML_FRAGMENTS), (text) => {
+        expectWellFormed(parseShapeFile(`<kml>${text}`));
+        expectWellFormed(parseShapeFile(text));
+      }),
+      PROPERTY_PARAMETERS,
+    );
+  });
+
+  it("reads a line of any positions back as the same line", () => {
+    fc.assert(
+      fc.property(
+        fc.array(
+          fc.record({
+            lat: degreesOnGrid(90),
+            lng: degreesOnGrid(180),
+          }),
+          { minLength: 2, maxLength: 20 },
+        ),
+        (vertices) => {
+          const tuples = vertices.map((v) => `${v.lng},${v.lat}`).join(" ");
+          const result = parseShapeFile(
+            `<kml><Placemark><LineString><coordinates>${tuples}</coordinates></LineString></Placemark></kml>`,
+          );
+          if (result.ok && result.shapes.length === 1) {
+            expect(result.shapes[0]).toEqual({ kind: "line", vertices });
+          } else {
+            expect(result).toMatchObject({
+              ok: true,
+              shapes: [],
+              skipped: { "too-few-vertices": 1 },
+            });
+          }
+        },
+      ),
+      PROPERTY_PARAMETERS,
+    );
+  });
+
+  it("refuses deep nesting of any length", () => {
+    fc.assert(
+      fc.property(repeatedFragment("<Folder>"), (opens) => {
+        expect(parseShapeFile(`<kml>${opens}`).ok).toBe(false);
+      }),
+      PROPERTY_PARAMETERS,
+    );
+  });
+});

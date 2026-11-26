@@ -22,23 +22,23 @@ Paths are relative to the repository root. A row describes the SDK unless it nam
 
 ## Data formats and connections
 
-| Capability                                                                         | Status  | Evidence                                                                                                                  | Tracked by |
-| ---------------------------------------------------------------------------------- | ------- | ------------------------------------------------------------------------------------------------------------------------- | ---------- |
-| Point, line and polygon features from a GeoJSON document, with fields read by path | has     | `FeedSource` and the `geojson` decoder in `packages/core/src/layers`                                                      | none       |
-| Any other JSON shape through a registered decoder                                  | has     | `decodeWith` and the decoder registry in `packages/core/src/layers/decoders.ts`                                           | none       |
-| Only the features in view, from a bounding box query, with a cap                   | has     | `QuerySource` (`maxFeatures` 1 to 5000)                                                                                   | none       |
-| Raster tiles, including a WMS through a box template                               | has     | `TileSource` (`{z}/{x}/{y}` and `{bbox-epsg-3857}`), [Serving layers to MapCairn](serving-layers.md)                      | none       |
-| Vector tiles styled by source layer                                                | has     | `VectorTileSource`, [Layer definitions](layer-definitions.md)                                                             | none       |
-| Worked recipes for OGC API Features, WMS and WMTS endpoints                        | has     | [Serving layers to MapCairn](serving-layers.md), checked in `packages/core/src/layers/openStandards.test.ts`              | none       |
-| Tiles read from a single-file archive                                              | lacks   | none                                                                                                                      | [#192]     |
-| Newer vector tile encodings                                                        | lacks   | none                                                                                                                      | [#197]     |
-| Layers supplied at runtime, per user, validated one at a time                      | has     | `createRuntimeLayerCatalogue` and `partitionDefinitions`                                                                  | none       |
-| Hosts that sit behind a login                                                      | lacks   | the reference site calls only public providers, so a host cannot attach credentials or react to a refused request         | [#45]      |
-| One place for tile and layer request limits, retry, priority and a host hook       | partial | each load is cancelled when replaced, and a slow tile layer says so (`useDataLayers`)                                     | [#195]     |
-| Importing drawn shapes from GeoJSON, WKT and CSV files                             | has     | `parseShapeFile` in `packages/core/src/draw/import.ts`, with the WKT axis order chosen by `wktAxisOrder`                  | none       |
-| Importing drawn shapes from GPX and KML files                                      | partial | GPX is read by `readGpx` in `packages/core/src/draw/gpx.ts`; KML is not read yet                                          | [#227]     |
-| Zipped vector sets, GeoPackage, FlatGeobuf, GeoTIFF and other raster files         | lacks   | each needs a reader library, a runtime dependency decision, so wait for a named need and start with a plan                | none       |
-| Reading a service's capabilities document to list its layers                       | lacks   | a definition is written by the host on purpose: the service's own list adds a parser and a trust question for little gain | none       |
+| Capability                                                                         | Status  | Evidence                                                                                                                   | Tracked by |
+| ---------------------------------------------------------------------------------- | ------- | -------------------------------------------------------------------------------------------------------------------------- | ---------- |
+| Point, line and polygon features from a GeoJSON document, with fields read by path | has     | `FeedSource` and the `geojson` decoder in `packages/core/src/layers`                                                       | none       |
+| Any other JSON shape through a registered decoder                                  | has     | `decodeWith` and the decoder registry in `packages/core/src/layers/decoders.ts`                                            | none       |
+| Only the features in view, from a bounding box query, with a cap                   | has     | `QuerySource` (`maxFeatures` 1 to 5000)                                                                                    | none       |
+| Raster tiles, including a WMS through a box template                               | has     | `TileSource` (`{z}/{x}/{y}` and `{bbox-epsg-3857}`), [Serving layers to MapCairn](serving-layers.md)                       | none       |
+| Vector tiles styled by source layer                                                | has     | `VectorTileSource`, [Layer definitions](layer-definitions.md)                                                              | none       |
+| Worked recipes for OGC API Features, WMS and WMTS endpoints                        | has     | [Serving layers to MapCairn](serving-layers.md), checked in `packages/core/src/layers/openStandards.test.ts`               | none       |
+| Tiles read from a single-file archive                                              | lacks   | none                                                                                                                       | [#192]     |
+| Newer vector tile encodings                                                        | lacks   | none                                                                                                                       | [#197]     |
+| Layers supplied at runtime, per user, validated one at a time                      | has     | `createRuntimeLayerCatalogue` and `partitionDefinitions`                                                                   | none       |
+| Hosts that sit behind a login                                                      | lacks   | the reference site calls only public providers, so a host cannot attach credentials or react to a refused request          | [#45]      |
+| One place for tile and layer request limits, retry, priority and a host hook       | partial | each load is cancelled when replaced, and a slow tile layer says so (`useDataLayers`)                                      | [#195]     |
+| Importing drawn shapes from GeoJSON, WKT and CSV files                             | has     | `parseShapeFile` in `packages/core/src/draw/import.ts`, with the WKT axis order chosen by `wktAxisOrder`                   | none       |
+| Importing drawn shapes from GPX and KML files                                      | has     | GPX is read by `readGpx` in `packages/core/src/draw/gpx.ts`, KML by `readKml` in `kml.ts`; KMZ and `gx:Track` are not read | [#227]     |
+| Zipped vector sets, GeoPackage, FlatGeobuf, GeoTIFF and other raster files         | lacks   | each needs a reader library, a runtime dependency decision, so wait for a named need and start with a plan                 | none       |
+| Reading a service's capabilities document to list its layers                       | lacks   | a definition is written by the host on purpose: the service's own list adds a parser and a trust question for little gain  | none       |
 
 ## Coordinate systems and projections
 

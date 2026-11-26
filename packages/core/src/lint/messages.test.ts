@@ -230,6 +230,7 @@ const EXPECTED_PLACEHOLDERS: Record<MessageKey, readonly string[]> = {
   "draw.import.refusal.not-recognised": [],
   "draw.import.refusal.wkt-unreadable": [],
   "draw.import.refusal.gpx-unreadable": [],
+  "draw.import.refusal.kml-unreadable": [],
   "draw.import.refusal.too-many-shapes": ["max"],
   "draw.import.refusal.too-many-points": ["max"],
   "draw.import.refusalWithDetail": ["refusal", "detail"],

@@ -4,7 +4,9 @@ import {
   checkMessageCatalogue,
   coordinateWordsFor,
   createMessageCatalogue,
+  describeShapeImport,
   EN_GB_CATALOGUE,
+  formatMessage,
   hemispheresFor,
   type MessageKey,
   parseCoordinates,
@@ -176,5 +178,25 @@ describe("the Afrikaans catalogue", () => {
       AF_CATALOGUE["format.hemisphereEast"],
       AF_CATALOGUE["format.hemisphereWest"],
     ]).toEqual(["N", "S", "O", "W"]);
+  });
+
+  it("words the KML import in Afrikaans: the refusals, the KMZ advice and the button", () => {
+    const afrikaans = createMessageCatalogue(
+      "af",
+      AF_CATALOGUE,
+      EN_GB_CATALOGUE,
+    );
+    const say = (refusal: "kml-unreadable" | "not-recognised" | "too-deep") =>
+      formatMessage(afrikaans, describeShapeImport({ ok: false, refusal }));
+    expect(say("kml-unreadable")).toBe(
+      "Die KML kon nie gelees word nie, so niks uit die lêer is ingevoer nie.",
+    );
+    expect(say("not-recognised")).toBe(
+      "Dit is nie GeoJSON, GPX, KML, WKT of 'n CSV met vorms van hierdie kaart nie. Kies 'n .geojson-, .json-, .gpx-, .kml-, .wkt-, .txt- of .csv-lêer. 'n KMZ-lêer word nie gelees nie: pak dit uit en kies die .kml daarin.",
+    );
+    expect(say("too-deep")).toContain("KML");
+    expect(AF_CATALOGUE["panels.shapes.import"]).toBe(
+      "Voer GeoJSON, GPX, KML, CSV of WKT in",
+    );
   });
 });

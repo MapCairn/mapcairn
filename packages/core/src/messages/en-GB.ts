@@ -279,13 +279,15 @@ export const EN_GB_CATALOGUE: Record<MessageKey, string> = {
   "draw.import.refusal.too-large":
     "The file is larger than {megabytes} MB. Split it into smaller files.",
   "draw.import.refusal.too-deep":
-    "The file is nested too deeply to read. Check that it is a GeoJSON or GPX file.",
+    "The file is nested too deeply to read. Check that it is a GeoJSON, GPX or KML file.",
   "draw.import.refusal.not-recognised":
-    "This is not GeoJSON, GPX, WKT or a CSV of shapes from this map. Choose a .geojson, .json, .gpx, .wkt, .txt or .csv file.",
+    "This is not GeoJSON, GPX, KML, WKT or a CSV of shapes from this map. Choose a .geojson, .json, .gpx, .kml, .wkt, .txt or .csv file. A KMZ file is not read: unzip it and choose the .kml inside.",
   "draw.import.refusal.wkt-unreadable":
     "The WKT could not be read, so none of the file was imported.",
   "draw.import.refusal.gpx-unreadable":
     "The GPX could not be read, so none of the file was imported.",
+  "draw.import.refusal.kml-unreadable":
+    "The KML could not be read, so none of the file was imported.",
   "draw.import.refusal.too-many-shapes":
     "The file holds more than {max} shapes. Import at most {max} at a time.",
   "draw.import.refusal.too-many-points":
@@ -356,7 +358,7 @@ export const EN_GB_CATALOGUE: Record<MessageKey, string> = {
   "panels.shapes.deleteSelected": "Delete selected shape",
   "panels.shapes.deleteAll": "Delete all shapes",
   "panels.shapes.importHeading": "Import",
-  "panels.shapes.import": "Import GeoJSON, GPX, CSV or WKT",
+  "panels.shapes.import": "Import GeoJSON, GPX, KML, CSV or WKT",
   "panels.shapes.axisOrderLabel": "WKT coordinate order",
   "panels.shapes.axisOrder.lng-lat": "Longitude, latitude (default)",
   "panels.shapes.axisOrder.lat-lng": "Latitude, longitude",

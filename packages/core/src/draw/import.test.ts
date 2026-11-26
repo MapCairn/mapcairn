@@ -16,6 +16,7 @@ import {
   shapeInputBounds,
   suggestWktAxisOrder,
 } from "./import";
+import { MAX_KML_DEPTH } from "./kml";
 import type { DrawShapeInput } from "./reducer";
 import type { DrawShape } from "./types";
 
@@ -1442,7 +1443,7 @@ describe("parseShapeFile with GPX", () => {
       ok: false,
       refusal: "gpx-unreadable",
     });
-    expect(parseShapeFile("<kml><Placemark/></kml>")).toEqual({
+    expect(parseShapeFile("<svg><path/></svg>")).toEqual({
       ok: false,
       refusal: "not-recognised",
     });
@@ -1479,5 +1480,226 @@ describe("parseShapeFile with GPX", () => {
       ),
     );
     expect(result).toMatchObject({ ok: true, shapes: [{ kind: "point" }] });
+  });
+});
+
+describe("parseShapeFile with KML", () => {
+  const kml = (body: string) =>
+    `<?xml version="1.0"?><kml xmlns="http://www.opengis.net/kml/2.2" xmlns:gx="http://www.google.com/kml/ext/2.2"><Document>${body}</Document></kml>`;
+  const mark = (geometry: string, name = "n") =>
+    `<Placemark><name>${name}</name>${geometry}</Placemark>`;
+  const ring = (coordinates: string) =>
+    `<LinearRing><coordinates>${coordinates}</coordinates></LinearRing>`;
+  const SQUARE_RING = ring("0,0 1,0 1,1 0,1 0,0");
+
+  it("reads points, lines and polygons, one shape each, and counts the holes left out", () => {
+    const result = parseShapeFile(
+      kml(
+        `${mark("<Point><coordinates>2,1,30</coordinates></Point>")}
+         <Folder>${mark("<LineString><coordinates>0,0 1,0</coordinates></LineString>")}
+         ${mark(`<Polygon><outerBoundaryIs>${SQUARE_RING}</outerBoundaryIs><innerBoundaryIs>${ring("0.2,0.2 0.4,0.2 0.4,0.4 0.2,0.2")}</innerBoundaryIs></Polygon>`)}</Folder>
+         ${mark(`<MultiGeometry><Point><coordinates>5,5</coordinates></Point><Polygon><outerBoundaryIs>${SQUARE_RING}</outerBoundaryIs></Polygon></MultiGeometry>`)}`,
+      ),
+    );
+    expect(result).toEqual({
+      ok: true,
+      shapes: [
+        { kind: "point", vertices: [p(2, 1)] },
+        { kind: "line", vertices: [p(0, 0), p(1, 0)] },
+        { kind: "polygon", vertices: [p(0, 0), p(1, 0), p(1, 1), p(0, 1)] },
+        { kind: "point", vertices: [p(5, 5)] },
+        { kind: "polygon", vertices: [p(0, 0), p(1, 0), p(1, 1), p(0, 1)] },
+      ],
+      skipped: {},
+      holesDropped: 1,
+    });
+  });
+
+  it("reads KML written without the prolog, past a byte order mark", () => {
+    const text = `\uFEFF\n <!-- made by an app --><kml><Placemark><Point><coordinates>1,2</coordinates></Point></Placemark></kml>`;
+    expect(parseShapeFile(text)).toMatchObject({
+      ok: true,
+      shapes: [{ kind: "point" }],
+    });
+  });
+
+  it("still reads GPX, and tells the two apart by their root", () => {
+    expect(parseShapeFile('<gpx><wpt lat="1" lon="2"/></gpx>')).toMatchObject({
+      ok: true,
+      shapes: [{ kind: "point" }],
+    });
+    expect(parseShapeFile('<kml><wpt lat="1" lon="2"/></kml>')).toMatchObject({
+      ok: true,
+      shapes: [],
+    });
+  });
+
+  it("skips and counts shapes outside the rules, and goes on", () => {
+    const result = parseShapeFile(
+      kml(
+        `${mark("<Point><coordinates>2,91</coordinates></Point>")}
+         ${mark("<Point><coordinates>1,2 3,4</coordinates></Point>")}
+         ${mark("<LineString><coordinates>0,0 x,1</coordinates></LineString>")}
+         ${mark("<LineString><coordinates>0,0</coordinates></LineString>")}
+         ${mark("<Polygon><extrude>1</extrude></Polygon>")}
+         ${mark("<gx:Track><gx:coord>1 2 3</gx:coord></gx:Track>")}
+         ${mark("<gx:MultiTrack><gx:Track/><gx:Track/></gx:MultiTrack>")}
+         ${mark("<Point><coordinates>1,2</coordinates></Point>")}`,
+      ),
+    );
+    expect(result).toEqual({
+      ok: true,
+      shapes: [{ kind: "point", vertices: [p(1, 2)] }],
+      skipped: {
+        "out-of-range": 1,
+        malformed: 3,
+        "too-few-vertices": 1,
+        unsupported: 2,
+      },
+      holesDropped: 0,
+    });
+  });
+
+  it("keeps no name or description: nothing of the text reaches a shape or an export", () => {
+    const name = '=HYPERLINK("http://evil.example","x")';
+    const result = parseShapeFile(
+      kml(
+        `<Placemark><name>${name}</name><description><![CDATA[<img src=x onerror=alert(1)>]]></description><Point><coordinates>1,2</coordinates></Point></Placemark>`,
+      ),
+    );
+    expect(result).toMatchObject({ ok: true, shapes: [{ kind: "point" }] });
+    expect(JSON.stringify(result)).not.toContain("HYPERLINK");
+    const shapes = (result as { shapes: DrawShapeInput[] }).shapes;
+    expect(
+      shapesToCsv(
+        shapes.map((shape, index) => ({
+          ...shape,
+          id: `s${index}`,
+          label: "",
+          done: true,
+        })),
+      ),
+    ).not.toContain("HYPERLINK");
+  });
+
+  it("refuses a file with too many shapes or points, and one that nests too deeply", () => {
+    const placemarks = mark(
+      "<Point><coordinates>1,2</coordinates></Point>",
+    ).repeat(MAX_IMPORT_SHAPES + 1);
+    expect(parseShapeFile(kml(placemarks))).toEqual({
+      ok: false,
+      refusal: "too-many-shapes",
+    });
+    const tuples = "1,2 ".repeat(MAX_IMPORT_SHAPE_POINTS);
+    const lines = mark(
+      `<LineString><coordinates>${tuples}</coordinates></LineString>`,
+    ).repeat(11);
+    expect(parseShapeFile(kml(lines))).toEqual({
+      ok: false,
+      refusal: "too-many-points",
+    });
+    expect(
+      parseShapeFile(kml("<Folder>".repeat(MAX_IMPORT_DEPTH + 1))),
+    ).toEqual({ ok: false, refusal: "too-deep" });
+    expect(parseShapeFile(kml(" ".repeat(MAX_IMPORT_BYTES)))).toEqual({
+      ok: false,
+      refusal: "too-large",
+    });
+  });
+
+  it("skips a line of more points than a shape may have", () => {
+    const tuples = "1,2 ".repeat(MAX_IMPORT_SHAPE_POINTS + 1);
+    expect(
+      parseShapeFile(
+        kml(
+          mark(`<LineString><coordinates>${tuples}</coordinates></LineString>`),
+        ),
+      ),
+    ).toMatchObject({
+      ok: true,
+      shapes: [],
+      skipped: { "too-many-points": 1 },
+    });
+  });
+
+  it("tells the damaged root of KML from that of GPX", () => {
+    expect(parseShapeFile("<kml xmlns=x><Placemark/></kml>")).toEqual({
+      ok: false,
+      refusal: "kml-unreadable",
+    });
+    expect(parseShapeFile("<gpx version=1><wpt/></gpx>")).toEqual({
+      ok: false,
+      refusal: "gpx-unreadable",
+    });
+  });
+
+  it("allows as many levels of KML elements as of JSON", () => {
+    const folders = (levels: number) =>
+      `<kml>${"<Folder>".repeat(levels)}${"</Folder>".repeat(levels)}</kml>`;
+    expect(MAX_IMPORT_DEPTH).toBe(MAX_KML_DEPTH);
+    expect(parseShapeFile(folders(MAX_IMPORT_DEPTH - 1))).toMatchObject({
+      ok: true,
+    });
+    expect(parseShapeFile(folders(MAX_IMPORT_DEPTH))).toEqual({
+      ok: false,
+      refusal: "too-deep",
+    });
+  });
+
+  it("counts a Point or a line with no coordinates as malformed", () => {
+    expect(
+      parseShapeFile(
+        kml(
+          mark("<Point/>") +
+            mark("<LineString><x/></LineString>") +
+            mark("<Polygon/>"),
+        ),
+      ),
+    ).toMatchObject({ ok: true, shapes: [], skipped: { malformed: 3 } });
+  });
+
+  it("refuses damaged KML whole, and anything that is not KML or GPX is not recognised", () => {
+    expect(parseShapeFile(kml("<Placemark><Point><coordinates>1,2"))).toEqual({
+      ok: false,
+      refusal: "kml-unreadable",
+    });
+    expect(parseShapeFile("<kml><Placemark></kml>")).toEqual({
+      ok: false,
+      refusal: "kml-unreadable",
+    });
+    for (const text of [
+      "<svg/>",
+      "PK\u0003\u0004\u0014\u0000 doc.kml",
+      "<!-- only a comment -->",
+    ]) {
+      expect(parseShapeFile(text), text).toEqual({
+        ok: false,
+        refusal: "not-recognised",
+      });
+    }
+  });
+
+  it("never expands an entity or follows a link", () => {
+    const laughs = Array.from(
+      { length: 9 },
+      (_, level) => `<!ENTITY lol${level + 1} "${`&lol${level};`.repeat(10)}">`,
+    ).join("");
+    expect(
+      parseShapeFile(
+        `<!DOCTYPE kml [<!ENTITY lol "lol">${laughs}<!ENTITY ext SYSTEM "file:///etc/passwd">]>${kml(mark("<Point><coordinates>&ext;</coordinates></Point>"))}`,
+      ),
+    ).toEqual({ ok: false, refusal: "not-recognised" });
+    expect(
+      parseShapeFile(
+        kml(mark("<Point><coordinates>&lol9;,&ext;</coordinates></Point>")),
+      ),
+    ).toMatchObject({ ok: true, shapes: [], skipped: { malformed: 1 } });
+    expect(
+      parseShapeFile(
+        kml(
+          "<NetworkLink><Link><href>http://169.254.169.254/latest</href></Link></NetworkLink><GroundOverlay><Icon><href>https://example.com/i.png</href></Icon></GroundOverlay>",
+        ),
+      ),
+    ).toEqual({ ok: true, shapes: [], skipped: {}, holesDropped: 0 });
   });
 });
