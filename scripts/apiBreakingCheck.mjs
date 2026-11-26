@@ -20,8 +20,10 @@ import { isEntryPoint } from "./entryPoint.mjs";
 import { skipReason } from "./prBodyCheck.mjs";
 import { compareApiReports } from "./release/apiChanges.mjs";
 import { tagReports } from "./release/plan.mjs";
+import { releaseTags } from "./release/semver.mjs";
 import { git } from "./release/tools.mjs";
 import { parseCommit } from "./release/versionRules.mjs";
+import { SDK_PACKAGES } from "./sdkPackages.mjs";
 
 /**
  * Whether a finding fails the pull request (`error`) or only annotates it
@@ -33,16 +35,33 @@ import { parseCommit } from "./release/versionRules.mjs";
 export const SEVERITY = "error";
 
 /**
- * The likely-breaking changes between two sets of API reports.
+ * The likely-breaking changes between two sets of API reports. An entry point
+ * that the last release does not have cannot break anyone, so a change in it
+ * is left out when `released` says what the last release held.
  *
  * @param {import("./release/apiChanges.mjs").ReportSource} before
  * @param {import("./release/apiChanges.mjs").ReportSource} after
+ * @param {import("./release/apiChanges.mjs").ReportSource | null} [released] The reports at the last release tag, or null when there is none.
  * @returns {ReturnType<typeof compareApiReports>}
  */
-export function breakingApiChanges(before, after) {
+export function breakingApiChanges(before, after, released = null) {
   return compareApiReports(before, after).filter(
-    (change) => change.likelyBreaking,
+    (change) =>
+      change.likelyBreaking &&
+      (released === null || existsInRelease(released, change)),
   );
+}
+
+/**
+ * Whether the entry point a change is in has a report in the released reports.
+ *
+ * @param {import("./release/apiChanges.mjs").ReportSource} released
+ * @param {{ package: string, entry: string }} change
+ * @returns {boolean}
+ */
+function existsInRelease(released, { package: name, entry }) {
+  const folder = `packages/${name.replace("@mapcairn/", "")}/api`;
+  return released.list(folder).includes(`${entry}.api.md`);
 }
 
 /**
@@ -92,6 +111,7 @@ function findings(title, changes) {
  * @param {string} input.body The pull request description.
  * @param {import("./release/apiChanges.mjs").ReportSource} input.before The reports at the merge base.
  * @param {import("./release/apiChanges.mjs").ReportSource} input.after The reports in the pull request.
+ * @param {import("./release/apiChanges.mjs").ReportSource | null} [input.released] The reports at the last release tag, when there is one.
  * @param {(line: string) => void} input.log Receives the annotations.
  * @param {(text: string) => void} input.summarise Receives the job summary text.
  * @param {"error" | "warning"} [input.severity] How a finding is reported; `SEVERITY` by default.
@@ -104,6 +124,7 @@ export function runApiBreakingCheck({
   body,
   before,
   after,
+  released = null,
   log,
   summarise,
   severity = SEVERITY,
@@ -114,7 +135,7 @@ export function runApiBreakingCheck({
   if (isMarkedBreaking(title, body)) {
     return 0;
   }
-  const changes = breakingApiChanges(before, after);
+  const changes = breakingApiChanges(before, after, released);
   if (changes.length === 0) {
     return 0;
   }
@@ -140,20 +161,67 @@ export function escapeAnnotation(text) {
 }
 
 /**
+ * The API reports at a release tag, read so that a failure cannot look like an
+ * entry point the release never had: every folder is listed with a git call
+ * whose result is checked.
+ *
+ * @param {string} tag
+ * @param {string} root
+ * @returns {import("./release/apiChanges.mjs").ReportSource}
+ * @throws {Error} When git cannot list a folder at the tag, or the tag holds no API report at all, so the tag is no baseline.
+ */
+export function releasedReports(tag, root) {
+  /** @type {Map<string, string[]>} */
+  const files = new Map();
+  for (const name of SDK_PACKAGES) {
+    const folder = `packages/${name}/api`;
+    const listed = git(["ls-tree", "--name-only", tag, `${folder}/`], root);
+    if (!listed.ok) {
+      throw new Error(`The API reports at ${tag} could not be read.`);
+    }
+    files.set(
+      folder,
+      listed.stdout
+        .split(/\r?\n/)
+        .filter((entry) => entry.endsWith(".api.md"))
+        .map((entry) => entry.slice(entry.lastIndexOf("/") + 1)),
+    );
+  }
+  if ([...files.values()].every((names) => names.length === 0)) {
+    throw new Error(`${tag} holds no API reports, so it is no baseline.`);
+  }
+  const reports = tagReports(tag, root);
+  return {
+    list: (folder) => files.get(folder) ?? [],
+    read: reports.read,
+  };
+}
+
+/**
  * The API reports at the base branch and at `HEAD`, read from git.
  *
  * @param {string} baseRef The base branch name; its remote-tracking ref `origin/<name>` is read.
  * @param {string} [root] The repository folder.
- * @returns {{ before: import("./release/apiChanges.mjs").ReportSource, after: import("./release/apiChanges.mjs").ReportSource } | null} Null when the base tip or the point where `HEAD` left it cannot be found.
+ * @returns {{ before: import("./release/apiChanges.mjs").ReportSource, after: import("./release/apiChanges.mjs").ReportSource, released: import("./release/apiChanges.mjs").ReportSource | null } | null} Null when the base tip or the point where `HEAD` left it cannot be found. `released` holds the reports at the newest release tag, or is null when the repository has no release tag.
+ * @throws {Error} When the tags cannot be listed or the newest release tag's reports cannot be read.
  */
 export function readReports(baseRef, root = ".") {
   const result = git(["merge-base", `origin/${baseRef}`, "HEAD"], root);
   if (!result.ok || result.stdout.trim() === "") {
     return null;
   }
+  const tags = git(["tag", "--list", "v*"], root);
+  if (!tags.ok) {
+    throw new Error("The release tags could not be listed.");
+  }
+  const lastRelease = releaseTags(
+    tags.stdout.split(/\r?\n/).filter(Boolean),
+  ).at(-1);
   return {
     before: tagReports(result.stdout.trim(), root),
     after: tagReports("HEAD", root),
+    released:
+      lastRelease === undefined ? null : releasedReports(lastRelease.tag, root),
   };
 }
 

@@ -5,6 +5,20 @@ import { describe, expect, it, vi } from "vitest";
 import { MountMapError } from "./MountMapError";
 import { mount } from "./mount";
 
+/**
+ * Imports the entry, which needs the built SDK packages for their stylesheets,
+ * and says so when they are missing, instead of a bare resolution error.
+ */
+async function loadEntry() {
+  try {
+    return await import("./index");
+  } catch (error) {
+    throw new Error(
+      `The entry could not be imported. If the SDK packages are not built, run \`npm run build:sdk\` once before this test file. ${String(error)}`,
+    );
+  }
+}
+
 describe("the browser entry on a server", () => {
   it("runs where there is no document, window or custom element registry", () => {
     expect(typeof document).toBe("undefined");
@@ -14,7 +28,7 @@ describe("the browser entry on a server", () => {
 
   it("imports without adding a global or reading the page", async () => {
     const before = Object.getOwnPropertyNames(globalThis).sort();
-    const entry = await import("./index");
+    const entry = await loadEntry();
     expect(Object.getOwnPropertyNames(globalThis).sort()).toEqual(before);
     expect(Object.keys(entry).sort()).toEqual(
       [
@@ -48,7 +62,7 @@ describe("the browser entry on a server", () => {
   });
 
   it("does the same through mountMap, which is what a page imports", async () => {
-    const { mountMap } = await import("./index");
+    const { mountMap } = await loadEntry();
     expect(() => mountMap({} as never)).toThrow(MountMapError);
   });
 });

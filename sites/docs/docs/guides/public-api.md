@@ -93,7 +93,7 @@ An export that is going away is deprecated first, so a host sees the notice befo
 
 Before `1.0.0`, a removal may skip the notice period when the export is documented as experimental or tagged `@beta`, or when keeping it would be unsafe, such as a privacy or security fault. The pull request that removes it says which exception applies and why.
 
-Only the marker on the removal is enforced. The step "Check that a breaking API change is marked in the pull request title", in the `build` job of `.github/workflows/ci.yml` (`scripts/apiBreakingCheck.mjs`), fails when the reports show a likely breaking change and neither the `!` nor the footer is there. No check requires a `@deprecated` tag before a removal or counts the minor releases between them; the reviewer does.
+Only the marker on the removal is enforced. The step "Check that a breaking API change is marked in the pull request title", in the `build` job of `.github/workflows/ci.yml` (`scripts/apiBreakingCheck.mjs`), fails when the reports show a likely breaking change and neither the `!` nor the footer is there. A change in an entry point that the last release tag does not have is left out, because nobody can depend on it yet. No check requires a `@deprecated` tag before a removal or counts the minor releases between them; the reviewer does.
 
 ## How a change is classed for a release
 

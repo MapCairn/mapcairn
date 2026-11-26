@@ -11,6 +11,7 @@ import {
   escapeAnnotation,
   isMarkedBreaking,
   readReports,
+  releasedReports,
   runApiBreakingCheck,
   runFromEnvironment,
   SEVERITY,
@@ -123,6 +124,68 @@ describe("breakingApiChanges", () => {
 
   it("finds nothing when no report changed", () => {
     expect(breakingApiChanges(REMOVAL_BEFORE, REMOVAL_BEFORE)).toEqual([]);
+  });
+});
+
+describe("an entry point the last release does not have", () => {
+  const RELEASED_WITHOUT_IT = sourceOf({});
+  const RELEASED_WITH_IT = sourceOf({ [CORE]: "released" });
+
+  it("cannot break anyone, so its likely-breaking change is left out", () => {
+    expect(
+      breakingApiChanges(REMOVAL_BEFORE, REMOVAL_AFTER, RELEASED_WITHOUT_IT),
+    ).toEqual([]);
+  });
+
+  it("still counts when the last release has the entry point", () => {
+    expect(
+      breakingApiChanges(REMOVAL_BEFORE, REMOVAL_AFTER, RELEASED_WITH_IT)
+        .length,
+    ).toBeGreaterThan(0);
+  });
+
+  it("excludes only the entry point the release lacks, when released and unreleased ones change together", () => {
+    const SDK_BROWSER = "packages/sdk/api/browser.api.md";
+    const body = (cost: boolean) =>
+      report(layerBaseBlock(cost), messageKeyBlock(cost));
+    const before = sourceOf({ [CORE]: body(true), [SDK_BROWSER]: body(true) });
+    const after = sourceOf({ [CORE]: body(false), [SDK_BROWSER]: body(false) });
+    const entries = breakingApiChanges(before, after, RELEASED_WITH_IT).map(
+      (change: { package: string; entry: string }) =>
+        `${change.package}:${change.entry}`,
+    );
+    expect(entries.length).toBeGreaterThan(0);
+    expect(new Set(entries)).toEqual(new Set(["@mapcairn/core:index"]));
+  });
+
+  it("still counts a released entry point that the pull request removes", () => {
+    const changes = breakingApiChanges(
+      REMOVAL_BEFORE,
+      sourceOf({}),
+      RELEASED_WITH_IT,
+    );
+    expect(changes.length).toBeGreaterThan(0);
+  });
+
+  it("counts everything when there is no release to compare with", () => {
+    expect(
+      breakingApiChanges(REMOVAL_BEFORE, REMOVAL_AFTER, null).length,
+    ).toBeGreaterThan(0);
+  });
+
+  it("lets an unmarked pull request pass", () => {
+    const code = runApiBreakingCheck({
+      author: "someone",
+      labels: [],
+      title: "feat(sdk): add an event",
+      body: "",
+      before: REMOVAL_BEFORE,
+      after: REMOVAL_AFTER,
+      released: RELEASED_WITHOUT_IT,
+      log: () => undefined,
+      summarise: () => undefined,
+    });
+    expect(code).toBe(0);
   });
 });
 
@@ -376,6 +439,58 @@ describe("readReports", () => {
     expect(reports.before.read(CORE)).toContain("LayerDefinitionBase");
     expect(reports.before.read(THEME)).toBeNull();
     expect(reports.after.read(THEME)).toContain("tokenValues");
+  });
+
+  it("reads the reports at the newest release tag, and none when there is no tag", () => {
+    const root = repository();
+    expect(readReports("main", root).released).toBeNull();
+    execFileSync("git", ["tag", "v0.1.0"], { cwd: root });
+    mkdirSync(path.join(root, "packages/theme/api"), { recursive: true });
+    writeFileSync(path.join(root, THEME), report(NAMESPACE_AFTER));
+    execFileSync("git", ["add", "."], { cwd: root });
+    execFileSync("git", ["commit", "-q", "-m", "theme"], { cwd: root });
+    const { released } = readReports("main", root);
+    expect(released.read(CORE)).toContain("LayerDefinitionBase");
+    expect(released.read(THEME)).toBeNull();
+  });
+
+  it("takes the newest release tag by version, not by name or by date", () => {
+    const root = repository();
+    const git = (...args: string[]) => execFileSync("git", args, { cwd: root });
+    const tagWith = (tag: string, text: string) => {
+      writeFileSync(path.join(root, CORE), report(text));
+      git("add", ".");
+      git("commit", "-q", "-m", tag);
+      git("tag", tag);
+    };
+    tagWith("v0.10.0", "// @public\nexport const ten = 10;");
+    tagWith("v0.9.0", "// @public\nexport const nine = 9;");
+    tagWith("v0.11.0-rc.1", "// @public\nexport const eleven = 11;");
+    const { released } = readReports("main", root);
+    expect(released.read(CORE)).toContain("eleven");
+  });
+
+  it("throws, so the check is skipped with a warning, when the release tag holds no API report", () => {
+    const root = repository();
+    const git = (...args: string[]) => execFileSync("git", args, { cwd: root });
+    git("rm", "-q", "-r", "packages");
+    writeFileSync(path.join(root, "README.md"), "x");
+    git("add", ".");
+    git("commit", "-q", "-m", "no reports");
+    git("tag", "v1.0.0");
+    expect(() => readReports("main", root)).toThrow(/holds no API reports/);
+  });
+
+  it("throws when the release tag cannot be listed as a tree", () => {
+    const root = repository();
+    const blob = execFileSync("git", ["rev-parse", "HEAD:" + CORE], {
+      cwd: root,
+    })
+      .toString()
+      .trim();
+    execFileSync("git", ["tag", "v1.0.0", blob], { cwd: root });
+    expect(() => readReports("main", root)).toThrow(/could not be read/);
+    expect(() => releasedReports("v1.0.0", root)).toThrow(/could not be read/);
   });
 
   it("returns null when the base branch is missing", () => {

@@ -184,6 +184,11 @@ describe("dependency-cruiser boundaries", () => {
     "packages/sdk/src/browser/goodSibling.ts": "export const y = 1;\n",
     "packages/sdk/src/browser/good.test.ts":
       'import { it } from "vitest";\nit("x", () => {});\n',
+    "packages/sdk/src/browser/testSupport.ts": "export const helper = 1;\n",
+    "packages/sdk/src/browser/goodUsesSupport.test.ts":
+      'import { helper } from "./testSupport";\nexport const y = helper;\n',
+    "packages/sdk/src/browser/badUsesSupport.ts":
+      'import { helper } from "./testSupport";\nexport const y = helper;\n',
     "packages/sdk/src/browser/badNpm.ts": 'export * from "zod";\n',
     "packages/sdk/src/browser/badDeep.ts":
       'export * from "../../../map/src/ui/index";\n',
@@ -338,6 +343,10 @@ describe("dependency-cruiser boundaries", () => {
     ["umbrella-reexports-entry-points-only", "packages/sdk/src/badDeep.ts"],
     ["umbrella-reexports-entry-points-only", "packages/sdk/src/badCode.ts"],
     ["umbrella-browser-uses-react-only", "packages/sdk/src/browser/badNpm.ts"],
+    [
+      "umbrella-browser-test-support-for-tests-only",
+      "packages/sdk/src/browser/badUsesSupport.ts",
+    ],
     [
       "umbrella-browser-uses-entry-points-only",
       "packages/sdk/src/browser/badDeep.ts",

@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
 import {
+  emptyLayerCatalogue,
   type MapAdapterFactory,
   type MapEngineError,
   MemorySettingsStore,
@@ -14,7 +15,9 @@ import {
 } from "@mapcairn/map";
 import { createRoot } from "react-dom/client";
 import { createAdapterTap } from "./adapterTap";
+import { ContainerLanguage } from "./ContainerLanguage";
 import { nextIdentifierPrefix } from "./identifiers";
+import { buildLayers } from "./layers";
 import { MountedMap } from "./MountedMap";
 import { MountMapError } from "./MountMapError";
 import { buildServices } from "./services";
@@ -96,23 +99,10 @@ export function mount(
     options.workerUrl ?? dependencies.defaultWorkerUrl(),
   );
 
-  const tap = createAdapterTap(valid.view);
-  const settings = new MemorySettingsStore({
-    persistent: false,
-    initial: { theme: valid.theme },
-  });
-  const built = buildServices({
-    element,
-    basemaps: valid.basemaps,
-    settings,
-    createMapAdapter: tap.wrap(dependencies.createMapAdapter(workerUrl)),
-    provided: options.services ?? {},
-  });
-  const services = dependencies.decorateServices?.(built) ?? built;
-
   const listeners: Listeners = {
     viewchange: new Set(),
     click: new Set(),
+    featuretap: new Set(),
     error: new Set(),
   };
   const emit = <K extends keyof MapEvents>(type: K, event: MapEvents[K]) => {
@@ -120,7 +110,31 @@ export function mount(
       listener(event);
     }
   };
+  const layers = buildLayers(options.layers, {
+    layerSource: options.services?.layerSource,
+    report: (problem) => emit("error", problem),
+  });
 
+  const tap = createAdapterTap(valid.view);
+  const settings = new MemorySettingsStore({
+    persistent: false,
+    initial: { theme: valid.theme, language: valid.languages.initial },
+  });
+  const built = buildServices({
+    element,
+    basemaps: valid.basemaps,
+    settings,
+    createMapAdapter: tap.wrap(dependencies.createMapAdapter(workerUrl)),
+    provided: options.services ?? {},
+    layers: valid.tools.has("map-options")
+      ? layers.catalogue
+      : emptyLayerCatalogue,
+    languages: valid.languages.catalogue,
+  });
+  const services =
+    dependencies.decorateServices?.(built.services) ?? built.services;
+
+  const adopterSetDirection = element.hasAttribute("dir");
   warnAboutLabels(element, valid.label);
   element.setAttribute(
     MARKER,
@@ -137,9 +151,19 @@ export function mount(
       <ServicesProvider services={services}>
         <LiveRegionProvider>
           <TooltipProvider>
+            <ContainerLanguage
+              element={element}
+              writeDirection={!adopterSetDirection}
+            />
             <MountedMap
               basemaps={valid.basemaps}
               basemapId={basemapId}
+              onBasemapChange={(id: string) => {
+                basemapId = id;
+                draw();
+              }}
+              tools={valid.tools}
+              hasLayers={layers.present}
               label={valid.label}
               initialView={valid.view}
               onViewChange={(view: ViewState) => {
@@ -147,6 +171,7 @@ export function mount(
                 emit("viewchange", view);
               }}
               onClick={(position) => emit("click", position)}
+              onFeatureTap={(featureTap) => emit("featuretap", featureTap)}
               onEngineError={(error: MapEngineError) => emit("error", error)}
             />
           </TooltipProvider>
@@ -205,6 +230,8 @@ export function mount(
       }
       destroyed = true;
       root.unmount();
+      layers.dispose();
+      built.dispose();
       tap.release();
       for (const set of Object.values(listeners)) {
         set.clear();

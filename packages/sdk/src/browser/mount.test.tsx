@@ -3,86 +3,23 @@
 import {
   BASEMAPS,
   createFakeMapAdapterFactory,
-  type FakeMapAdapter,
-  type MapAdapterFactory,
   MapEngineError,
   type Services,
 } from "@mapcairn/core";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { MountMapError } from "./MountMapError";
-import { type MountDependencies, mount } from "./mount";
-import type { MapHandle } from "./types";
+import { mount } from "./mount";
+import {
+  button,
+  container,
+  destroyMounted,
+  drawn,
+  harness,
+  mountOn,
+  remember,
+} from "./testSupport";
 
-const WORKER = "/mapcairn/browser-worker.js";
-
-interface Harness {
-  readonly dependencies: MountDependencies;
-  readonly adapters: FakeMapAdapter[];
-  readonly workerUrls: string[];
-}
-
-function harness(
-  factory?: (onCreate: (adapter: FakeMapAdapter) => void) => MapAdapterFactory,
-): Harness {
-  const adapters: FakeMapAdapter[] = [];
-  const workerUrls: string[] = [];
-  const onCreate = (adapter: FakeMapAdapter) => {
-    vi.spyOn(adapter, "mount");
-    vi.spyOn(adapter, "setBasemap");
-    adapters.push(adapter);
-  };
-  return {
-    adapters,
-    workerUrls,
-    dependencies: {
-      createMapAdapter: (workerUrl) => {
-        workerUrls.push(workerUrl);
-        return (factory ?? createFakeMapAdapterFactory)(onCreate);
-      },
-      defaultWorkerUrl: () => new URL(WORKER, document.baseURI).href,
-    },
-  };
-}
-
-/** An element with a height, as happy-dom lays out none. */
-function container(height = 300): HTMLElement {
-  const element = document.createElement("div");
-  element.getBoundingClientRect = () =>
-    ({
-      height,
-      width: 400,
-      top: 0,
-      left: 0,
-      right: 400,
-      bottom: height,
-    }) as DOMRect;
-  document.body.append(element);
-  return element;
-}
-
-const mounted: MapHandle[] = [];
-
-function mountOn(
-  element: HTMLElement,
-  tools: Harness,
-  options: Parameters<typeof mount>[1] = {},
-): MapHandle {
-  const handle = mount(element, options, tools.dependencies);
-  mounted.push(handle);
-  return handle;
-}
-
-async function drawn(handle: MapHandle): Promise<void> {
-  await handle.ready;
-}
-
-afterEach(() => {
-  for (const handle of mounted.splice(0)) {
-    handle.destroy();
-  }
-  document.body.replaceChildren();
-  vi.restoreAllMocks();
-});
+afterEach(destroyMounted);
 
 describe("mount with no options", () => {
   it("draws a map with the zoom, the compass, the credits and the scale", async () => {
@@ -543,7 +480,7 @@ describe("the services it builds", () => {
         },
       },
     );
-    mounted.push(handle);
+    remember(handle);
     await drawn(handle);
     expect(calls).toEqual([]);
   });
@@ -563,22 +500,11 @@ describe("the services it builds", () => {
         },
       },
     );
-    mounted.push(handle);
+    remember(handle);
     await drawn(handle);
     expect(seen?.search).toBe(search);
   });
 });
-
-/** The button with an accessible name, once the interface has drawn it. */
-function button(element: HTMLElement, name: string): Promise<HTMLElement> {
-  return vi.waitFor(() => {
-    const found = element.querySelector<HTMLElement>(
-      `button[aria-label="${name}"]`,
-    );
-    expect(found, name).not.toBeNull();
-    return found as HTMLElement;
-  });
-}
 
 describe("the controls", () => {
   it("zoom the map through the adapter", async () => {
@@ -672,7 +598,7 @@ describe("the suggestion provider", () => {
         },
       },
     );
-    mounted.push(handle);
+    remember(handle);
     await drawn(handle);
     expect(seen?.suggestions).toBe(suggestions);
   });
