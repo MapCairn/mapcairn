@@ -303,6 +303,38 @@ function isBundleFile(file, bundle) {
 }
 
 /**
+ * What is wrong with one source map in the tarball: the bundle has none, any
+ * other map needs its script and must name files in the package's own `src`.
+ *
+ * @param {{
+ *   file: string,
+ *   present: Set<string>,
+ *   readFile: (file: string) => string | undefined,
+ *   sourceExists: (source: string) => boolean,
+ *   bundle?: { entries: string[] },
+ * }} input
+ * @returns {string[]}
+ */
+function sourceMapProblems({ file, present, readFile, sourceExists, bundle }) {
+  const script = file.slice(0, -".map".length);
+  if (isBundleFile(script, bundle)) {
+    return [
+      `${file}: a source map of the bundle, whose maps would name other packages' files`,
+    ];
+  }
+  if (!present.has(script)) {
+    return [`${file}: a source map with no script`];
+  }
+  const checked = checkSourceMap(file, readFile(file));
+  return [
+    ...checked.problems,
+    ...checked.sources
+      .filter((entry) => !sourceExists(entry))
+      .map((entry) => `${file}: source ${entry} is not a file in the package`),
+  ];
+}
+
+/**
  * What is wrong with the files under `dist`, beyond their names: a script
  * needs a readable source map that names files in `src` (an entry point and
  * rolldown's helper module are the two exceptions), a map needs its script,
@@ -342,17 +374,9 @@ function buildProblems({ paths, targets, readFile, sourceExists, bundle }) {
         `${file}: no source map, so nothing says what it was built from`,
       );
     } else if (file.endsWith(".js.map")) {
-      if (!present.has(file.slice(0, -".map".length))) {
-        problems.push(`${file}: a source map with no script`);
-        continue;
-      }
-      const checked = checkSourceMap(file, readFile(file));
-      problems.push(...checked.problems);
-      for (const source of checked.sources.filter(
-        (entry) => !sourceExists(entry),
-      )) {
-        problems.push(`${file}: source ${source} is not a file in the package`);
-      }
+      problems.push(
+        ...sourceMapProblems({ file, present, readFile, sourceExists, bundle }),
+      );
     } else if (/\.(?:d\.ts|css)$/.test(file) && !named.has(file)) {
       problems.push(
         `${file}: not named by exports or types, so no build step is known to make it`,
@@ -369,7 +393,7 @@ function buildProblems({ paths, targets, readFile, sourceExists, bundle }) {
  * @param {(file: string) => string | undefined} readFile
  * @returns {number}
  */
-function gzippedBytes(files, readFile) {
+export function gzippedBytes(files, readFile) {
   return files.reduce(
     (total, file) => total + gzipSync(readFile(file) ?? "").length,
     0,

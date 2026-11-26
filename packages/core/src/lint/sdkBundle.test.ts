@@ -81,6 +81,16 @@ describe("the files of @mapcairn/sdk/browser", () => {
     }
   });
 
+  it("look for the worker by the name the build copies it to", () => {
+    const { copy } = JSON.parse(
+      readFileSync(path.join(SDK, "package.json"), "utf8"),
+    ).mapcairn.bundle;
+    expect(Object.keys(copy)).toEqual(["browser-worker.js"]);
+    for (const name of Object.keys(copy)) {
+      expect(read("browser.js")).toContain(`"${name}"`);
+    }
+  });
+
   it("have process.env.NODE_ENV replaced", () => {
     for (const file of scripts()) {
       expect(read(file), file).not.toContain("process.env.NODE_ENV");

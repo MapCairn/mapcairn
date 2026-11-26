@@ -1,11 +1,13 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
+import { gzipSync } from "node:zlib";
 import { describe, expect, it } from "vitest";
 import {
   BUNDLE_CEILINGS,
   checkPackage,
   classifyFile,
   exportTargetsOf,
+  gzippedBytes,
   SIZE_CEILINGS,
   // @ts-expect-error The scripts are dependency-free JavaScript with JSDoc types.
 } from "../../../../scripts/release/packCheck.mjs";
@@ -619,5 +621,83 @@ describe("BUNDLE_CEILINGS", () => {
   it("names only packages that build a bundle", () => {
     expect(Object.keys(BUNDLE_CEILINGS)).toEqual(["sdk"]);
     expect(BUNDLE_CEILINGS.sdk).toBeGreaterThan(SIZE_CEILINGS.sdk);
+  });
+});
+
+describe("gzippedBytes", () => {
+  it("is the length of each file gzipped alone, added up", () => {
+    // A thousand letters gzip to 29 bytes, and an empty file to 20, whatever the machine.
+    expect(gzippedBytes(["a"], () => "a".repeat(1000))).toBe(29);
+    expect(gzippedBytes(["a"], () => "")).toBe(20);
+    expect(gzippedBytes(["a"], () => undefined)).toBe(20);
+    expect(
+      gzippedBytes(["a", "b"], (file: string) => (file === "a" ? "x" : "yy")),
+    ).toBe(gzipSync("x").length + gzipSync("yy").length);
+    expect(gzippedBytes([], () => "x")).toBe(0);
+  });
+});
+
+describe("the two ceilings of a bundle package, one byte either side", () => {
+  const contents: Record<string, string> = {};
+  for (const [index, file] of BUNDLE_FILES.entries()) {
+    contents[file] = `${index}`.repeat(50 + index);
+  }
+  const group = [...BUNDLE_FILES].filter(
+    (file) =>
+      file === "THIRD-PARTY-NOTICES.md" || /^dist\/browser[-.]/.test(file),
+  );
+  const bundleBytes = group.reduce(
+    (total, file) => total + gzipSync(contents[file] ?? "").length,
+    0,
+  );
+  /** Whether the tarball passes both ceilings (the package's is 5000). */
+  const passes = (size: number, bundleCeiling: number) =>
+    bundleProblems(BUNDLE_FILES, { size, bundleCeiling, contents }).filter(
+      (line) => /^(size|bundle):/.test(line),
+    ).length === 0;
+
+  it("holds the bundle to its own ceiling", () => {
+    expect(passes(1000, bundleBytes)).toBe(true);
+    expect(passes(1000, bundleBytes - 1)).toBe(false);
+    expect(passes(1000, bundleBytes + 1)).toBe(true);
+  });
+
+  it("holds the rest of the tarball to the package's ceiling, less the bundle", () => {
+    expect(passes(bundleBytes + 5000, 1_000_000)).toBe(true);
+    expect(passes(bundleBytes + 5001, 1_000_000)).toBe(false);
+    expect(passes(bundleBytes + 4999, 1_000_000)).toBe(true);
+  });
+
+  it("counts the notices file and every bundle file in the bundle", () => {
+    const withoutNotices = group
+      .filter((file) => file !== "THIRD-PARTY-NOTICES.md")
+      .reduce(
+        (total, file) => total + gzipSync(contents[file] ?? "").length,
+        0,
+      );
+    expect(withoutNotices).toBeLessThan(bundleBytes);
+    expect(passes(1000, withoutNotices)).toBe(false);
+  });
+});
+
+describe("a source map of a bundle", () => {
+  it("is a problem, even one that names only files in the package's src", () => {
+    const result = bundleProblems([...BUNDLE_FILES, "dist/browser.js.map"], {
+      contents: { "dist/browser.js.map": sourceMap() },
+    });
+    expect(result.join("\n")).toContain(
+      "dist/browser.js.map: a source map of the bundle",
+    );
+    expect(
+      bundleProblems([...BUNDLE_FILES, "dist/browser-engine-AbC123.js.map"], {
+        contents: { "dist/browser-engine-AbC123.js.map": sourceMap() },
+      }).join("\n"),
+    ).toContain("a source map of the bundle");
+  });
+
+  it("is still read as any package's source map when the package builds no bundle", () => {
+    expect(problems([...GOOD_FILES]).join("\n")).not.toContain(
+      "a source map of the bundle",
+    );
   });
 });
