@@ -70,6 +70,8 @@ function isOnGlobe(position: LatLng): boolean {
  * - Every request honours its `AbortSignal` by rejecting with a
  *   `RoutingError` of kind `aborted`.
  * - `routeCalls` and `reachableAreaCalls` record what the ui asked.
+ * - The default reachable area loads a lazy chunk (the geometry library) on
+ *   first use; a failed load rejects as `network`.
  */
 export class FakeRoutingProvider implements RoutingProvider {
   /** Every `route` request, in order, including ones that were refused. */
@@ -217,6 +219,17 @@ function defaultRoute(stops: readonly LatLng[], mode: TravelMode): RouteResult {
   };
 }
 
+async function loadOperations(): Promise<
+  typeof import("../geometry/operations")
+> {
+  try {
+    return await import("../geometry/operations");
+  } catch {
+    // A chunk that cannot be fetched is a failed request, as for a real provider.
+    throw new RoutingError("network", "The geometry code could not be loaded.");
+  }
+}
+
 async function defaultArea(
   origin: LatLng,
   minutes: number,
@@ -224,7 +237,8 @@ async function defaultArea(
 ): Promise<ReachableAreaResult> {
   // Loaded on first use, so an app that composes the fakes but never asks for
   // a reachable area does not carry the geometry library behind `buffer`.
-  const { buffer } = await import("../geometry/operations");
+  const operations = await loadOperations();
+  const buffer = operations.buffer;
   const reach = SPEEDS[mode] * minutes * 60;
   let ring: ReturnType<typeof buffer>;
   try {

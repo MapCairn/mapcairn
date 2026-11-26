@@ -44,7 +44,7 @@ async function buildApp(source: string): Promise<readonly Chunk[]> {
     root: scratch,
     logLevel: "silent",
     configFile: false,
-    build: { write: false, minify: false, rollupOptions: { input: entry } },
+    build: { write: false, minify: false, rolldownOptions: { input: entry } },
   });
   const outputs = Array.isArray(result) ? result : [result];
   return outputs.flatMap((output) =>
@@ -86,7 +86,12 @@ describe("the eager chunk of an app that uses the fakes", () => {
       const chunks = await buildApp(
         `import { createFakeServices } from ${JSON.stringify(CORE_ENTRY)};\nconsole.log(createFakeServices());\n`,
       );
-      expect(eagerChunks(chunks).filter(holdsJsts).map(nameOf)).toEqual([]);
+      const eager = eagerChunks(chunks);
+      expect(eager.length).toBeGreaterThan(0);
+      expect(eager.every((chunk) => (chunk.moduleIds ?? []).length > 0)).toBe(
+        true,
+      );
+      expect(eager.filter(holdsJsts).map(nameOf)).toEqual([]);
     },
     BUILD_TIMEOUT,
   );
