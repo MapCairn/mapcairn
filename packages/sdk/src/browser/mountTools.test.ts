@@ -582,7 +582,9 @@ describe("Settings and Help on a mounted map", () => {
 });
 
 describe("keyboard help on a mounted map", () => {
-  async function mounted(tools: readonly ("search" | "settings")[]) {
+  async function mounted(
+    tools: readonly ("search" | "settings" | "map-options")[],
+  ) {
     const element = container();
     await drawn(mountOn(element, harness(), { tools }));
     return element;
@@ -597,6 +599,16 @@ describe("keyboard help on a mounted map", () => {
     expect(help).toContain("Arrow keys");
     expect(help).not.toMatch(/\bP: /);
     expect(help).not.toMatch(/\bI: /);
+  });
+
+  it("lists no P key beside the Map options pin card", async () => {
+    const element = await mounted(["map-options", "settings"]);
+    const region = element.querySelector('[aria-roledescription="map"]');
+    const help = element.ownerDocument.getElementById(
+      region?.getAttribute("aria-describedby") ?? "",
+    )?.textContent;
+    expect(help).toContain("Arrow keys");
+    expect(help).not.toMatch(/\bP: /);
   });
 
   it("lists no pin, identify or drawing key in Help", async () => {
