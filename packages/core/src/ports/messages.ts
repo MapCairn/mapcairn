@@ -111,6 +111,7 @@ export type MessageKey =
   | "describe.tilesNoImagery"
   | "describe.tilesUnavailable"
   | "describe.tilesSlow"
+  | "describe.tilesWrongFormat"
   // Announcements
   | "announce.layerLoaded"
   | "announce.layerStatus"

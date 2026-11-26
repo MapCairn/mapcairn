@@ -13,6 +13,7 @@ import { wrapLongitude } from "../globe/longitude";
 import { placePoint } from "../globe/placement";
 import { mapMetresPerPixel } from "../globe/resolution";
 import { planRequestedImage, refuseBoxOnGlobe } from "../imageExport/plan";
+import type { VectorTileEncoding } from "../layers/definition";
 import { clamp } from "../numbers/clamp";
 import type { BasemapDefinition } from "../ports/basemap";
 import {
@@ -131,6 +132,8 @@ export type DrawnLayer =
       readonly kind: "vector";
       readonly tiles: string;
       readonly sourceLayers: readonly string[];
+      /** The encoding the source declares, left out when it declares none. */
+      readonly encoding?: VectorTileEncoding;
     }
   | {
       readonly id: string;
@@ -219,6 +222,8 @@ export class FakeMapAdapter implements MapAdapter {
   readonly #dataLayers = new Map<string, DataLayer>();
   /** The tiles each tile layer reported as slow or missing, until they load or change. */
   readonly #reportedTiles = new Map<string, string>();
+  /** The vector layers that reported their tiles in the wrong format, until they are drawn again or removed. */
+  readonly #reportedFormats = new Set<string>();
   #hitsAtPointer: readonly MapFeatureHit[] = [];
   #failNextImage = false;
   #stallImageTiles = false;
@@ -512,6 +517,7 @@ export class FakeMapAdapter implements MapAdapter {
 
   /** Stores the vector layer under the id, replacing and restacking whatever was there. */
   setVectorLayer(id: string, layer: MapVectorTiles): void {
+    this.#reportedFormats.delete(id);
     this.#dataLayers.delete(id);
     this.#dataLayers.set(id, { kind: "vector", layer });
   }
@@ -525,6 +531,7 @@ export class FakeMapAdapter implements MapAdapter {
   /** Forgets the layer under the id. Does nothing for an unknown id. */
   removeLayer(id: string): void {
     this.#reportedTiles.delete(id);
+    this.#reportedFormats.delete(id);
     this.#dataLayers.delete(id);
   }
 
@@ -759,6 +766,9 @@ export class FakeMapAdapter implements MapAdapter {
             kind: "vector",
             tiles: layer.layer.source.tiles,
             sourceLayers: layer.layer.layers.map((item) => item.sourceLayer),
+            ...(layer.layer.source.encoding
+              ? { encoding: layer.layer.source.encoding }
+              : {}),
           };
         }
         if (layer.kind === "heatmap") {
@@ -907,6 +917,25 @@ export class FakeMapAdapter implements MapAdapter {
   }
 
   /**
+   * Emits `tileLayerWrongFormat` for the vector layer `layerId` as it is drawn,
+   * as an engine does when it could not read the layer's tiles in the encoding
+   * the source declares and none loaded. A layer that is not a drawn vector
+   * layer emits nothing, and a layer reports it at most once each time it is
+   * drawn.
+   */
+  simulateTileFormatFailure(layerId: string): void {
+    const layer = this.#dataLayers.get(layerId);
+    if (layer?.kind !== "vector" || this.#reportedFormats.has(layerId)) {
+      return;
+    }
+    this.#reportedFormats.add(layerId);
+    this.#emit("tileLayerWrongFormat", {
+      layerId,
+      tiles: layer.layer.source.tiles,
+    });
+  }
+
+  /**
    * Emits `tileLayerSlow` for the tile layer `layerId` as it is drawn, as an
    * engine does when none of its tiles has loaded for longer than its wait. A
    * layer that is not a drawn tile layer has no tiles, so nothing is emitted,
@@ -925,7 +954,8 @@ export class FakeMapAdapter implements MapAdapter {
 
   /**
    * Emits `tileLayerRecovered` for the tile layer `layerId`, as an engine does
-   * when a tile loads after the layer reported slow tiles or no tiles. A layer
+   * when a tile loads after the layer reported slow tiles or no tiles, or a
+   * vector layer reported its tiles in the wrong format. A layer
    * that has not reported (or has since been set to other tiles, or removed)
    * emits nothing, and the reports of one drawing are ended by one recovery.
    */
@@ -935,6 +965,12 @@ export class FakeMapAdapter implements MapAdapter {
     if (layer?.kind === "tiles" && tiles === layer.overlay.tiles) {
       this.#reportedTiles.delete(layerId);
       this.#emit("tileLayerRecovered", { layerId, tiles });
+    }
+    if (layer?.kind === "vector" && this.#reportedFormats.delete(layerId)) {
+      this.#emit("tileLayerRecovered", {
+        layerId,
+        tiles: layer.layer.source.tiles,
+      });
     }
   }
 

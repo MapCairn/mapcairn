@@ -61,6 +61,13 @@ export interface TileSourceRegistry {
   release(source: string): void;
 }
 
+/** What the store tells the failure detection about the vector sources it draws. */
+export interface VectorSourceRegistry {
+  register(source: string, layerId: string, tiles: string): void;
+  /** A vector source was erased, or drawn over; it is no longer watched. */
+  release(source: string): void;
+}
+
 /** What the store needs from the adapter that owns the map and the style's lifecycle. */
 export interface DataLayerStoreHost {
   /** The map, when its style can take sources and layers; otherwise undefined. */
@@ -69,6 +76,8 @@ export interface DataLayerStoreHost {
   changed(): void;
   /** Follows the tile layers that are drawn. */
   readonly tileSources: TileSourceRegistry;
+  /** Follows the vector tile layers that are drawn, for tiles in the wrong encoding. */
+  readonly vectorSources: VectorSourceRegistry;
   /** Keeps the tile requests of the drawn layers apart from the basemap's. */
   readonly tileRequests: DataLayerTileRequests;
 }
@@ -288,6 +297,7 @@ export class DataLayerStore {
       return;
     }
     this.host.tileSources.release(drawn.source);
+    this.host.vectorSources.release(drawn.source);
     this.host.tileRequests.release(drawn.source);
     for (const layerId of drawn.layers) {
       if (map.getLayer(layerId)) {
@@ -378,6 +388,9 @@ export class DataLayerStore {
     const template = tileTemplateOf(plan.source);
     if (template) {
       this.host.tileRequests.register(source, template);
+      if (plan.source.type === "vector") {
+        this.host.vectorSources.register(source, id, template);
+      }
     }
     map.addSource(source, plan.source as unknown as SourceSpecification);
     for (const engineLayer of plan.layers) {

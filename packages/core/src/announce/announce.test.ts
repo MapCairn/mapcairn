@@ -66,6 +66,7 @@ import {
   announceTilesRecovered,
   announceTilesSlow,
   announceTilesUnavailable,
+  announceTilesWrongFormat,
   announceTimeMoved,
   announceTourSkipped,
   announceZoom,
@@ -77,6 +78,7 @@ import {
   describeNoLayers,
   describeTilesSlow,
   describeTilesUnavailable,
+  describeTilesWrongFormat,
   describeZoomIn,
   describeZoomOut,
 } from "./index";
@@ -481,6 +483,15 @@ describe("layer announcements", () => {
     );
     expect(english(announceTilesSlow("Rainfall"))).toBe(
       "Rainfall: Still waiting for imagery. The provider may be slow or not answering.",
+    );
+  });
+
+  it("says a vector tile layer's tiles are in another format, in the status line and aloud", () => {
+    expect(english(describeTilesWrongFormat())).toBe(
+      "This layer's tiles are in another format.",
+    );
+    expect(english(announceTilesWrongFormat("Roads"))).toBe(
+      "Roads: This layer's tiles are in another format.",
     );
   });
 

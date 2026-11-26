@@ -288,6 +288,15 @@ export interface QuerySource {
   readonly minzoom?: number;
 }
 
+/** The encodings a vector tile source can declare. */
+export type VectorTileEncoding = "mvt" | "mlt";
+
+/** Every {@link VectorTileEncoding}, for a check of an untrusted value. */
+export const VECTOR_TILE_ENCODINGS: readonly VectorTileEncoding[] = [
+  "mvt",
+  "mlt",
+];
+
 /**
  * Vector tiles drawn by the map engine, styled per source layer. Features
  * stay in the tiles, so a layer of this kind has a key but no cards or list.
@@ -295,6 +304,13 @@ export interface QuerySource {
 export interface VectorTileSource {
   /** Tells a vector tile source from the other source kinds. */
   readonly kind: "vector-tiles";
+  /**
+   * How the service encodes its tiles: `mvt` (Mapbox Vector Tiles, the
+   * default) or `mlt` (MapLibre Tile). Core only carries the value; the map
+   * engine decodes. A server that answers in the other encoding makes the
+   * layer report that its tiles are in another format.
+   */
+  readonly encoding?: VectorTileEncoding;
   /** A URL template over control values. `{z}`, `{x}` and `{y}` are left for the engine. */
   readonly tiles: string;
   /** The shallowest tile level the service has. Defaults to 0. */

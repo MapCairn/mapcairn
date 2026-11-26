@@ -348,6 +348,7 @@ export interface DataLayers {
     reportTilesRecovered(id: string, tiles: string): void;
     reportTilesSlow(id: string, tiles: string): void;
     reportTilesUnavailable(id: string, tiles: string): void;
+    reportTilesWrongFormat(id: string, tiles: string): void;
     retry(id: string): void;
     retryCatalogue(): void;
     select(layerId: string, featureId: string | null, options?: {
@@ -770,6 +771,8 @@ export type LayerStatus = {
     readonly kind: "tiles-slow";
 } | {
     readonly kind: "tiles-unavailable";
+} | {
+    readonly kind: "tiles-format";
 } | {
     readonly kind: "loading";
 } | {

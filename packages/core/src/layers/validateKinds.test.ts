@@ -266,6 +266,20 @@ describe("vector tile layers", () => {
     expect(validateLayerDefinition(SAMPLE_VECTOR_LAYER, options)).toEqual([]);
   });
 
+  it.each(["mvt", "mlt"])("accepts the %s encoding", (encoding) => {
+    expect(vector((d) => ((d.source as Json).encoding = encoding))).toEqual([]);
+  });
+
+  it.each([
+    ["an unknown encoding", "pbf"],
+    ["an encoding in capitals", "MLT"],
+    ["an encoding that is not text", 3],
+  ])("rejects %s", (_name, encoding) => {
+    const problems = vector((d) => ((d.source as Json).encoding = encoding));
+    expect(problems).toHaveLength(1);
+    expect(problems[0]).toMatch(/^source\.encoding: must be mvt or mlt/);
+  });
+
   it.each([
     [
       "a tile URL with a variable that has no control",

@@ -11,13 +11,16 @@ import { LayerError, type ZoomLimit } from "@mapcairn/core";
  * waiting for its first tile (`tiles-slow`) or that none of its tiles loaded
  * (`tiles-unavailable`, which replaces `tiles-slow`). Either lasts until its
  * tiles change, it is turned off, or the map reports that a tile loaded
- * later, when it is `on` again.
+ * later, when it is `on` again. A vector tile layer is `on` until the map
+ * reports that its tiles could not be read in the encoding its source declares
+ * (`tiles-format`), which lasts until its tiles change or it is turned off.
  */
 export type LayerStatus =
   | { readonly kind: "off" }
   | { readonly kind: "on" }
   | { readonly kind: "tiles-slow" }
   | { readonly kind: "tiles-unavailable" }
+  | { readonly kind: "tiles-format" }
   | { readonly kind: "loading" }
   | {
       readonly kind: "ready";

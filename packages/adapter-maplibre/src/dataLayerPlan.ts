@@ -214,6 +214,7 @@ function vectorSource(source: MapVectorTiles["source"]) {
     tiles: [source.tiles],
     minzoom: source.minzoom,
     maxzoom: source.maxzoom,
+    ...(source.encoding ? { encoding: source.encoding } : {}),
   };
 }
 
