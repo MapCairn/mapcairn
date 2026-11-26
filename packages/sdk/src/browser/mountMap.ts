@@ -11,7 +11,8 @@ const WORKER_FILE = "browser-worker.js";
  * Draws a map in `element` and returns the handle to move, change and remove
  * it. Every option is optional: `mountMap(element)` draws a world map on the
  * built-in basemap, in the device's colour scheme, with zoom, a compass, the
- * credits and the scale. The element needs a height in CSS.
+ * credits and the scale. Name more in `tools`, and give `layers` and
+ * `languages` as plain data. The element needs a height in CSS.
  *
  * @throws MountMapError when called where there is no browser, when the
  *   element already holds a map, or when an option cannot be used. The message
