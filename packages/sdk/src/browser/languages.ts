@@ -7,6 +7,7 @@ import {
   type LanguageCatalogue,
   type LanguageOption,
   type MessageCatalogue,
+  type MessageKey,
 } from "@mapcairn/core";
 import { MountMapError } from "./MountMapError";
 import type { MountLanguage } from "./types";
@@ -46,13 +47,30 @@ function assertMessages(messages: unknown, name: string): void {
     invalid(`${name}.messages must be an object of message keys and text.`);
   }
   for (const [key, text] of Object.entries(messages)) {
-    if (!Object.hasOwn(EN_GB_CATALOGUE, key)) {
-      invalid(`${name}.messages: "${key}" is not a message key.`);
-    }
     if (typeof text !== "string") {
       invalid(`${name}.messages: "${key}" must be text.`);
     }
   }
+}
+
+/**
+ * The language's text laid over English, so a key it leaves out reads in
+ * English without a warning for each one. A key this version has no message
+ * for is ignored with one warning: keys are added over time, so a page written
+ * for a later version still works.
+ */
+function overEnglish(language: MountLanguage): Record<string, string> {
+  const merged: Record<string, string> = { ...EN_GB_CATALOGUE };
+  for (const [key, text] of Object.entries(language.messages)) {
+    if (Object.hasOwn(EN_GB_CATALOGUE, key)) {
+      merged[key] = text as string;
+    } else {
+      console.warn(
+        `languages: "${language.tag}" has text for "${key}", which is not a message key in this version, so it is ignored.`,
+      );
+    }
+  }
+  return merged;
 }
 
 function assertLanguage(language: unknown, index: number): MountLanguage {
@@ -96,7 +114,7 @@ function assertDistinctTags(languages: readonly MountLanguage[]): void {
 function messagesFor(language: MountLanguage): MessageCatalogue {
   return createMessageCatalogue(
     language.tag,
-    language.messages,
+    overEnglish(language) as Record<MessageKey, string>,
     EN_GB_CATALOGUE,
     {
       ...(language.direction === undefined

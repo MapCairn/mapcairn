@@ -11,7 +11,6 @@ import {
   type LayerDefinition,
   type LayerSource,
   loadsFeatures,
-  readyLayers,
   type SkippedDefinition,
 } from "@mapcairn/core";
 import { MountMapError } from "./MountMapError";
@@ -88,44 +87,78 @@ function skippedMessage({ id, problems }: SkippedDefinition): MountMapError {
   );
 }
 
+function isObject(value: unknown): value is object {
+  return typeof value === "object" && value !== null;
+}
+
+/** The message for a loaded layer that is left out because it needs a layer source the page did not give. */
+function lackingSourceMessage(id: string): MountMapError {
+  return new MountMapError(
+    "invalid-option",
+    `layers: "${id}" was left out because it needs services.layerSource to load its features. Pass services.layerSource, or remove it from layers.`,
+  );
+}
+
+/**
+ * What a loader returned, less the layers that need a layer source when the
+ * page gave none. Each is reported and never reaches the catalogue, so it is
+ * not shown only to fail as empty. A payload that is not a list is the
+ * catalogue's to judge.
+ */
+function withoutLacking(
+  payload: unknown,
+  { layerSource, report }: LayersInput,
+): unknown {
+  if (!Array.isArray(payload) || layerSource !== undefined) {
+    return payload;
+  }
+  return payload.filter((entry) => {
+    // An entry with no source is the catalogue's to skip as not valid.
+    const candidate = entry as LayerDefinition;
+    if (!isObject(entry) || !isObject(candidate.source)) {
+      return true;
+    }
+    if (!needsLayerSource(candidate)) {
+      return true;
+    }
+    report(lackingSourceMessage(String((entry as LayerDefinition).id)));
+    return false;
+  });
+}
+
+/** Runs the page's function, reporting a failure before the catalogue shows it as one. */
+async function loaded(
+  load: () => Promise<readonly LayerDefinition[]>,
+  { report }: LayersInput,
+): Promise<readonly LayerDefinition[]> {
+  try {
+    return await load();
+  } catch (error) {
+    const reason = error instanceof Error ? error.message : String(error);
+    report(
+      new MountMapError(
+        "invalid-option",
+        `layers: the function could not load the layers (${reason}). Fix it, or pass the definitions as a list.`,
+      ),
+    );
+    throw error;
+  }
+}
+
 function buildRuntime(
   load: () => Promise<readonly LayerDefinition[]>,
-  { layerSource, report }: LayersInput,
+  input: LayersInput,
 ): BuiltLayers {
   const catalogue = createRuntimeLayerCatalogue({
-    load: () => load(),
+    load: async () => withoutLacking(await loaded(load, input), input),
     options: registries(),
     onSkipped: (skipped) => {
       for (const entry of skipped) {
-        report(skippedMessage(entry));
+        input.report(skippedMessage(entry));
       }
     },
   });
-  const reported = new Set<string>();
-  const stopWatching = catalogue.subscribe(() => {
-    for (const { id } of missingSource(
-      readyLayers(catalogue.getState()),
-      layerSource,
-    )) {
-      if (!reported.has(id)) {
-        reported.add(id);
-        report(
-          new MountMapError(
-            "invalid-option",
-            `layers: ${id} needs services.layerSource to load its features. Pass services.layerSource, or remove it from layers.`,
-          ),
-        );
-      }
-    }
-  });
-  return {
-    catalogue,
-    present: true,
-    dispose: () => {
-      stopWatching();
-      catalogue.dispose();
-    },
-  };
+  return { catalogue, present: true, dispose: () => catalogue.dispose() };
 }
 
 /**

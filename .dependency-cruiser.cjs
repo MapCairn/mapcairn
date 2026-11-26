@@ -183,6 +183,17 @@ module.exports = {
       },
     },
     {
+      name: "umbrella-browser-test-support-for-tests-only",
+      severity: "error",
+      comment:
+        "The browser folder's shared test helpers import the test runner, which must never reach the bundle, so only a test file may import them.",
+      from: {
+        path: "^packages/sdk/src/browser/",
+        pathNot: "\\.test\\.tsx?$|/testSupport\\.ts$",
+      },
+      to: { path: "^packages/sdk/src/browser/testSupport\\.ts$" },
+    },
+    {
       name: "umbrella-browser-is-imported-by-itself-only",
       severity: "error",
       comment:

@@ -41,6 +41,8 @@ export interface MountedChromeProps {
   readonly basemapId: string;
   readonly onBasemapChange: (id: string) => void;
   readonly tools: ReadonlySet<MapTool>;
+  /** Whether the page gave layers, for the sheet's layers section. */
+  readonly hasLayers: boolean;
   readonly layers: DataLayers;
   readonly measure: UseMeasure;
   readonly measuring: boolean;
@@ -71,6 +73,7 @@ function ChromeSlots({
   basemapId,
   onBasemapChange,
   tools,
+  hasLayers,
   layers,
   measure,
   measuring,
@@ -89,7 +92,7 @@ function ChromeSlots({
   const restoreFocus = useFocusReturn();
   const opener = useRef<Exclude<OpenSheet, null>>("map-options");
   const wasMeasuring = useRef(false);
-  const hasMapOptions = tools.has("basemaps") || tools.has("layers");
+  const hasMapOptions = tools.has("map-options");
   const hasSheet = hasMapOptions || tools.has("settings");
 
   useShowFix(tools.has("locate") ? locate.fix : null);
@@ -207,7 +210,8 @@ function ChromeSlots({
                 onBasemapChange={onBasemapChange}
                 hasPin={pin !== null}
                 onDropPin={() => setPin(map.view.center)}
-                layers={tools.has("layers") ? layers : undefined}
+                layers={hasLayers ? layers : undefined}
+                intro=""
               />
             ) : null}
           </Sheet>

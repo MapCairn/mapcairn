@@ -5,28 +5,26 @@ import type { MountServices } from "./types";
 
 /**
  * The optional tools `mountMap` can add to the map: `"search"` (a search box,
- * which needs `services.search`), `"basemaps"` (the sheet with the basemap
- * picker), `"layers"` (the layers in that sheet, which need `layers`),
- * `"measure"`, `"settings"` and `"locate"` (Locate me, which needs
- * `services.location`). Zoom, the compass, the credits and the scale are
- * always there.
+ * which needs `services.search`), `"map-options"` (the sheet with the
+ * basemaps, a pin and saving the map as an image, and the layers when `layers`
+ * is given), `"measure"`, `"locate"` (Locate me, which needs
+ * `services.location`) and `"settings"`. Zoom, the compass, the credits and the
+ * scale are always there.
  */
 export type MapTool =
   | "search"
-  | "basemaps"
-  | "layers"
+  | "map-options"
   | "measure"
-  | "settings"
-  | "locate";
+  | "locate"
+  | "settings";
 
 /** Every {@link MapTool}, in the order the interface lists them. */
 export const MAP_TOOLS: readonly MapTool[] = [
   "search",
-  "basemaps",
-  "layers",
+  "map-options",
   "measure",
-  "settings",
   "locate",
+  "settings",
 ];
 
 /** The provider a tool cannot work without, as the page names it and as a person reads it. */
@@ -62,48 +60,44 @@ function assertToolsNamed(tools: unknown): asserts tools is readonly unknown[] {
   }
 }
 
-function assertProviders(
+/**
+ * The tools that can work with what the page gave. A tool whose provider is
+ * missing is left out with one warning that names the fix, instead of
+ * throwing, so a framework that sets the providers after the map connects is
+ * never stuck.
+ */
+function withProviders(
   tools: ReadonlySet<MapTool>,
   provided: MountServices,
-): void {
+): ReadonlySet<MapTool> {
+  const working = new Set(tools);
   for (const tool of tools) {
     const need = PROVIDER_NEEDS[tool];
     if (need !== undefined && provided[need.service] === undefined) {
-      invalid(
-        `tools: "${tool}" needs a ${need.noun} provider. Pass services.${need.service}, or remove "${tool}" from tools.`,
+      working.delete(tool);
+      console.warn(
+        `tools: "${tool}" needs a ${need.noun} provider, so it is not shown. Pass services.${need.service}, or remove "${tool}" from tools.`,
       );
     }
   }
+  return working;
 }
 
 /**
- * Checks the `tools` option against what the page supplied and returns the
- * tools to compose, none when it is left out.
+ * Checks the `tools` option and returns the tools to compose, none when it is
+ * left out.
  *
- * @throws MountMapError naming the fix: for an unknown tool, a tool whose
- *   provider is missing, the layers tool with no layers, and layers with no
- *   layers tool to turn them on.
+ * @throws MountMapError naming the fix for a tools value that is not a list of
+ *   tool names. A tool whose provider is missing is not an error: it is left
+ *   out, with a warning.
  */
 export function validateTools(
   tools: unknown,
   provided: MountServices,
-  hasLayers: boolean,
 ): ReadonlySet<MapTool> {
   if (tools === undefined) {
     return new Set();
   }
   assertToolsNamed(tools);
-  const chosen = new Set(tools as readonly MapTool[]);
-  assertProviders(chosen, provided);
-  if (chosen.has("layers") && !hasLayers) {
-    invalid(
-      'tools: "layers" needs layers. Pass layers, or remove "layers" from tools.',
-    );
-  }
-  if (hasLayers && !chosen.has("layers")) {
-    invalid(
-      'layers can only be turned on from the "layers" tool. Add "layers" to tools, or remove layers.',
-    );
-  }
-  return chosen;
+  return withProviders(new Set(tools as readonly MapTool[]), provided);
 }

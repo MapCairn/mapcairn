@@ -57,7 +57,12 @@ export interface MountMapOptions {
   readonly basemap?: string;
   /**
    * The layers a person can turn on, as plain definitions or a function that
-   * loads them. Needs `"layers"` in `tools`. Every layer starts off.
+   * loads them. The layers are listed in the Map options sheet, so name
+   * `"map-options"` in `tools`; without it they are not shown. Every layer
+   * starts off. A list that is not valid throws. A function that fails, a
+   * layer it returns that is not valid and one that needs
+   * `services.layerSource` when there is none are reported through the `error`
+   * event, and the rest are kept.
    */
   readonly layers?:
     | readonly LayerDefinition[]

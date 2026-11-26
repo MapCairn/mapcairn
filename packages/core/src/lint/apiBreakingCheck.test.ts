@@ -126,6 +126,45 @@ describe("breakingApiChanges", () => {
   });
 });
 
+describe("an entry point the last release does not have", () => {
+  const RELEASED_WITHOUT_IT = sourceOf({});
+  const RELEASED_WITH_IT = sourceOf({ [CORE]: "released" });
+
+  it("cannot break anyone, so its likely-breaking change is left out", () => {
+    expect(
+      breakingApiChanges(REMOVAL_BEFORE, REMOVAL_AFTER, RELEASED_WITHOUT_IT),
+    ).toEqual([]);
+  });
+
+  it("still counts when the last release has the entry point", () => {
+    expect(
+      breakingApiChanges(REMOVAL_BEFORE, REMOVAL_AFTER, RELEASED_WITH_IT)
+        .length,
+    ).toBeGreaterThan(0);
+  });
+
+  it("counts everything when there is no release to compare with", () => {
+    expect(
+      breakingApiChanges(REMOVAL_BEFORE, REMOVAL_AFTER, null).length,
+    ).toBeGreaterThan(0);
+  });
+
+  it("lets an unmarked pull request pass", () => {
+    const code = runApiBreakingCheck({
+      author: "someone",
+      labels: [],
+      title: "feat(sdk): add an event",
+      body: "",
+      before: REMOVAL_BEFORE,
+      after: REMOVAL_AFTER,
+      released: RELEASED_WITHOUT_IT,
+      log: () => undefined,
+      summarise: () => undefined,
+    });
+    expect(code).toBe(0);
+  });
+});
+
 describe("isMarkedBreaking", () => {
   it("accepts a ! after the type, with or without a scope", () => {
     expect(isMarkedBreaking("refactor!: remove a field", "")).toBe(true);
@@ -376,6 +415,19 @@ describe("readReports", () => {
     expect(reports.before.read(CORE)).toContain("LayerDefinitionBase");
     expect(reports.before.read(THEME)).toBeNull();
     expect(reports.after.read(THEME)).toContain("tokenValues");
+  });
+
+  it("reads the reports at the newest release tag, and none when there is no tag", () => {
+    const root = repository();
+    expect(readReports("main", root).released).toBeNull();
+    execFileSync("git", ["tag", "v0.1.0"], { cwd: root });
+    mkdirSync(path.join(root, "packages/theme/api"), { recursive: true });
+    writeFileSync(path.join(root, THEME), report(NAMESPACE_AFTER));
+    execFileSync("git", ["add", "."], { cwd: root });
+    execFileSync("git", ["commit", "-q", "-m", "theme"], { cwd: root });
+    const { released } = readReports("main", root);
+    expect(released.read(CORE)).toContain("LayerDefinitionBase");
+    expect(released.read(THEME)).toBeNull();
   });
 
   it("returns null when the base branch is missing", () => {

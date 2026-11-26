@@ -1,11 +1,15 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { MountMapError } from "./MountMapError";
 import { MAP_TOOLS, validateTools } from "./tools";
 
 const SEARCH = { search: () => Promise.resolve([]) } as never;
 const LOCATION = { locate: () => Promise.resolve({}) } as never;
+
+afterEach(() => {
+  vi.restoreAllMocks();
+});
 
 function problem(run: () => unknown): string {
   try {
@@ -19,71 +23,71 @@ function problem(run: () => unknown): string {
 }
 
 describe("validateTools", () => {
-  it("names the six tools", () => {
+  it("names the five tools", () => {
     expect(MAP_TOOLS).toEqual([
       "search",
-      "basemaps",
-      "layers",
+      "map-options",
       "measure",
-      "settings",
       "locate",
+      "settings",
     ]);
   });
 
   it("offers none when left out, and when empty", () => {
-    expect(validateTools(undefined, {}, false).size).toBe(0);
-    expect(validateTools([], {}, false).size).toBe(0);
+    expect(validateTools(undefined, {}).size).toBe(0);
+    expect(validateTools([], {}).size).toBe(0);
   });
 
   it("returns the tools named, once each", () => {
     const tools = validateTools(
-      ["measure", "settings", "measure", "basemaps"],
+      ["measure", "settings", "measure", "map-options"],
       {},
-      false,
     );
-    expect([...tools].sort()).toEqual(["basemaps", "measure", "settings"]);
+    expect([...tools].sort()).toEqual(["map-options", "measure", "settings"]);
   });
 
   it("refuses a list that is not a list", () => {
-    expect(problem(() => validateTools("search", {}, false))).toBe(
+    expect(problem(() => validateTools("search", {}))).toBe(
       'tools must be a list of tool names, for example ["measure", "settings"].',
     );
   });
 
   it("refuses an unknown name and lists the ones there are", () => {
-    expect(problem(() => validateTools(["measures"], {}, false))).toBe(
-      'tools: "measures" is not a tool. Use any of: "search", "basemaps", "layers", "measure", "settings", "locate".',
+    expect(problem(() => validateTools(["measures"], {}))).toBe(
+      'tools: "measures" is not a tool. Use any of: "search", "map-options", "measure", "locate", "settings".',
     );
   });
 
-  it("refuses search without a search provider, and accepts it with one", () => {
-    expect(problem(() => validateTools(["search"], {}, false))).toBe(
-      'tools: "search" needs a search provider. Pass services.search, or remove "search" from tools.',
+  it("refuses the names the tools had before they were merged", () => {
+    expect(problem(() => validateTools(["basemaps"], {}))).toContain(
+      '"basemaps" is not a tool',
     );
-    expect(
-      validateTools(["search"], { search: SEARCH }, false).has("search"),
-    ).toBe(true);
   });
 
-  it("refuses locate without a location provider, and accepts it with one", () => {
-    expect(problem(() => validateTools(["locate"], {}, false))).toBe(
-      'tools: "locate" needs a location provider. Pass services.location, or remove "locate" from tools.',
+  it("leaves out search without a provider, with one warning that names the fix", () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    expect(validateTools(["search"], {}).has("search")).toBe(false);
+    expect(warn).toHaveBeenCalledTimes(1);
+    expect(warn).toHaveBeenCalledWith(
+      'tools: "search" needs a search provider, so it is not shown. Pass services.search, or remove "search" from tools.',
     );
-    expect(
-      validateTools(["locate"], { location: LOCATION }, false).has("locate"),
-    ).toBe(true);
   });
 
-  it("refuses the layers tool without layers", () => {
-    expect(problem(() => validateTools(["layers"], {}, false))).toBe(
-      'tools: "layers" needs layers. Pass layers, or remove "layers" from tools.',
+  it("leaves out locate without a provider, with one warning that names the fix", () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    expect(validateTools(["locate"], {}).has("locate")).toBe(false);
+    expect(warn).toHaveBeenCalledWith(
+      'tools: "locate" needs a location provider, so it is not shown. Pass services.location, or remove "locate" from tools.',
     );
-    expect(validateTools(["layers"], {}, true).has("layers")).toBe(true);
   });
 
-  it("refuses layers that no tool can turn on", () => {
-    expect(problem(() => validateTools(["measure"], {}, true))).toBe(
-      'layers can only be turned on from the "layers" tool. Add "layers" to tools, or remove layers.',
-    );
+  it("keeps search and locate, quietly, with their providers", () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const tools = validateTools(["search", "locate"], {
+      search: SEARCH,
+      location: LOCATION,
+    });
+    expect([...tools].sort()).toEqual(["locate", "search"]);
+    expect(warn).not.toHaveBeenCalled();
   });
 });

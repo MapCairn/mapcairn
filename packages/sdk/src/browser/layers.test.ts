@@ -114,7 +114,7 @@ describe("buildLayers with a function", () => {
       options(),
     );
     expect(present).toBe(true);
-    catalogue.getState();
+    catalogue.subscribe(() => {});
     await vi.waitFor(() =>
       expect(readyLayers(catalogue.getState())).toHaveLength(1),
     );
@@ -131,7 +131,7 @@ describe("buildLayers with a function", () => {
         ] as unknown as LayerDefinition[]),
       seen,
     );
-    catalogue.getState();
+    catalogue.subscribe(() => {});
     await vi.waitFor(() => expect(seen.errors).toHaveLength(1));
     expect(seen.errors[0]?.kind).toBe("invalid-option");
     expect(seen.errors[0]?.message).toMatch(
@@ -148,26 +148,57 @@ describe("buildLayers with a function", () => {
       () => Promise.resolve([{ name: "No id" } as unknown as LayerDefinition]),
       seen,
     );
-    catalogue.getState();
+    catalogue.subscribe(() => {});
     await vi.waitFor(() => expect(seen.errors).toHaveLength(1));
     expect(seen.errors[0]?.message).toMatch(
       /^layers: "\(no id\)" was left out/,
     );
   });
 
-  it("reports a loaded layer that needs a layer source when there is none, once each", async () => {
+  it("leaves out, and reports, a loaded layer that needs a layer source when there is none", async () => {
     const seen = options();
     const { catalogue } = buildLayers(
       () => Promise.resolve([SAMPLE_TILE_LAYER, SAMPLE_FEED_LAYER]),
       seen,
     );
-    catalogue.getState();
+    catalogue.subscribe(() => {});
     await vi.waitFor(() => expect(seen.errors).toHaveLength(1));
     expect(seen.errors[0]?.message).toBe(
-      `layers: ${SAMPLE_FEED_LAYER.id} needs services.layerSource to load its features. Pass services.layerSource, or remove it from layers.`,
+      `layers: "${SAMPLE_FEED_LAYER.id}" was left out because it needs services.layerSource to load its features. Pass services.layerSource, or remove it from layers.`,
     );
-    await catalogue.refresh();
-    expect(seen.errors).toHaveLength(1);
+    await vi.waitFor(() =>
+      expect(readyLayers(catalogue.getState()).map(({ id }) => id)).toEqual([
+        SAMPLE_TILE_LAYER.id,
+      ]),
+    );
+  });
+
+  it("keeps a loaded layer that needs a layer source when there is one", async () => {
+    const seen = options(SOURCE);
+    const { catalogue } = buildLayers(
+      () => Promise.resolve([SAMPLE_FEED_LAYER]),
+      seen,
+    );
+    catalogue.subscribe(() => {});
+    await vi.waitFor(() =>
+      expect(readyLayers(catalogue.getState())).toHaveLength(1),
+    );
+    expect(seen.errors).toEqual([]);
+  });
+
+  it("reports a function that fails, and shows the catalogue as failed", async () => {
+    const seen = options();
+    const { catalogue } = buildLayers(
+      () => Promise.reject(new Error("offline")),
+      seen,
+    );
+    catalogue.subscribe(() => {});
+    await vi.waitFor(() => expect(seen.errors).toHaveLength(1));
+    expect(seen.errors[0]?.kind).toBe("invalid-option");
+    expect(seen.errors[0]?.message).toBe(
+      "layers: the function could not load the layers (offline). Fix it, or pass the definitions as a list.",
+    );
+    await vi.waitFor(() => expect(catalogue.getState().status).toBe("failed"));
   });
 
   it("stops reporting after dispose", async () => {
@@ -177,7 +208,7 @@ describe("buildLayers with a function", () => {
       seen,
     );
     dispose();
-    catalogue.getState();
+    catalogue.subscribe(() => {});
     await Promise.resolve();
     await Promise.resolve();
     expect(seen.errors).toEqual([]);

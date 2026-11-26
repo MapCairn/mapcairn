@@ -58,7 +58,7 @@ describe("layers", () => {
     const element = container();
     await drawn(
       mountOn(element, tools, {
-        tools: ["layers"],
+        tools: ["map-options"],
         layers: [SAMPLE_TILE_LAYER],
       }),
     );
@@ -82,7 +82,7 @@ describe("layers", () => {
     const element = container();
     const load = vi.fn(() => Promise.resolve([SAMPLE_TILE_LAYER]));
     await drawn(
-      mountOn(element, harness(), { tools: ["layers"], layers: load }),
+      mountOn(element, harness(), { tools: ["map-options"], layers: load }),
     );
     await openMapOptions(element);
     await layerSwitch(element, SAMPLE_TILE_LAYER.id);
@@ -93,7 +93,7 @@ describe("layers", () => {
     const element = container();
     const broken = { ...SAMPLE_TILE_LAYER, id: "broken", name: 3 };
     const handle = mountOn(element, harness(), {
-      tools: ["layers"],
+      tools: ["map-options"],
       layers: () => Promise.resolve([SAMPLE_TILE_LAYER, broken as never]),
     });
     const errors: unknown[] = [];
@@ -111,7 +111,7 @@ describe("layers", () => {
   it("report a loaded layer that needs a layer source the page did not write", async () => {
     const element = container();
     const handle = mountOn(element, harness(), {
-      tools: ["layers"],
+      tools: ["map-options"],
       layers: () => Promise.resolve([SAMPLE_FEED_LAYER]),
     });
     const errors: MountMapError[] = [];
@@ -126,7 +126,7 @@ describe("layers", () => {
     const element = container();
     const broken = { ...SAMPLE_TILE_LAYER, id: "broken", name: 3 } as never;
     expect(() =>
-      mountOn(element, harness(), { tools: ["layers"], layers: [broken] }),
+      mountOn(element, harness(), { tools: ["map-options"], layers: [broken] }),
     ).toThrow(/broken: /);
     expect(element.hasAttribute("data-mapcairn")).toBe(false);
   });
@@ -143,7 +143,7 @@ describe("layers", () => {
     });
     await drawn(
       mountOn(element, tools, {
-        tools: ["layers"],
+        tools: ["map-options"],
         layers: [SAVEABLE],
         services: { layerSource: source },
       }),
@@ -154,7 +154,11 @@ describe("layers", () => {
     vi.spyOn(URL, "revokeObjectURL").mockImplementation(() => {});
     await openMapOptions(element);
     (await layerSwitch(element, SAVEABLE.id)).click();
-    await vi.waitFor(() => expect(source.requests.length).toBeGreaterThan(0));
+    await vi.waitFor(() => expect(source.requests).toHaveLength(1));
+    expect(source.requests[0]?.definition.id).toBe(SAVEABLE.id);
+    expect(source.requests[0]?.url).toBe(
+      "https://sample.test/feed/big_day.json",
+    );
     const save = await vi.waitFor(() => {
       const found = element.querySelector<HTMLElement>(
         `[data-testid="layer-save-geojson-${SAVEABLE.id}"]`,
@@ -166,6 +170,9 @@ describe("layers", () => {
     await vi.waitFor(() => expect(clicks).toHaveLength(1));
     expect(clicks[0]).toMatch(/\.geojson$/);
     expect(createObjectURL).toHaveBeenCalledTimes(1);
+    const file = createObjectURL.mock.calls[0]?.[0] as Blob;
+    expect(file.type).toBe("application/geo+json");
+    expect(await file.text()).toContain('"a"');
   });
 
   it("report a tap on a feature as a featuretap event, and not while measuring", async () => {
@@ -173,7 +180,7 @@ describe("layers", () => {
     const tools = harness();
     const element = container();
     const handle = mountOn(element, tools, {
-      tools: ["layers", "measure"],
+      tools: ["map-options", "measure"],
       layers: [SAMPLE_FEED_LAYER],
       services: { layerSource: source },
     });
@@ -219,7 +226,7 @@ describe("languages", () => {
     const element = container();
     await drawn(
       mountOn(element, harness(), {
-        tools: ["basemaps", "settings"],
+        tools: ["map-options", "settings"],
         languages: [AFRIKAANS],
         language: "af",
       }),
@@ -234,7 +241,7 @@ describe("languages", () => {
     const element = container();
     await drawn(
       mountOn(element, harness(), {
-        tools: ["basemaps", "settings"],
+        tools: ["map-options", "settings"],
         languages: [AFRIKAANS],
         language: "en-GB",
       }),
@@ -265,16 +272,28 @@ describe("languages", () => {
   });
 });
 
+const failing = (calls: string[]) => {
+  return <T extends object>(name: string): T =>
+    new Proxy({} as T, {
+      get: (_target, property) => {
+        calls.push(`${name}.${String(property)}`);
+        return () => {
+          throw new Error(`${name}.${String(property)} was called`);
+        };
+      },
+    });
+};
+
 describe("a map with every tool", () => {
+  const ALL_TOOLS = [
+    "search",
+    "map-options",
+    "measure",
+    "settings",
+    "locate",
+  ] as const;
   const everything = (source: FakeLayerSource) => ({
-    tools: [
-      "search",
-      "basemaps",
-      "layers",
-      "measure",
-      "settings",
-      "locate",
-    ] as const,
+    tools: ALL_TOOLS,
     layers: [SAMPLE_TILE_LAYER, SAMPLE_FEED_LAYER],
     services: {
       search: {
@@ -289,41 +308,98 @@ describe("a map with every tool", () => {
     },
   });
 
-  it("calls no stand-in port while the tools are drawn and used", async () => {
+  async function useEveryTool(element: HTMLElement): Promise<void> {
+    await openMapOptions(element);
+    (await layerSwitch(element, SAMPLE_TILE_LAYER.id)).click();
+    await vi.waitFor(() =>
+      expect(
+        element.querySelector(
+          `[data-testid="layer-${SAMPLE_TILE_LAYER.id}"] [aria-checked="true"]`,
+        ),
+      ).not.toBeNull(),
+    );
+    (await button(element, "Close")).click();
+    (await button(element, "Settings")).click();
+    await vi.waitFor(() =>
+      expect(
+        element.querySelector(
+          '[data-testid="sheet-section-settings"], [data-testid="settings-privacy-note"]',
+        ),
+      ).not.toBeNull(),
+    );
+    (await button(element, "Measure distance and area")).click();
+    await vi.waitFor(() =>
+      expect(
+        element.querySelector('[data-testid="measure-toolbar"]'),
+      ).not.toBeNull(),
+    );
+    (await button(element, "Locate me")).click();
+    await vi.waitFor(() =>
+      expect(
+        [...element.querySelectorAll('[role="alert"]')]
+          .map((node) => node.textContent)
+          .join(" "),
+      ).toContain("location is not available"),
+    );
+  }
+
+  it("calls no port the page did not give while the tools are drawn and used, with the page's providers absent", async () => {
     const calls: string[] = [];
-    const failing = <T extends object>(name: string): T =>
-      new Proxy({} as T, {
-        get: (_target, property) => {
-          calls.push(`${name}.${String(property)}`);
-          return () => {
-            throw new Error(`${name}.${String(property)} was called`);
-          };
-        },
-      });
+    const stand = failing(calls);
     const tools = harness();
     const element = container();
-    const options = everything(sourceWithFeatures());
     const handle = remember(
-      mount(element, options as never, {
-        ...tools.dependencies,
-        decorateServices: (services: Services): Services => ({
-          ...services,
-          clipboard: failing("clipboard"),
-          fileOpener: failing("fileOpener"),
-        }),
-      }),
+      mount(
+        element,
+        { tools: ALL_TOOLS, layers: [SAMPLE_TILE_LAYER] },
+        {
+          ...tools.dependencies,
+          decorateServices: (services: Services): Services => ({
+            ...services,
+            clipboard: stand("clipboard"),
+            fileOpener: stand("fileOpener"),
+            fileSaver: stand("fileSaver"),
+            layerSource: stand("layerSource"),
+            location: stand("location"),
+            search: stand("search"),
+          }),
+        },
+      ),
     );
     await drawn(handle);
     await openMapOptions(element);
     (await layerSwitch(element, SAMPLE_TILE_LAYER.id)).click();
     (await button(element, "Close")).click();
     (await button(element, "Settings")).click();
+    (await button(element, "Measure distance and area")).click();
     await vi.waitFor(() =>
       expect(
-        element.querySelector('[data-testid="sheet-content"]'),
+        element.querySelector('[data-testid="measure-toolbar"]'),
       ).not.toBeNull(),
     );
-    (await button(element, "Measure distance and area")).click();
+    expect(element.querySelector('[role="search"]')).toBeNull();
+    expect(element.querySelector('button[aria-label="Locate me"]')).toBeNull();
+    expect(calls).toEqual([]);
+  });
+
+  it("calls no port the tools do not use when the page's providers are given", async () => {
+    const calls: string[] = [];
+    const stand = failing(calls);
+    const tools = harness();
+    const element = container();
+    const handle = remember(
+      mount(element, everything(sourceWithFeatures()) as never, {
+        ...tools.dependencies,
+        decorateServices: (services: Services): Services => ({
+          ...services,
+          clipboard: stand("clipboard"),
+          fileOpener: stand("fileOpener"),
+          fileSaver: stand("fileSaver"),
+        }),
+      }),
+    );
+    await drawn(handle);
+    await useEveryTool(element);
     expect(calls).toEqual([]);
   });
 
@@ -331,7 +407,7 @@ describe("a map with every tool", () => {
     const tools = harness();
     const first = container();
     const second = container();
-    const one = mountOn(first, tools, { tools: ["basemaps"], label: "One" });
+    const one = mountOn(first, tools, { tools: ["map-options"], label: "One" });
     const two = mountOn(second, tools, { tools: ["measure"], label: "Two" });
     await drawn(one);
     await drawn(two);
@@ -447,5 +523,233 @@ describe("a map with every tool", () => {
     } finally {
       vi.useRealTimers();
     }
+  });
+});
+
+describe("two maps with their own languages and layers", () => {
+  const ENGLISH_AND_AFRIKAANS = {
+    tag: "af",
+    label: "Afrikaans",
+    messages: { "chrome.endStack.mapOptions": "Kaartopsies" },
+  } as const;
+  const ENGLISH_AND_FRENCH = {
+    tag: "fr",
+    label: "Français",
+    messages: { "chrome.endStack.mapOptions": "Options de la carte" },
+  } as const;
+  const OTHER_TILES = { ...SAMPLE_TILE_LAYER, id: "other-tiles" };
+
+  it("each speak their own language", async () => {
+    const tools = harness();
+    const first = container();
+    const second = container();
+    await drawn(
+      mountOn(first, tools, {
+        tools: ["map-options"],
+        languages: [ENGLISH_AND_AFRIKAANS],
+        language: "af",
+        label: "One",
+      }),
+    );
+    await drawn(
+      mountOn(second, tools, {
+        tools: ["map-options"],
+        languages: [ENGLISH_AND_FRENCH],
+        language: "fr",
+        label: "Two",
+      }),
+    );
+    await button(first, "Kaartopsies");
+    await button(second, "Options de la carte");
+    expect(
+      first.querySelector('button[aria-label="Options de la carte"]'),
+    ).toBeNull();
+    expect(second.querySelector('button[aria-label="Kaartopsies"]')).toBeNull();
+    expect(first.getAttribute("lang")).toBe("af");
+    expect(second.getAttribute("lang")).toBe("fr");
+  });
+
+  it("each list their own layers", async () => {
+    const tools = harness();
+    const first = container();
+    const second = container();
+    await drawn(
+      mountOn(first, tools, {
+        tools: ["map-options"],
+        layers: [SAMPLE_TILE_LAYER],
+        label: "One",
+      }),
+    );
+    await drawn(
+      mountOn(second, tools, {
+        tools: ["map-options"],
+        layers: [OTHER_TILES],
+        label: "Two",
+      }),
+    );
+    (await button(first, "Map options")).click();
+    (await button(second, "Map options")).click();
+    await layerSwitch(first, SAMPLE_TILE_LAYER.id);
+    await layerSwitch(second, OTHER_TILES.id);
+    expect(
+      first.querySelector(`[data-testid="layer-${OTHER_TILES.id}"]`),
+    ).toBeNull();
+    expect(
+      second.querySelector(`[data-testid="layer-${SAMPLE_TILE_LAYER.id}"]`),
+    ).toBeNull();
+  });
+});
+
+describe("the layers function", () => {
+  it("is not asked again once the map is destroyed", async () => {
+    let catalogue: Services["layers"] | undefined;
+    const load = vi.fn(() => Promise.resolve([SAMPLE_FEED_LAYER]));
+    const tools = harness();
+    const element = container();
+    const handle = remember(
+      mount(
+        element,
+        { tools: ["map-options"], layers: load },
+        {
+          ...tools.dependencies,
+          decorateServices: (services: Services) => {
+            catalogue = services.layers;
+            return services;
+          },
+        },
+      ),
+    );
+    const errors: unknown[] = [];
+    handle.on("error", (error) => errors.push(error));
+    await drawn(handle);
+    await openMapOptions(element);
+    await vi.waitFor(() => expect(errors).toHaveLength(1));
+    expect(load).toHaveBeenCalledTimes(1);
+    handle.destroy();
+    await catalogue?.refresh();
+    await Promise.resolve();
+    expect(load).toHaveBeenCalledTimes(1);
+  });
+
+  it("reports a failure to load through the error event, and shows the layers section as failed", async () => {
+    const element = container();
+    const handle = mountOn(element, harness(), {
+      tools: ["map-options"],
+      layers: () => Promise.reject(new Error("offline")),
+    });
+    const errors: MountMapError[] = [];
+    handle.on("error", (error) => errors.push(error as MountMapError));
+    await drawn(handle);
+    await openMapOptions(element);
+    await vi.waitFor(() => expect(errors).toHaveLength(1));
+    expect(errors[0]?.message).toContain("(offline)");
+  });
+});
+
+describe("lang and dir on the map's element", () => {
+  const ARABIC = {
+    tag: "ar",
+    label: "العربية",
+    direction: "rtl",
+    messages: { "chrome.endStack.mapOptions": "خيارات الخريطة" },
+  } as const;
+  const AFRIKAANS = {
+    tag: "af",
+    label: "Afrikaans",
+    messages: { "chrome.endStack.mapOptions": "Kaartopsies" },
+  } as const;
+
+  it("are English and left to right, with no languages", async () => {
+    const element = container();
+    await drawn(mountOn(element, harness()));
+    await vi.waitFor(() => expect(element.getAttribute("lang")).toBe("en-GB"));
+    expect(element.getAttribute("dir")).toBe("ltr");
+  });
+
+  it("follow the language the map starts on, with the direction the page gave it", async () => {
+    const element = container();
+    await drawn(
+      mountOn(element, harness(), {
+        tools: ["map-options"],
+        languages: [ARABIC],
+        language: "ar",
+      }),
+    );
+    await vi.waitFor(() => expect(element.getAttribute("lang")).toBe("ar"));
+    expect(element.getAttribute("dir")).toBe("rtl");
+  });
+
+  it("follow a switch made in Settings", async () => {
+    const element = container();
+    await drawn(
+      mountOn(element, harness(), {
+        tools: ["settings"],
+        languages: [ARABIC, AFRIKAANS],
+        language: "af",
+      }),
+    );
+    await vi.waitFor(() => expect(element.getAttribute("lang")).toBe("af"));
+    expect(element.getAttribute("dir")).toBe("ltr");
+    (await button(element, "Settings")).click();
+    const arabic = await vi.waitFor(() => {
+      const found = [
+        ...element.querySelectorAll<HTMLElement>("button, label"),
+      ].find((node) => node.textContent?.trim() === ARABIC.label);
+      expect(found).toBeDefined();
+      return found as HTMLElement;
+    });
+    arabic.click();
+    await vi.waitFor(() => expect(element.getAttribute("lang")).toBe("ar"));
+    expect(element.getAttribute("dir")).toBe("rtl");
+  });
+
+  it("leave a dir the page set alone, and put lang back as it was, when the map is destroyed", async () => {
+    const element = container();
+    element.setAttribute("dir", "rtl");
+    element.setAttribute("lang", "fr");
+    const handle = mountOn(element, harness());
+    await drawn(handle);
+    await vi.waitFor(() => expect(element.getAttribute("lang")).toBe("en-GB"));
+    expect(element.getAttribute("dir")).toBe("rtl");
+    handle.destroy();
+    expect(element.getAttribute("dir")).toBe("rtl");
+    expect(element.getAttribute("lang")).toBe("fr");
+  });
+
+  it("remove what the map wrote when it is destroyed", async () => {
+    const element = container();
+    const handle = mountOn(element, harness());
+    await drawn(handle);
+    await vi.waitFor(() => expect(element.getAttribute("dir")).toBe("ltr"));
+    handle.destroy();
+    expect(element.hasAttribute("lang")).toBe(false);
+    expect(element.hasAttribute("dir")).toBe(false);
+  });
+});
+
+describe("text a layer carries itself", () => {
+  it("is shown as written, whatever the language: languages translate the interface only", async () => {
+    const hostKeyed = {
+      ...SAMPLE_TILE_LAYER,
+      id: "host-keyed",
+      name: { key: "my.layer.name", text: "My layer" },
+    };
+    const element = container();
+    await drawn(
+      mountOn(element, harness(), {
+        tools: ["map-options"],
+        layers: [hostKeyed as never],
+        languages: [
+          {
+            tag: "af",
+            label: "Afrikaans",
+            messages: { "chrome.endStack.mapOptions": "Kaartopsies" },
+          },
+        ],
+        language: "af",
+      }),
+    );
+    (await button(element, "Kaartopsies")).click();
+    await vi.waitFor(() => expect(element.textContent).toContain("My layer"));
   });
 });

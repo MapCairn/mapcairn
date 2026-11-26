@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { buildLanguages } from "./languages";
 import { MountMapError } from "./MountMapError";
 
@@ -9,6 +9,10 @@ const AFRIKAANS = {
   label: "Afrikaans",
   messages: { "chrome.endStack.mapOptions": "Kaartopsies" },
 };
+
+afterEach(() => {
+  vi.restoreAllMocks();
+});
 
 function problem(run: () => unknown): string {
   try {
@@ -109,7 +113,7 @@ describe("buildLanguages", () => {
     ).toBe('languages[0].direction must be "ltr" or "rtl".');
   });
 
-  it("refuses messages that are not messages, a key that is not a key and a value that is not text", () => {
+  it("refuses messages that are not an object, and a value that is not text", () => {
     expect(
       problem(() =>
         buildLanguages([{ ...AFRIKAANS, messages: null as never }], undefined),
@@ -118,19 +122,32 @@ describe("buildLanguages", () => {
     expect(
       problem(() =>
         buildLanguages(
-          [{ ...AFRIKAANS, messages: { nope: "x" } as never }],
-          undefined,
-        ),
-      ),
-    ).toBe('languages[0].messages: "nope" is not a message key.');
-    expect(
-      problem(() =>
-        buildLanguages(
           [{ ...AFRIKAANS, messages: { "chrome.sheet.close": 3 } as never }],
           undefined,
         ),
       ),
     ).toBe('languages[0].messages: "chrome.sheet.close" must be text.');
+  });
+
+  it("ignores a key this version has no message for, with one warning that names it", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const { catalogue } = buildLanguages(
+      [{ ...AFRIKAANS, messages: { "a.later.key": "x" } as never }],
+      undefined,
+    );
+    expect(warn).toHaveBeenCalledTimes(1);
+    expect(warn.mock.calls[0]?.[0]).toContain('"a.later.key"');
+    const messages = await catalogue?.load("af");
+    expect(messages?.t("chrome.sheet.close", {})).toBe("Close");
+  });
+
+  it("warns about no key a partial language leaves out", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const { catalogue } = buildLanguages([AFRIKAANS], undefined);
+    const messages = await catalogue?.load("af");
+    messages?.t("chrome.sheet.close", {});
+    messages?.t("settings.title", {});
+    expect(warn).not.toHaveBeenCalled();
   });
 
   it("refuses a tag used twice, English included", () => {

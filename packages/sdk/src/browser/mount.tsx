@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
 import {
+  emptyLayerCatalogue,
   type MapAdapterFactory,
   type MapEngineError,
   MemorySettingsStore,
@@ -14,6 +15,7 @@ import {
 } from "@mapcairn/map";
 import { createRoot } from "react-dom/client";
 import { createAdapterTap } from "./adapterTap";
+import { ContainerLanguage } from "./ContainerLanguage";
 import { nextIdentifierPrefix } from "./identifiers";
 import { buildLayers } from "./layers";
 import { MountedMap } from "./MountedMap";
@@ -124,12 +126,15 @@ export function mount(
     settings,
     createMapAdapter: tap.wrap(dependencies.createMapAdapter(workerUrl)),
     provided: options.services ?? {},
-    layers: layers.catalogue,
+    layers: valid.tools.has("map-options")
+      ? layers.catalogue
+      : emptyLayerCatalogue,
     languages: valid.languages.catalogue,
   });
   const services =
     dependencies.decorateServices?.(built.services) ?? built.services;
 
+  const adopterSetDirection = element.hasAttribute("dir");
   warnAboutLabels(element, valid.label);
   element.setAttribute(
     MARKER,
@@ -146,6 +151,10 @@ export function mount(
       <ServicesProvider services={services}>
         <LiveRegionProvider>
           <TooltipProvider>
+            <ContainerLanguage
+              element={element}
+              writeDirection={!adopterSetDirection}
+            />
             <MountedMap
               basemaps={valid.basemaps}
               basemapId={basemapId}
@@ -154,6 +163,7 @@ export function mount(
                 draw();
               }}
               tools={valid.tools}
+              hasLayers={layers.present}
               label={valid.label}
               initialView={valid.view}
               onViewChange={(view: ViewState) => {

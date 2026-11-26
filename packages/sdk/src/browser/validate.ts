@@ -158,11 +158,7 @@ export function validateOptions(options: MountMapOptions): ValidOptions {
     basemapId: options.basemap ?? null,
     theme,
     label: options.label === "" ? undefined : options.label,
-    tools: validateTools(
-      options.tools,
-      options.services ?? {},
-      options.layers !== undefined,
-    ),
+    tools: validateTools(options.tools, options.services ?? {}),
     languages: buildLanguages(options.languages, options.language),
   };
 }

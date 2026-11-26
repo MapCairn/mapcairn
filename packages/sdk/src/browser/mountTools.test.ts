@@ -138,22 +138,22 @@ describe("the search tool", () => {
     );
   });
 
-  it("refuses to mount without a provider, naming the fix", () => {
-    expect(() =>
-      mountOn(container(), harness(), { tools: ["search"] }),
-    ).toThrow(
-      new MountMapError(
-        "invalid-option",
-        'tools: "search" needs a search provider. Pass services.search, or remove "search" from tools.',
-      ),
+  it("is left out, with one warning that names the fix, when the page wrote no provider", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const element = container();
+    await drawn(mountOn(element, harness(), { tools: ["search"] }));
+    expect(element.querySelector('[role="search"]')).toBeNull();
+    expect(warn).toHaveBeenCalledTimes(1);
+    expect(warn).toHaveBeenCalledWith(
+      'tools: "search" needs a search provider, so it is not shown. Pass services.search, or remove "search" from tools.',
     );
   });
 
-  it("leaves the element empty when it refuses, so the page can try again", () => {
+  it("refuses an unknown tool, and leaves the element free for another try", () => {
     const element = container();
-    expect(() => mountOn(element, harness(), { tools: ["locate"] })).toThrow(
-      MountMapError,
-    );
+    expect(() =>
+      mountOn(element, harness(), { tools: ["searh" as never] }),
+    ).toThrow(MountMapError);
     expect(element.hasAttribute("data-mapcairn")).toBe(false);
     expect(element.childNodes).toHaveLength(0);
   });
@@ -175,6 +175,40 @@ describe("the locate tool", () => {
     await vi.waitFor(() =>
       expect(handle.getView().center.lat).toBeCloseTo(51.5, 1),
     );
+    expect(handle.getView().center.lng).toBeCloseTo(-0.12, 1);
+  });
+
+  it("fits a very coarse fix to a capped circle, at the closest zoom and with padding", async () => {
+    const provider = locationProvider();
+    (provider.locate as ReturnType<typeof vi.fn>).mockResolvedValue({
+      position: { lat: 51.5, lng: -0.12 },
+      accuracyMetres: 1_000_000,
+      timestamp: 0,
+    });
+    const tools = harness();
+    const element = container();
+    await drawn(
+      mountOn(element, tools, {
+        tools: ["locate"],
+        services: { location: provider },
+      }),
+    );
+    const fit = vi.spyOn(
+      tools.adapters[0] as unknown as {
+        fitBounds: (...args: unknown[]) => void;
+      },
+      "fitBounds",
+    );
+    (await button(element, "Locate me")).click();
+    await vi.waitFor(() => expect(fit).toHaveBeenCalledTimes(1));
+    const [bounds, options] = fit.mock.calls[0] as unknown as [
+      { south: number; west: number; north: number; east: number },
+      { maxZoom: number; padding: { top: number } },
+    ];
+    expect(bounds.north - bounds.south).toBeLessThan(1);
+    expect(bounds.north - bounds.south).toBeGreaterThan(0.3);
+    expect(options.maxZoom).toBe(15);
+    expect(options.padding.top).toBe(32);
   });
 
   it("says why in the page when the provider fails, with a way to try again", async () => {
@@ -204,11 +238,13 @@ describe("the locate tool", () => {
     await vi.waitFor(() => expect(provider.locate).toHaveBeenCalledTimes(2));
   });
 
-  it("is not there when the page names the tool but wrote no provider", () => {
-    expect(() =>
-      mountOn(container(), harness(), { tools: ["locate"] }),
-    ).toThrow(
-      'tools: "locate" needs a location provider. Pass services.location, or remove "locate" from tools.',
+  it("is left out, with one warning that names the fix, when the page wrote no provider", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const element = container();
+    await drawn(mountOn(element, harness(), { tools: ["locate"] }));
+    expect(element.querySelector('button[aria-label="Locate me"]')).toBeNull();
+    expect(warn).toHaveBeenCalledWith(
+      'tools: "locate" needs a location provider, so it is not shown. Pass services.location, or remove "locate" from tools.',
     );
   });
 
@@ -282,7 +318,12 @@ describe("search, pin and measure from the centre", () => {
         services: { search: provider },
       }),
     );
-    const fit = vi.spyOn(tools.adapters[0] as never, "fitBounds");
+    const fit = vi.spyOn(
+      tools.adapters[0] as unknown as {
+        fitBounds: (...args: unknown[]) => void;
+      },
+      "fitBounds",
+    );
     const input = await field(element);
     typeInto(input, "Ben");
     enter(input);
@@ -297,7 +338,7 @@ describe("search, pin and measure from the centre", () => {
 
   it("drops a pin from the sheet", async () => {
     const element = container();
-    await drawn(mountOn(element, harness(), { tools: ["basemaps"] }));
+    await drawn(mountOn(element, harness(), { tools: ["map-options"] }));
     (await button(element, "Map options")).click();
     const drop = await vi.waitFor(() => {
       const found = element.querySelector<HTMLElement>(
@@ -325,11 +366,17 @@ describe("search, pin and measure from the centre", () => {
       expect(found).not.toBeNull();
       return found as HTMLElement;
     });
+    const undoBefore = element.querySelector<HTMLButtonElement>(
+      '[data-testid="measure-undo"]',
+    );
+    expect(undoBefore?.getAttribute("aria-disabled")).toBe("true");
     add.click();
     await vi.waitFor(() =>
       expect(
-        element.querySelector('[data-testid="measure-toolbar"]')?.textContent,
-      ).toMatch(/1 point|point/i),
+        element
+          .querySelector<HTMLButtonElement>('[data-testid="measure-undo"]')
+          ?.getAttribute("aria-disabled"),
+      ).toBeNull(),
     );
   });
 });
@@ -337,7 +384,7 @@ describe("search, pin and measure from the centre", () => {
 describe("the buttons that open and close", () => {
   it("close the sheet when pressed again", async () => {
     const element = container();
-    await drawn(mountOn(element, harness(), { tools: ["basemaps"] }));
+    await drawn(mountOn(element, harness(), { tools: ["map-options"] }));
     const opener = await button(element, "Map options");
     opener.click();
     await vi.waitFor(() =>
@@ -372,7 +419,7 @@ describe("the sheet", () => {
   it("opens with the basemaps, and a basemap picked there outlasts a theme change", async () => {
     const tools = harness();
     const element = container();
-    const handle = mountOn(element, tools, { tools: ["basemaps"] });
+    const handle = mountOn(element, tools, { tools: ["map-options"] });
     await drawn(handle);
     const opener = await button(element, "Map options");
     opener.click();
@@ -402,7 +449,7 @@ describe("the sheet", () => {
   it("is named by the catalogue and by the map's label", async () => {
     const element = container();
     await drawn(
-      mountOn(element, harness(), { tools: ["basemaps"], label: "North" }),
+      mountOn(element, harness(), { tools: ["map-options"], label: "North" }),
     );
     (await button(element, "Map options")).click();
     await vi.waitFor(() =>
@@ -413,7 +460,7 @@ describe("the sheet", () => {
   it("returns focus to the button that opened it when it closes", async () => {
     const element = container();
     await drawn(
-      mountOn(element, harness(), { tools: ["settings", "basemaps"] }),
+      mountOn(element, harness(), { tools: ["settings", "map-options"] }),
     );
     const opener = await button(element, "Settings");
     opener.focus();
@@ -423,30 +470,36 @@ describe("the sheet", () => {
     await vi.waitFor(() => expect(document.activeElement).toBe(opener));
   });
 
-  it("closes on Escape and returns focus to the button that opened it", async () => {
-    const element = container();
-    await drawn(mountOn(element, harness(), { tools: ["basemaps"] }));
-    const opener = await button(element, "Map options");
-    opener.focus();
-    opener.click();
-    const content = await vi.waitFor(() => {
-      const found = element.querySelector<HTMLElement>(
-        '[data-testid="sheet-content"]',
+  it("closes on Escape and returns focus to the button that opened it, for each sheet", async () => {
+    for (const name of ["Map options", "Settings"]) {
+      const element = container();
+      const handle = mountOn(element, harness(), {
+        tools: ["map-options", "settings"],
+      });
+      await drawn(handle);
+      const opener = await button(element, name);
+      opener.focus();
+      opener.click();
+      const content = await vi.waitFor(() => {
+        const found = element.querySelector<HTMLElement>(
+          '[data-testid="sheet-content"]',
+        );
+        expect(found, name).not.toBeNull();
+        return found as HTMLElement;
+      });
+      content.dispatchEvent(
+        new KeyboardEvent("keydown", { key: "Escape", bubbles: true }),
       );
-      expect(found).not.toBeNull();
-      return found as HTMLElement;
-    });
-    content.dispatchEvent(
-      new KeyboardEvent("keydown", { key: "Escape", bubbles: true }),
-    );
-    await vi.waitFor(() => expect(document.activeElement).toBe(opener));
+      await vi.waitFor(() => expect(document.activeElement).toBe(opener));
+      handle.destroy();
+    }
   });
 
-  it("shows the layers when the layers tool is on, and none otherwise", async () => {
+  it("lists the layers the page gave, without the reference site's own introduction", async () => {
     const element = container();
     await drawn(
       mountOn(element, harness(), {
-        tools: ["layers"],
+        tools: ["map-options"],
         layers: [SAMPLE_TILE_LAYER],
       }),
     );
@@ -454,5 +507,34 @@ describe("the sheet", () => {
     await vi.waitFor(() =>
       expect(element.textContent).toContain(String(SAMPLE_TILE_LAYER.name)),
     );
+    expect(element.textContent).not.toContain(
+      "Open data from public providers",
+    );
+  });
+
+  it("has no layers section when the page gave no layers", async () => {
+    const element = container();
+    await drawn(mountOn(element, harness(), { tools: ["map-options"] }));
+    (await button(element, "Map options")).click();
+    await vi.waitFor(() =>
+      expect(
+        element.querySelector('[data-testid="sheet-content"]'),
+      ).not.toBeNull(),
+    );
+    expect(
+      element.querySelector('[data-testid="sheet-section-layers"]'),
+    ).toBeNull();
+  });
+
+  it("does not show, or load, layers when the sheet is not a tool, and does not throw", async () => {
+    const load = vi.fn(() => Promise.resolve([SAMPLE_TILE_LAYER]));
+    const element = container();
+    await drawn(
+      mountOn(element, harness(), { tools: ["measure"], layers: load }),
+    );
+    expect(
+      element.querySelector('[data-testid="sheet-section-layers"]'),
+    ).toBeNull();
+    expect(load).not.toHaveBeenCalled();
   });
 });

@@ -427,7 +427,7 @@ export interface MapHandle {
 }
 
 // @public
-export type MapTool = "search" | "basemaps" | "layers" | "measure" | "settings" | "locate";
+export type MapTool = "search" | "map-options" | "measure" | "locate" | "settings";
 
 // @public
 export interface MapUpdate {

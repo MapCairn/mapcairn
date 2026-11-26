@@ -36,6 +36,8 @@ export interface MountedMapProps {
   readonly initialView: ViewState;
   /** The tools to compose. Zoom, the compass, the credits and the scale are always there. */
   readonly tools: ReadonlySet<MapTool>;
+  /** Whether the page gave layers. The sheet lists them when it is a tool. */
+  readonly hasLayers: boolean;
   readonly onViewChange: (view: ViewState) => void;
   readonly onClick: (position: LatLng) => void;
   readonly onFeatureTap: (tap: MapFeatureTap) => void;
@@ -56,6 +58,7 @@ export function MountedMap({
   label,
   initialView,
   tools,
+  hasLayers,
   onViewChange,
   onClick,
   onFeatureTap,
@@ -90,6 +93,7 @@ export function MountedMap({
           basemapId={basemap.id}
           onBasemapChange={onBasemapChange}
           tools={tools}
+          hasLayers={hasLayers}
           layers={layers}
           measure={measure}
           measuring={measuring}
@@ -100,7 +104,7 @@ export function MountedMap({
         />
       )}
     >
-      {tools.has("layers") ? (
+      {hasLayers ? (
         <MapDataLayers
           layers={layers}
           ignoreTaps={measuring}
