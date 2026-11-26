@@ -8,7 +8,9 @@ import { describe, expect, it } from "vitest";
 /**
  * Keeps the umbrella package (`@mapcairn/sdk`) a set of re-exports that cannot
  * drift from the packages it stands for: the four at its root, and the MapLibre
- * adapter at its `./adapter-maplibre` subpath only. The checks read manifests,
+ * adapter at its `./adapter-maplibre` subpath only. The one exception is the
+ * `./browser` subpath, whose source is the folder `src/browser` and which is
+ * built as a self-contained bundle; nothing else may import it. The checks read manifests,
  * committed API reports and source text only; the runtime check is in
  * `packages/sdk/src/umbrella.test.ts`.
  */
@@ -23,6 +25,13 @@ const PACKAGES = ["core", "map", "react", "theme"] as const;
 const ADAPTER = "adapter-maplibre";
 const SUBPATH_ONLY = [ADAPTER] as const;
 const SOURCE_CONDITION = "@mapcairn/source";
+/** The umbrella's own code: a folder of source, built as a bundle, with its stylesheet and worker. */
+const BROWSER_SOURCE_FOLDER = "browser";
+const BROWSER_SUBPATHS = [
+  "./browser",
+  "./browser/styles.css",
+  "./browser/worker",
+] as const;
 
 interface Manifest {
   readonly name: string;
@@ -227,10 +236,31 @@ describe("@mapcairn/sdk manifest", () => {
     expect(read(`${UMBRELLA}/LICENSE`)).toBe(read("LICENSE"));
   });
 
-  it("exports the root, one subpath for each code entry point of the five packages, and its stylesheet", () => {
+  it("exports the root, one subpath for each code entry point of the five packages, its stylesheet, and the browser bundle with its stylesheet and worker", () => {
     expect(Object.keys(manifest.exports).sort()).toEqual(
-      [".", "./styles.css", ...mirroredEntryPoints().keys()].sort(),
+      [
+        ".",
+        "./styles.css",
+        ...mirroredEntryPoints().keys(),
+        ...BROWSER_SUBPATHS,
+      ].sort(),
     );
+  });
+
+  it("points the browser subpath at its own source folder and the stylesheet and worker at files the build writes", () => {
+    expect(manifest.exports["./browser"]).toEqual({
+      [SOURCE_CONDITION]: "./src/browser/index.ts",
+      types: "./dist/browser.d.ts",
+      default: "./dist/browser.js",
+    });
+    expect(manifest.exports["./browser/styles.css"]).toEqual({
+      types: "./dist/browser.css.d.ts",
+      default: "./dist/browser.css",
+    });
+    expect(manifest.exports["./browser/worker"]).toEqual({
+      types: "./dist/browser-worker.d.ts",
+      default: "./dist/browser-worker.js",
+    });
   });
 
   it("has no test code at the root, so contracts are reachable only on their own subpath", () => {
@@ -264,6 +294,24 @@ describe("@mapcairn/sdk manifest", () => {
 });
 
 describe("@mapcairn/sdk source", () => {
+  it("holds, beside those files, the browser folder and nothing else", () => {
+    const folders = readdirSync(path.join(REPO, UMBRELLA, "src"), {
+      withFileTypes: true,
+    })
+      .filter((entry) => entry.isDirectory())
+      .map((entry) => entry.name);
+    expect(folders).toEqual([BROWSER_SOURCE_FOLDER]);
+  });
+
+  it("never imports the browser folder from the root or from a file that re-exports", () => {
+    for (const file of sourceFiles()) {
+      const mentions = /(?:^|["'/])browser(?:["'/]|$)/.test(
+        statementsOf(read(`${UMBRELLA}/src/${file}`)).join("\n"),
+      );
+      expect(mentions, file).toBe(false);
+    }
+  });
+
   it("holds one file for the root and one for each subpath, and nothing else", () => {
     expect(sourceFiles()).toEqual(
       [

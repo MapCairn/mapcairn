@@ -96,6 +96,8 @@ export const ADAPTER_WIRING_DIRS = [
   "packages/adapter-maplibre/src/",
   "packages/web/src/adapters/",
   "packages/web/src/composition/",
+  // The browser bundle's own composition root.
+  "packages/sdk/src/browser/services.ts",
 ];
 
 /** Weights in the type scale. */

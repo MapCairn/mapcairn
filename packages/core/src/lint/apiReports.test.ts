@@ -23,7 +23,7 @@ import {
   // @ts-expect-error The scripts are dependency-free JavaScript with JSDoc types.
 } from "../../../../scripts/apiReports.mjs";
 import {
-  entryPointsOf,
+  entryPointsOfManifest,
   // @ts-expect-error The scripts are dependency-free JavaScript with JSDoc types.
 } from "../../../../scripts/buildPackage.mjs";
 import {
@@ -386,7 +386,7 @@ describe.each(BUILT_PACKAGES)("@mapcairn/%s API reports", (name) => {
   const manifest = JSON.parse(
     readFileSync(path.join(folder, "package.json"), "utf8"),
   ) as { exports: Record<string, unknown> };
-  const entries = Object.keys(entryPointsOf(manifest.exports));
+  const entries = Object.keys(entryPointsOfManifest(manifest));
 
   it("has a committed report for every entry point", () => {
     for (const entry of entries) {

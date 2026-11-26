@@ -36,6 +36,7 @@ export default defineConfig({
         // Run by `npm run build`, which fails if they are wrong; a unit test
         // would only restate the real build.
         "scripts/buildPackage.mjs",
+        "scripts/buildBundle.mjs",
         "scripts/shareDeclarations.mjs",
         // Command-line wrappers with no logic of their own: the work is in
         // modules whose tests are counted.

@@ -3,7 +3,7 @@
 [![npm version](https://img.shields.io/npm/v/@mapcairn/sdk)](https://www.npmjs.com/package/@mapcairn/sdk)
 [![GitHub Release](https://img.shields.io/github/v/release/MapCairn/mapcairn)](https://github.com/MapCairn/mapcairn/releases)
 
-The whole MapCairn SDK from one import: it re-exports `@mapcairn/core`, `@mapcairn/map`, `@mapcairn/react` and `@mapcairn/theme` from its root, and the MapLibre adapter, `@mapcairn/adapter-maplibre`, at the subpath `@mapcairn/sdk/adapter-maplibre`, so an app learns one package name instead of five. It is the recommended install, and it holds no code of its own. The individual packages are the advanced option, for a host that wants fewer dependencies: `core` has no React or browser dependency, and `theme` installs without the interface.
+The whole MapCairn SDK from one import: it re-exports `@mapcairn/core`, `@mapcairn/map`, `@mapcairn/react` and `@mapcairn/theme` from its root, and the MapLibre adapter, `@mapcairn/adapter-maplibre`, at the subpath `@mapcairn/sdk/adapter-maplibre`, so an app learns one package name instead of five. It is the recommended install. Apart from the `browser` subpath below, it holds no code of its own. The individual packages are the advanced option, for a host that wants fewer dependencies: `core` has no React or browser dependency, and `theme` installs without the interface.
 
 **Status:** pre-1.0. While the version starts with `0.`, a minor release (the middle number) can contain a breaking change to the public API and a patch release (the last number) is not meant to, so a caret range takes patch releases but not the next minor release. The [changelog](https://github.com/MapCairn/mapcairn/blob/main/CHANGELOG.md) names each breaking change the release finds, and [what counts as the public API](https://docs.mapcairn.com/guides/public-api/) says what is covered.
 
@@ -53,6 +53,7 @@ import { createMapLibreMapAdapter } from "@mapcairn/sdk/adapter-maplibre";
 | `@mapcairn/sdk/react`            | `@mapcairn/react`                                           |
 | `@mapcairn/sdk/theme`            | `@mapcairn/theme`                                           |
 | `@mapcairn/sdk/styles.css`       | the three stylesheets, in order                             |
+| `@mapcairn/sdk/browser`          | `mountMap(element)`, a map for a page with no React         |
 
 Each entry point is an `export * from` the package, never a copy, so a type from the umbrella is the same type as the package's own. The contract suites are not in the root, because they import a test runner.
 

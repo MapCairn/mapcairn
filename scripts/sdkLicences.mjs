@@ -150,6 +150,32 @@ export function isLicenceAllowed(expression, allowed) {
 }
 
 /**
+ * The licence identifiers an allowlist names, in lower case.
+ *
+ * @param {{ licences: Record<string, string> }} allowlist
+ * @returns {Set<string>}
+ */
+export function allowedIdentifiers(allowlist) {
+  return new Set(Object.keys(allowlist.licences).map((id) => id.toLowerCase()));
+}
+
+/**
+ * Whether a package's licence is allowed: the expression is on the list, or
+ * the allowlist names the package with this very licence.
+ *
+ * @param {string} name
+ * @param {string} licence The licence field, or `NO_LICENCE`.
+ * @param {{ licences: Record<string, string>, packages: Record<string, { licence: string, reason: string }> }} allowlist
+ * @returns {boolean}
+ */
+export function isPackageLicenceAllowed(name, licence, allowlist) {
+  return (
+    isLicenceAllowed(licence, allowedIdentifiers(allowlist)) ||
+    allowlist.packages[name]?.licence === licence
+  );
+}
+
+/**
  * The lockfile entry a dependency resolves to when required from a location,
  * found the way Node does: the location's own `node_modules`, then each parent's.
  *
@@ -216,9 +242,6 @@ function licenceOf(entry) {
  */
 export function checkSdkLicences({ lockfile, manifests, allowlist }) {
   const { packages } = lockfile;
-  const allowed = new Set(
-    Object.keys(allowlist.licences).map((id) => id.toLowerCase()),
-  );
   /** @type {Failure[]} */
   const failures = [];
   const peers = {};
@@ -252,10 +275,7 @@ export function checkSdkLicences({ lockfile, manifests, allowlist }) {
       entry.name ??
       key.slice(key.lastIndexOf("node_modules/") + "node_modules/".length);
     const licence = licenceOf(entry);
-    const exception = allowlist.packages[name];
-    const permitted =
-      isLicenceAllowed(licence, allowed) || exception?.licence === licence;
-    if (!permitted) {
+    if (!isPackageLicenceAllowed(name, licence, allowlist)) {
       failures.push({
         name,
         version: entry.version ?? "?",

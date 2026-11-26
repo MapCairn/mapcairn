@@ -10,6 +10,7 @@
 import { spawnSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import path from "node:path";
+import { bundleOf } from "../bundleSettings.mjs";
 import { isolatedEnvironment } from "./npm.mjs";
 
 /** How long one Node import may take before it is cut off, in ms. */
@@ -33,22 +34,45 @@ function isScriptKey(key) {
 }
 
 /**
+ * Whether an export is one of the files the package copies into `dist`.
+ *
+ * @param {unknown} target The export's value.
+ * @param {readonly string[]} copied
+ * @returns {boolean}
+ */
+function isCopiedFile(target, copied) {
+  const built =
+    typeof target === "object" && target !== null
+      ? Reflect.get(target, "default")
+      : target;
+  return typeof built === "string" && copied.includes(path.basename(built));
+}
+
+/**
  * The import specifiers of a package's public entry points.
  *
  * @param {string} name The package name.
  * @param {Record<string, unknown> | string | undefined} exports The
  *   package's `exports` field. Without a map the package has one entry.
- * @param {{ styles?: boolean }} [options] With `styles`, list the style
- *   sheet entries instead of the script entries.
+ * @param {{ styles?: boolean, copied?: readonly string[] }} [options] With
+ *   `styles`, list the style sheet entries instead of the script entries.
+ *   `copied` names the files the package copies into `dist` for a page to
+ *   serve (its worker script): an app does not import them, so they are not
+ *   script entries.
  * @returns {string[]}
  */
-export function entryPointSpecifiers(name, exports, { styles = false } = {}) {
+export function entryPointSpecifiers(
+  name,
+  exports,
+  { styles = false, copied = [] } = {},
+) {
   if (exports === undefined || typeof exports === "string") {
     return styles ? [] : [name];
   }
   return Object.keys(exports)
     .filter((key) => key.startsWith(".") && key !== "./package.json")
     .filter((key) => (styles ? key.endsWith(".css") : isScriptKey(key)))
+    .filter((key) => styles || !isCopiedFile(exports[key], copied))
     .map((key) => (key === "." ? name : `${name}/${key.slice(2)}`));
 }
 
@@ -162,6 +186,9 @@ export function installedEntryPoints(app, packages, options) {
         "utf8",
       ),
     );
-    return entryPointSpecifiers(name, manifest.exports, options);
+    return entryPointSpecifiers(name, manifest.exports, {
+      ...options,
+      copied: Object.keys(bundleOf(manifest)?.copy ?? {}),
+    });
   });
 }

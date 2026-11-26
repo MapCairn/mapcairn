@@ -25,6 +25,7 @@ import {
   // @ts-expect-error The scripts are dependency-free JavaScript with JSDoc types.
 } from "../../../../scripts/buildPackage.mjs";
 import {
+  assertBuilt,
   isStale,
   newestInput,
   newestSharedInput,
@@ -410,5 +411,63 @@ describe("every package script", () => {
         );
       }
     }
+  });
+});
+
+describe("assertBuilt", () => {
+  const manifest = (dependencies: Record<string, string>) =>
+    JSON.stringify({ dependencies });
+
+  it("passes when the build is current", () => {
+    write("packages/react/package.json", 1);
+    writeFileSync(
+      path.join(scratch, "packages/react/package.json"),
+      manifest({}),
+    );
+    expect(() =>
+      assertBuilt("react", { root: scratch, stale: () => false }),
+    ).not.toThrow();
+  });
+
+  it("fails, naming the command, when the build is out of date or missing", () => {
+    mkdirSync(path.join(scratch, "packages/react"), { recursive: true });
+    writeFileSync(
+      path.join(scratch, "packages/react/package.json"),
+      manifest({}),
+    );
+    expect(() =>
+      assertBuilt("react", { root: scratch, stale: () => true }),
+    ).toThrow(
+      'packages/react/dist is missing or older than its sources or the build scripts: run "npm run build:sdk" first.',
+    );
+    // With no stamp the real check says stale.
+    expect(() => assertBuilt("react", { root: scratch })).toThrow(
+      /npm run build:sdk/,
+    );
+  });
+
+  it("asks about the package's folder and the SDK packages it depends on", () => {
+    mkdirSync(path.join(scratch, "packages/map"), { recursive: true });
+    writeFileSync(
+      path.join(scratch, "packages/map/package.json"),
+      manifest({ "@mapcairn/core": "1", "@mapcairn/theme": "1", lodash: "1" }),
+    );
+    const asked: { folder: string; dependencyFolders: string[] }[] = [];
+    assertBuilt("map", {
+      root: scratch,
+      stale: (folder: string, dependencyFolders: string[]) => {
+        asked.push({ folder, dependencyFolders });
+        return false;
+      },
+    });
+    expect(asked).toEqual([
+      {
+        folder: path.join(scratch, "packages/map"),
+        dependencyFolders: [
+          path.join(scratch, "packages/core"),
+          path.join(scratch, "packages/theme"),
+        ],
+      },
+    ]);
   });
 });

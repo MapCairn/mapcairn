@@ -10,6 +10,10 @@ import {
   // @ts-expect-error The scripts are dependency-free JavaScript with JSDoc types.
 } from "../../../../scripts/buildInputs.mjs";
 import {
+  assertBuilt,
+  // @ts-expect-error The scripts are dependency-free JavaScript with JSDoc types.
+} from "../../../../scripts/buildSdk.mjs";
+import {
   BUILT_SDK_PACKAGES,
   // @ts-expect-error The scripts are dependency-free JavaScript with JSDoc types.
 } from "../../../../scripts/sdkPackages.mjs";
@@ -62,6 +66,14 @@ function distFiles(name: string): string[] {
     .filter((file) => !file.endsWith("/") && file.includes("."));
 }
 
+/** The umbrella's own bundle (`browser.js`, its chunks, stylesheet, worker and declarations); everything else in its `dist` re-exports. */
+const BUNDLE_FILE = /^browser[-.]/;
+
+/** The files of the umbrella that only re-export: its `dist` without the bundle. */
+function reexportFiles(): string[] {
+  return distFiles("sdk").filter((file) => !BUNDLE_FILE.test(file));
+}
+
 function read(name: string, file: string): string {
   return readFileSync(path.join(folderOf(name), "dist", file), "utf8");
 }
@@ -96,6 +108,10 @@ function exportTargets(exportsField: Manifest["exports"]): string[] {
 }
 
 describe.each(BUILT_PACKAGES)("@mapcairn/%s dist", (name) => {
+  it("is built from the current sources and build scripts", () => {
+    expect(() => assertBuilt(name)).not.toThrow();
+  });
+
   it("holds every file its exports point at", () => {
     const files = new Set(distFiles(name));
     const missing = exportTargets(manifestOf(name).exports)
@@ -380,14 +396,14 @@ describe("@mapcairn/sdk dist", () => {
   });
 
   it("imports no stylesheet from its JavaScript, so it loads in plain Node", () => {
-    for (const file of distFiles("sdk").filter((f) => f.endsWith(".js"))) {
+    for (const file of reexportFiles().filter((f) => f.endsWith(".js"))) {
       expect(read("sdk", file), file).not.toMatch(/\.css["']/);
     }
   });
 
   it("reaches the adapter and the engine from the adapter subpath only, so the root and the other subpaths carry no engine", () => {
     const reachesAdapter = new Set(
-      distFiles("sdk")
+      reexportFiles()
         .filter((f) => /\.(js|d\.ts)$/.test(f))
         .filter((file) =>
           /adapter-maplibre|maplibre-gl/.test(read("sdk", file)),
@@ -398,7 +414,7 @@ describe("@mapcairn/sdk dist", () => {
   });
 
   it("keeps every export a star re-export of its package, never a copy of its declarations", () => {
-    for (const file of distFiles("sdk").filter((f) => f.endsWith(".d.ts"))) {
+    for (const file of reexportFiles().filter((f) => f.endsWith(".d.ts"))) {
       expect(read("sdk", file), file).not.toMatch(
         /^export (declare )?(function|const|class|interface|type|enum) /m,
       );

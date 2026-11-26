@@ -1,10 +1,13 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
+import { gzipSync } from "node:zlib";
 import { describe, expect, it } from "vitest";
 import {
+  BUNDLE_CEILINGS,
   checkPackage,
   classifyFile,
   exportTargetsOf,
+  gzippedBytes,
   SIZE_CEILINGS,
   // @ts-expect-error The scripts are dependency-free JavaScript with JSDoc types.
 } from "../../../../scripts/release/packCheck.mjs";
@@ -452,5 +455,227 @@ describe("SIZE_CEILINGS", () => {
     for (const ceiling of Object.values(SIZE_CEILINGS)) {
       expect(ceiling).toBeGreaterThan(0);
     }
+  });
+});
+
+/** A manifest as the umbrella has it: a bundle, a notices file, and the files they need. */
+function bundleManifest(overrides: Record<string, unknown> = {}) {
+  return manifest({
+    name: "@mapcairn/sdk",
+    repository: {
+      type: "git",
+      url: "git+https://github.com/MapCairn/mapcairn.git",
+      directory: "packages/sdk",
+    },
+    mapcairn: {
+      bundle: {
+        entries: ["browser"],
+        copy: {
+          "browser-worker.js": "maplibre-gl/dist/maplibre-gl-worker.mjs",
+        },
+      },
+    },
+    exports: {
+      ".": {
+        "@mapcairn/source": "./src/index.ts",
+        types: "./dist/index.d.ts",
+        default: "./dist/index.js",
+      },
+      "./browser": {
+        "@mapcairn/source": "./src/browser/index.ts",
+        types: "./dist/browser.d.ts",
+        default: "./dist/browser.js",
+      },
+      "./browser/styles.css": {
+        types: "./dist/browser.css.d.ts",
+        default: "./dist/browser.css",
+      },
+      "./browser/worker": {
+        types: "./dist/browser-worker.d.ts",
+        default: "./dist/browser-worker.js",
+      },
+    },
+    files: ["dist", "!dist/.built", "THIRD-PARTY-NOTICES.md"],
+    ...overrides,
+  });
+}
+
+const BUNDLE_FILES = [
+  "LICENSE",
+  "README.md",
+  "package.json",
+  "THIRD-PARTY-NOTICES.md",
+  "dist/index.js",
+  "dist/index.js.map",
+  "dist/index.d.ts",
+  "dist/browser.js",
+  "dist/browser.d.ts",
+  "dist/browser.css",
+  "dist/browser.css.d.ts",
+  "dist/browser-worker.js",
+  "dist/browser-worker.d.ts",
+  "dist/browser-engine-AbC123.js",
+  "dist/browser-rolldown-runtime-AbC123.js",
+];
+
+function bundleProblems(
+  files: readonly string[] = BUNDLE_FILES,
+  options: {
+    manifestOverrides?: Record<string, unknown>;
+    size?: number;
+    bundleCeiling?: number;
+    contents?: Record<string, string>;
+  } = {},
+) {
+  const contents = options.contents ?? {};
+  return checkPackage({
+    manifest: bundleManifest(options.manifestOverrides),
+    listing: listing(files, options.size ?? 1000),
+    ceiling: 5000,
+    bundleCeiling: options.bundleCeiling ?? 5000,
+    readFile: (file: string) =>
+      file === "dist/index.js.map" ? sourceMap() : (contents[file] ?? "x"),
+    sourceExists: () => true,
+  }) as string[];
+}
+
+describe("a package that builds a bundle", () => {
+  it("passes with its notices, its bundle files and no source map for them", () => {
+    expect(bundleProblems()).toEqual([]);
+  });
+
+  it("must ship the notices file, and lists it in `files`", () => {
+    expect(
+      bundleProblems(
+        BUNDLE_FILES.filter((f) => f !== "THIRD-PARTY-NOTICES.md"),
+      ),
+    ).toEqual([
+      "THIRD-PARTY-NOTICES.md: missing from the tarball (the bundle build writes it: run npm run build:sdk)",
+    ]);
+    expect(
+      bundleProblems(BUNDLE_FILES, {
+        manifestOverrides: { files: ["dist", "!dist/.built"] },
+      }).join("\n"),
+    ).toContain("files: must be");
+  });
+
+  it("allows the notices file in no other package", () => {
+    expect(
+      problems([...GOOD_FILES, "THIRD-PARTY-NOTICES.md"]).join("\n"),
+    ).toContain("THIRD-PARTY-NOTICES.md: outside the allowed set");
+  });
+
+  it("still needs a source map for a script that is not part of the bundle", () => {
+    expect(
+      bundleProblems([...BUNDLE_FILES, "dist/stray.js"]).join("\n"),
+    ).toContain("dist/stray.js: no source map");
+    expect(
+      bundleProblems([...BUNDLE_FILES, "dist/browserish.js"]).join("\n"),
+    ).toContain("dist/browserish.js: no source map");
+  });
+
+  it("measures the bundle's files apart from the rest, in gzipped bytes", () => {
+    const big = "a".repeat(200_000);
+    const noisy = Array.from({ length: 4000 }, (_, i) => `${i * 7919}`).join(
+      ",",
+    );
+    const result = bundleProblems(BUNDLE_FILES, {
+      bundleCeiling: 100,
+      contents: { "dist/browser.js": noisy, "dist/browser.css": big },
+    });
+    expect(result.join("\n")).toMatch(
+      /bundle: \d+ bytes gzipped is over the ceiling of 100/,
+    );
+  });
+});
+
+describe("BUNDLE_CEILINGS", () => {
+  it("names only packages that build a bundle", () => {
+    expect(Object.keys(BUNDLE_CEILINGS)).toEqual(["sdk"]);
+    expect(BUNDLE_CEILINGS.sdk).toBeGreaterThan(SIZE_CEILINGS.sdk);
+  });
+});
+
+describe("gzippedBytes", () => {
+  it("is the length of each file gzipped alone, added up", () => {
+    // A thousand letters gzip to 29 bytes, and an empty file to 20, whatever the machine.
+    expect(gzippedBytes(["a"], () => "a".repeat(1000))).toBe(29);
+    expect(gzippedBytes(["a"], () => "")).toBe(20);
+    expect(gzippedBytes(["a"], () => undefined)).toBe(20);
+    expect(
+      gzippedBytes(["a", "b"], (file: string) => (file === "a" ? "x" : "yy")),
+    ).toBe(gzipSync("x").length + gzipSync("yy").length);
+    expect(gzippedBytes([], () => "x")).toBe(0);
+  });
+});
+
+describe("the two ceilings of a bundle package, one byte either side", () => {
+  const contents: Record<string, string> = {};
+  for (const [index, file] of BUNDLE_FILES.entries()) {
+    contents[file] = `${index}`.repeat(50 + index);
+  }
+  contents["dist/index.js.map"] = sourceMap();
+  const inBundle = (file: string) =>
+    file === "THIRD-PARTY-NOTICES.md" || /^dist\/browser[-.]/.test(file);
+  const weight = (files: readonly string[]) =>
+    files.reduce(
+      (total, file) => total + gzipSync(contents[file] ?? "").length,
+      0,
+    );
+  const bundleBytes = weight(BUNDLE_FILES.filter(inBundle));
+  const restBytes = weight(BUNDLE_FILES.filter((file) => !inBundle(file)));
+  /** Whether the tarball passes both ceilings, the package's being `ceiling` and the bundle's `bundleCeiling`. */
+  const passes = (ceiling: number, bundleCeiling: number) =>
+    checkPackage({
+      manifest: bundleManifest(),
+      listing: listing(BUNDLE_FILES, 1),
+      ceiling,
+      bundleCeiling,
+      readFile: (file: string) => contents[file],
+      sourceExists: () => true,
+    }).filter((line: string) => /^(size|bundle):/.test(line)).length === 0;
+
+  it("holds the bundle to its own ceiling", () => {
+    expect(passes(restBytes, bundleBytes)).toBe(true);
+    expect(passes(restBytes, bundleBytes - 1)).toBe(false);
+    expect(passes(restBytes, bundleBytes + 1)).toBe(true);
+  });
+
+  it("holds the rest of the files to the package's ceiling, gzipped and without the bundle, whatever the tarball weighs", () => {
+    expect(passes(restBytes, bundleBytes)).toBe(true);
+    expect(passes(restBytes - 1, bundleBytes)).toBe(false);
+    expect(passes(restBytes + 1, bundleBytes)).toBe(true);
+  });
+
+  it("counts the notices file and every bundle file in the bundle", () => {
+    const withoutNotices = weight(
+      BUNDLE_FILES.filter(
+        (file) => inBundle(file) && file !== "THIRD-PARTY-NOTICES.md",
+      ),
+    );
+    expect(withoutNotices).toBeLessThan(bundleBytes);
+    expect(passes(restBytes, withoutNotices)).toBe(false);
+  });
+});
+
+describe("a source map of a bundle", () => {
+  it("is a problem, even one that names only files in the package's src", () => {
+    const result = bundleProblems([...BUNDLE_FILES, "dist/browser.js.map"], {
+      contents: { "dist/browser.js.map": sourceMap() },
+    });
+    expect(result.join("\n")).toContain(
+      "dist/browser.js.map: a source map of the bundle",
+    );
+    expect(
+      bundleProblems([...BUNDLE_FILES, "dist/browser-engine-AbC123.js.map"], {
+        contents: { "dist/browser-engine-AbC123.js.map": sourceMap() },
+      }).join("\n"),
+    ).toContain("a source map of the bundle");
+  });
+
+  it("is still read as any package's source map when the package builds no bundle", () => {
+    expect(problems([...GOOD_FILES]).join("\n")).not.toContain(
+      "a source map of the bundle",
+    );
   });
 });

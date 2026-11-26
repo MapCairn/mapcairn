@@ -178,6 +178,17 @@ describe("dependency-cruiser boundaries", () => {
       'export * from "@mapcairn/adapter-maplibre";\n',
     "packages/sdk/src/badAdapterDeep.ts":
       'export * from "../../adapter-maplibre/src/goodCore";\n',
+    // The browser folder: React and its own files, and the packages' entry points.
+    "packages/sdk/src/browser/good.tsx":
+      'import { createRoot } from "react-dom/client";\nimport { x } from "@mapcairn/map";\nimport { y } from "./goodSibling";\nexport const z = [createRoot, x, y];\n',
+    "packages/sdk/src/browser/goodSibling.ts": "export const y = 1;\n",
+    "packages/sdk/src/browser/good.test.ts":
+      'import { it } from "vitest";\nit("x", () => {});\n',
+    "packages/sdk/src/browser/badNpm.ts": 'export * from "zod";\n',
+    "packages/sdk/src/browser/badDeep.ts":
+      'export * from "../../../map/src/ui/index";\n',
+    "packages/sdk/src/badImportsBrowser.ts":
+      'export * from "./browser/goodSibling";\n',
     "packages/sdk/src/badNpm.ts": 'export * from "zod";\n',
     "packages/sdk/src/badDeep.ts": 'export * from "../../map/src/ui/index";\n',
     "packages/sdk/src/badCode.ts":
@@ -326,6 +337,15 @@ describe("dependency-cruiser boundaries", () => {
     ["umbrella-reexports-entry-points-only", "packages/sdk/src/badNpm.ts"],
     ["umbrella-reexports-entry-points-only", "packages/sdk/src/badDeep.ts"],
     ["umbrella-reexports-entry-points-only", "packages/sdk/src/badCode.ts"],
+    ["umbrella-browser-uses-react-only", "packages/sdk/src/browser/badNpm.ts"],
+    [
+      "umbrella-browser-uses-entry-points-only",
+      "packages/sdk/src/browser/badDeep.ts",
+    ],
+    [
+      "umbrella-browser-is-imported-by-itself-only",
+      "packages/sdk/src/badImportsBrowser.ts",
+    ],
     ["umbrella-root-has-no-adapter", "packages/sdk/src/badRootAdapter.ts"],
     ["umbrella-root-has-no-adapter", "packages/sdk/src/badAdapterDeep.ts"],
     [
@@ -413,6 +433,9 @@ describe("dependency-cruiser boundaries", () => {
     "examples/demo/src/goodAdapterPackage.ts",
     "packages/sdk/src/index.ts",
     "packages/sdk/src/adapterMaplibre.ts",
+    "packages/sdk/src/browser/good.tsx",
+    "packages/sdk/src/browser/goodSibling.ts",
+    "packages/sdk/src/browser/good.test.ts",
   ])("accepts %s", (file) => {
     expect(findings.filter((f) => f.endsWith(file))).toEqual([]);
   });

@@ -130,6 +130,31 @@ export function isStale(folder, dependencyFolders = []) {
 }
 
 /**
+ * Fails, with the command to run, when a package's `dist` is missing or older
+ * than what it is built from, so a test that reads built files can never pass
+ * against a stale build.
+ *
+ * @param {string} name The folder name under `packages/`, such as `sdk`.
+ * @param {{ root?: string, stale?: (folder: string, dependencyFolders: string[]) => boolean }} [options]
+ *   `root` is the repository root; `stale` replaces `isStale`.
+ * @throws {Error} When the build is out of date.
+ */
+export function assertBuilt(name, { root = REPO, stale = isStale } = {}) {
+  const folder = path.join(root, "packages", name);
+  const manifest = JSON.parse(
+    readFileSync(path.join(folder, "package.json"), "utf8"),
+  );
+  const dependencyFolders = sdkDependenciesOf(manifest).map((dependency) =>
+    path.join(root, "packages", dependency),
+  );
+  if (stale(folder, dependencyFolders)) {
+    throw new Error(
+      `packages/${name}/dist is missing or older than its sources or the build scripts: run "npm run build:sdk" first.`,
+    );
+  }
+}
+
+/**
  * Builds every SDK package that is out of date, in dependency order, and
  * returns the names it built.
  *
