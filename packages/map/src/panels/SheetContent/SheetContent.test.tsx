@@ -256,6 +256,21 @@ describe("SheetContent pin, settings and help", () => {
     expect(screen.queryByTestId("help-search")).toBeNull();
   });
 
+  it("passes shortcuts to Help", () => {
+    renderContent({
+      props: {
+        section: "help",
+        shortcuts: { pin: false, identify: false, drawing: false },
+      },
+    });
+    expect(screen.queryByTestId("help-drawing")).toBeNull();
+    expect(
+      within(screen.getByTestId("help-keyboard"))
+        .getAllByRole("term")
+        .map((term) => term.textContent),
+    ).not.toEqual(expect.arrayContaining(["P"]));
+  });
+
   it("passes the host's privacy note to Settings", () => {
     renderContent({
       props: { section: "settings", privacyNote: "Host privacy note." },

@@ -30,6 +30,16 @@ import { showResult } from "./showResult";
 import type { MapTool } from "./tools";
 import { useShowFix } from "./useShowFix";
 
+/**
+ * The keys a mounted map does not have: it wires no pin, identify or drawing,
+ * so the hidden instructions and Help leave those lines out.
+ */
+export const MOUNTED_SHORTCUTS = {
+  pin: false,
+  identify: false,
+  drawing: false,
+} as const;
+
 /** Which group of sections the sheet holds, or null while it is closed. */
 type OpenSheet = "map-options" | "settings" | null;
 
@@ -215,6 +225,7 @@ function ChromeSlots({
                 privacyHref=""
                 privacyNote={null}
                 hasSearch={tools.has("search")}
+                shortcuts={MOUNTED_SHORTCUTS}
               />
             ) : null}
           </Sheet>

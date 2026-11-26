@@ -197,6 +197,27 @@ describe("mounting and accessibility", () => {
     expect(help?.textContent).toMatch(/Plus or minus: Zoom in or out\./);
   });
 
+  it("lists the P and I keys by default", async () => {
+    const { host } = await setup();
+    const text = document.getElementById(
+      host().getAttribute("aria-describedby") as string,
+    )?.textContent;
+    expect(text).toMatch(/\bP: Drop a pin/);
+    expect(text).toMatch(/\bI: Show what is at the centre/);
+  });
+
+  it("leaves the P and I keys out of the instructions when told", async () => {
+    const { host } = await setup({
+      shortcuts: { pin: false, identify: false },
+    });
+    const text = document.getElementById(
+      host().getAttribute("aria-describedby") as string,
+    )?.textContent;
+    expect(text).not.toMatch(/\bP: /);
+    expect(text).not.toMatch(/\bI: /);
+    expect(text).toMatch(/Arrow keys: Pan the map\./);
+  });
+
   it("includes rotation and pointing north in the instructions", async () => {
     const { host } = await setup();
     const help = document.getElementById(

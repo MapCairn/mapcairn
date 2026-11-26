@@ -580,3 +580,41 @@ describe("Settings and Help on a mounted map", () => {
     ).toContain("MGRS");
   });
 });
+
+describe("keyboard help on a mounted map", () => {
+  async function mounted(tools: readonly ("search" | "settings")[]) {
+    const element = container();
+    await drawn(mountOn(element, harness(), { tools }));
+    return element;
+  }
+
+  it("lists no pin, identify or drawing key in the hidden instructions", async () => {
+    const element = await mounted(["settings"]);
+    const region = element.querySelector('[aria-roledescription="map"]');
+    const help = element.ownerDocument.getElementById(
+      region?.getAttribute("aria-describedby") ?? "",
+    )?.textContent;
+    expect(help).toContain("Arrow keys");
+    expect(help).not.toMatch(/\bP: /);
+    expect(help).not.toMatch(/\bI: /);
+  });
+
+  it("lists no pin, identify or drawing key in Help", async () => {
+    const element = await mounted(["settings"]);
+    (await button(element, "Settings")).click();
+    await vi.waitFor(() =>
+      expect(
+        element.querySelector('[data-testid="help-keyboard"]'),
+      ).not.toBeNull(),
+    );
+    const keys = [
+      ...(element.querySelectorAll(
+        '[data-testid="help-keyboard"] dt',
+      ) as NodeListOf<HTMLElement>),
+    ].map((term) => term.textContent);
+    expect(keys).toContain("Home or 0");
+    expect(keys).not.toContain("P");
+    expect(keys).not.toContain("I");
+    expect(element.querySelector('[data-testid="help-drawing"]')).toBeNull();
+  });
+});

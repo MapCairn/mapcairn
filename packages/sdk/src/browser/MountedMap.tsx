@@ -22,7 +22,7 @@ import {
   useTheme,
 } from "@mapcairn/map";
 import { useState } from "react";
-import { MountedChrome } from "./MountedChrome";
+import { MOUNTED_SHORTCUTS, MountedChrome } from "./MountedChrome";
 import type { MapTool } from "./tools";
 
 /** What one mounted map's interface needs from the mount. */
@@ -86,6 +86,7 @@ export function MountedMap({
         onClick(event.latlng);
       }}
       onEngineError={onEngineError}
+      shortcuts={MOUNTED_SHORTCUTS}
       chrome={(background) => (
         <MountedChrome
           background={background}

@@ -8,7 +8,11 @@ import { useMessages, usePreferences } from "../../services";
 import { drawingForImage, type UseDraw } from "../../tools/DrawToolbar";
 import { BasemapPicker } from "../BasemapPicker";
 import { ExportSection } from "../ExportSection";
-import { type HelpAbout, HelpSection } from "../HelpSection";
+import {
+  type HelpAbout,
+  HelpSection,
+  type HelpShortcuts,
+} from "../HelpSection";
 import { PinSection } from "../PinSection";
 import { Section } from "../Section";
 import { SettingsSection } from "../SettingsSection";
@@ -67,6 +71,8 @@ export interface SheetContentProps {
   readonly about?: HelpAbout;
   /** Whether the map has a search box. Defaults to true; without one Help leaves out Search. */
   readonly hasSearch?: boolean;
+  /** Which of the pin, identify and drawing shortcut lines Help lists. All by default. */
+  readonly shortcuts?: HelpShortcuts;
 }
 
 /**
@@ -93,6 +99,7 @@ export function SheetContent({
   onStartTour,
   about,
   hasSearch,
+  shortcuts,
 }: SheetContentProps) {
   const { reducedMotion } = usePreferences();
   const { t } = useMessages();
@@ -133,6 +140,7 @@ export function SheetContent({
           onStartTour={onStartTour}
           about={about}
           hasSearch={hasSearch}
+          shortcuts={shortcuts}
         />
       </div>
     );
