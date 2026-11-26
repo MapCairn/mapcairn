@@ -3,18 +3,23 @@
 import type {
   BasemapDefinition,
   LatLng,
+  LayerDefinition,
+  LayerSource,
   LocationProvider,
   MapEngineError,
+  MapFeatureTap,
+  MessageKey,
   SearchProvider,
   SuggestionProvider,
   ThemeChoice,
   ViewState,
 } from "@mapcairn/core";
 import type { MountMapError } from "./MountMapError";
+import type { MapTool } from "./tools";
 
 /**
- * The providers a page writes itself. Each is optional and none is used by
- * the first release's interface until a tool needs it.
+ * The providers a page writes itself. Each is optional. A tool that needs one
+ * (`"search"`, `"locate"`) refuses to mount without it.
  */
 export interface MountServices {
   /** Finds places by name. Throw `SearchError` when a search fails. */
@@ -23,6 +28,23 @@ export interface MountServices {
   readonly suggestions?: SuggestionProvider;
   /** Finds where the person is. Throw `LocationError` when it cannot. */
   readonly location?: LocationProvider;
+  /**
+   * Loads the features of a layer that comes from a feed or a query, and
+   * answers a tap on a layer that identifies. Needed by such layers only.
+   */
+  readonly layerSource?: LayerSource;
+}
+
+/** A language a page adds to English, as plain data. */
+export interface MountLanguage {
+  /** A language tag such as `"af"`. Each language has its own, and `"en-GB"` is taken by English. */
+  readonly tag: string;
+  /** The language's name, in that language. It is what the language switcher shows. */
+  readonly label: string;
+  /** The reading direction, when it is not the one the tag implies. */
+  readonly direction?: "ltr" | "rtl";
+  /** The text, by message key. A key left out reads in English. */
+  readonly messages: Partial<Record<MessageKey, string>>;
 }
 
 /** Everything `mountMap` takes. Every option is optional. */
@@ -33,12 +55,25 @@ export interface MountMapOptions {
   readonly basemaps?: readonly BasemapDefinition[];
   /** The id of the basemap to start on. The default of the basemaps, for the theme, when left out. */
   readonly basemap?: string;
+  /**
+   * The layers a person can turn on, as plain definitions or a function that
+   * loads them. Needs `"layers"` in `tools`. Every layer starts off.
+   */
+  readonly layers?:
+    | readonly LayerDefinition[]
+    | (() => Promise<readonly LayerDefinition[]>);
+  /** Languages to offer besides English. The language switcher is in Settings. */
+  readonly languages?: readonly MountLanguage[];
+  /** The tag of the language to start on, from `languages` or `"en-GB"`. The browser's choice when left out. */
+  readonly language?: string;
   /** `"system"` (when left out) follows the device. */
   readonly theme?: ThemeChoice;
   /** The name of this map. Give each of several maps on a page its own. */
   readonly label?: string;
   /** Where the engine's worker is served from, on this page's origin. Beside the module when left out. */
   readonly workerUrl?: string;
+  /** The tools to add. None when left out: zoom, the compass, the credits and the scale are always there. */
+  readonly tools?: readonly MapTool[];
   /** The providers the page writes. */
   readonly services?: MountServices;
 }
@@ -63,10 +98,12 @@ export interface MapEvents {
   readonly viewchange: ViewState;
   /** The map was clicked or tapped at this position. */
   readonly click: LatLng;
+  /** A point, shape or line of a layer was tapped. Not emitted while the measure tool is on. */
+  readonly featuretap: MapFeatureTap;
   /**
-   * The engine failed. Today only a `MapEngineError` is emitted; a
-   * `MountMapError` joins it when a later release reports a layer or a tool that
-   * cannot work after the map is drawing.
+   * The engine failed (`MapEngineError`), or a layer loaded after the map was
+   * drawn cannot work (`MountMapError`): a definition that was left out, or
+   * one that needs `services.layerSource`.
    */
   readonly error: MapEngineError | MountMapError;
 }

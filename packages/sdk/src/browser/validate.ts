@@ -7,7 +7,9 @@ import {
   type ThemeChoice,
   type ViewState,
 } from "@mapcairn/core";
+import { type BuiltLanguages, buildLanguages } from "./languages";
 import { MountMapError } from "./MountMapError";
+import { type MapTool, validateTools } from "./tools";
 import type { MountMapOptions } from "./types";
 
 /** The view of the whole world a map starts on when it is given none. */
@@ -29,6 +31,8 @@ export interface ValidOptions {
   readonly basemapId: string | null;
   readonly theme: ThemeChoice;
   readonly label: string | undefined;
+  readonly tools: ReadonlySet<MapTool>;
+  readonly languages: BuiltLanguages;
 }
 
 function invalid(message: string): never {
@@ -154,6 +158,12 @@ export function validateOptions(options: MountMapOptions): ValidOptions {
     basemapId: options.basemap ?? null,
     theme,
     label: options.label === "" ? undefined : options.label,
+    tools: validateTools(
+      options.tools,
+      options.services ?? {},
+      options.layers !== undefined,
+    ),
+    languages: buildLanguages(options.languages, options.language),
   };
 }
 

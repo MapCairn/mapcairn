@@ -1,0 +1,458 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright MapCairn contributors
+import {
+  LocationError,
+  type LocationProvider,
+  SAMPLE_TILE_LAYER,
+  SearchError,
+  type SearchProvider,
+  type SearchResult,
+} from "@mapcairn/core";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { MountMapError } from "./MountMapError";
+import {
+  button,
+  container,
+  destroyMounted,
+  drawn,
+  harness,
+  mountOn,
+} from "./testSupport";
+
+afterEach(destroyMounted);
+
+const PLACE: SearchResult = {
+  id: "ben",
+  label: "Ben Nevis",
+  centre: { lat: 56.8, lng: -5 },
+};
+
+function searchProvider(results: readonly SearchResult[] = [PLACE]) {
+  return {
+    search: vi.fn<SearchProvider["search"]>(() => Promise.resolve(results)),
+    reverse: vi.fn(() => Promise.resolve(null)),
+  } as SearchProvider & { search: ReturnType<typeof vi.fn> };
+}
+
+function locationProvider(): LocationProvider {
+  return {
+    locate: vi.fn(() =>
+      Promise.resolve({
+        position: { lat: 51.5, lng: -0.12 },
+        accuracyMetres: 30,
+        timestamp: 0,
+      }),
+    ),
+    watch: vi.fn(() => () => {}),
+  } as unknown as LocationProvider;
+}
+
+function typeInto(input: HTMLInputElement, text: string): void {
+  const set = Object.getOwnPropertyDescriptor(
+    HTMLInputElement.prototype,
+    "value",
+  )?.set;
+  set?.call(input, text);
+  input.dispatchEvent(new Event("input", { bubbles: true }));
+}
+
+async function field(element: HTMLElement): Promise<HTMLInputElement> {
+  return vi.waitFor(() => {
+    const found = element.querySelector<HTMLInputElement>('[role="combobox"]');
+    expect(found).not.toBeNull();
+    return found as HTMLInputElement;
+  });
+}
+
+function enter(input: HTMLInputElement): void {
+  input.dispatchEvent(
+    new KeyboardEvent("keydown", { key: "Enter", bubbles: true }),
+  );
+}
+
+describe("no tools", () => {
+  it("shows none of them, whatever providers the page wrote", async () => {
+    const element = container();
+    await drawn(
+      mountOn(element, harness(), {
+        services: { search: searchProvider(), location: locationProvider() },
+      }),
+    );
+    expect(element.querySelector('[role="search"]')).toBeNull();
+    expect(
+      element.querySelector('[role="dialog"], [data-testid="sheet"]'),
+    ).toBeNull();
+    for (const name of [
+      "Map options",
+      "Measure distance and area",
+      "Locate me",
+      "Settings",
+    ]) {
+      expect(element.querySelector(`button[aria-label="${name}"]`)).toBeNull();
+    }
+  });
+});
+
+describe("the search tool", () => {
+  it("appears when the page supplies a provider, and finds places through it", async () => {
+    const provider = searchProvider();
+    const element = container();
+    const handle = mountOn(element, harness(), {
+      tools: ["search"],
+      services: { search: provider },
+    });
+    await drawn(handle);
+    const input = await field(element);
+    typeInto(input, "Ben");
+    enter(input);
+    await vi.waitFor(() => expect(provider.search).toHaveBeenCalled());
+    expect(provider.search.mock.calls[0]?.[0]).toBe("Ben");
+    const option = await vi.waitFor(() => {
+      const found = element.querySelector<HTMLElement>('[role="option"]');
+      expect(found?.textContent).toContain("Ben Nevis");
+      return found as HTMLElement;
+    });
+    option.click();
+    await vi.waitFor(() =>
+      expect(handle.getView().center).toEqual(PLACE.centre),
+    );
+  });
+
+  it("shows the search status when the page's provider throws a SearchError", async () => {
+    const provider = searchProvider();
+    provider.search.mockRejectedValue(new SearchError("offline"));
+    const element = container();
+    await drawn(
+      mountOn(element, harness(), {
+        tools: ["search"],
+        services: { search: provider },
+      }),
+    );
+    const input = await field(element);
+    typeInto(input, "Ben");
+    enter(input);
+    await vi.waitFor(() =>
+      expect(element.textContent).toContain(
+        "Search is unavailable right now. Please try again.",
+      ),
+    );
+  });
+
+  it("refuses to mount without a provider, naming the fix", () => {
+    expect(() =>
+      mountOn(container(), harness(), { tools: ["search"] }),
+    ).toThrow(
+      new MountMapError(
+        "invalid-option",
+        'tools: "search" needs a search provider. Pass services.search, or remove "search" from tools.',
+      ),
+    );
+  });
+
+  it("leaves the element empty when it refuses, so the page can try again", () => {
+    const element = container();
+    expect(() => mountOn(element, harness(), { tools: ["locate"] })).toThrow(
+      MountMapError,
+    );
+    expect(element.hasAttribute("data-mapcairn")).toBe(false);
+    expect(element.childNodes).toHaveLength(0);
+  });
+});
+
+describe("the locate tool", () => {
+  it("appears with a provider, asks it only when pressed, and moves the map to the fix", async () => {
+    const provider = locationProvider();
+    const element = container();
+    const handle = mountOn(element, harness(), {
+      tools: ["locate"],
+      services: { location: provider },
+    });
+    await drawn(handle);
+    const locate = await button(element, "Locate me");
+    expect(provider.locate).not.toHaveBeenCalled();
+    locate.click();
+    await vi.waitFor(() => expect(provider.locate).toHaveBeenCalledTimes(1));
+    await vi.waitFor(() =>
+      expect(handle.getView().center.lat).toBeCloseTo(51.5, 1),
+    );
+  });
+
+  it("says why in the page when the provider fails, with a way to try again", async () => {
+    const provider = locationProvider();
+    (provider.locate as ReturnType<typeof vi.fn>).mockRejectedValue(
+      new LocationError("denied"),
+    );
+    const element = container();
+    await drawn(
+      mountOn(element, harness(), {
+        tools: ["locate"],
+        services: { location: provider },
+      }),
+    );
+    (await button(element, "Locate me")).click();
+    await vi.waitFor(() =>
+      expect(
+        [...element.querySelectorAll('[role="alert"]')].map(
+          (node) => node.textContent,
+        ),
+      ).toContainEqual(expect.stringContaining("Location access is blocked")),
+    );
+    const retry = [...element.querySelectorAll<HTMLElement>("button")].find(
+      (node) => node.textContent?.trim() === "Try again",
+    );
+    retry?.click();
+    await vi.waitFor(() => expect(provider.locate).toHaveBeenCalledTimes(2));
+  });
+
+  it("is not there when the page names the tool but wrote no provider", () => {
+    expect(() =>
+      mountOn(container(), harness(), { tools: ["locate"] }),
+    ).toThrow(
+      'tools: "locate" needs a location provider. Pass services.location, or remove "locate" from tools.',
+    );
+  });
+
+  it("is not there when the tool is not named, even with a provider", async () => {
+    const element = container();
+    await drawn(
+      mountOn(element, harness(), {
+        tools: ["measure"],
+        services: { location: locationProvider() },
+      }),
+    );
+    expect(element.querySelector('button[aria-label="Locate me"]')).toBeNull();
+    expect(
+      element.querySelector('button[aria-label="Measure distance and area"]'),
+    ).not.toBeNull();
+  });
+});
+
+describe("the measure tool", () => {
+  it("measures from clicks on the map, still reports each click and ends with Done", async () => {
+    const tools = harness();
+    const element = container();
+    const handle = mountOn(element, tools, { tools: ["measure"] });
+    const clicks: unknown[] = [];
+    handle.on("click", (position) => clicks.push(position));
+    await drawn(handle);
+    (await button(element, "Measure distance and area")).click();
+    await vi.waitFor(() =>
+      expect(
+        element.querySelector(
+          '[role="toolbar"], [data-testid="measure-toolbar"]',
+        ),
+      ).not.toBeNull(),
+    );
+    tools.adapters[0]?.simulateClick({ lat: 10, lng: 10 });
+    tools.adapters[0]?.simulateClick({ lat: 10, lng: 11 });
+    await vi.waitFor(() => expect(element.textContent).toMatch(/km/));
+    expect(clicks).toHaveLength(2);
+  });
+});
+
+describe("the measure tool's focus", () => {
+  it("returns to Measure when the toolbar is done", async () => {
+    const element = container();
+    await drawn(mountOn(element, harness(), { tools: ["measure"] }));
+    const measure = await button(element, "Measure distance and area");
+    measure.focus();
+    measure.click();
+    const done = await vi.waitFor(() => {
+      const found = [...element.querySelectorAll<HTMLElement>("button")].find(
+        (node) => node.textContent?.trim() === "Done",
+      );
+      expect(found).toBeDefined();
+      return found as HTMLElement;
+    });
+    done.click();
+    await vi.waitFor(() => expect(document.activeElement).toBe(measure));
+  });
+});
+
+describe("search, pin and measure from the centre", () => {
+  it("fits a result that has an extent", async () => {
+    const provider = searchProvider([
+      { ...PLACE, bounds: { south: 56, west: -6, north: 57, east: -4 } },
+    ]);
+    const element = container();
+    const tools = harness();
+    await drawn(
+      mountOn(element, tools, {
+        tools: ["search"],
+        services: { search: provider },
+      }),
+    );
+    const fit = vi.spyOn(tools.adapters[0] as never, "fitBounds");
+    const input = await field(element);
+    typeInto(input, "Ben");
+    enter(input);
+    const option = await vi.waitFor(() => {
+      const found = element.querySelector<HTMLElement>('[role="option"]');
+      expect(found).not.toBeNull();
+      return found as HTMLElement;
+    });
+    option.click();
+    await vi.waitFor(() => expect(fit).toHaveBeenCalledTimes(1));
+  });
+
+  it("drops a pin from the sheet", async () => {
+    const element = container();
+    await drawn(mountOn(element, harness(), { tools: ["basemaps"] }));
+    (await button(element, "Map options")).click();
+    const drop = await vi.waitFor(() => {
+      const found = element.querySelector<HTMLElement>(
+        '[data-testid="drop-pin-button"]',
+      );
+      expect(found).not.toBeNull();
+      return found as HTMLElement;
+    });
+    drop.click();
+    await vi.waitFor(() =>
+      expect(
+        element.querySelector('[data-testid="pin-marker"]'),
+      ).not.toBeNull(),
+    );
+  });
+
+  it("adds a measure point at the centre of the map", async () => {
+    const element = container();
+    await drawn(mountOn(element, harness(), { tools: ["measure"] }));
+    (await button(element, "Measure distance and area")).click();
+    const add = await vi.waitFor(() => {
+      const found = element.querySelector<HTMLElement>(
+        '[data-testid="measure-add-point"]',
+      );
+      expect(found).not.toBeNull();
+      return found as HTMLElement;
+    });
+    add.click();
+    await vi.waitFor(() =>
+      expect(
+        element.querySelector('[data-testid="measure-toolbar"]')?.textContent,
+      ).toMatch(/1 point|point/i),
+    );
+  });
+});
+
+describe("the buttons that open and close", () => {
+  it("close the sheet when pressed again", async () => {
+    const element = container();
+    await drawn(mountOn(element, harness(), { tools: ["basemaps"] }));
+    const opener = await button(element, "Map options");
+    opener.click();
+    await vi.waitFor(() =>
+      expect(opener.getAttribute("aria-expanded")).toBe("true"),
+    );
+    opener.click();
+    await vi.waitFor(() =>
+      expect(opener.getAttribute("aria-expanded")).toBe("false"),
+    );
+  });
+
+  it("end measuring when Measure is pressed again", async () => {
+    const element = container();
+    await drawn(mountOn(element, harness(), { tools: ["measure"] }));
+    const measure = await button(element, "Measure distance and area");
+    measure.click();
+    await vi.waitFor(() =>
+      expect(
+        element.querySelector('[data-testid="measure-toolbar"]'),
+      ).not.toBeNull(),
+    );
+    measure.click();
+    await vi.waitFor(() =>
+      expect(
+        element.querySelector('[data-testid="measure-toolbar"]'),
+      ).toBeNull(),
+    );
+  });
+});
+
+describe("the sheet", () => {
+  it("opens with the basemaps, and a basemap picked there outlasts a theme change", async () => {
+    const tools = harness();
+    const element = container();
+    const handle = mountOn(element, tools, { tools: ["basemaps"] });
+    await drawn(handle);
+    const opener = await button(element, "Map options");
+    opener.click();
+    const radios = await vi.waitFor(() => {
+      const found = element.querySelectorAll<HTMLInputElement>(
+        '[role="radiogroup"] input[type="radio"]',
+      );
+      expect(found.length).toBeGreaterThan(1);
+      return [...found];
+    });
+    const other = radios.find((radio) => !radio.checked) as HTMLInputElement;
+    other.click();
+    await vi.waitFor(() => {
+      expect(tools.adapters[0]?.setBasemap).toHaveBeenCalledWith(
+        expect.objectContaining({ id: other.value }),
+      );
+    });
+    handle.update({ theme: "dark" });
+    await vi.waitFor(() =>
+      expect(
+        element.querySelector<HTMLInputElement>(`input[value="${other.value}"]`)
+          ?.checked,
+      ).toBe(true),
+    );
+  });
+
+  it("is named by the catalogue and by the map's label", async () => {
+    const element = container();
+    await drawn(
+      mountOn(element, harness(), { tools: ["basemaps"], label: "North" }),
+    );
+    (await button(element, "Map options")).click();
+    await vi.waitFor(() =>
+      expect(element.textContent).toContain("Map options (North)"),
+    );
+  });
+
+  it("returns focus to the button that opened it when it closes", async () => {
+    const element = container();
+    await drawn(
+      mountOn(element, harness(), { tools: ["settings", "basemaps"] }),
+    );
+    const opener = await button(element, "Settings");
+    opener.focus();
+    opener.click();
+    const close = await button(element, "Close");
+    close.click();
+    await vi.waitFor(() => expect(document.activeElement).toBe(opener));
+  });
+
+  it("closes on Escape and returns focus to the button that opened it", async () => {
+    const element = container();
+    await drawn(mountOn(element, harness(), { tools: ["basemaps"] }));
+    const opener = await button(element, "Map options");
+    opener.focus();
+    opener.click();
+    const content = await vi.waitFor(() => {
+      const found = element.querySelector<HTMLElement>(
+        '[data-testid="sheet-content"]',
+      );
+      expect(found).not.toBeNull();
+      return found as HTMLElement;
+    });
+    content.dispatchEvent(
+      new KeyboardEvent("keydown", { key: "Escape", bubbles: true }),
+    );
+    await vi.waitFor(() => expect(document.activeElement).toBe(opener));
+  });
+
+  it("shows the layers when the layers tool is on, and none otherwise", async () => {
+    const element = container();
+    await drawn(
+      mountOn(element, harness(), {
+        tools: ["layers"],
+        layers: [SAMPLE_TILE_LAYER],
+      }),
+    );
+    (await button(element, "Map options")).click();
+    await vi.waitFor(() =>
+      expect(element.textContent).toContain(String(SAMPLE_TILE_LAYER.name)),
+    );
+  });
+});
