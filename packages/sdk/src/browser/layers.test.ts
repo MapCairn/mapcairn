@@ -194,7 +194,7 @@ describe("buildLayers with a function", () => {
     );
     catalogue.subscribe(() => {});
     await vi.waitFor(() => expect(seen.errors).toHaveLength(1));
-    expect(seen.errors[0]?.kind).toBe("invalid-option");
+    expect(seen.errors[0]?.kind).toBe("layers-unavailable");
     expect(seen.errors[0]?.message).toBe(
       "layers: the function could not load the layers (offline). Fix it, or pass the definitions as a list.",
     );

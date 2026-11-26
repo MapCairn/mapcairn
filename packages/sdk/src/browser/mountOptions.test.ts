@@ -642,6 +642,7 @@ describe("the layers function", () => {
     await drawn(handle);
     await openMapOptions(element);
     await vi.waitFor(() => expect(errors).toHaveLength(1));
+    expect(errors[0]?.kind).toBe("layers-unavailable");
     expect(errors[0]?.message).toContain("(offline)");
   });
 });

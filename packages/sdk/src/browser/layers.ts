@@ -137,7 +137,7 @@ async function loaded(
     const reason = error instanceof Error ? error.message : String(error);
     report(
       new MountMapError(
-        "invalid-option",
+        "layers-unavailable",
         `layers: the function could not load the layers (${reason}). Fix it, or pass the definitions as a list.`,
       ),
     );

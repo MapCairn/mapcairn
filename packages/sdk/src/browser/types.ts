@@ -19,7 +19,7 @@ import type { MapTool } from "./tools";
 
 /**
  * The providers a page writes itself. Each is optional. A tool that needs one
- * (`"search"`, `"locate"`) refuses to mount without it.
+ * (`"search"`, `"locate"`) is left out, with one warning that names the fix, when it is missing.
  */
 export interface MountServices {
   /** Finds places by name. Throw `SearchError` when a search fails. */
@@ -59,7 +59,11 @@ export interface MountMapOptions {
    * The layers a person can turn on, as plain definitions or a function that
    * loads them. The layers are listed in the Map options sheet, so name
    * `"map-options"` in `tools`; without it they are not shown. Every layer
-   * starts off. A list that is not valid throws. A function that fails, a
+   * starts off. A list is checked when the map is mounted, even when
+   * `"map-options"` is not named, and throws if it is not valid or if a layer
+   * in it needs `services.layerSource` (a feed, a query or a heatmap layer, or
+   * a tile layer with an `identify` block) and none was given. A tile or vector
+   * layer without an `identify` block never needs one. A function that fails, a
    * layer it returns that is not valid and one that needs
    * `services.layerSource` when there is none are reported through the `error`
    * event, and the rest are kept.
@@ -106,9 +110,10 @@ export interface MapEvents {
   /** A point, shape or line of a layer was tapped. Not emitted while the measure tool is on. */
   readonly featuretap: MapFeatureTap;
   /**
-   * The engine failed (`MapEngineError`), or a layer loaded after the map was
-   * drawn cannot work (`MountMapError`): a definition that was left out, or
-   * one that needs `services.layerSource`.
+   * The engine failed (`MapEngineError`), or the layers a page gave cannot all
+   * be used (`MountMapError`): the function that loads them failed (kind
+   * `layers-unavailable`), or a layer it returned was left out because it is
+   * not valid or needs `services.layerSource` (kind `invalid-option`).
    */
   readonly error: MapEngineError | MountMapError;
 }

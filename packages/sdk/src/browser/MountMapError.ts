@@ -7,12 +7,14 @@
  * - `server`: it ran where there is no document.
  * - `element-in-use`: the element already holds a map.
  * - `invalid-option`: an option or an argument is not usable.
+ * - `layers-unavailable`: the function given as `layers` failed to load them.
  * - `destroyed`: the map was destroyed before it was ready.
  */
 export type MountMapErrorKind =
   | "server"
   | "element-in-use"
   | "invalid-option"
+  | "layers-unavailable"
   | "destroyed";
 
 /**

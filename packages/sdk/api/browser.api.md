@@ -459,7 +459,7 @@ export class MountMapError extends Error {
 }
 
 // @public
-export type MountMapErrorKind = "server" | "element-in-use" | "invalid-option" | "destroyed";
+export type MountMapErrorKind = "server" | "element-in-use" | "invalid-option" | "layers-unavailable" | "destroyed";
 
 // @public
 export interface MountMapOptions {
