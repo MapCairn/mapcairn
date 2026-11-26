@@ -36,7 +36,7 @@ The page holds the map region and the three things around it that the example re
 
 `index.html`:
 
-```html no-check source="examples/headless/index.html"
+```html no-check whole source="examples/headless/index.html"
 <!doctype html>
 <html lang="en-GB">
   <head>
@@ -70,7 +70,7 @@ The adapter loads the engine's stylesheet itself, when the first map mounts, and
 
 `src/page.css`:
 
-```css no-check source="examples/headless/src/page.css"
+```css no-check whole source="examples/headless/src/page.css"
 html,
 body {
   margin: 0;
@@ -99,7 +99,7 @@ output {
 
 `src/main.ts` finds the elements, gives the adapter the URL of the engine's worker and starts the map:
 
-```ts no-check source="examples/headless/src/main.ts"
+```ts no-check whole source="examples/headless/src/main.ts"
 /// <reference types="vite/client" />
 import "./page.css";
 import { createMapLibreMapAdapter } from "@mapcairn/adapter-maplibre";

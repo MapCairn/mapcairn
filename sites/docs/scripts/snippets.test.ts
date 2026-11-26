@@ -114,12 +114,15 @@ describe("sourceFindings", () => {
     "",
   ];
 
+  const SOURCE_INFO = 'source="examples/x/main.ts"';
+  const WHOLE_INFO = `whole ${SOURCE_INFO}`;
+
   /** A scratch repository holding `examples/x/main.ts`, and a page quoting it. */
-  function check(quoted: string[], info = 'source="examples/x/main.ts"') {
+  function check(quoted: string[], info = SOURCE_INFO, source = SOURCE) {
     const repo = mkdtempSync(join(tmpdir(), "mapcairn-docs-source-"));
     try {
       mkdirSync(join(repo, "examples/x"), { recursive: true });
-      writeFileSync(join(repo, "examples/x/main.ts"), SOURCE.join("\n"));
+      writeFileSync(join(repo, "examples/x/main.ts"), source.join("\n"));
       const snippets = extractSnippets(
         "guides/quote.md",
         ["# Quote", "", `\`\`\`ts no-check ${info}`, ...quoted, "```", ""].join(
@@ -155,8 +158,27 @@ describe("sourceFindings", () => {
     expect(unmarkedFindings(snippets)).toEqual([]);
   });
 
-  it("passes a block that is the whole file without its licence header", () => {
-    expect(check(SOURCE.slice(2, -1))).toEqual([]);
+  it("passes a whole block that matches the file exactly", () => {
+    expect(check(SOURCE.slice(0, -1), WHOLE_INFO)).toEqual([]);
+  });
+
+  it("passes a whole block without the file's two-line licence header", () => {
+    expect(check(SOURCE.slice(2, -1), WHOLE_INFO)).toEqual([]);
+  });
+
+  it("fails a whole block when its source gains a line and leaves an unmarked block unchanged", () => {
+    const quoted = SOURCE.slice(2, -1);
+    const changed = [...SOURCE.slice(0, -1), "const c = 3;", ""];
+    expect(check(quoted, WHOLE_INFO, changed)).toEqual([
+      expect.stringMatching(/^guides\/quote\.md:3 .*examples\/x\/main\.ts/),
+    ]);
+    expect(check(quoted, SOURCE_INFO, changed)).toEqual([]);
+  });
+
+  it("fails a whole block that omits lines other than the licence header", () => {
+    expect(
+      check(["const a = 1;"], WHOLE_INFO, ["// one", "// two", "const a = 1;"]),
+    ).toHaveLength(1);
   });
 
   it("passes a block of whole lines from the middle of the file", () => {
@@ -181,6 +203,7 @@ describe("sourceFindings", () => {
 
   it("fails an empty block", () => {
     expect(check([])).toHaveLength(1);
+    expect(check([], WHOLE_INFO)).toHaveLength(1);
   });
 });
 
