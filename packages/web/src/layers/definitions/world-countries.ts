@@ -9,6 +9,11 @@ import type { FeedLayerDefinition, ShapeStyle } from "@mapcairn/core";
  * the order never rests on colour alone. The file is served by a public
  * content delivery network, pinned to a release tag so it cannot change
  * under the layer, and the whole world is about 840 KB.
+ *
+ * Saving is allowed: the Natural Earth terms of use put all its vector data
+ * in the public domain, for use in any manner including electronic
+ * dissemination, and say crediting is unnecessary. The credit still travels
+ * in the saved file.
  */
 const worldCountries: FeedLayerDefinition<ShapeStyle> = {
   id: "world-countries",
@@ -107,6 +112,7 @@ const worldCountries: FeedLayerDefinition<ShapeStyle> = {
     ],
   },
   emptyText: "layer.world-countries.emptyText",
+  saveFeatures: true,
 };
 
 export default worldCountries;

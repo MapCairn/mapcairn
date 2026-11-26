@@ -48,9 +48,8 @@ export const WINDS = catalogueLayer("catalogue-wind", "Winds", "Weather");
 export const QUAKES = catalogueLayer("catalogue-quakes", "Quakes", "Hazards");
 
 /**
- * A layer whose definition allows saving its features. No shipped layer does:
- * whether a provider's data may be saved is decided per layer, so the specs
- * for saving use this one.
+ * A layer whose definition allows saving its features, so the specs for
+ * saving do not depend on which shipped layers a provider's terms allow.
  */
 export const SAVEABLE: LayerDefinition = {
   ...catalogueLayer("catalogue-save", "Saveable", "Hazards", {

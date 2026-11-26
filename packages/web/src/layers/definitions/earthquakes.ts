@@ -8,6 +8,10 @@ import type { FeedLayerDefinition } from "@mapcairn/core";
  * derived variable. The hour is offered unfiltered only (its 2.5 feed is
  * usually empty) and the week at 2.5 and above only (the full week is over
  * 1 MB). USGS sends `max-age=60`, which the source honours.
+ *
+ * Saving is allowed: the USGS copyrights and credits page says USGS-authored
+ * or produced data are in the US public domain and asks only for the credit
+ * "Credit: U.S. Geological Survey", which travels in the saved file.
  */
 const earthquakes: FeedLayerDefinition = {
   id: "earthquakes",
@@ -138,6 +142,7 @@ const earthquakes: FeedLayerDefinition = {
     ],
   },
   emptyText: "layer.earthquakes.emptyText",
+  saveFeatures: true,
 };
 
 export default earthquakes;
