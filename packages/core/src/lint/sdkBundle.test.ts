@@ -159,7 +159,11 @@ describe("the files of @mapcairn/sdk/browser", () => {
       "dist",
       "maplibre-gl-worker.mjs",
     );
-    expect(read("browser-worker.js")).toBe(readFileSync(installed, "utf8"));
+    const copied = read("browser-worker.js");
+    const original = readFileSync(installed, "utf8");
+    expect(original.startsWith(copied.trimEnd())).toBe(true);
+    expect(copied).not.toMatch(/\/\/# sourceMappingURL=\S+\s*$/);
+    expect(original.length - copied.length).toBeLessThan(200);
   });
 
   it("declare their types in one file that imports no @mapcairn package and no react", () => {

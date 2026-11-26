@@ -1,20 +1,19 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
-import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
+import {
+  existsSync,
+  readdirSync,
+  readFileSync,
+  statSync,
+  writeFileSync,
+} from "node:fs";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
 import {
   ALLOWLIST_FILE,
   allowedIdentifiers,
   isPackageLicenceAllowed,
   NO_LICENCE,
 } from "./sdkLicences.mjs";
-
-/** Where the texts of licences a package may leave out are kept, one `<identifier>.txt` each. */
-export const LICENCE_TEXTS_FOLDER = path.join(
-  path.dirname(fileURLToPath(import.meta.url)),
-  "licenceTexts",
-);
 
 /**
  * Packages that are in a bundle's module graph and are not shipped in it:
@@ -165,56 +164,86 @@ export function licenceInUse(expression, allowed) {
 }
 
 /**
- * The licence text a package ships, from its own licence file, or failing
- * that the text this project keeps for the identifier it is used under.
+ * The licence file of a package: the one whose name contains the identifier it
+ * is used under (`LICENSE-MIT`) when there are several, else the first by name.
  *
  * @param {BundledPackage} bundled
  * @param {string | undefined} inUse
- * @param {string} textsFolder
- * @returns {string | undefined}
+ * @returns {string | undefined} The text, or `undefined` when the package has no licence file.
  */
-function licenceTextOf(bundled, inUse, textsFolder) {
-  const own = readdirSync(bundled.directory)
+function licenceTextOf(bundled, inUse) {
+  const files = readdirSync(bundled.directory)
     .filter(
       (file) =>
         LICENCE_FILE.test(file) &&
         statSync(path.join(bundled.directory, file)).isFile(),
     )
-    .sort()[0];
-  if (own !== undefined) {
-    return readFileSync(path.join(bundled.directory, own), "utf8").trim();
+    .sort();
+  const named =
+    inUse === undefined
+      ? undefined
+      : files.find((file) => file.toLowerCase().includes(inUse.toLowerCase()));
+  const chosen = named ?? files[0];
+  return chosen === undefined
+    ? licenceSectionOfReadme(bundled.directory)
+    : readFileSync(path.join(bundled.directory, chosen), "utf8").trim();
+}
+
+/**
+ * For a package that ships no licence file, the licence section of its README
+ * (a heading that starts with "License" or "Licence", up to the next heading),
+ * which is where such a package puts the text and its copyright.
+ *
+ * @param {string} directory
+ * @returns {string | undefined}
+ */
+export function licenceSectionOfReadme(directory) {
+  const readme = readdirSync(directory).find((file) =>
+    /^readme(\.\w+)?$/i.test(file),
+  );
+  if (readme === undefined) {
+    return undefined;
   }
-  const kept =
-    inUse === undefined ? undefined : path.join(textsFolder, `${inUse}.txt`);
-  return kept !== undefined && existsSync(kept)
-    ? readFileSync(kept, "utf8").trim()
-    : undefined;
+  const lines = readFileSync(path.join(directory, readme), "utf8").split(
+    /\r?\n/,
+  );
+  const start = lines.findIndex((line) => /^#{1,6}\s*licen[cs]e\b/i.test(line));
+  if (start === -1) {
+    return undefined;
+  }
+  const level = /^#+/.exec(lines[start])?.[0].length ?? 1;
+  const length = lines.slice(start + 1).findIndex((line) => {
+    const heading = /^(#+)\s/.exec(line);
+    return heading !== null && heading[1].length <= level;
+  });
+  const section = lines.slice(
+    start + 1,
+    length === -1 ? undefined : start + 1 + length,
+  );
+  const text = section.join("\n").trim();
+  return text === "" ? undefined : text;
 }
 
 /**
  * The text of `THIRD-PARTY-NOTICES.md`: each bundled package with its
- * version, its licence, the licence it is used under and the licence text.
+ * version, its licence, the licence it is used under (when the licence offers
+ * a choice) and its licence text, which holds its copyright.
  *
  * @param {readonly BundledPackage[]} packages
  * @param {{ licences: Record<string, string>, packages: Record<string, { licence: string, reason: string }> }} allowlist
- * @param {string} [textsFolder]
  * @returns {string}
- * @throws {Error} When a package has no licence text to ship.
+ * @throws {Error} When a package has no licence file to ship.
  */
-export function noticesOf(
-  packages,
-  allowlist,
-  textsFolder = LICENCE_TEXTS_FOLDER,
-) {
+export function noticesOf(packages, allowlist) {
   const allowed = allowedIdentifiers(allowlist);
   const sections = [...packages]
     .sort((a, b) => a.name.localeCompare(b.name))
     .map((bundled) => {
       const inUse = licenceInUse(bundled.licence, allowed);
-      const text = licenceTextOf(bundled, inUse, textsFolder);
+      const text = licenceTextOf(bundled, inUse);
       if (text === undefined) {
         throw new Error(
-          `${bundled.name}@${bundled.version} is bundled and there is no licence text to ship: its package has no licence file, and ${textsFolder} has no text for ${inUse ?? bundled.licence}.`,
+          `${bundled.name}@${bundled.version} is bundled and its package has no licence file, and its README has no licence section, to ship.`,
         );
       }
       const lines = [
@@ -222,7 +251,7 @@ export function noticesOf(
         "",
         `Licence: ${bundled.licence}`,
       ];
-      if (inUse !== undefined && inUse !== bundled.licence) {
+      if (inUse !== undefined && /\sOR\s/i.test(bundled.licence)) {
         lines.push(`Used under: ${inUse}`);
       }
       return [...lines, "", "```text", text, "```"].join("\n");
@@ -234,4 +263,94 @@ export function noticesOf(
     "",
     ...sections.flatMap((section) => [section, ""]),
   ].join("\n");
+}
+
+/**
+ * The folder of an installed package a package asks for, found the way Node
+ * does: its own `node_modules`, then each parent's.
+ *
+ * @param {string} from A package folder.
+ * @param {string} name
+ * @returns {string | undefined}
+ */
+function installedFolder(from, name) {
+  for (
+    let folder = from;
+    folder !== path.dirname(folder);
+    folder = path.dirname(folder)
+  ) {
+    const candidate = path.join(folder, "node_modules", name);
+    if (existsSync(path.join(candidate, "package.json"))) {
+      return candidate;
+    }
+  }
+  return undefined;
+}
+
+/**
+ * The packages and, for each, the production dependencies it needs, all the way
+ * down, read from the installed manifests (`@types/*` left out). A package that
+ * is prebuilt into a file the bundle holds, such as MapLibre's own, names what
+ * it is built from only there, so the module graph cannot see it.
+ *
+ * @param {readonly { directory: string }[]} packages Package folders.
+ * @returns {BundledPackage[]} Each once, sorted by name.
+ */
+export function withDependencies(packages) {
+  /** @type {Map<string, BundledPackage>} */
+  const found = new Map();
+  /** @param {string} directory */
+  const visit = (directory) => {
+    if (found.has(directory)) {
+      return;
+    }
+    const manifest = JSON.parse(
+      readFileSync(path.join(directory, "package.json"), "utf8"),
+    );
+    found.set(directory, {
+      name: manifest.name,
+      version: manifest.version ?? "?",
+      licence:
+        typeof manifest.license === "string" && manifest.license.trim() !== ""
+          ? manifest.license.trim()
+          : NO_LICENCE,
+      directory,
+    });
+    for (const dependency of Object.keys(manifest.dependencies ?? {})) {
+      const folder = installedFolder(directory, dependency);
+      if (folder === undefined) {
+        throw new Error(
+          `${manifest.name} needs ${dependency}, which is not installed.`,
+        );
+      }
+      if (!dependency.startsWith("@types/")) {
+        visit(folder);
+      }
+    }
+  };
+  for (const { directory } of packages) {
+    visit(directory);
+  }
+  return [...found.values()].sort((a, b) => a.name.localeCompare(b.name));
+}
+
+/**
+ * Judges everything the bundle holds, and writes the notices file.
+ *
+ * @param {object} input
+ * @param {Iterable<string>} input.moduleIds The modules that reached the output.
+ * @param {readonly string[]} input.copiedFolders The folders of the packages the copied files come from.
+ * @param {{ licences: Record<string, string>, packages: Record<string, { licence: string, reason: string }> }} input.allowlist
+ * @param {string} input.file Where to write the notices.
+ * @returns {BundledPackage[]} What the notices name.
+ * @throws {Error} When a package's licence is not allowed, or one has no licence file.
+ */
+export function writeNotices({ moduleIds, copiedFolders, allowlist, file }) {
+  const packages = withDependencies([
+    ...bundledPackagesOf(moduleIds),
+    ...copiedFolders.map((directory) => ({ directory })),
+  ]);
+  assertBundledLicences(packages, allowlist);
+  writeFileSync(file, noticesOf(packages, allowlist));
+  return packages;
 }

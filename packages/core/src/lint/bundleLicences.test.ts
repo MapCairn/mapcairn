@@ -1,6 +1,13 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
@@ -9,7 +16,10 @@ import {
   bundledPackagesOf,
   judgeBundledPackages,
   licenceInUse,
+  licenceSectionOfReadme,
   noticesOf,
+  withDependencies,
+  writeNotices,
   // @ts-expect-error The scripts are dependency-free JavaScript with JSDoc types.
 } from "../../../../scripts/bundleLicences.mjs";
 
@@ -156,13 +166,6 @@ describe("licenceInUse", () => {
 });
 
 describe("noticesOf", () => {
-  const textsFolder = () => {
-    const folder = path.join(root, "texts");
-    mkdirSync(folder, { recursive: true });
-    writeFileSync(path.join(folder, "EDL-1.0.txt"), "EDL TEXT");
-    return folder;
-  };
-
   it("lists each package with its version, licence and the text from its own licence file", () => {
     const directory = install(
       "left-pad",
@@ -172,42 +175,87 @@ describe("noticesOf", () => {
     const text: string = noticesOf(
       [{ name: "left-pad", version: "1.2.3", licence: "MIT", directory }],
       ALLOWLIST,
-      textsFolder(),
     );
     expect(text).toContain("## left-pad 1.2.3");
     expect(text).toContain("Licence: MIT");
     expect(text).toContain("Copyright (c) Someone");
+    expect(text).not.toContain("Used under");
   });
 
-  it("takes the side it uses and ships the text of the licence the project keeps, when the package has none", () => {
-    const directory = install("@turf/jsts", {
-      license: "(EDL-1.0 OR EPL-1.0)",
-    });
+  it("says which side it uses only for a licence that offers a choice, and ships the file named for it", () => {
+    const directory = install(
+      "dual",
+      { license: "(EDL-1.0 OR EPL-1.0)" },
+      {
+        "LICENSE-EPL": "EPL TEXT",
+        "LICENSE-EDL-1.0": "EDL TEXT",
+        "LICENSE-A": "A",
+      },
+    );
     const text: string = noticesOf(
       [
         {
-          name: "@turf/jsts",
+          name: "dual",
           version: "1.2.3",
           licence: "(EDL-1.0 OR EPL-1.0)",
           directory,
         },
       ],
       ALLOWLIST,
-      textsFolder(),
     );
     expect(text).toContain("Used under: EDL-1.0");
     expect(text).toContain("EDL TEXT");
+    expect(text).not.toContain("EPL TEXT");
   });
 
-  it("fails when there is no text to ship", () => {
+  it("takes the first licence file by name when none is named for the licence", () => {
+    const directory = install(
+      "two",
+      { license: "MIT" },
+      { "LICENSE.md": "SECOND", COPYING: "FIRST" },
+    );
+    const text: string = noticesOf(
+      [{ name: "two", version: "1.2.3", licence: "MIT", directory }],
+      ALLOWLIST,
+    );
+    expect(text).toContain("FIRST");
+    expect(text).not.toContain("SECOND");
+  });
+
+  it("takes the licence section of the README for a package that ships no licence file", () => {
+    const directory = install(
+      "readme-only",
+      { license: "MIT" },
+      {
+        "README.md":
+          "# readme-only\n\nUse it.\n\n## License (MIT)\n\nCopyright (c) 2011 Someone\n\n### Terms\n\nPermission is granted.\n\n## Credits\n\nThanks.\n",
+      },
+    );
+    const text: string = noticesOf(
+      [{ name: "readme-only", version: "1.2.3", licence: "MIT", directory }],
+      ALLOWLIST,
+    );
+    expect(text).toContain("Copyright (c) 2011 Someone");
+    expect(text).toContain("Permission is granted.");
+    expect(text).not.toContain("Thanks.");
+    expect(text).not.toContain("Use it.");
+  });
+
+  it("fails when a package has no licence file to ship", () => {
     const directory = install("bare", { license: "MIT" });
     expect(() =>
       noticesOf(
         [{ name: "bare", version: "1.2.3", licence: "MIT", directory }],
         ALLOWLIST,
-        textsFolder(),
       ),
-    ).toThrow(/bare@1\.2\.3.*no licence text/);
+    ).toThrow(/bare@1\.2\.3.*no licence file/);
+    const withReadme = install(
+      "plain-readme",
+      { license: "MIT" },
+      { "README.md": "# plain-readme\n\nNothing about terms.\n" },
+    );
+    expect(licenceSectionOfReadme(withReadme)).toBeUndefined();
+    expect(licenceSectionOfReadme(directory)).toBeUndefined();
   });
 
   it("sorts the packages so the file is the same on every build", () => {
@@ -219,7 +267,6 @@ describe("noticesOf", () => {
         { name: "a", version: "1.2.3", licence: "MIT", directory: a },
       ],
       ALLOWLIST,
-      textsFolder(),
     );
     expect(text.indexOf("## a 1.2.3")).toBeLessThan(text.indexOf("## b 1.2.3"));
   });
@@ -255,5 +302,123 @@ describe("assertBundledLicences", () => {
     ).toThrow(
       /copyleft@1\.0\.0 is licensed LGPL-3\.0-only[\s\S]*bare@1\.0\.0 is licensed \(none\)/,
     );
+  });
+});
+
+describe("withDependencies", () => {
+  it("adds the production dependencies of a package, all the way down, and leaves out types", () => {
+    const top = install("top", {
+      license: "MIT",
+      dependencies: { mid: "1", "@types/mid": "1", "@scope/leaf": "1" },
+      devDependencies: { tooling: "1" },
+    });
+    install("mid", { license: "ISC", dependencies: { leaf2: "1" } });
+    install("@types/mid", { license: "MIT" });
+    install("@scope/leaf", { license: "MIT" });
+    install("leaf2", { license: "BSD-3-Clause" });
+    install("tooling", { license: "MIT" });
+    const found: Bundled[] = withDependencies([{ directory: top }]);
+    expect(found.map((entry) => entry.name)).toEqual([
+      "@scope/leaf",
+      "leaf2",
+      "mid",
+      "top",
+    ]);
+    expect(found.find((entry) => entry.name === "mid")?.licence).toBe("ISC");
+  });
+
+  it("finds a dependency in a parent's node_modules, and each package once", () => {
+    const outer = install("outer", {
+      license: "MIT",
+      dependencies: { shared: "1", inner: "1" },
+    });
+    const inner = path.join(outer, "node_modules", "inner");
+    mkdirSync(inner, { recursive: true });
+    writeFileSync(
+      path.join(inner, "package.json"),
+      JSON.stringify({
+        name: "inner",
+        version: "1.0.0",
+        license: "MIT",
+        dependencies: { shared: "1" },
+      }),
+    );
+    install("shared", { license: "MIT" });
+    const found: Bundled[] = withDependencies([
+      { directory: outer },
+      { directory: outer },
+    ]);
+    expect(found.map((entry) => entry.name)).toEqual([
+      "inner",
+      "outer",
+      "shared",
+    ]);
+  });
+
+  it("fails naming a dependency that is not installed", () => {
+    const top = install("needy", {
+      license: "MIT",
+      dependencies: { missing: "1" },
+    });
+    expect(() => withDependencies([{ directory: top }])).toThrow(
+      "needy needs missing, which is not installed.",
+    );
+  });
+});
+
+describe("writeNotices", () => {
+  const file = () => path.join(root, "NOTICES.md");
+
+  it("names the module graph's packages, the copied files' packages and what each builds in", () => {
+    const graph = install("react", { license: "MIT" }, { LICENSE: "REACT" });
+    const engine = install(
+      "engine",
+      { license: "BSD-3-Clause", dependencies: { earcut: "1" } },
+      { LICENSE: "ENGINE" },
+    );
+    install("earcut", { license: "ISC" }, { LICENSE: "EARCUT" });
+    const found: Bundled[] = writeNotices({
+      moduleIds: [path.join(graph, "index.js")],
+      copiedFolders: [engine],
+      allowlist: {
+        ...ALLOWLIST,
+        licences: { ...ALLOWLIST.licences, ISC: "x" },
+      },
+      file: file(),
+    });
+    expect(found.map((entry) => entry.name)).toEqual([
+      "earcut",
+      "engine",
+      "react",
+    ]);
+    const text = readFileSync(file(), "utf8");
+    for (const word of [
+      "## earcut",
+      "EARCUT",
+      "## engine",
+      "ENGINE",
+      "## react",
+      "REACT",
+    ]) {
+      expect(text).toContain(word);
+    }
+  });
+
+  it("fails, and writes nothing, when something a package builds in is not allowed", () => {
+    const engine = install(
+      "engine",
+      { license: "MIT", dependencies: { copyleft: "1" } },
+      { LICENSE: "x" },
+    );
+    install("copyleft", { license: "LGPL-3.0-only" }, { LICENSE: "x" });
+    expect(() =>
+      writeNotices({
+        moduleIds: [],
+        copiedFolders: [engine],
+        allowlist: ALLOWLIST,
+        file: file(),
+      }),
+    ).toThrow(/copyleft@1\.2\.3 is licensed LGPL-3\.0-only/);
+    expect(existsSync(file())).toBe(false);
   });
 });

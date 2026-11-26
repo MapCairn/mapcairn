@@ -38,3 +38,14 @@ export function mergedStylesheet(engineRules, asset, name) {
   }
   return `${engineRules}\n${String(asset.source)}`;
 }
+
+/**
+ * A copied script without its closing `//# sourceMappingURL=` line, which
+ * names a map the package does not ship.
+ *
+ * @param {string} text
+ * @returns {string}
+ */
+export function withoutSourceMapComment(text) {
+  return text.replace(/\n?\/\/# sourceMappingURL=\S+\s*$/, "\n");
+}

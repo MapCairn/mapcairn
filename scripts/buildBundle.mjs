@@ -1,15 +1,15 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
-import { copyFileSync, readFileSync, writeFileSync } from "node:fs";
+import { readFileSync, writeFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import path from "node:path";
+import { writeNotices } from "./bundleLicences.mjs";
 import {
-  assertBundledLicences,
-  bundledPackagesOf,
-  noticesOf,
-} from "./bundleLicences.mjs";
-import { mergedStylesheet, moduleIdsOf } from "./bundleOutput.mjs";
-import { NOTICES_FILE } from "./bundleSettings.mjs";
+  mergedStylesheet,
+  moduleIdsOf,
+  withoutSourceMapComment,
+} from "./bundleOutput.mjs";
+import { copySourceOf, NOTICES_FILE } from "./bundleSettings.mjs";
 import { ALLOWLIST_FILE } from "./sdkLicences.mjs";
 
 /** The stylesheet the engine's loader imports on demand, which the bundle merges into its own. */
@@ -142,26 +142,21 @@ export async function buildBundle({
   const [stylesheet] = bundle.entries;
   const moduleIds = await bundleModules({ folder, entries, stylesheet });
   const require = createRequire(path.join(folder, "package.json"));
+  const copiedFolders = [];
   for (const [name, source] of Object.entries(bundle.copy)) {
-    const [packageName, ...inside] = source.split("/");
-    const scoped = packageName.startsWith("@");
-    const installed = path.dirname(
-      require.resolve(
-        `${scoped ? `${packageName}/${inside.shift()}` : packageName}/package.json`,
-      ),
-    );
-    copyFileSync(
-      path.join(installed, ...inside),
+    const { packageFolder, file } = copySourceOf(source, require);
+    copiedFolders.push(packageFolder);
+    writeFileSync(
       path.join(folder, "dist", name),
+      withoutSourceMapComment(readFileSync(file, "utf8")),
     );
   }
-  const allowlist = JSON.parse(
-    readFileSync(path.join(root, ALLOWLIST_FILE), "utf8"),
-  );
-  const packages = bundledPackagesOf(moduleIds);
-  assertBundledLicences(packages, allowlist);
-  writeFileSync(
-    path.join(folder, NOTICES_FILE),
-    noticesOf(packages, allowlist),
-  );
+  writeNotices({
+    moduleIds,
+    copiedFolders,
+    allowlist: JSON.parse(
+      readFileSync(path.join(root, ALLOWLIST_FILE), "utf8"),
+    ),
+    file: path.join(folder, NOTICES_FILE),
+  });
 }

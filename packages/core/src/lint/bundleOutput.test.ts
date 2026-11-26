@@ -4,6 +4,7 @@ import { describe, expect, it } from "vitest";
 import {
   mergedStylesheet,
   moduleIdsOf,
+  withoutSourceMapComment,
   // @ts-expect-error The scripts are dependency-free JavaScript with JSDoc types.
 } from "../../../../scripts/bundleOutput.mjs";
 
@@ -45,5 +46,24 @@ describe("mergedStylesheet", () => {
     expect(() =>
       mergedStylesheet(".e{}", { type: "chunk" }, "browser.css"),
     ).toThrow(/no browser\.css/);
+  });
+});
+
+describe("withoutSourceMapComment", () => {
+  it("drops the closing source map line and keeps the rest", () => {
+    expect(
+      withoutSourceMapComment(
+        "export{};\n//# sourceMappingURL=worker.mjs.map\n",
+      ),
+    ).toBe("export{};\n");
+    expect(withoutSourceMapComment("a\n//# sourceMappingURL=x.map")).toBe(
+      "a\n",
+    );
+  });
+
+  it("leaves a script without one, and a mention in the middle, alone", () => {
+    expect(withoutSourceMapComment("a;b;\n")).toBe("a;b;\n");
+    const middle = 'var s = "//# sourceMappingURL=x";\nrun();\n';
+    expect(withoutSourceMapComment(middle)).toBe(middle);
   });
 });
