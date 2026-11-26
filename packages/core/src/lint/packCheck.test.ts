@@ -549,7 +549,9 @@ describe("a package that builds a bundle", () => {
       bundleProblems(
         BUNDLE_FILES.filter((f) => f !== "THIRD-PARTY-NOTICES.md"),
       ),
-    ).toEqual(["THIRD-PARTY-NOTICES.md: missing from the tarball"]);
+    ).toEqual([
+      "THIRD-PARTY-NOTICES.md: missing from the tarball (the bundle build writes it: run npm run build:sdk)",
+    ]);
     expect(
       bundleProblems(BUNDLE_FILES, {
         manifestOverrides: { files: ["dist", "!dist/.built"] },

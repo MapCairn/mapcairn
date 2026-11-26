@@ -48,8 +48,8 @@ export const SIZE_CEILINGS = {
 /**
  * The most the files of a package's bundle may weigh, in gzipped bytes: each
  * of its `dist` files that starts with the name of a bundle entry (`browser`),
- * and the notices file, each gzipped alone and added up. About one and a
- * seventh times what the bundle weighs now, so ordinary growth passes and a
+ * and the notices file, each gzipped alone and added up. About 1.16
+ * times what the bundle weighs now (790,000 against about 680,000), so ordinary growth passes and a
  * second copy of the engine or of React (about 330 and 75 kilobytes gzipped)
  * does not. The rest of such a package is measured the same way and stays
  * under `SIZE_CEILINGS`. Raising one is a deliberate edit in a pull request.
@@ -401,6 +401,21 @@ export function gzippedBytes(files, readFile) {
 }
 
 /**
+ * The message for a root file the tarball lacks. A file the bundle build
+ * writes says which command makes it.
+ *
+ * @param {string} file
+ * @param {readonly string[]} extraRootFiles
+ * @returns {string}
+ */
+function missingRootFile(file, extraRootFiles) {
+  const hint = extraRootFiles.includes(file)
+    ? " (the bundle build writes it: run npm run build:sdk)"
+    : "";
+  return `${file}: missing from the tarball${hint}`;
+}
+
+/**
  * Everything wrong with one package's tarball and manifest.
  *
  * @param {{
@@ -437,7 +452,7 @@ export function checkPackage({
   const present = new Set(paths);
   for (const required of [...ROOT_FILES, ...extraRootFiles]) {
     if (!present.has(required)) {
-      problems.push(`${required}: missing from the tarball`);
+      problems.push(missingRootFile(required, extraRootFiles));
     }
   }
   const targets = exportTargetsOf(manifest);

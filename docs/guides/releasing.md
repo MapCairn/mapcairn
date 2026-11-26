@@ -135,7 +135,7 @@ What counts as the public API, and which changes are breaking, is in [The public
 
 `npm run pack:check` (`scripts/release/packCheck.mjs`) packs each SDK package with `npm pack --dry-run --json`. It fails when a tarball:
 
-- holds anything but `package.json`, `README.md`, `LICENSE` and files under `dist` ending in `.js`, `.js.map`, `.d.ts` or `.css`, so there is no source, test, dotfile, data file or image (each `.js.map` carries its source in `sourcesContent`);
+- holds anything but `package.json`, `README.md`, `LICENSE` (and `THIRD-PARTY-NOTICES.md`, for a package that builds a bundle, which must then hold it) and files under `dist` ending in `.js`, `.js.map`, `.d.ts` or `.css`, so there is no source, test, dotfile, data file or image (each `.js.map` carries its source in `sourcesContent`);
 - lacks a file that `exports` or `types` names (the `@mapcairn/source` condition is left out, because it names a file only this repository has);
 - differs from the SDK manifests in `files`, `publishConfig` or a `main` field, or has a `license` other than `AGPL-3.0-only`, or lacks the npm page fields (`repository` with the package's own `directory`, `homepage`, `bugs`, `keywords`, `description`);
 - is over its size ceiling (`SIZE_CEILINGS`, about one and a half times the size measured when it was set; raising one is an edit in a pull request). The umbrella's `browser*` files and its `THIRD-PARTY-NOTICES.md` have a ceiling of their own (`BUNDLE_CEILINGS`, in gzipped bytes, each file gzipped alone), and the rest of its tarball stays under `SIZE_CEILINGS`;
