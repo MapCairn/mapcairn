@@ -10,10 +10,6 @@ import {
   assertBuilt,
   // @ts-expect-error The scripts are dependency-free JavaScript with JSDoc types.
 } from "../../../../scripts/buildSdk.mjs";
-import {
-  PAGE_RESET,
-  // @ts-expect-error The scripts are dependency-free JavaScript with JSDoc types.
-} from "../../../../scripts/bundleOutput.mjs";
 
 /**
  * Reads the built bundle of `@mapcairn/sdk/browser` in `packages/sdk/dist`
@@ -148,13 +144,20 @@ describe("the files of @mapcairn/sdk/browser", () => {
       text.split(".maplibregl-canvas-container").length - 1;
     // One copy of MapLibre's rules and one of the adapter's, and no second copy of either.
     expect(count(sheet)).toBe(count(engine) + count(adapter));
-    expect(sheet.startsWith(`${PAGE_RESET}\n${engine}`)).toBe(true);
+    const reset = sheet.slice(0, sheet.indexOf("\n"));
+    expect(reset).toMatch(
+      /^\[data-mapcairn\] \*:where\(:not\(svg,svg \*\)\)\{all:revert\}/,
+    );
+    expect(sheet.startsWith(`${reset}\n${engine}`)).toBe(true);
     expect(sheet.indexOf("[data-map-host]")).toBeGreaterThan(engine.length);
   });
 
   it("start with the reset that gives a page's element rules no hold on the interface, and hold no cascade layer", () => {
     const sheet = read("browser.css");
-    expect(sheet.startsWith(PAGE_RESET)).toBe(true);
+    expect(sheet).toContain(
+      "[data-mapcairn],[data-mapcairn] *,[data-mapcairn] *::before",
+    );
+    expect(sheet).toContain("box-sizing:border-box}");
     expect(sheet).not.toMatch(/@layer/);
     // The primitives' rules are still there, now outside any layer.
     expect(sheet).toContain("min-height:var(");

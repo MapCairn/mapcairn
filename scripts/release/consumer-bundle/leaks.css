@@ -1,0 +1,23 @@
+/* Rules that are as specific as the reset or more, or name the container, so they still reach the interface. */
+[type="button"] {
+  background: red;
+}
+
+.page button {
+  padding: 0;
+  border: 2px solid red;
+}
+
+#map {
+  height: 500px;
+  text-transform: uppercase;
+  letter-spacing: 6px;
+  text-align: right;
+  color: red;
+}
+
+/* A rule on svg, which the interface keeps off an icon. */
+svg {
+  stroke: red;
+  stroke-width: 4;
+}

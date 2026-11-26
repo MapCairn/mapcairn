@@ -91,6 +91,7 @@ import {
   playwrightAvailable,
   publishedLegSkip,
   WORKERD_TIMEOUT,
+  webkitLegPlan,
   workerdSkipped,
   yarnManifest,
   yarnSettings,
@@ -1518,18 +1519,31 @@ function checkBrowserBundle(app, prefix) {
       (line) => `the example page in Chromium, ${line}`,
     ),
   );
-  for (const engine of /** @type {const} */ (["webkit", "firefox"])) {
-    if (engineAvailable(REPO, engine)) {
-      lines.push(
-        ...runBundleRun("page", page, chromium, app, engine).map(
-          (line) => `the example page in ${engine}, ${line}`,
-        ),
-      );
-    } else {
-      lines.push(
-        `the example page in ${engine}: skipped, ${engine} is not installed (npm run playwright:install -w @mapcairn/web)`,
-      );
-    }
+  const webkit = webkitLegPlan({
+    installed: engineAvailable(REPO, "webkit"),
+    playwright: playwrightAvailable(REPO),
+  });
+  if (webkit.action === "fail") {
+    throw new Error(webkit.message);
+  }
+  if (webkit.action === "skip") {
+    lines.push(webkit.line);
+  }
+  // Firefox is not one of the web host's projects, so it runs when it is there and is otherwise left out.
+  /** @type {("webkit" | "firefox")[]} */
+  const engines = [];
+  if (webkit.action === "run") {
+    engines.push("webkit");
+  }
+  if (engineAvailable(REPO, "firefox")) {
+    engines.push("firefox");
+  }
+  for (const engine of engines) {
+    lines.push(
+      ...runBundleRun("page", page, chromium, app, engine).map(
+        (line) => `the example page in ${engine}, ${line}`,
+      ),
+    );
   }
   const served = path.join(page, "mapcairn");
   const sizes = bundleLoadSizes(

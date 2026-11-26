@@ -6,7 +6,7 @@ A plain HTML page that draws a map with `mountMap` from `@mapcairn/sdk/browser`.
 npm run dev -w @mapcairn/example-browser
 ```
 
-`copyFiles.mjs` copies the files a page serves out of the installed `@mapcairn/sdk` into `mapcairn/`: `browser.css` and every `browser*.js` beside it. Serve all of them from one folder. The map's engine is loaded on demand from that folder. Its worker is made from a script inside the bundle, so the page's policy needs `worker-src` to include `blob:`, and there is no worker file to serve:
+`copyFiles.mjs` copies the files a page serves out of the installed `@mapcairn/sdk` into `mapcairn/`: `browser.css` and every `browser*.js` beside it. Serve all of them from one folder. The map's engine is loaded on demand from that folder. Its worker is made from a script inside the bundle, so the page's policy needs `worker-src` to include `blob:`, and there is no worker file to serve. That needs Safari 15.5 or later, the first to support `worker-src`; a page that must support an older Safari adds `child-src blob:`. A page that enforces Trusted Types (`require-trusted-types-for 'script'`) cannot run the engine's worker either way:
 
 ```text
 default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data: blob: https://tiles.openfreemap.org; font-src 'self'; connect-src 'self' https://tiles.openfreemap.org; worker-src 'self' blob:

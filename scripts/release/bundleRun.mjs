@@ -38,8 +38,11 @@ import {
   fileRequestProblems,
   hostilePageProblems,
   hostParityProblems,
+  hostStyleProblems,
   leakProblems,
   MOVED_ZOOM,
+  reachProblems,
+  workerRefusalProblems,
 } from "./bundleLeg.mjs";
 import { OPEN_FREE_MAP_ORIGIN } from "./openFreeMapFixtures.mjs";
 import { policyWithout, quickstartProblems } from "./quickstartLeg.mjs";
@@ -211,6 +214,7 @@ async function readChrome(page) {
         icon: icon && {
           width: round(icon.getBoundingClientRect().width),
           fill: getComputedStyle(icon).fill,
+          stroke: getComputedStyle(icon).stroke,
         },
       };
     });
@@ -230,6 +234,110 @@ async function readChrome(page) {
               outlineStyle: ring.outlineStyle,
               outlineWidth: ring.outlineWidth,
             },
+    };
+  });
+}
+
+/**
+ * Waits for a page's map to draw.
+ *
+ * @param {import("playwright-core").Page} page
+ * @returns {Promise<void>}
+ */
+async function drawn(page) {
+  await page.waitForFunction(
+    () => {
+      const region = document.querySelector("[data-map-host]");
+      return (
+        region !== null &&
+        region.getAttribute("aria-busy") === "false" &&
+        region.querySelector("canvas.maplibregl-canvas") !== null
+      );
+    },
+    undefined,
+    { timeout: SERVER_TIMEOUT },
+  );
+}
+
+/**
+ * Reads what the host's base styles give, from a map with every tool, opening
+ * the credits and Settings as a person would.
+ *
+ * @param {import("playwright-core").Page} page The leg's `parity.html`.
+ * @returns {Promise<Record<keyof typeof import("./bundleLeg.mjs").HOST_STYLES, string | number>>}
+ */
+async function readHostStyles(page) {
+  await drawn(page);
+  const first = await page.evaluate(() => {
+    const map = /** @type {HTMLElement} */ (document.getElementById("map"));
+    const input = /** @type {HTMLElement} */ (
+      map.querySelector("input[role=combobox]")
+    );
+    const style = getComputedStyle(map);
+    return {
+      containerFontSize: style.fontSize,
+      containerLineHeight: style.lineHeight,
+      searchInputBoxSizing: getComputedStyle(input).boxSizing,
+    };
+  });
+  // The credits show by themselves at first; a click would close them.
+  const links = page.locator("#map ul a").first();
+  if (!(await links.isVisible())) {
+    await page.getByRole("button", { name: "Map credits" }).click();
+  }
+  const credits = await page.evaluate(() => {
+    const link = /** @type {HTMLElement} */ (
+      document.querySelector("#map ul a")
+    );
+    const list = /** @type {HTMLElement} */ (link.closest("ul"));
+    return {
+      creditsListBoxSizing: getComputedStyle(list).boxSizing,
+      creditsLinkBoxSizing: getComputedStyle(link).boxSizing,
+      creditsLinkHeight: link.getBoundingClientRect().height,
+    };
+  });
+  await page.keyboard.press("Escape");
+  await page.getByRole("button", { name: "Settings" }).first().click();
+  const radio = await page.evaluate(() => {
+    const button = /** @type {HTMLElement} */ (
+      document.querySelector("#map button[role=radio]")
+    );
+    return {
+      radioBoxSizing: getComputedStyle(button).boxSizing,
+      radioHeight: button.getBoundingClientRect().height,
+    };
+  });
+  return { ...first, ...credits, ...radio };
+}
+
+/**
+ * Reads what a page's rules did to the interface, on `leaks.html`.
+ *
+ * @param {import("playwright-core").Page} page
+ * @returns {Promise<Record<keyof typeof import("./bundleLeg.mjs").REACH, string>>}
+ */
+async function readReach(page) {
+  await drawn(page);
+  return page.evaluate(() => {
+    const map = /** @type {HTMLElement} */ (document.getElementById("map"));
+    const zoomIn = /** @type {HTMLElement} */ (
+      map.querySelector('button[aria-label="Zoom in"]')
+    );
+    const icon = /** @type {Element} */ (zoomIn.querySelector("svg"));
+    const help = /** @type {HTMLElement} */ (
+      [...map.querySelectorAll("span")].find((each) =>
+        each.textContent?.startsWith("Arrow keys"),
+      )
+    );
+    const helpStyle = getComputedStyle(help);
+    return {
+      buttonBackgroundFromAttributeSelector:
+        getComputedStyle(zoomIn).backgroundColor,
+      buttonBorderFromClassAndElement: getComputedStyle(zoomIn).borderTopWidth,
+      iconStrokeFromSvgRule: getComputedStyle(icon).stroke,
+      inheritedTextTransform: helpStyle.textTransform,
+      inheritedLetterSpacing: helpStyle.letterSpacing,
+      inheritedTextAlign: helpStyle.textAlign,
     };
   });
 }
@@ -308,11 +416,7 @@ async function checkPlainPage(browser, folder) {
     },
     options,
   );
-  if (refused.violations.length === 0) {
-    problems.push(
-      "the page reported no violation without blob: in worker-src, so that is not what lets the worker start",
-    );
-  }
+  problems.push(...workerRefusalProblems(refused.violations));
 
   /** @type {{ cycle: import("./bundleLeg.mjs").Cycle, attributes: import("./bundleLeg.mjs").Attributes }[]} */
   let cycles = [];
@@ -332,6 +436,32 @@ async function checkPlainPage(browser, folder) {
     ...leakProblems(cycles.map(({ cycle }) => cycle)),
     ...violationProblems(two).map((line) => `two maps: ${line}`),
   );
+
+  /** @type {Record<string, any>} */
+  const read = {};
+  for (const [name, reader] of /** @type {const} */ ([
+    ["parity", readHostStyles],
+    ["leaks", readReach],
+  ])) {
+    const seen = await openUnder(
+      browser,
+      folder,
+      BUNDLE_POLICY,
+      async (page) => {
+        read[name] = await reader(page);
+      },
+      { path: `/${name}.html` },
+    );
+    problems.push(
+      ...violationProblems(seen).map((line) => `${name} page: ${line}`),
+    );
+  }
+  if (read.parity !== undefined) {
+    problems.push(...hostStyleProblems(read.parity));
+  }
+  if (read.leaks !== undefined) {
+    problems.push(...reachProblems(read.leaks));
+  }
 
   /** @type {Record<string, import("./bundleLeg.mjs").Chrome>} */
   const chrome = {};
@@ -367,6 +497,8 @@ async function checkPlainPage(browser, folder) {
     "without blob: in worker-src the page reports a violation, so the directive is needed: ok",
     `two maps drew in one page, one was destroyed and the other kept drawing, and after both were destroyed no canvas, live region or attribute of either was left (a pair held ${first?.cycle.both.regions} live regions): ok`,
     `a second pair of maps left no more listeners on the window and the document than the first (${first?.cycle.end.listeners} after one pair, ${second?.cycle.end.listeners} after two), and the engine's worker was ended with the last map (${second?.cycle.end.workers.made} made, ${second?.cycle.end.workers.ended} ended): ok`,
+    "a map with every tool has what the reference host's base styles give (border-box everywhere read, the container's 15px text, a 26 px credits link and a 44 px Settings radio): ok",
+    "a page with rules the reset does not stop reaches as far as the documents say: an attribute selector and a class with an element still set a button's background and border, an id rule on the container still sets the inherited text, and an svg rule's stroke does not reach an icon: ok",
     "the zoom and credits buttons have the boxes the reference host's /map gives them (48 by 48, Zoom out 48 by 49 with its hairline, credits 44 by 44), and a page with rules on *, button, svg, h1, box-sizing and [data-theme=dark] left every button at 44 px or more, the focus ring showing and the map's theme and chrome as they are with no rules: ok",
   ];
 }

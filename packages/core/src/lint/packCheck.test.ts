@@ -4,6 +4,7 @@ import { gzipSync } from "node:zlib";
 import { describe, expect, it } from "vitest";
 import {
   BUNDLE_CEILINGS,
+  bundleHeadroomWarning,
   checkPackage,
   classifyFile,
   exportTargetsOf,
@@ -589,6 +590,43 @@ describe("BUNDLE_CEILINGS", () => {
   it("names only packages that build a bundle", () => {
     expect(Object.keys(BUNDLE_CEILINGS)).toEqual(["sdk"]);
     expect(BUNDLE_CEILINGS.sdk).toBeGreaterThan(SIZE_CEILINGS.sdk);
+  });
+});
+
+describe("bundleHeadroomWarning", () => {
+  it("says nothing while there is room, at the edge of it, or over the ceiling (which fails instead)", () => {
+    expect(bundleHeadroomWarning(752_000, 800_000)).toBeUndefined();
+    expect(bundleHeadroomWarning(776_000, 800_000)).toBeUndefined();
+    expect(bundleHeadroomWarning(800_001, 800_000)).toBeUndefined();
+    expect(bundleHeadroomWarning(100, 0)).toBeUndefined();
+  });
+
+  it("warns, naming the size, the ceiling and what to do, once less than 3% is left", () => {
+    const warning = bundleHeadroomWarning(776_001, 800_000);
+    expect(warning).toContain("776001");
+    expect(warning).toContain("less than 3% of the ceiling of 800000");
+    expect(warning).toContain("raise the ceiling with the reason");
+  });
+
+  it("is passed on by checkPackage without failing it", () => {
+    const measured = gzippedBytes(
+      BUNDLE_FILES.filter((file) => /dist\/browser|NOTICES/.test(file)),
+      () => "x",
+    );
+    const warnings: string[] = [];
+    const found = checkPackage({
+      manifest: bundleManifest(),
+      listing: listing(BUNDLE_FILES, 1000),
+      ceiling: 5000,
+      bundleCeiling: measured + 1,
+      readFile: (file: string) =>
+        file === "dist/index.js.map" ? sourceMap() : "x",
+      sourceExists: () => true,
+      warnings,
+    });
+    expect(found).toEqual([]);
+    expect(warnings).toHaveLength(1);
+    expect(warnings[0]).toContain("less than 3%");
   });
 });
 

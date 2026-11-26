@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest";
 import {
   mergedStylesheet,
   moduleIdsOf,
-  PAGE_RESET,
+  pageReset,
   withoutLayers,
   withoutSourceMapComment,
   // @ts-expect-error The scripts are dependency-free JavaScript with JSDoc types.
@@ -37,8 +37,9 @@ describe("mergedStylesheet", () => {
         ".engine{}",
         { type: "asset", source: ".own{}@layer a{.prim{}}" },
         "x.css",
+        "R",
       ),
-    ).toBe(`${PAGE_RESET}\n.engine{}\n.prim{}.own{}`);
+    ).toBe("R\n.engine{}\n.prim{}.own{}");
   });
 
   it("fails when the bundle has no stylesheet, or one that is a chunk", () => {
@@ -51,10 +52,54 @@ describe("mergedStylesheet", () => {
   });
 });
 
-describe("PAGE_RESET", () => {
+describe("pageReset", () => {
+  const theme = {
+    tokens: {
+      type: {
+        family: "var(--f)",
+        body: {
+          size: "var(--s)",
+          lineHeight: "var(--l)",
+          tracking: "var(--t)",
+        },
+        weight: { regular: "var(--w)" },
+      },
+      color: { text: "var(--c)" },
+    },
+    focusRing: { outline: "var(--o)", outlineOffset: "var(--oo)" },
+  };
+  const reset = pageReset(theme);
+
   it("gives every element under a mounted map, drawings apart, the browser's own defaults, with the specificity of one class", () => {
-    expect(PAGE_RESET).toBe(
-      "[data-mapcairn] *:where(:not(svg,svg *)){all:revert}[data-mapcairn] svg[fill=currentColor]{fill:currentColor}",
+    expect(reset).toContain(
+      "[data-mapcairn] *:where(:not(svg,svg *)){all:revert}",
+    );
+  });
+
+  it("then gives what the host's base styles give: border-box, the default focus ring, and an icon's own fill and no stroke", () => {
+    expect(reset).toContain(
+      "[data-mapcairn],[data-mapcairn] *,[data-mapcairn] *::before,[data-mapcairn] *::after{box-sizing:border-box}",
+    );
+    expect(reset).toContain(
+      "[data-mapcairn] :where(:focus-visible){outline:var(--o);outline-offset:var(--oo)}",
+    );
+    expect(reset).toContain(
+      "[data-mapcairn] svg[fill=currentColor]{fill:currentColor;stroke:none}",
+    );
+  });
+
+  it("sets the container's text from the tokens, with no transform and start alignment", () => {
+    expect(reset).toContain(
+      "[data-mapcairn]{font-family:var(--f);font-size:var(--s);line-height:var(--l);letter-spacing:var(--t);font-weight:var(--w);color:var(--c);text-transform:none;text-align:start}",
+    );
+  });
+
+  it("puts the revert before the rules that give things back, so they win at equal specificity", () => {
+    expect(reset.indexOf("all:revert")).toBeLessThan(
+      reset.indexOf("box-sizing:border-box"),
+    );
+    expect(reset.indexOf("all:revert")).toBeLessThan(
+      reset.indexOf("fill:currentColor"),
     );
   });
 });

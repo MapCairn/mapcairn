@@ -60,6 +60,31 @@ export const BUNDLE_CEILINGS = {
   sdk: 800_000,
 };
 
+/**
+ * The share of a bundle ceiling that is used before the check warns that the
+ * headroom is thin: under 3% of the ceiling left (776,000 bytes of 800,000).
+ * `docs/guides/releasing.md` says what a change that crosses it does.
+ */
+export const HEADROOM_WARNING_SHARE = 0.97;
+
+/**
+ * The warning for a bundle that is within its ceiling but close to it.
+ *
+ * @param {number} bundleBytes The bundle's gzipped size.
+ * @param {number} ceiling Its ceiling.
+ * @returns {string | undefined} `undefined` while there is room.
+ */
+export function bundleHeadroomWarning(bundleBytes, ceiling) {
+  if (
+    ceiling === 0 ||
+    bundleBytes > ceiling ||
+    bundleBytes <= ceiling * HEADROOM_WARNING_SHARE
+  ) {
+    return undefined;
+  }
+  return `bundle: ${bundleBytes} bytes gzipped leaves less than 3% of the ceiling of ${ceiling} (under ${Math.round(ceiling * HEADROOM_WARNING_SHARE)} is room): say in the pull request what grew and take it out, or raise the ceiling with the reason`;
+}
+
 /** The `files` every SDK package declares: the build, without its stamp. */
 export const EXPECTED_FILES_FIELD = ["dist", "!dist/.built"];
 
@@ -416,6 +441,64 @@ function missingRootFile(file, extraRootFiles) {
 }
 
 /**
+ * The size problems of one package: a package with no bundle is measured as a
+ * whole, one with a bundle in two parts, each file gzipped alone, so a bundle
+ * that slips into the ordinary modules still shows in the rest. A bundle near
+ * its ceiling adds a warning.
+ *
+ * @param {{
+ *   paths: string[],
+ *   bundle: import("../bundleSettings.mjs").BundleSettings | undefined,
+ *   extraRootFiles: string[],
+ *   size: number,
+ *   ceiling: number,
+ *   bundleCeiling?: number,
+ *   readFile: (file: string) => string | undefined,
+ *   warnings: string[],
+ * }} input
+ * @returns {string[]}
+ */
+function sizeProblems({
+  paths,
+  bundle,
+  extraRootFiles,
+  size,
+  ceiling,
+  bundleCeiling,
+  readFile,
+  warnings,
+}) {
+  if (bundle === undefined) {
+    return size > ceiling
+      ? [`size: ${size} bytes is over the ceiling of ${ceiling}`]
+      : [];
+  }
+  const inBundle = (/** @type {string} */ file) =>
+    isBundleFile(file, bundle) || extraRootFiles.includes(file);
+  const bundleBytes = gzippedBytes(paths.filter(inBundle), readFile);
+  const restBytes = gzippedBytes(
+    paths.filter((file) => !inBundle(file)),
+    readFile,
+  );
+  const problems = [];
+  if (restBytes > ceiling) {
+    problems.push(
+      `size: ${restBytes} bytes gzipped, not counting the bundle, is over the ceiling of ${ceiling}`,
+    );
+  }
+  if (bundleBytes > (bundleCeiling ?? 0)) {
+    problems.push(
+      `bundle: ${bundleBytes} bytes gzipped is over the ceiling of ${bundleCeiling ?? 0}`,
+    );
+  }
+  const thin = bundleHeadroomWarning(bundleBytes, bundleCeiling ?? 0);
+  if (thin !== undefined) {
+    warnings.push(thin);
+  }
+  return problems;
+}
+
+/**
  * Everything wrong with one package's tarball and manifest.
  *
  * @param {{
@@ -425,9 +508,11 @@ function missingRootFile(file, extraRootFiles) {
  *   bundleCeiling?: number,
  *   readFile: (file: string) => string | undefined,
  *   sourceExists: (source: string) => boolean,
+ *   warnings?: string[],
  * }} input `listing` is one element of `npm pack --dry-run --json`;
  *   `readFile` reads a packed file by its path in the tarball and
  *   `sourceExists` says whether a path relative to the package is a file.
+ *   `warnings` is filled with what is worth saying and fails nothing.
  * @returns {string[]} One message for each problem, none when it is fine.
  */
 export function checkPackage({
@@ -437,6 +522,7 @@ export function checkPackage({
   bundleCeiling,
   readFile,
   sourceExists,
+  warnings = [],
 }) {
   /** @type {string[]} */
   const problems = [];
@@ -466,33 +552,18 @@ export function checkPackage({
   problems.push(
     ...buildProblems({ paths, targets, readFile, sourceExists, bundle }),
   );
-  const inBundle = (/** @type {string} */ file) =>
-    isBundleFile(file, bundle) || extraRootFiles.includes(file);
-  if (bundle === undefined) {
-    if (listing.size > ceiling) {
-      problems.push(
-        `size: ${listing.size} bytes is over the ceiling of ${ceiling}`,
-      );
-    }
-  } else {
-    // A bundle package is measured in two parts, each file gzipped alone, so a
-    // bundle that slips into the ordinary modules still shows in the rest.
-    const bundleBytes = gzippedBytes(paths.filter(inBundle), readFile);
-    const restBytes = gzippedBytes(
-      paths.filter((file) => !inBundle(file)),
+  problems.push(
+    ...sizeProblems({
+      paths,
+      bundle,
+      extraRootFiles,
+      size: listing.size,
+      ceiling,
+      bundleCeiling,
       readFile,
-    );
-    if (restBytes > ceiling) {
-      problems.push(
-        `size: ${restBytes} bytes gzipped, not counting the bundle, is over the ceiling of ${ceiling}`,
-      );
-    }
-    if (bundleBytes > (bundleCeiling ?? 0)) {
-      problems.push(
-        `bundle: ${bundleBytes} bytes gzipped is over the ceiling of ${bundleCeiling ?? 0}`,
-      );
-    }
-  }
+      warnings,
+    }),
+  );
   const expectedFiles = [...EXPECTED_FILES_FIELD, ...extraRootFiles];
   if (JSON.stringify(manifest.files) !== JSON.stringify(expectedFiles)) {
     problems.push(
@@ -640,12 +711,16 @@ export function packResultsFromTarballs(folder, root = REPO) {
     const manifest = JSON.parse(readTarballFile(file, "package.json") ?? "{}");
     const files = parseTarList(listed.stdout);
     const size = statSync(file).size;
+    /** @type {string[]} */
+    const warnings = [];
     return {
+      warnings,
       name: String(manifest.name),
       files: files.length,
       size,
       unpackedSize: 0,
       problems: checkPackage({
+        warnings,
         manifest,
         listing: {
           size,
@@ -666,7 +741,7 @@ export function packResultsFromTarballs(folder, root = REPO) {
  * Packs every SDK package as a dry run and checks each one.
  *
  * @param {string} [root] The repository root.
- * @returns {Array<{ name: string, files: number, size: number, unpackedSize: number, problems: string[] }>} One entry for each package, in release order; `name` is the package name.
+ * @returns {Array<{ name: string, files: number, size: number, unpackedSize: number, problems: string[], warnings: string[] }>} One entry for each package, in release order; `name` is the package name.
  */
 export function packResults(root = REPO) {
   return PACKAGES.map((folderName) => {
@@ -675,12 +750,16 @@ export function packResults(root = REPO) {
       readFileSync(path.join(folder, "package.json"), "utf8"),
     );
     const listing = listPackage(folder);
+    /** @type {string[]} */
+    const warnings = [];
     return {
+      warnings,
       name: String(manifest.name),
       files: listing.files.length,
       size: listing.size,
       unpackedSize: listing.unpackedSize,
       problems: checkPackage({
+        warnings,
         manifest,
         listing,
         ceiling: SIZE_CEILINGS[folderName] ?? 0,
@@ -707,6 +786,11 @@ export function runPackCheck(root = REPO, tarballs = null) {
       : packResultsFromTarballs(tarballs, root);
   for (const result of results) {
     const summary = `${result.name}: ${result.files} files, ${result.size} bytes packed, ${result.unpackedSize} unpacked`;
+    for (const warning of result.warnings) {
+      // On GitHub Actions the annotation shows on the run, not only in its log.
+      const prefix = process.env.GITHUB_ACTIONS === "true" ? "::warning::" : "";
+      console.warn(`${prefix}${result.name}: ${warning}`);
+    }
     if (result.problems.length === 0) {
       console.log(`ok   ${summary}`);
       continue;

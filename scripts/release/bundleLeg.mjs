@@ -143,6 +143,28 @@ export function blobWorkerProblems(urls, pageOrigin) {
     );
 }
 
+/**
+ * What the page said when `blob:` was taken out of `worker-src`: a refusal of
+ * a `blob:` worker by the `worker-src` directive (Chromium reports the scheme
+ * alone, `blob`, and Firefox the address). Any other violation would
+ * not show the directive is what lets the worker start.
+ *
+ * @param {{ violatedDirective: string, blockedURI: string }[]} violations
+ * @returns {string[]}
+ */
+export function workerRefusalProblems(violations) {
+  const refused = violations.some(
+    ({ violatedDirective, blockedURI }) =>
+      violatedDirective.startsWith("worker-src") &&
+      (blockedURI === "blob" || blockedURI.startsWith("blob:")),
+  );
+  return refused
+    ? []
+    : [
+        `without blob: in worker-src the page reported ${violations.length === 0 ? "no violation" : `only ${violations.map((each) => `${each.violatedDirective} on ${each.blockedURI || "inline"}`).join(", ")}`}, not a worker-src refusal of a blob: worker, so that is not what lets the worker start`,
+      ];
+}
+
 /** The engine's lazy chunk and the chunk that holds its worker's text, each named with a hash. */
 const ENGINE_CHUNK = /\/browser-engine-[\w-]+\.js$/;
 const WORKER_CHUNK = /\/browser-worker-[\w-]+\.js$/;
@@ -297,7 +319,7 @@ export function leakProblems(cycles) {
  *
  * @typedef {object} Chrome
  * @property {string} theme The `data-theme` of the map's container.
- * @property {{ name: string, width: number, height: number, boxSizing: string, margin: string, background: string, icon: { width: number, fill: string } | null }[]} buttons
+ * @property {{ name: string, width: number, height: number, boxSizing: string, margin: string, background: string, icon: { width: number, fill: string, stroke: string } | null }[]} buttons
  * @property {{ name: string, outlineStyle: string, outlineWidth: string } | undefined} focus
  */
 
@@ -363,10 +385,19 @@ export const ENGINE_BUILD = "browser engine and worker";
  * map then loads, from the files of the bundle, in the shape
  * `bundleSizeProblems` reads.
  *
+ * @throws {Error} For a file that is in neither group.
+ *
  * @param {Record<string, Buffer>} files The bundle's files by name.
  * @returns {{ name: string, gzipBytes: number }[]}
  */
 export function bundleLoadSizes(files) {
+  for (const name of Object.keys(files)) {
+    if (!FIRST_LOAD.test(name) && !LAZY.test(name)) {
+      throw new Error(
+        `${name} is a file of the bundle that is neither first load nor a lazy chunk, so no ceiling would count it`,
+      );
+    }
+  }
   /** @param {RegExp} pattern */
   const gzipped = (pattern) =>
     Object.entries(files)
@@ -392,6 +423,90 @@ export const HOST_BOXES = {
   "Zoom out": { width: 48, height: 49, boxSizing: "content-box" },
   "Map credits": { width: 44, height: 44, boxSizing: "border-box" },
 };
+
+/**
+ * What the reference host's `/map` has, read from the built host in Chromium
+ * at 1440 by 900 px, for what the host's base styles (`box-sizing: border-box`
+ * on everything, the body's font) give and a plain page does not: the
+ * container's font size and line height, the search input and the credits
+ * list and links, and a Settings radio, each `border-box`, and the heights of a
+ * credits link and a Settings radio (sizes that follow the viewport or the
+ * font's own width are not held).
+ */
+export const HOST_STYLES = {
+  containerFontSize: "15px",
+  containerLineHeight: "21.75px",
+  searchInputBoxSizing: "border-box",
+  creditsListBoxSizing: "border-box",
+  creditsLinkBoxSizing: "border-box",
+  creditsLinkHeight: 26.2,
+  radioBoxSizing: "border-box",
+  radioHeight: 44,
+};
+
+/** How far a height may be from the host's, in CSS pixels, for the font's rounding. */
+const HEIGHT_TOLERANCE = 0.5;
+
+/**
+ * The problems with the bundle's sheets, search input, list and credits read
+ * against {@link HOST_STYLES}.
+ *
+ * @param {Record<keyof typeof HOST_STYLES, string | number>} readings The same keys, read from the bundle's page with every tool.
+ * @returns {string[]}
+ */
+export function hostStyleProblems(readings) {
+  return Object.entries(HOST_STYLES).flatMap(([name, expected]) => {
+    const found = readings[/** @type {keyof typeof HOST_STYLES} */ (name)];
+    const same =
+      typeof expected === "number"
+        ? typeof found === "number" &&
+          Math.abs(found - expected) <= HEIGHT_TOLERANCE
+        : found === expected;
+    return same
+      ? []
+      : [
+          `${name} is ${found} in the bundle and ${expected} in the reference host`,
+        ];
+  });
+}
+
+/**
+ * How far the reset reaches, from a page with rules the reset does not stop
+ * (`consumer-bundle/leaks.css`): an attribute selector (`[type="button"]`) and
+ * a class and element (`.page button`) are as specific as the reset or more and
+ * come later, so they still set a button's background and border; a rule on
+ * the container by id (`#map`) still sets the inherited properties no component
+ * names, here read from the keyboard help's text; and an `svg` rule's `stroke`
+ * does not reach an icon. A change that lets a page rule through where it was
+ * stopped, or stops one that was let through, fails until this table and the
+ * documents that quote it (`DESIGN.md`, `docs/guides/releasing.md`) agree.
+ */
+export const REACH = {
+  buttonBackgroundFromAttributeSelector: "rgb(255, 0, 0)",
+  buttonBorderFromClassAndElement: "2px",
+  iconStrokeFromSvgRule: "none",
+  inheritedTextTransform: "uppercase",
+  inheritedLetterSpacing: "6px",
+  inheritedTextAlign: "right",
+};
+
+/**
+ * The problems with how far a page's rules reached.
+ *
+ * @param {Record<keyof typeof REACH, string>} readings The same keys, read from the leaks page.
+ * @returns {string[]}
+ */
+export function reachProblems(readings) {
+  return Object.entries(REACH)
+    .filter(
+      ([name, expected]) =>
+        readings[/** @type {keyof typeof REACH} */ (name)] !== expected,
+    )
+    .map(
+      ([name, expected]) =>
+        `${name} is ${readings[/** @type {keyof typeof REACH} */ (name)]}, not ${expected}: the reset reaches a different distance than the documents say`,
+    );
+}
 
 /**
  * The problems with the bundle's buttons read against the host's boxes.

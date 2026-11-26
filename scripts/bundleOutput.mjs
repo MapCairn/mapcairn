@@ -21,22 +21,45 @@ export function moduleIdsOf(bundle) {
 }
 
 /**
- * What the bundle's stylesheet starts with: for every element of a mounted map
- * (below the container the mount marks with `data-mapcairn`), the browser's own
- * defaults in place of any rule the page wrote for that element, such as
- * `* { margin: 0 }`, `button { height: 2rem }` or a global `box-sizing`. The
- * interface's rules come after it and set what they need, so only a property
- * the interface leaves to the browser comes back to the default. `all` leaves
- * custom properties and `direction` alone, so the theme and the reading
- * direction pass through. Its specificity is that of a class (`:where` adds
- * none), so a page rule that names a class, an id or a state beats it, as it
- * beats any other rule. Drawings are left out: an icon's or a shape's `fill`,
- * `stroke` and geometry are presentation attributes, which `all` would
- * discard. A page's `svg` rule can still set an icon's `fill`, so the second
- * rule gives it back the `fill="currentColor"` the icon was drawn with.
+ * What the bundle's stylesheet starts with, for every element of a mounted map
+ * (below the container the mount marks with `data-mapcairn`), in four parts.
+ *
+ * 1. The browser's own defaults in place of any rule the page wrote for that
+ *    element, such as `* { margin: 0 }`, `button { height: 2rem }` or a global
+ *    `box-sizing` (`all: revert`). The interface's rules come after it and set
+ *    what they need, so only a property the interface leaves to the browser
+ *    comes back to the default. `all` leaves custom properties and `direction`
+ *    alone, so the theme and the reading direction pass through. Drawings are
+ *    left out: an icon's or a shape's `fill`, `stroke` and geometry are
+ *    presentation attributes, which `all` would discard.
+ * 2. What the reference host's base styles give: `box-sizing: border-box` on
+ *    every element and pseudo-element, and the default focus ring for anything
+ *    a component has not styled (`packages/web/src/global.css.ts`).
+ * 3. An icon's `fill` and `stroke` back, because a page's `svg` rule would
+ *    otherwise set them on an icon (`fill="currentColor"` and no stroke is
+ *    how it is drawn).
+ * 4. The container's own text: the host's body font, size, line height,
+ *    tracking, weight and colour, which a plain page does not have, and no
+ *    text transform or alignment. An inherited property of the page that a
+ *    component does not set itself still reaches the interface (a rule on the
+ *    container with an id, or from an ancestor that part 4 does not name).
+ *
+ * The first three have the specificity of a class (`:where` adds none), so a
+ * page rule that names an attribute, a class, an id or a state beats them, as
+ * it beats any other rule, when it comes later or is more specific.
+ *
+ * @param {{ tokens: any, focusRing: { outline: string, outlineOffset: string } }} theme `tokens` and `focusRing` of `@mapcairn/theme`, whose values are custom property references.
+ * @returns {string}
  */
-export const PAGE_RESET =
-  "[data-mapcairn] *:where(:not(svg,svg *)){all:revert}[data-mapcairn] svg[fill=currentColor]{fill:currentColor}";
+export function pageReset({ tokens, focusRing }) {
+  return [
+    "[data-mapcairn] *:where(:not(svg,svg *)){all:revert}",
+    "[data-mapcairn],[data-mapcairn] *,[data-mapcairn] *::before,[data-mapcairn] *::after{box-sizing:border-box}",
+    `[data-mapcairn] :where(:focus-visible){outline:${focusRing.outline};outline-offset:${focusRing.outlineOffset}}`,
+    "[data-mapcairn] svg[fill=currentColor]{fill:currentColor;stroke:none}",
+    `[data-mapcairn]{font-family:${tokens.type.family};font-size:${tokens.type.body.size};line-height:${tokens.type.body.lineHeight};letter-spacing:${tokens.type.body.tracking};font-weight:${tokens.type.weight.regular};color:${tokens.color.text};text-transform:none;text-align:start}`,
+  ].join("");
+}
 
 /** A scan of CSS text outside strings and comments, which is where braces and semicolons count. */
 function* structuralCharacters(css) {
@@ -114,7 +137,7 @@ export function withoutLayers(css) {
 }
 
 /**
- * The bundle's stylesheet: {@link PAGE_RESET}, then the engine's own rules, so
+ * The bundle's stylesheet: the reset ({@link pageReset}), then the engine's own rules, so
  * the interface's rules, which come after, win where they meet, then the
  * interface's rules with no cascade layer left in them
  * ({@link withoutLayers}).
@@ -122,16 +145,17 @@ export function withoutLayers(css) {
  * @param {string} engineRules The engine's stylesheet.
  * @param {{ type: string, source?: unknown } | undefined} asset The stylesheet asset of the bundle.
  * @param {string} name The stylesheet's file name, for the message.
+ * @param {string} reset What the stylesheet starts with (`pageReset`).
  * @returns {string}
  * @throws {Error} When the bundle has no stylesheet to merge into.
  */
-export function mergedStylesheet(engineRules, asset, name) {
+export function mergedStylesheet(engineRules, asset, name, reset) {
   if (asset === undefined || asset.type !== "asset") {
     throw new Error(
       `The bundle has no ${name} to merge the engine's stylesheet into.`,
     );
   }
-  return `${PAGE_RESET}\n${engineRules}\n${withoutLayers(String(asset.source))}`;
+  return `${reset}\n${engineRules}\n${withoutLayers(String(asset.source))}`;
 }
 
 /**

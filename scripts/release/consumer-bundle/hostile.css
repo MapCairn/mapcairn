@@ -26,6 +26,8 @@ svg {
   width: 300px;
   height: 300px;
   fill: red;
+  stroke: red;
+  stroke-width: 4;
 }
 
 #map {

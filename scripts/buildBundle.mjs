@@ -3,10 +3,12 @@
 import { readFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import path from "node:path";
+import { pathToFileURL } from "node:url";
 import { writeNotices } from "./bundleLicences.mjs";
 import {
   mergedStylesheet,
   moduleIdsOf,
+  pageReset,
   withoutSourceMapComment,
 } from "./bundleOutput.mjs";
 import { NOTICES_FILE, packageFileOf } from "./bundleSettings.mjs";
@@ -33,6 +35,15 @@ const EMPTY_STYLESHEET_MODULE = "\0mapcairn-engine-stylesheet";
  */
 async function bundleModules({ folder, entries, stylesheet, embedded }) {
   const { build } = await import("vite");
+  // The theme is built before the umbrella, and its token values are the custom properties the stylesheet uses.
+  const theme = await import(
+    pathToFileURL(
+      createRequire(path.join(folder, "package.json")).resolve(
+        "@mapcairn/theme",
+      ),
+    ).href
+  );
+  const reset = pageReset(theme);
   const engineStylesheet = path.join(
     path.dirname(
       createRequire(path.join(folder, "package.json")).resolve(
@@ -78,6 +89,7 @@ async function bundleModules({ folder, entries, stylesheet, embedded }) {
               readFileSync(engineStylesheet, "utf8"),
               sheet,
               name,
+              reset,
             );
             if (sheet?.type === "asset") {
               sheet.source = merged;

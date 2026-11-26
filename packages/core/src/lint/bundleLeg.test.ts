@@ -15,6 +15,7 @@ import {
   hostilePageProblems,
   hostParityProblems,
   leakProblems,
+  workerRefusalProblems,
   // @ts-expect-error The scripts are dependency-free JavaScript with JSDoc types.
 } from "../../../../scripts/release/bundleLeg.mjs";
 import { BUILT_IN_BASEMAP_CATALOGUE } from "../basemaps";
@@ -309,7 +310,6 @@ describe("bundleLoadSizes", () => {
       "browser-rolldown-runtime-AbC.js": bytes("c"),
       "browser-engine-AbC.js": bytes("d"),
       "browser-worker-AbC.js": bytes("e"),
-      "browser.d.ts": bytes("f"),
     });
     expect(sizes.map((size: { name: string }) => size.name)).toEqual([
       FIRST_LOAD_BUILD,
@@ -365,5 +365,47 @@ describe("hostParityProblems", () => {
       /"Zoom out" has height 48 in the bundle and 49 in the reference host/,
     );
     expect(hostParityProblems({ ...chrome(), buttons: [] })).toHaveLength(3);
+  });
+});
+
+describe("bundleLoadSizes with a file it cannot place", () => {
+  it("throws, so a file left out of both groups cannot escape every ceiling", () => {
+    expect(() =>
+      bundleLoadSizes({
+        "browser.js": Buffer.from("a"),
+        "browser-extra.js": Buffer.from("b"),
+      }),
+    ).toThrow(
+      /browser-extra\.js is a file of the bundle that is neither first load nor a lazy chunk/,
+    );
+    expect(() => bundleLoadSizes({ "browser.d.ts": Buffer.from("a") })).toThrow(
+      /browser\.d\.ts/,
+    );
+  });
+});
+
+describe("workerRefusalProblems", () => {
+  it("passes a worker-src refusal of a blob, reported by scheme or by address", () => {
+    expect(
+      workerRefusalProblems([
+        { violatedDirective: "worker-src", blockedURI: "blob" },
+      ]),
+    ).toEqual([]);
+    expect(
+      workerRefusalProblems([
+        { violatedDirective: "worker-src-elem", blockedURI: "blob:http://x/1" },
+      ]),
+    ).toEqual([]);
+  });
+
+  it("fails no violation, and any other violation, naming what was seen", () => {
+    expect(workerRefusalProblems([])[0]).toContain("no violation");
+    const other = workerRefusalProblems([
+      { violatedDirective: "style-src-elem", blockedURI: "inline" },
+      { violatedDirective: "worker-src", blockedURI: "http://x/w.js" },
+    ]);
+    expect(other[0]).toContain(
+      "only style-src-elem on inline, worker-src on http://x/w.js",
+    );
   });
 });

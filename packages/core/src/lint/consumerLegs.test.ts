@@ -25,6 +25,7 @@ import {
   publishedLegSkip,
   publishedSkipped,
   WORKER_CONDITIONS,
+  webkitLegPlan,
   workerdSkipped,
   YARN_PACKAGE_MANAGER,
   YARN_VERSION,
@@ -336,5 +337,41 @@ describe("corepackCliPath", () => {
 
   it("is undefined when this Node has no corepack, as Node 25 and later have none", () => {
     expect(corepackCliPath(path.join(scratch, "node"))).toBeUndefined();
+  });
+});
+
+describe("webkitLegPlan", () => {
+  it("runs when WebKit is installed, on any machine", () => {
+    for (const env of [{}, { GITHUB_ACTIONS: "true" }]) {
+      expect(webkitLegPlan({ installed: true, playwright: true, env })).toEqual(
+        { action: "run" },
+      );
+    }
+  });
+
+  it("skips with a warning on a developer's machine, and where Playwright is not installed at all", () => {
+    const plan = webkitLegPlan({ installed: false, playwright: true, env: {} });
+    expect(plan.action).toBe("skip");
+    expect(plan.line).toMatch(/WebKit/);
+    expect(plan.line).toContain("playwright:install");
+    expect(
+      webkitLegPlan({
+        installed: false,
+        playwright: false,
+        env: { GITHUB_ACTIONS: "true" },
+      }).action,
+    ).toBe("skip");
+  });
+
+  it("fails on GitHub Actions when Playwright is installed and WebKit is not", () => {
+    const plan = webkitLegPlan({
+      installed: false,
+      playwright: true,
+      env: { GITHUB_ACTIONS: "true" },
+    });
+    expect(plan.action).toBe("fail");
+    expect(plan.message).toContain(
+      "playwright install --with-deps chromium webkit",
+    );
   });
 });
