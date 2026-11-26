@@ -48,16 +48,16 @@ export const SIZE_CEILINGS = {
 /**
  * The most the files of a package's bundle may weigh, in gzipped bytes: each
  * of its `dist` files that starts with the name of a bundle entry (`browser`),
- * and the notices file, each gzipped alone and added up. About one and a half
- * times what the bundle weighs now, so ordinary growth passes and a second
- * copy of React or the engine does not. The rest of such a package stays under
- * `SIZE_CEILINGS`, which counts the tarball less this. Raising one is a
- * deliberate edit in a pull request.
+ * and the notices file, each gzipped alone and added up. About one and a
+ * seventh times what the bundle weighs now, so ordinary growth passes and a
+ * second copy of the engine or of React (about 330 and 75 kilobytes gzipped)
+ * does not. The rest of such a package is measured the same way and stays
+ * under `SIZE_CEILINGS`. Raising one is a deliberate edit in a pull request.
  *
  * @type {Record<string, number>}
  */
 export const BUNDLE_CEILINGS = {
-  sdk: 1_030_000,
+  sdk: 790_000,
 };
 
 /** The `files` every SDK package declares: the build, without its stamp. */
@@ -451,21 +451,32 @@ export function checkPackage({
   problems.push(
     ...buildProblems({ paths, targets, readFile, sourceExists, bundle }),
   );
-  const bundleBytes = gzippedBytes(
-    paths.filter(
-      (file) => isBundleFile(file, bundle) || extraRootFiles.includes(file),
-    ),
-    readFile,
-  );
-  if (listing.size - bundleBytes > ceiling) {
-    problems.push(
-      `size: ${listing.size - bundleBytes} bytes is over the ceiling of ${ceiling}${bundle === undefined ? "" : ", not counting the bundle"}`,
+  const inBundle = (/** @type {string} */ file) =>
+    isBundleFile(file, bundle) || extraRootFiles.includes(file);
+  if (bundle === undefined) {
+    if (listing.size > ceiling) {
+      problems.push(
+        `size: ${listing.size} bytes is over the ceiling of ${ceiling}`,
+      );
+    }
+  } else {
+    // A bundle package is measured in two parts, each file gzipped alone, so a
+    // bundle that slips into the ordinary modules still shows in the rest.
+    const bundleBytes = gzippedBytes(paths.filter(inBundle), readFile);
+    const restBytes = gzippedBytes(
+      paths.filter((file) => !inBundle(file)),
+      readFile,
     );
-  }
-  if (bundle !== undefined && bundleBytes > (bundleCeiling ?? 0)) {
-    problems.push(
-      `bundle: ${bundleBytes} bytes gzipped is over the ceiling of ${bundleCeiling ?? 0}`,
-    );
+    if (restBytes > ceiling) {
+      problems.push(
+        `size: ${restBytes} bytes gzipped, not counting the bundle, is over the ceiling of ${ceiling}`,
+      );
+    }
+    if (bundleBytes > (bundleCeiling ?? 0)) {
+      problems.push(
+        `bundle: ${bundleBytes} bytes gzipped is over the ceiling of ${bundleCeiling ?? 0}`,
+      );
+    }
   }
   const expectedFiles = [...EXPECTED_FILES_FIELD, ...extraRootFiles];
   if (JSON.stringify(manifest.files) !== JSON.stringify(expectedFiles)) {

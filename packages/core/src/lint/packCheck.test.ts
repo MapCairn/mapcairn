@@ -585,36 +585,6 @@ describe("a package that builds a bundle", () => {
       /bundle: \d+ bytes gzipped is over the ceiling of 100/,
     );
   });
-
-  it("holds what is not the bundle to the package's own ceiling, whatever the bundle weighs", () => {
-    const noisy = Array.from({ length: 4000 }, (_, i) => `${i * 7919}`).join(
-      ",",
-    );
-    const contents = { "dist/browser.js": noisy };
-    const bundleBytes = (bundleProblems(BUNDLE_FILES, {
-      bundleCeiling: 1,
-      contents,
-    })
-      .join("\n")
-      .match(/bundle: (\d+) bytes/) ?? [])[1];
-    expect(Number(bundleBytes)).toBeGreaterThan(1000);
-    // A tarball the size of the bundle and 2000 bytes more is 2000 bytes of everything else.
-    const rest = bundleProblems(BUNDLE_FILES, {
-      size: Number(bundleBytes) + 6000,
-      bundleCeiling: 1_000_000,
-      contents,
-    });
-    expect(rest.join("\n")).toMatch(
-      /size: .* bytes is over the ceiling of 5000/,
-    );
-    expect(
-      bundleProblems(BUNDLE_FILES, {
-        size: Number(bundleBytes) + 2000,
-        bundleCeiling: 1_000_000,
-        contents,
-      }),
-    ).toEqual([]);
-  });
 });
 
 describe("BUNDLE_CEILINGS", () => {
@@ -642,41 +612,47 @@ describe("the two ceilings of a bundle package, one byte either side", () => {
   for (const [index, file] of BUNDLE_FILES.entries()) {
     contents[file] = `${index}`.repeat(50 + index);
   }
-  const group = [...BUNDLE_FILES].filter(
-    (file) =>
-      file === "THIRD-PARTY-NOTICES.md" || /^dist\/browser[-.]/.test(file),
-  );
-  const bundleBytes = group.reduce(
-    (total, file) => total + gzipSync(contents[file] ?? "").length,
-    0,
-  );
-  /** Whether the tarball passes both ceilings (the package's is 5000). */
-  const passes = (size: number, bundleCeiling: number) =>
-    bundleProblems(BUNDLE_FILES, { size, bundleCeiling, contents }).filter(
-      (line) => /^(size|bundle):/.test(line),
-    ).length === 0;
+  contents["dist/index.js.map"] = sourceMap();
+  const inBundle = (file: string) =>
+    file === "THIRD-PARTY-NOTICES.md" || /^dist\/browser[-.]/.test(file);
+  const weight = (files: readonly string[]) =>
+    files.reduce(
+      (total, file) => total + gzipSync(contents[file] ?? "").length,
+      0,
+    );
+  const bundleBytes = weight(BUNDLE_FILES.filter(inBundle));
+  const restBytes = weight(BUNDLE_FILES.filter((file) => !inBundle(file)));
+  /** Whether the tarball passes both ceilings, the package's being `ceiling` and the bundle's `bundleCeiling`. */
+  const passes = (ceiling: number, bundleCeiling: number) =>
+    checkPackage({
+      manifest: bundleManifest(),
+      listing: listing(BUNDLE_FILES, 1),
+      ceiling,
+      bundleCeiling,
+      readFile: (file: string) => contents[file],
+      sourceExists: () => true,
+    }).filter((line: string) => /^(size|bundle):/.test(line)).length === 0;
 
   it("holds the bundle to its own ceiling", () => {
-    expect(passes(1000, bundleBytes)).toBe(true);
-    expect(passes(1000, bundleBytes - 1)).toBe(false);
-    expect(passes(1000, bundleBytes + 1)).toBe(true);
+    expect(passes(restBytes, bundleBytes)).toBe(true);
+    expect(passes(restBytes, bundleBytes - 1)).toBe(false);
+    expect(passes(restBytes, bundleBytes + 1)).toBe(true);
   });
 
-  it("holds the rest of the tarball to the package's ceiling, less the bundle", () => {
-    expect(passes(bundleBytes + 5000, 1_000_000)).toBe(true);
-    expect(passes(bundleBytes + 5001, 1_000_000)).toBe(false);
-    expect(passes(bundleBytes + 4999, 1_000_000)).toBe(true);
+  it("holds the rest of the files to the package's ceiling, gzipped and without the bundle, whatever the tarball weighs", () => {
+    expect(passes(restBytes, bundleBytes)).toBe(true);
+    expect(passes(restBytes - 1, bundleBytes)).toBe(false);
+    expect(passes(restBytes + 1, bundleBytes)).toBe(true);
   });
 
   it("counts the notices file and every bundle file in the bundle", () => {
-    const withoutNotices = group
-      .filter((file) => file !== "THIRD-PARTY-NOTICES.md")
-      .reduce(
-        (total, file) => total + gzipSync(contents[file] ?? "").length,
-        0,
-      );
+    const withoutNotices = weight(
+      BUNDLE_FILES.filter(
+        (file) => inBundle(file) && file !== "THIRD-PARTY-NOTICES.md",
+      ),
+    );
     expect(withoutNotices).toBeLessThan(bundleBytes);
-    expect(passes(1000, withoutNotices)).toBe(false);
+    expect(passes(restBytes, withoutNotices)).toBe(false);
   });
 });
 
