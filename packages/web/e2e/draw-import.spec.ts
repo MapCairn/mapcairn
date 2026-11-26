@@ -146,10 +146,20 @@ test.describe("draw import", () => {
 
   test("imports a KML file as points, lines and a polygon, shows no name or description and fits the map to it", async ({
     page,
+    context,
     mapPage,
   }) => {
-    const requests: string[] = [];
-    page.on("request", (request) => requests.push(request.url()));
+    // The fixture's links point here. The control request below proves the
+    // route would count one, so zero hits after the import means none was made.
+    const hits: string[] = [];
+    await context.route("https://links.test/**", async (route) => {
+      hits.push(route.request().url());
+      await route.fulfill({ status: 200, body: "" });
+    });
+    const control = await context.newPage();
+    await control.goto("https://links.test/control");
+    expect(hits).toEqual(["https://links.test/control"]);
+    await control.close();
     await mapPage.goto(FAR_AWAY);
     await mapPage.mapOptionsButton.click();
     await expect(mapPage.shapesSection).toBeVisible();
@@ -173,7 +183,7 @@ test.describe("draw import", () => {
     await expect(page.locator("img[src='x']")).toHaveCount(0);
     await expect(page.getByText("alert(1)")).toHaveCount(0);
     // A link inside the file is never followed.
-    expect(requests.filter((url) => url.includes("never.kml"))).toEqual([]);
+    expect(hits).toEqual(["https://links.test/control"]);
   });
 
   test("refuses damaged KML whole, and a zipped KMZ in words, and adds nothing", async ({

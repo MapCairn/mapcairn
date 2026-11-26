@@ -3,18 +3,21 @@
 
 import { walkXml, type XmlHandler, type XmlReading } from "./xml";
 
-/** A KML number (`xsd:double`): a sign, digits, an optional fraction and an optional exponent, never hex or empty text. */
-const KML_DECIMAL = /^[+-]?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?$/;
+/** A KML number (`xsd:double`): an optional sign, digits with an optional fraction or a fraction alone (`.5`, `5.`), and an optional exponent; never hex, `NaN` or empty text. */
+const KML_DECIMAL = /^[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?$/;
 
 /**
  * How deeply KML elements may nest. A position in a polygon of a folder tree
  * sits about ten levels down; 32 leaves room for folders and extensions and
  * matches the JSON cap.
  */
-const MAX_KML_DEPTH = 32;
+export const MAX_KML_DEPTH = 32;
 
 /** How many numbers a tuple of a `coordinates` element may have: longitude and latitude, then an optional altitude. */
 const TUPLE_SIZES: ReadonlySet<number> = new Set([2, 3]);
+
+/** A position that is not a number, which the importer counts as malformed. */
+const NO_POSITION: KmlPosition = [Number.NaN, Number.NaN];
 
 /** Runs of white space, which separate the tuples of a `coordinates` element. */
 const WHITE_SPACE = /\s+/;
@@ -138,6 +141,8 @@ class KmlHandler implements XmlHandler {
   private pieces: string[] = [];
   private outer: readonly KmlPosition[] | null = null;
   private holes = 0;
+  /** Whether the open Point or line has had its `coordinates` element. */
+  private placed = false;
 
   constructor(
     private readonly onGeometry: (geometry: KmlGeometry) => boolean,
@@ -156,6 +161,8 @@ class KmlHandler implements XmlHandler {
     if (kind === "polygon") {
       this.outer = null;
       this.holes = 0;
+    } else if (kind === "point" || kind === "line") {
+      this.placed = false;
     } else if (kind === "coordinates") {
       this.pieces = [];
     }
@@ -166,6 +173,9 @@ class KmlHandler implements XmlHandler {
     const kind = this.kinds.pop();
     if (kind === "coordinates") {
       return this.closeCoordinates(readCoordinates(this.pieces.join("")));
+    }
+    if (kind === "point" || kind === "line") {
+      return this.placed || this.onGeometry(this.unplaced(kind));
     }
     if (kind === "polygon") {
       return this.onGeometry({
@@ -179,21 +189,33 @@ class KmlHandler implements XmlHandler {
     return true;
   }
 
+  /** The geometry for a Point or line that never had `coordinates`: one position that is not a number, so it is counted as malformed. */
+  private unplaced(kind: "point" | "line"): KmlGeometry {
+    return kind === "point"
+      ? { type: "Point", coordinates: NO_POSITION }
+      : { type: "LineString", coordinates: [NO_POSITION] };
+  }
+
   /** Takes in the tuples of a `coordinates` element by what holds it. */
   private closeCoordinates(tuples: KmlPosition[]): boolean {
     const holder = this.kinds.at(-1);
     const boundary = this.kinds.at(-2);
+    if ((holder === "point" || holder === "line") && this.placed) {
+      return true;
+    }
     if (holder === "point") {
+      this.placed = true;
       return this.onGeometry({
         type: "Point",
         coordinates: tuples.length === 1 ? (tuples[0] as KmlPosition) : [],
       });
     }
     if (holder === "line") {
+      this.placed = true;
       return this.onGeometry({ type: "LineString", coordinates: tuples });
     }
     if (boundary === "outer") {
-      this.outer = tuples;
+      this.outer ??= tuples;
     } else if (boundary === "inner") {
       this.holes += 1;
     }
@@ -240,7 +262,9 @@ const READINGS: Readonly<Record<XmlReading, KmlReading>> = {
  *   space, read as plain decimals from the text and CDATA of the element, so
  *   an entity (`&#44;`) or a space after a comma makes a position that is not
  *   a number. A Point that does not have exactly one tuple gives no usable
- *   position. The text must be well formed as far as elements go: a tag left
+ *   position, and a Point or line with no `coordinates` element gives one
+ *   position that is not a number. Only the first `coordinates` of a Point or
+ *   line, and the first outer boundary of a polygon, are read. The text must be well formed as far as elements go: a tag left
  *   open, closed twice or out of order is `unreadable`.
  */
 export function readKml(

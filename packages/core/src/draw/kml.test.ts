@@ -1,7 +1,12 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
 import { describe, expect, it } from "vitest";
-import { type KmlGeometry, type KmlReading, readKml } from "./kml";
+import {
+  type KmlGeometry,
+  type KmlReading,
+  MAX_KML_DEPTH,
+  readKml,
+} from "./kml";
 
 function read(text: string): {
   result: KmlReading;
@@ -265,11 +270,9 @@ describe("readKml", () => {
     }
   });
 
-  it("refuses elements nested deeper than the cap, in linear time", () => {
+  it("refuses elements nested deeper than the cap", () => {
     const deep = `<kml>${"<Folder>".repeat(40_000)}</kml>`;
-    const started = performance.now();
     expect(read(deep).result).toBe("too-deep");
-    expect(performance.now() - started).toBeLessThan(500);
     const nested = (levels: number) =>
       `<kml>${"<Folder>".repeat(levels)}${"</Folder>".repeat(levels)}</kml>`;
     expect(read(nested(31)).result).toBe("ok");
@@ -290,6 +293,127 @@ describe("readKml", () => {
     expect(
       readKml("<kml><Placemark><gx:Track/></Placemark></kml>", () => false),
     ).toBe("stopped");
+  });
+
+  it("counts a Point or a line with no coordinates element as malformed, like a polygon", () => {
+    const nan = [Number.NaN, Number.NaN];
+    const expected: [string, KmlGeometry][] = [
+      ["<Point/>", { type: "Point", coordinates: nan }],
+      ["<Point><x/></Point>", { type: "Point", coordinates: nan }],
+      ["<LineString/>", { type: "LineString", coordinates: [nan] }],
+      [
+        "<LineString><altitudeMode>clampToGround</altitudeMode></LineString>",
+        { type: "LineString", coordinates: [nan] },
+      ],
+      ["<LinearRing/>", { type: "LineString", coordinates: [nan] }],
+    ];
+    for (const [geometry, shape] of expected) {
+      const { result, geometries } = read(placemark(geometry));
+      expect(result, geometry).toBe("ok");
+      expect(geometries, geometry).toEqual([shape]);
+    }
+  });
+
+  it("reads a Placemark with no geometry as nothing", () => {
+    expect(
+      read(kml("<Placemark><name>n</name></Placemark>")).geometries,
+    ).toEqual([]);
+  });
+
+  it("reads plain decimals as the schema allows: a leading or trailing point, a plus sign and an exponent", () => {
+    const { geometries } = read(
+      placemark(
+        "<LineString><coordinates>+1,2 .5,-.5 5.,1E1 1e+1,-1e-1</coordinates></LineString>",
+      ),
+    );
+    expect(geometries).toEqual([
+      {
+        type: "LineString",
+        coordinates: [
+          [1, 2],
+          [0.5, -0.5],
+          [5, 10],
+          [10, -0.1],
+        ],
+      },
+    ]);
+    const bad = read(
+      placemark(
+        "<LineString><coordinates>. ,1 1e 1,+ -,1</coordinates></LineString>",
+      ),
+    );
+    expect(
+      (bad.geometries[0] as { coordinates: number[][] }).coordinates.every(
+        (position) => Number.isNaN(position[0]),
+      ),
+    ).toBe(true);
+  });
+
+  it("reads the first coordinates element of a Point or line and ignores a second", () => {
+    expect(
+      read(
+        placemark(
+          "<Point><coordinates>1,2</coordinates><coordinates>3,4</coordinates></Point>",
+        ),
+      ).geometries,
+    ).toEqual([{ type: "Point", coordinates: [1, 2] }]);
+    expect(
+      read(
+        placemark(
+          "<LineString><coordinates>1,2 3,4</coordinates><coordinates>5,6 7,8</coordinates></LineString>",
+        ),
+      ).geometries,
+    ).toEqual([
+      {
+        type: "LineString",
+        coordinates: [
+          [1, 2],
+          [3, 4],
+        ],
+      },
+    ]);
+  });
+
+  it("reads the first outer boundary of a polygon and ignores a second", () => {
+    const { geometries } = read(
+      placemark(
+        `<Polygon><outerBoundaryIs>${ring("0,0 1,0 1,1 0,0")}</outerBoundaryIs><outerBoundaryIs>${ring("5,5 6,5 6,6 5,5")}</outerBoundaryIs></Polygon>`,
+      ),
+    );
+    expect(geometries).toEqual([
+      {
+        type: "Polygon",
+        coordinates: [
+          [
+            [0, 0],
+            [1, 0],
+            [1, 1],
+            [0, 0],
+          ],
+        ],
+      },
+    ]);
+  });
+
+  it("counts a Track inside a MultiGeometry, and reads a prefixed Placemark", () => {
+    const { geometries } = read(
+      kml(
+        "<foo:Placemark><MultiGeometry><Point><coordinates>1,2</coordinates></Point><gx:Track/></MultiGeometry></foo:Placemark>",
+      ),
+    );
+    expect(geometries).toEqual([
+      { type: "Point", coordinates: [1, 2] },
+      { type: "Unsupported" },
+    ]);
+  });
+
+  it("tells a KML root with damaged attributes from text that is not KML", () => {
+    expect(read("<kml xmlns=x><Placemark/></kml>").result).toBe("unreadable");
+    expect(read("<gpx version=1><wpt/></gpx>").result).toBe("not-kml");
+  });
+
+  it("allows the depth the import allows", () => {
+    expect(MAX_KML_DEPTH).toBe(32);
   });
 
   it("walks hostile text in time that grows in proportion to its length", () => {

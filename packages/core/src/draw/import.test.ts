@@ -16,6 +16,7 @@ import {
   shapeInputBounds,
   suggestWktAxisOrder,
 } from "./import";
+import { MAX_KML_DEPTH } from "./kml";
 import type { DrawShapeInput } from "./reducer";
 import type { DrawShape } from "./types";
 
@@ -1621,6 +1622,42 @@ describe("parseShapeFile with KML", () => {
     });
   });
 
+  it("tells the damaged root of KML from that of GPX", () => {
+    expect(parseShapeFile("<kml xmlns=x><Placemark/></kml>")).toEqual({
+      ok: false,
+      refusal: "kml-unreadable",
+    });
+    expect(parseShapeFile("<gpx version=1><wpt/></gpx>")).toEqual({
+      ok: false,
+      refusal: "gpx-unreadable",
+    });
+  });
+
+  it("allows as many levels of KML elements as of JSON", () => {
+    const folders = (levels: number) =>
+      `<kml>${"<Folder>".repeat(levels)}${"</Folder>".repeat(levels)}</kml>`;
+    expect(MAX_IMPORT_DEPTH).toBe(MAX_KML_DEPTH);
+    expect(parseShapeFile(folders(MAX_IMPORT_DEPTH - 1))).toMatchObject({
+      ok: true,
+    });
+    expect(parseShapeFile(folders(MAX_IMPORT_DEPTH))).toEqual({
+      ok: false,
+      refusal: "too-deep",
+    });
+  });
+
+  it("counts a Point or a line with no coordinates as malformed", () => {
+    expect(
+      parseShapeFile(
+        kml(
+          mark("<Point/>") +
+            mark("<LineString><x/></LineString>") +
+            mark("<Polygon/>"),
+        ),
+      ),
+    ).toMatchObject({ ok: true, shapes: [], skipped: { malformed: 3 } });
+  });
+
   it("refuses damaged KML whole, and anything that is not KML or GPX is not recognised", () => {
     expect(parseShapeFile(kml("<Placemark><Point><coordinates>1,2"))).toEqual({
       ok: false,
@@ -1647,7 +1684,6 @@ describe("parseShapeFile with KML", () => {
       { length: 9 },
       (_, level) => `<!ENTITY lol${level + 1} "${`&lol${level};`.repeat(10)}">`,
     ).join("");
-    const started = performance.now();
     expect(
       parseShapeFile(
         `<!DOCTYPE kml [<!ENTITY lol "lol">${laughs}<!ENTITY ext SYSTEM "file:///etc/passwd">]>${kml(mark("<Point><coordinates>&ext;</coordinates></Point>"))}`,
@@ -1665,6 +1701,5 @@ describe("parseShapeFile with KML", () => {
         ),
       ),
     ).toEqual({ ok: true, shapes: [], skipped: {}, holesDropped: 0 });
-    expect(performance.now() - started).toBeLessThan(500);
   });
 });

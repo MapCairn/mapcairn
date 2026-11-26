@@ -90,12 +90,18 @@ type Tag =
       readonly start: StartTag;
     };
 
-/** Reads the markup that starts at `at`; "damaged" is a fault in it, "unreadable" one in a start tag's attributes. */
+/**
+ * Reads the markup that starts at `at`; "damaged" is a fault in it,
+ * "unreadable" one in a start tag's attributes and "foreign" a root that
+ * `acceptRoot` (given only while the root is still to come) turns down, which
+ * is decided before its attributes are read.
+ */
 function readTag(
   text: string,
   at: number,
   rootClosed: boolean,
-): Tag | "damaged" | "unreadable" {
+  acceptRoot: ((name: string) => boolean) | null,
+): Tag | "damaged" | "unreadable" | "foreign" {
   const skipped = skipMarkup(text, at);
   if (skipped === -1) {
     return "damaged";
@@ -113,6 +119,9 @@ function readTag(
   const name = matchAt(NAME, text, at + 1);
   if (name.value === "") {
     return "damaged";
+  }
+  if (acceptRoot !== null && !acceptRoot(name.value)) {
+    return "foreign";
   }
   const start = rootClosed ? null : readAttributes(text, name.end);
   return start === null
@@ -174,6 +183,13 @@ class XmlWalk {
 
   get isRootClosed(): boolean {
     return this.rootClosed;
+  }
+
+  /** The test a root must pass, while the root is still to come; otherwise null. */
+  get rootTest(): ((name: string) => boolean) | null {
+    return this.path.length === 0 && !this.rootClosed
+      ? (name) => this.handler.isRoot(name)
+      : null;
   }
 
   characters(piece: string): void {
@@ -262,9 +278,12 @@ export function walkXml(text: string, handler: XmlHandler): XmlReading {
       at = end + CDATA_CLOSE.length;
       continue;
     }
-    const tag = readTag(text, lt, walk.isRootClosed);
+    const tag = readTag(text, lt, walk.isRootClosed, walk.rootTest);
     if (tag === "damaged") {
       return walk.damaged();
+    }
+    if (tag === "foreign") {
+      return tag;
     }
     if (tag === "unreadable") {
       return "unreadable";
