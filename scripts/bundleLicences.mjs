@@ -154,39 +154,56 @@ export function assertBundledLicences(packages, allowlist) {
  * @returns {string | undefined}
  */
 export function licenceInUse(expression, allowed) {
-  const identifiers = expression
+  return identifiersOf(expression).find((token) =>
+    allowed.has(token.toLowerCase()),
+  );
+}
+
+/**
+ * The licence identifiers an expression names, without its operators and brackets.
+ *
+ * @param {string} expression
+ * @returns {string[]}
+ */
+export function identifiersOf(expression) {
+  return expression
     .split(/[\s()]+/)
     .filter(
       (token) =>
         token !== "" && !["AND", "OR", "WITH"].includes(token.toUpperCase()),
     );
-  return identifiers.find((token) => allowed.has(token.toLowerCase()));
 }
 
+/** A notice file, which Apache-2.0 (section 4(d)) and others ask a redistributor to keep. */
+const NOTICE_FILE = /^notice(?:[-.][\w.-]+)?$/i;
+
 /**
- * The licence file of a package: the one whose name contains the identifier it
- * is used under (`LICENSE-MIT`) when there are several, else the first by name.
+ * Every licence file and every notice file of a package, by file name, with
+ * their text. A package with no licence file gives its README's licence
+ * section instead, so something always carries its copyright when one exists.
  *
  * @param {BundledPackage} bundled
- * @param {string | undefined} inUse
- * @returns {string | undefined} The text, or `undefined` when the package has no licence file.
+ * @returns {{ name: string, text: string }[]} Empty when the package has no licence text at all.
  */
-function licenceTextOf(bundled, inUse) {
+function licenceTextsOf(bundled) {
   const files = readdirSync(bundled.directory)
     .filter(
       (file) =>
-        LICENCE_FILE.test(file) &&
+        (LICENCE_FILE.test(file) || NOTICE_FILE.test(file)) &&
         statSync(path.join(bundled.directory, file)).isFile(),
     )
     .sort();
-  const named =
-    inUse === undefined
-      ? undefined
-      : files.find((file) => file.toLowerCase().includes(inUse.toLowerCase()));
-  const chosen = named ?? files[0];
-  return chosen === undefined
-    ? licenceSectionOfReadme(bundled.directory)
-    : readFileSync(path.join(bundled.directory, chosen), "utf8").trim();
+  const texts = files.map((name) => ({
+    name,
+    text: readFileSync(path.join(bundled.directory, name), "utf8").trim(),
+  }));
+  if (files.some((file) => LICENCE_FILE.test(file))) {
+    return texts;
+  }
+  const section = licenceSectionOfReadme(bundled.directory);
+  return section === undefined
+    ? []
+    : [{ name: "README, licence section", text: section }, ...texts];
 }
 
 /**
@@ -226,22 +243,23 @@ export function licenceSectionOfReadme(directory) {
 
 /**
  * The text of `THIRD-PARTY-NOTICES.md`: each bundled package with its
- * version, its licence, the licence it is used under (when the licence offers
- * a choice) and its licence text, which holds its copyright.
+ * version, its licence (the one it is used under, when the licence offers a
+ * choice, and every identifier that applies, when it joins several) and the
+ * text of every licence file and notice file it ships, which hold its
+ * copyright.
  *
  * @param {readonly BundledPackage[]} packages
  * @param {{ licences: Record<string, string>, packages: Record<string, { licence: string, reason: string }> }} allowlist
  * @returns {string}
- * @throws {Error} When a package has no licence file to ship.
+ * @throws {Error} When a package has no licence text to ship.
  */
 export function noticesOf(packages, allowlist) {
   const allowed = allowedIdentifiers(allowlist);
   const sections = [...packages]
     .sort((a, b) => a.name.localeCompare(b.name))
     .map((bundled) => {
-      const inUse = licenceInUse(bundled.licence, allowed);
-      const text = licenceTextOf(bundled, inUse);
-      if (text === undefined) {
+      const texts = licenceTextsOf(bundled);
+      if (texts.length === 0) {
         throw new Error(
           `${bundled.name}@${bundled.version} is bundled and its package has no licence file, and its README has no licence section, to ship.`,
         );
@@ -251,10 +269,24 @@ export function noticesOf(packages, allowlist) {
         "",
         `Licence: ${bundled.licence}`,
       ];
-      if (inUse !== undefined && /\sOR\s/i.test(bundled.licence)) {
+      const choice = /\sOR\s/i.test(bundled.licence);
+      const inUse = licenceInUse(bundled.licence, allowed);
+      if (choice && inUse !== undefined) {
         lines.push(`Used under: ${inUse}`);
+      } else if (/\sAND\s/i.test(bundled.licence)) {
+        lines.push(
+          `All of these apply: ${identifiersOf(bundled.licence).join(", ")}`,
+        );
       }
-      return [...lines, "", "```text", text, "```"].join("\n");
+      const bodies = texts.flatMap(({ name, text }) => [
+        "",
+        `${name}:`,
+        "",
+        "```text",
+        text,
+        "```",
+      ]);
+      return [...lines, ...bodies].join("\n");
     });
   return [
     "# Third-party notices",

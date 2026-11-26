@@ -182,15 +182,11 @@ describe("noticesOf", () => {
     expect(text).not.toContain("Used under");
   });
 
-  it("says which side it uses only for a licence that offers a choice, and ships the file named for it", () => {
+  it("says which side it uses for a licence that offers a choice, and ships every licence file", () => {
     const directory = install(
       "dual",
       { license: "(EDL-1.0 OR EPL-1.0)" },
-      {
-        "LICENSE-EPL": "EPL TEXT",
-        "LICENSE-EDL-1.0": "EDL TEXT",
-        "LICENSE-A": "A",
-      },
+      { "LICENSE-EPL": "EPL TEXT", "LICENSE-EDL-1.0": "EDL TEXT" },
     );
     const text: string = noticesOf(
       [
@@ -205,21 +201,83 @@ describe("noticesOf", () => {
     );
     expect(text).toContain("Used under: EDL-1.0");
     expect(text).toContain("EDL TEXT");
-    expect(text).not.toContain("EPL TEXT");
+    expect(text).toContain("EPL TEXT");
+    expect(text).toContain("LICENSE-EDL-1.0:");
   });
 
-  it("takes the first licence file by name when none is named for the licence", () => {
+  it("lists every identifier of licences that all apply, and ships each file", () => {
     const directory = install(
-      "two",
-      { license: "MIT" },
-      { "LICENSE.md": "SECOND", COPYING: "FIRST" },
+      "both",
+      { license: "(MIT AND BSD-3-Clause)" },
+      { LICENSE: "MIT TEXT", "LICENSE.third-party": "BSD TEXT" },
     );
     const text: string = noticesOf(
-      [{ name: "two", version: "1.2.3", licence: "MIT", directory }],
+      [
+        {
+          name: "both",
+          version: "1.2.3",
+          licence: "(MIT AND BSD-3-Clause)",
+          directory,
+        },
+      ],
       ALLOWLIST,
     );
-    expect(text).toContain("FIRST");
-    expect(text).not.toContain("SECOND");
+    expect(text).toContain("All of these apply: MIT, BSD-3-Clause");
+    expect(text).not.toContain("Used under");
+    expect(text).toContain("MIT TEXT");
+    expect(text).toContain("BSD TEXT");
+  });
+
+  it("ships a notice file beside the licence, and every licence file in name order", () => {
+    const directory = install(
+      "apache",
+      { license: "MIT" },
+      {
+        "LICENSE.md": "SECOND",
+        COPYING: "FIRST",
+        NOTICE: "NOTICE TEXT",
+        "NOTICE.txt": "MORE",
+      },
+    );
+    const text: string = noticesOf(
+      [{ name: "apache", version: "1.2.3", licence: "MIT", directory }],
+      ALLOWLIST,
+    );
+    for (const word of ["FIRST", "SECOND", "NOTICE TEXT", "MORE"]) {
+      expect(text).toContain(word);
+    }
+    expect(text.indexOf("FIRST")).toBeLessThan(text.indexOf("SECOND"));
+  });
+
+  it("does not take a notice file for a licence, and still looks in the README", () => {
+    const directory = install(
+      "notice-only",
+      { license: "MIT" },
+      {
+        NOTICE: "NOTICE TEXT",
+        "README.md": "# x\n\n## License\n\nMIT (c) Someone\n",
+      },
+    );
+    const text: string = noticesOf(
+      [{ name: "notice-only", version: "1.2.3", licence: "MIT", directory }],
+      ALLOWLIST,
+    );
+    expect(text).toContain("MIT (c) Someone");
+    expect(text).toContain("NOTICE TEXT");
+    const bare = install("only-notice", { license: "MIT" }, { NOTICE: "N" });
+    expect(() =>
+      noticesOf(
+        [
+          {
+            name: "only-notice",
+            version: "1.2.3",
+            licence: "MIT",
+            directory: bare,
+          },
+        ],
+        ALLOWLIST,
+      ),
+    ).toThrow(/no licence file/);
   });
 
   it("takes the licence section of the README for a package that ships no licence file", () => {
