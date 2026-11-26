@@ -37,8 +37,6 @@ function isDevelopment(): boolean {
 
 const LiveRegionContext = createContext<Announce | null>(null);
 
-/** How many providers are mounted, to warn in development about a second. */
-let mountedProviders = 0;
 let warnedMissingProvider = false;
 
 /** Does nothing. Returned outside a provider so callers need no null check. */
@@ -51,17 +49,22 @@ export interface LiveRegionProviderProps {
 }
 
 /**
- * Mounts the one app-wide announcer: a visually hidden polite `status` region
- * and a visually hidden assertive `alert` region. Nothing else in the app may
- * create a live region except `StatusMessage`, which is a visible message.
- * @remarks Mount it once, near the root. A second provider logs a warning in
- *   development, because two announcers would read the same message twice.
+ * Mounts the announcer for one React tree: a visually hidden polite `status`
+ * region and a visually hidden assertive `alert` region. Nothing else in the
+ * app may create a live region except `StatusMessage`, which is a visible
+ * message.
+ * @remarks Mount one near the root of each React tree. Separate React roots
+ *   each need their own provider and have their own announcer and throttle. A
+ *   provider nested inside another shadows the outer one for the components
+ *   below it and logs a warning in development, because both would read the
+ *   same message.
  */
 export function LiveRegionProvider({ children }: LiveRegionProviderProps) {
   const [texts, setTexts] = useState<Record<AnnouncePriority, string>>({
     polite: "",
     assertive: "",
   });
+  const nested = useContext(LiveRegionContext) !== null;
   const catalogueRef = useLatestRef(useOptionalMessages());
   const [announcer] = useState(() =>
     createAnnouncer({
@@ -71,17 +74,14 @@ export function LiveRegionProvider({ children }: LiveRegionProviderProps) {
   );
 
   useEffect(() => {
-    mountedProviders += 1;
-    if (isDevelopment() && mountedProviders > 1) {
+    if (nested && isDevelopment()) {
       console.warn(
-        "LiveRegionProvider is mounted more than once. Mount a single provider so messages are announced once.",
+        "LiveRegionProvider is nested inside another LiveRegionProvider. Mount one provider for each React tree so messages are announced once.",
       );
     }
-    return () => {
-      mountedProviders -= 1;
-      announcer.dispose();
-    };
-  }, [announcer]);
+  }, [nested]);
+
+  useEffect(() => () => announcer.dispose(), [announcer]);
 
   const announce = useCallback<Announce>(
     (message, options) =>

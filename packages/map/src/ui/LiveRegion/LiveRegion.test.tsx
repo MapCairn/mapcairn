@@ -5,7 +5,8 @@ import {
   FakeMessageCatalogue,
   message,
 } from "@mapcairn/core";
-import { act, render, screen } from "@testing-library/react";
+import { act, render, screen, within } from "@testing-library/react";
+import { StrictMode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ServicesProvider } from "../../services/ServicesProvider";
 import { THROTTLE_MS } from "./announcer";
@@ -173,7 +174,7 @@ describe("LiveRegionProvider", () => {
     expect(new Set(seen).size).toBe(1);
   });
 
-  it("warns in development when a second provider is mounted", () => {
+  it("does not warn for two sibling providers", () => {
     const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
     render(
       <>
@@ -181,9 +182,86 @@ describe("LiveRegionProvider", () => {
         <LiveRegionProvider />
       </>,
     );
-    expect(warn).toHaveBeenCalledWith(
-      expect.stringContaining("more than once"),
+    expect(warn).not.toHaveBeenCalled();
+    warn.mockRestore();
+  });
+
+  it("warns in development when a provider is nested in another", () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    render(
+      <LiveRegionProvider>
+        <LiveRegionProvider />
+      </LiveRegionProvider>,
     );
+    expect(warn).toHaveBeenCalledTimes(1);
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining("nested"));
+    warn.mockRestore();
+  });
+
+  it("warns for a provider nested below a scope", () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    render(
+      <LiveRegionProvider>
+        <LiveRegionScope format={(text) => text}>
+          <LiveRegionProvider />
+        </LiveRegionScope>
+      </LiveRegionProvider>,
+    );
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining("nested"));
+    warn.mockRestore();
+  });
+
+  it("does not warn for providers in separate roots", () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    const left: Announce[] = [];
+    function Grab({ at }: { readonly at: number }) {
+      left[at] = useAnnounce();
+      return null;
+    }
+    const first = render(
+      <LiveRegionProvider>
+        <Grab at={0} />
+      </LiveRegionProvider>,
+    );
+    const second = render(
+      <LiveRegionProvider>
+        <Grab at={1} />
+      </LiveRegionProvider>,
+    );
+    act(() => left[0]?.("Root one"));
+    act(() => left[1]?.("Root two"));
+    expect(within(first.container).getByRole("status").textContent).toBe(
+      "Root one",
+    );
+    expect(within(second.container).getByRole("status").textContent).toBe(
+      "Root two",
+    );
+    expect(warn).not.toHaveBeenCalled();
+    warn.mockRestore();
+  });
+
+  it("does not warn for a sibling pair under StrictMode", () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    render(
+      <StrictMode>
+        <LiveRegionProvider />
+        <LiveRegionProvider />
+      </StrictMode>,
+    );
+    expect(warn).not.toHaveBeenCalled();
+    warn.mockRestore();
+  });
+
+  it("warns for a nested pair under StrictMode", () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    render(
+      <StrictMode>
+        <LiveRegionProvider>
+          <LiveRegionProvider />
+        </LiveRegionProvider>
+      </StrictMode>,
+    );
+    expect(warn).toHaveBeenCalled();
     warn.mockRestore();
   });
 
@@ -192,6 +270,85 @@ describe("LiveRegionProvider", () => {
     renderProvider();
     expect(warn).not.toHaveBeenCalled();
     warn.mockRestore();
+  });
+
+  describe("two sibling providers", () => {
+    const announcers: Record<string, Announce> = {};
+
+    function CaptureAs({ name }: { readonly name: string }) {
+      announcers[name] = useAnnounce();
+      return null;
+    }
+
+    function renderTwo() {
+      return render(
+        <>
+          <section data-testid="one">
+            <LiveRegionProvider>
+              <CaptureAs name="one" />
+            </LiveRegionProvider>
+          </section>
+          <section data-testid="two">
+            <LiveRegionProvider>
+              <CaptureAs name="two" />
+            </LiveRegionProvider>
+          </section>
+        </>,
+      );
+    }
+
+    const regionIn = (id: string, role: string) =>
+      within(screen.getByTestId(id)).getByRole(role);
+
+    it("lands a message only in its own provider's regions", () => {
+      renderTwo();
+      act(() => announcers.one?.("From one"));
+      act(() => announcers.two?.("From two", { priority: "assertive" }));
+      expect(regionIn("one", "status").textContent).toBe("From one");
+      expect(regionIn("two", "status").textContent).toBe("");
+      expect(regionIn("one", "alert").textContent).toBe("");
+      expect(regionIn("two", "alert").textContent).toBe("From two");
+    });
+
+    it("throttles each provider on its own", () => {
+      renderTwo();
+      act(() => announcers.one?.("One first"));
+      act(() => announcers.one?.("One second"));
+      act(() => announcers.two?.("Two first"));
+      expect(regionIn("one", "status").textContent).toBe("One first");
+      expect(regionIn("two", "status").textContent).toBe("Two first");
+      act(() => vi.advanceTimersByTime(THROTTLE_MS));
+      expect(regionIn("one", "status").textContent).toBe("One second");
+      expect(regionIn("two", "status").textContent).toBe("Two first");
+    });
+
+    it("de-duplicates each provider on its own", () => {
+      renderTwo();
+      act(() => announcers.one?.("Saved"));
+      act(() => vi.advanceTimersByTime(THROTTLE_MS));
+      act(() => announcers.two?.("Saved"));
+      expect(regionIn("two", "status").textContent).toBe("Saved");
+    });
+
+    it("removes only its own regions and timers on unmount, leaving another provider's queue", () => {
+      const { unmount } = render(
+        <LiveRegionProvider>
+          <CaptureAs name="gone" />
+        </LiveRegionProvider>,
+      );
+      renderTwo();
+      act(() => announcers.gone?.("First"));
+      act(() => announcers.gone?.("Queued"));
+      act(() => announcers.two?.("Two first"));
+      act(() => announcers.two?.("Two queued"));
+      expect(screen.getAllByRole("status")).toHaveLength(3);
+      unmount();
+      expect(screen.getAllByRole("status")).toHaveLength(2);
+      expect(screen.getAllByRole("alert")).toHaveLength(2);
+      expect(vi.getTimerCount()).toBe(1);
+      act(() => vi.advanceTimersByTime(THROTTLE_MS));
+      expect(regionIn("two", "status").textContent).toBe("Two queued");
+    });
   });
 
   it("stops pending timers when it unmounts", () => {
