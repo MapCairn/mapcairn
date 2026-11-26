@@ -21,19 +21,47 @@ function renderHelp(
     finePointer?: boolean;
     headingLevel?: 3 | 4;
     onStartTour?: () => void;
+    hasSearch?: boolean;
   } = {},
 ) {
-  const { finePointer = true, headingLevel, onStartTour } = options;
+  const { finePointer = true, headingLevel, onStartTour, hasSearch } = options;
   const services = createFakeServices({
     preferences: new FakeDevicePreferences({ finePointer }),
   });
   const view = render(
     <ServicesProvider services={services}>
-      <HelpSection headingLevel={headingLevel} onStartTour={onStartTour} />
+      <HelpSection
+        headingLevel={headingLevel}
+        onStartTour={onStartTour}
+        hasSearch={hasSearch}
+      />
     </ServicesProvider>,
   );
   return { ...view, services };
 }
+
+describe("HelpSection search topic", () => {
+  it("describes Search, with its coordinate formats, by default", () => {
+    renderHelp();
+    expect(screen.getByTestId("help-search")).toHaveTextContent(/UTM/);
+    expect(screen.getByTestId("help-search")).toHaveTextContent(/MGRS/);
+  });
+
+  it("leaves Search and the coordinate formats out when the map has no search", () => {
+    renderHelp({ hasSearch: false });
+    expect(screen.queryByTestId("help-search")).toBeNull();
+    expect(screen.queryByRole("heading", { name: "Search" })).toBeNull();
+    expect(screen.queryByText(/UTM/)).toBeNull();
+  });
+
+  it("keeps the keyboard and accessibility topics without search", () => {
+    renderHelp({ hasSearch: false });
+    expect(screen.getByTestId("help-keyboard")).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: "Accessibility" }),
+    ).toBeInTheDocument();
+  });
+});
 
 describe("HelpSection", () => {
   it("is a region named Help with an h3, and subheadings at h4", () => {

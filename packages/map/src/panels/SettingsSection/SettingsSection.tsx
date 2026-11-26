@@ -68,8 +68,13 @@ function projectionOptions(
 export interface SettingsSectionProps {
   /** The heading level. Defaults to 3, below the sheet's h2 title. */
   readonly headingLevel?: HeadingLevel;
-  /** Where the privacy policy is. Defaults to `/privacy`. */
-  readonly privacyHref?: string;
+  /**
+   * Where the privacy policy is. Defaults to `/privacy`. `null` draws no link,
+   * for a host that has no such page. With no link and no statement
+   * (`privacyNote` of `null` or an empty string) the Privacy subsection is
+   * left out.
+   */
+  readonly privacyHref?: string | null;
   /**
    * The host's privacy statement, shown under the Privacy heading. Defaults to
    * the catalogue's `settings.privacy.default`, which names no provider because
@@ -107,6 +112,8 @@ export function SettingsSection({
   const subLevel = nextHeadingLevel(headingLevel);
   const privacyStatement =
     privacyNote === undefined ? t("settings.privacy.default", {}) : privacyNote;
+  const hasStatement = privacyStatement !== null && privacyStatement !== "";
+  const showsPrivacy = hasStatement || Boolean(privacyHref);
   const themeLabel = t("settings.theme.label", {});
   const unitsLabel = t("settings.units.label", {});
   const mapShapeLabel = t("settings.mapShape.label", {});
@@ -170,19 +177,23 @@ export function SettingsSection({
           {t("settings.notSaved", {})}
         </p>
       )}
-      <div className={subsection}>
-        <Subheading level={subLevel}>
-          {t("settings.privacy.heading", {})}
-        </Subheading>
-        <p className={prose} data-testid="settings-privacy-note">
-          {privacyStatement}
-        </p>
-        <p className={prose}>
-          <a className={link} href={privacyHref}>
-            {t("settings.privacy.link", {})}
-          </a>
-        </p>
-      </div>
+      {showsPrivacy ? (
+        <div className={subsection}>
+          <Subheading level={subLevel}>
+            {t("settings.privacy.heading", {})}
+          </Subheading>
+          <p className={prose} data-testid="settings-privacy-note">
+            {privacyStatement}
+          </p>
+          {privacyHref ? (
+            <p className={prose}>
+              <a className={link} href={privacyHref}>
+                {t("settings.privacy.link", {})}
+              </a>
+            </p>
+          ) : null}
+        </div>
+      ) : null}
     </Section>
   );
 }

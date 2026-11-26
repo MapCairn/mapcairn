@@ -661,6 +661,24 @@ describe("privacy", () => {
   });
 });
 
+describe("privacy link left out", () => {
+  it("shows no link when the host passes null, and keeps the statement", () => {
+    renderSettings({ props: { privacyHref: null, privacyNote: "Host note." } });
+    expect(
+      screen.queryByRole("link", { name: "Read the privacy policy" }),
+    ).toBeNull();
+    expect(screen.getByTestId("settings-privacy-note")).toHaveTextContent(
+      "Host note.",
+    );
+  });
+
+  it("shows no Privacy subsection with neither a link nor a statement", () => {
+    renderSettings({ props: { privacyHref: null, privacyNote: null } });
+    expect(screen.queryByRole("heading", { name: "Privacy" })).toBeNull();
+    expect(screen.queryByTestId("settings-privacy-note")).toBeNull();
+  });
+});
+
 describe("message catalogue", () => {
   it("asks for its text and labels by key, not by writing the text inline", () => {
     const { services } = renderSettings();

@@ -643,6 +643,7 @@ export function HelpSection(input: HelpSectionProps): JSX.Element;
 // @public
 export interface HelpSectionProps {
     readonly about?: HelpAbout;
+    readonly hasSearch?: boolean;
     readonly headingLevel?: HeadingLevel;
     readonly headingRef?: Ref<HTMLHeadingElement>;
     readonly onStartTour?: () => void;
@@ -1220,7 +1221,7 @@ export function SettingsSection(input: SettingsSectionProps): JSX.Element;
 export interface SettingsSectionProps {
     readonly headingLevel?: HeadingLevel;
     readonly headingRef?: Ref<HTMLHeadingElement>;
-    readonly privacyHref?: string;
+    readonly privacyHref?: string | null;
     readonly privacyNote?: ReactNode;
 }
 
@@ -1246,6 +1247,7 @@ export interface SheetContentProps {
     readonly basemapId: string;
     readonly draw?: UseDraw;
     readonly hasPin: boolean;
+    readonly hasSearch?: boolean;
     readonly imageCredits?: string;
     readonly intro?: string;
     readonly layers?: DataLayers;
@@ -1254,7 +1256,7 @@ export interface SheetContentProps {
     readonly onShowOnMap?: () => void;
     readonly onStartTour?: () => void;
     readonly pinCard?: ReactNode;
-    readonly privacyHref?: string;
+    readonly privacyHref?: string | null;
     readonly privacyNote?: ReactNode;
     readonly section?: SheetSection;
     readonly showTurnOffAll?: boolean;

@@ -242,6 +242,20 @@ describe("SheetContent pin, settings and help", () => {
     ).toHaveAttribute("href", "/af/privacy");
   });
 
+  it("passes a hidden privacy link to Settings", () => {
+    renderContent({
+      props: { section: "settings", privacyHref: null, privacyNote: null },
+    });
+    expect(
+      screen.queryByRole("link", { name: "Read the privacy policy" }),
+    ).toBeNull();
+  });
+
+  it("passes hasSearch to Help", () => {
+    renderContent({ props: { section: "help", hasSearch: false } });
+    expect(screen.queryByTestId("help-search")).toBeNull();
+  });
+
   it("passes the host's privacy note to Settings", () => {
     renderContent({
       props: { section: "settings", privacyNote: "Host privacy note." },

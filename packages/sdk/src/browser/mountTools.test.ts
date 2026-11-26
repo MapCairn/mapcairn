@@ -538,3 +538,45 @@ describe("the sheet", () => {
     expect(load).not.toHaveBeenCalled();
   });
 });
+
+describe("Settings and Help on a mounted map", () => {
+  async function openSettings(tools: readonly ("search" | "settings")[]) {
+    const element = container();
+    await drawn(
+      mountOn(element, harness(), {
+        tools,
+        services: { search: searchProvider() },
+      }),
+    );
+    (await button(element, "Settings")).click();
+    await vi.waitFor(() =>
+      expect(
+        element.querySelector('[data-testid="sheet-section-help"]'),
+      ).not.toBeNull(),
+    );
+    return element;
+  }
+
+  it("shows no privacy link or reference to a policy the page does not have", async () => {
+    const element = await openSettings(["settings"]);
+    expect(element.textContent).not.toContain("Read the privacy policy");
+    expect(element.querySelector('a[href="/privacy"]')).toBeNull();
+    expect(element.textContent).not.toContain("privacy policy");
+  });
+
+  it("leaves the Search and coordinate help out without the search tool", async () => {
+    const element = await openSettings(["settings"]);
+    expect(element.querySelector('[data-testid="help-search"]')).toBeNull();
+    expect(element.textContent).not.toContain("MGRS");
+    expect(
+      element.querySelector('[data-testid="help-keyboard"]'),
+    ).not.toBeNull();
+  });
+
+  it("describes Search and the coordinate formats with the search tool", async () => {
+    const element = await openSettings(["search", "settings"]);
+    expect(
+      element.querySelector('[data-testid="help-search"]')?.textContent,
+    ).toContain("MGRS");
+  });
+});
