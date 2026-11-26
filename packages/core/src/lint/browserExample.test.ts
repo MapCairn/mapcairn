@@ -43,7 +43,8 @@ describe("the plain page example", () => {
     const script = readFileSync(path.join(EXAMPLE, "main.js"), "utf8");
     expect(html).toContain('href="./mapcairn/browser.css"');
     expect(html).toContain('<script type="module" src="./main.js">');
-    expect(html).not.toMatch(/<style|\sstyle=|<script>[^<]/);
+    // No inline style or script, whatever the case or attributes: every script has a `src`.
+    expect(html).not.toMatch(/<style|\sstyle=|<script(?![^>]*\ssrc=)/i);
     expect(script).toContain('from "./mapcairn/browser.js"');
     expect(script).toMatch(
       /mountMap\(document\.getElementById\("map"\)\);\s*$/,
