@@ -5,6 +5,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
+  assertBundledLicences,
   bundledPackagesOf,
   judgeBundledPackages,
   licenceInUse,
@@ -221,5 +222,38 @@ describe("noticesOf", () => {
       textsFolder(),
     );
     expect(text.indexOf("## a 1.2.3")).toBeLessThan(text.indexOf("## b 1.2.3"));
+  });
+});
+
+describe("assertBundledLicences", () => {
+  const bundled = (name: string, licence: string): Bundled => ({
+    name,
+    version: "1.0.0",
+    licence,
+    directory: "/x",
+  });
+
+  it("does nothing when every licence is allowed", () => {
+    expect(() =>
+      assertBundledLicences(
+        [bundled("a", "MIT"), bundled("b", "(EDL-1.0 OR EPL-1.0)")],
+        ALLOWLIST,
+      ),
+    ).not.toThrow();
+  });
+
+  it("fails the build, naming each package that is not allowed", () => {
+    expect(() =>
+      assertBundledLicences(
+        [
+          bundled("a", "MIT"),
+          bundled("copyleft", "LGPL-3.0-only"),
+          bundled("bare", ""),
+        ],
+        ALLOWLIST,
+      ),
+    ).toThrow(
+      /copyleft@1\.0\.0 is licensed LGPL-3\.0-only[\s\S]*bare@1\.0\.0 is licensed \(none\)/,
+    );
   });
 });

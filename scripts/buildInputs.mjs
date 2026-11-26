@@ -18,6 +18,7 @@ export const BUILD_SCRIPTS = [
   "scripts/buildInputs.mjs",
   "scripts/buildBundle.mjs",
   "scripts/bundleLicences.mjs",
+  "scripts/bundleOutput.mjs",
   "scripts/bundleSettings.mjs",
   "scripts/sdkLicences.mjs",
   "scripts/sdkLicences.allowlist.json",

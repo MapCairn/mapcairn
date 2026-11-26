@@ -132,6 +132,20 @@ export function judgeBundledPackages(packages, allowlist) {
 }
 
 /**
+ * Fails the build when a bundled package's licence is not allowed.
+ *
+ * @param {readonly BundledPackage[]} packages
+ * @param {{ licences: Record<string, string>, packages: Record<string, { licence: string, reason: string }> }} allowlist
+ * @throws {Error} Naming each package that is not allowed.
+ */
+export function assertBundledLicences(packages, allowlist) {
+  const failures = judgeBundledPackages(packages, allowlist);
+  if (failures.length > 0) {
+    throw new Error(failures.join("\n"));
+  }
+}
+
+/**
  * The identifier of the licence a package is used under: the first allowed
  * identifier of its expression, so `(EDL-1.0 OR EPL-1.0)` is used under
  * `EDL-1.0`.

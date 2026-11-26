@@ -4,10 +4,11 @@ import { copyFileSync, readFileSync, writeFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import path from "node:path";
 import {
+  assertBundledLicences,
   bundledPackagesOf,
-  judgeBundledPackages,
   noticesOf,
 } from "./bundleLicences.mjs";
+import { mergedStylesheet, moduleIdsOf } from "./bundleOutput.mjs";
 import { NOTICES_FILE } from "./bundleSettings.mjs";
 import { ALLOWLIST_FILE } from "./sdkLicences.mjs";
 
@@ -60,20 +61,19 @@ async function bundleModules({ folder, entries, stylesheet }) {
         generateBundle: {
           order: "post",
           handler(_options, bundle) {
-            for (const file of Object.values(bundle)) {
-              if (file.type === "chunk") {
-                for (const id of Object.keys(file.modules ?? {})) {
-                  moduleIds.add(id);
-                }
-              }
+            for (const id of moduleIdsOf(bundle)) {
+              moduleIds.add(id);
             }
-            const sheet = bundle[`${stylesheet}.css`];
-            if (sheet === undefined || sheet.type !== "asset") {
-              throw new Error(
-                `The bundle has no ${stylesheet}.css to merge the engine's stylesheet into.`,
-              );
+            const name = `${stylesheet}.css`;
+            const sheet = bundle[name];
+            const merged = mergedStylesheet(
+              readFileSync(engineStylesheet, "utf8"),
+              sheet,
+              name,
+            );
+            if (sheet?.type === "asset") {
+              sheet.source = merged;
             }
-            sheet.source = `${readFileSync(engineStylesheet, "utf8")}\n${sheet.source}`;
           },
         },
       },
@@ -158,10 +158,7 @@ export async function buildBundle({
     readFileSync(path.join(root, ALLOWLIST_FILE), "utf8"),
   );
   const packages = bundledPackagesOf(moduleIds);
-  const failures = judgeBundledPackages(packages, allowlist);
-  if (failures.length > 0) {
-    throw new Error(failures.join("\n"));
-  }
+  assertBundledLicences(packages, allowlist);
   writeFileSync(
     path.join(folder, NOTICES_FILE),
     noticesOf(packages, allowlist),
