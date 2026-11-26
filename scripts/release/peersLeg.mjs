@@ -77,12 +77,15 @@ export function mismatchManifest({ tarballs, versions, otherCore }) {
 
 /**
  * What is wrong with the install of the mismatch app: it must fail, and the
- * failure must be npm's peer conflict over `@mapcairn/core`.
+ * failure must be npm's peer conflict, the adapter's exact range on `core` at
+ * the release version. A conflict over the engine, or over another version,
+ * proves nothing about that range.
  *
  * @param {{ status: number | null, stdout?: string, stderr?: string }} result The finished `npm install`.
+ * @param {string} version The release version.
  * @returns {string[]} One line for each problem.
  */
-export function peerMismatchProblems(result) {
+export function peerMismatchProblems(result, version) {
   if (result.status === 0) {
     return [
       "npm installed core at another version beside the adapter, which is two copies of core with no message; the adapter's peer range on core should refuse it.",
@@ -94,9 +97,10 @@ export function peerMismatchProblems(result) {
       `The install failed, but not with ERESOLVE, so it proves nothing about the peer range:\n${output}`,
     ];
   }
-  if (!output.includes("@mapcairn/core")) {
+  const peerLine = `peer @mapcairn/core@"${version}" from @mapcairn/adapter-maplibre`;
+  if (!output.includes(peerLine)) {
     return [
-      `The install failed with ERESOLVE, but the message does not name @mapcairn/core:\n${output}`,
+      `The install failed with ERESOLVE, but not over the adapter's peer range on core (expected \`${peerLine}\`):\n${output}`,
     ];
   }
   return [];

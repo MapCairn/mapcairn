@@ -76,31 +76,38 @@ describe("peerMismatchProblems", () => {
       'npm error code ERESOLVE\nnpm error Found: @mapcairn/core@0.3.0-other.0\nnpm error peer @mapcairn/core@"0.3.0" from @mapcairn/adapter-maplibre@0.3.0',
   };
 
-  it("passes an install that npm refused over core's peer range", () => {
-    expect(peerMismatchProblems(refusal)).toEqual([]);
+  it("passes an install that npm refused over the adapter's peer range on core", () => {
+    expect(peerMismatchProblems(refusal, "0.3.0")).toEqual([]);
   });
 
   it("fails an install that succeeded, which is two copies of core with no message", () => {
-    expect(peerMismatchProblems({ ...refusal, status: 0 })).toEqual([
+    expect(peerMismatchProblems({ ...refusal, status: 0 }, "0.3.0")).toEqual([
       expect.stringMatching(/installed/),
     ]);
   });
 
   it("fails a refusal that is about something else", () => {
     expect(
-      peerMismatchProblems({
-        status: 1,
-        stdout: "",
-        stderr: "npm error code E404",
-      }),
+      peerMismatchProblems(
+        { status: 1, stdout: "", stderr: "npm error code E404" },
+        "0.3.0",
+      ),
     ).toEqual([expect.stringMatching(/ERESOLVE/)]);
+  });
+
+  it("fails a conflict over another package, or one that names core without the adapter's peer line", () => {
+    const other = (stderr: string) =>
+      peerMismatchProblems({ status: 1, stdout: "", stderr }, "0.3.0");
     expect(
-      peerMismatchProblems({
-        status: 1,
-        stdout: "",
-        stderr: "npm error code ERESOLVE\nnpm error peer react@19",
-      }),
-    ).toEqual([expect.stringMatching(/@mapcairn\/core/)]);
+      other(
+        'npm error code ERESOLVE\nnpm error Found: @mapcairn/core@0.3.0-other.0\nnpm error peer maplibre-gl@"^6.18.0" from @mapcairn/adapter-maplibre@0.3.0',
+      ),
+    ).toEqual([expect.stringMatching(/peer range/)]);
+    expect(
+      other(
+        'npm error code ERESOLVE\nnpm error Found: @mapcairn/core@0.3.0-other.0\nnpm error peer @mapcairn/core@"0.2.0" from @mapcairn/adapter-maplibre@0.2.0',
+      ),
+    ).toEqual([expect.stringMatching(/peer range/)]);
   });
 });
 

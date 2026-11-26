@@ -791,11 +791,18 @@ function assertOneCopyOfEach(app, installOutput) {
     readFileSync(path.join(app, "node_modules", ".package-lock.json"), "utf8"),
   );
   const listed = runNpm(["ls", "--all", "--json"], { cwd: app });
+  // `npm ls` exits non-zero when it reports a problem and still prints JSON;
+  // no JSON at all means it failed to run.
+  if (!listed.stdout?.trim()) {
+    throw new Error(
+      `npm ls --all --json printed nothing (exit ${listed.status}):\n${listed.stderr}`,
+    );
+  }
   const problems = [
     ...ownPackageCopies(installed.packages),
     ...sharedCopyProblems({
       installOutput,
-      listing: JSON.parse(listed.stdout || "{}"),
+      listing: JSON.parse(listed.stdout),
     }),
   ];
   if (problems.length > 0) {
@@ -1708,12 +1715,17 @@ function checkPeers({ root, packed, published, versions }) {
       `${prefix}not repeated for the published packages; it needs the tarballs`,
     ];
   }
-  const version = JSON.parse(
-    readTarballFile(
-      path.join(root, "tarballs", packed[UMBRELLA_PACKAGE]),
-      "package.json",
-    ) ?? "{}",
-  ).version;
+  const manifestText = readTarballFile(
+    path.join(root, "tarballs", packed[UMBRELLA_PACKAGE]),
+    "package.json",
+  );
+  const version = JSON.parse(manifestText ?? "{}").version;
+  if (typeof version !== "string") {
+    throw new Error(
+      `The ${UMBRELLA_PACKAGE} tarball has no package.json with a version, so the other version of core cannot be made.`,
+    );
+  }
+  const started = Date.now();
   const other = path.join(root, "other-core");
   mkdirSync(other);
   writeFileSync(
@@ -1731,12 +1743,13 @@ function checkPeers({ root, packed, published, versions }) {
     ["install", "--no-audit", "--no-fund", "--ignore-scripts"],
     { cwd: app },
   );
-  const problems = peerMismatchProblems(result);
+  const problems = peerMismatchProblems(result, version);
   if (problems.length > 0) {
     throw new Error(problems.join("\n"));
   }
+  const seconds = ((Date.now() - started) / MILLISECONDS).toFixed(1);
   return [
-    `${prefix}npm refuses the install with ERESOLVE, naming @mapcairn/core: ok`,
+    `${prefix}npm refuses the install with ERESOLVE, naming @mapcairn/core: ok (${seconds} seconds)`,
   ];
 }
 
