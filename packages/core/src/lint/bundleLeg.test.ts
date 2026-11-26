@@ -109,14 +109,17 @@ const cycle = (overrides = {}) => ({
     firstChildren: 0,
     firstAttributes: ["id"],
     secondCanvases: 1,
+    secondZoom: 3,
   },
-  end: { ...moment(), containerAttributes: ["id"] },
+  end: { ...moment(), containerAttributes: { first: ["id"], second: ["id"] } },
   ...overrides,
 });
 
+const BASELINE = { first: ["id"], second: ["id"] };
+
 describe("cycleProblems", () => {
   it("passes two maps that drew, one destroyed and the other left drawing, then both gone", () => {
-    expect(cycleProblems(cycle(), ["id"])).toEqual([]);
+    expect(cycleProblems(cycle(), BASELINE)).toEqual([]);
   });
 
   it.each([
@@ -167,12 +170,37 @@ describe("cycleProblems", () => {
       /1 canvases/,
     ],
     [
-      "an attribute left after both",
-      { end: { ...cycle().end, containerAttributes: ["id", "data-theme"] } },
-      /data-theme/,
+      "an attribute left on the first container after both",
+      {
+        end: {
+          ...cycle().end,
+          containerAttributes: { first: ["id", "data-theme"], second: ["id"] },
+        },
+      },
+      /first container has the attributes id, data-theme/,
+    ],
+    [
+      "an attribute left on the second container after both",
+      {
+        end: {
+          ...cycle().end,
+          containerAttributes: {
+            first: ["id"],
+            second: ["id", "data-mapcairn"],
+          },
+        },
+      },
+      /second container has the attributes id, data-mapcairn/,
+    ],
+    [
+      "the other map not moving when asked",
+      { afterFirst: { ...cycle().afterFirst, secondZoom: undefined } },
+      /did not move when asked/,
     ],
   ])("names %s", (_name, overrides, pattern) => {
-    expect(cycleProblems(cycle(overrides), ["id"]).join("\n")).toMatch(pattern);
+    expect(cycleProblems(cycle(overrides), BASELINE).join("\n")).toMatch(
+      pattern,
+    );
   });
 });
 
@@ -183,7 +211,10 @@ describe("leakProblems", () => {
 
   it("names listeners that grow from one cycle to the next", () => {
     const grown = cycle({
-      end: { ...moment({ listeners: 18 }), containerAttributes: ["id"] },
+      end: {
+        ...moment({ listeners: 18 }),
+        containerAttributes: { first: ["id"], second: ["id"] },
+      },
     });
     expect(leakProblems([cycle(), grown])).toEqual([
       "a second pair of maps left 3 more listeners on after destroy",
@@ -194,7 +225,7 @@ describe("leakProblems", () => {
     const running = cycle({
       end: {
         ...moment({ workers: { made: 2, ended: 1 } }),
-        containerAttributes: ["id"],
+        containerAttributes: { first: ["id"], second: ["id"] },
       },
     });
     expect(leakProblems([cycle(), running]).join()).toMatch(

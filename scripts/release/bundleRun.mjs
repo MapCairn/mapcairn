@@ -35,6 +35,7 @@ import {
   fileRequestProblems,
   hostilePageProblems,
   leakProblems,
+  MOVED_ZOOM,
 } from "./bundleLeg.mjs";
 import { OPEN_FREE_MAP_ORIGIN } from "./openFreeMapFixtures.mjs";
 import { policyWithout, quickstartProblems } from "./quickstartLeg.mjs";
@@ -55,49 +56,68 @@ const REFUSAL_TIMEOUT = 10 * 1000;
 const SETTLE_TIMEOUT = 10 * 1000;
 const POLL_INTERVAL = 250;
 
+/** How long the second map has to say it moved, in ms. */
+const MOVE_TIMEOUT = 10 * 1000;
+
 /**
  * Runs the two-map cycle in the page: mounts two maps, destroys the first,
  * then the second, and reads the page at each step.
  *
  * @param {import("playwright-core").Page} page The leg's `two.html`.
- * @returns {Promise<{ cycle: import("./bundleLeg.mjs").Cycle, attributes: string[] }[]>} Two cycles.
+ * @returns {Promise<{ cycle: import("./bundleLeg.mjs").Cycle, attributes: import("./bundleLeg.mjs").Attributes }[]>} Two cycles.
  */
 async function twoMapCycles(page) {
-  /** @type {{ cycle: import("./bundleLeg.mjs").Cycle, attributes: string[] }[]} */
+  /** @type {{ cycle: import("./bundleLeg.mjs").Cycle, attributes: import("./bundleLeg.mjs").Attributes }[]} */
   const cycles = [];
   for (let run = 0; run < 2; run += 1) {
-    const afterBoth = await page.evaluate(async () => {
-      const win = /** @type {any} */ (window);
-      const first = /** @type {HTMLElement} */ (
-        document.getElementById("first")
-      );
-      const second = /** @type {HTMLElement} */ (
-        document.getElementById("second")
-      );
-      const hold = () => {
-        const activity = win.__activity;
-        return {
-          canvases: document.querySelectorAll("canvas").length,
-          regions: document.querySelectorAll("[aria-live]").length,
-          listeners: activity.listeners(),
-          workers: activity.workers(),
+    const afterBoth = await page.evaluate(
+      async ({ zoom, timeout }) => {
+        const win = /** @type {any} */ (window);
+        const first = /** @type {HTMLElement} */ (
+          document.getElementById("first")
+        );
+        const second = /** @type {HTMLElement} */ (
+          document.getElementById("second")
+        );
+        const hold = () => {
+          const activity = win.__activity;
+          return {
+            canvases: document.querySelectorAll("canvas").length,
+            regions: document.querySelectorAll("[aria-live]").length,
+            listeners: activity.listeners(),
+            workers: activity.workers(),
+          };
         };
-      };
-      const attributes = first.getAttributeNames();
-      const one = win.mountMap(first, { label: "First map" });
-      const two = win.mountMap(second, { label: "Second map" });
-      await Promise.all([one.ready, two.ready]);
-      const both = hold();
-      one.destroy();
-      const afterFirst = {
-        ...hold(),
-        firstChildren: first.childElementCount,
-        firstAttributes: first.getAttributeNames(),
-        secondCanvases: second.querySelectorAll("canvas").length,
-      };
-      two.destroy();
-      return { attributes, both, afterFirst };
-    });
+        const attributes = {
+          first: first.getAttributeNames(),
+          second: second.getAttributeNames(),
+        };
+        const one = win.mountMap(first, { label: "First map" });
+        const two = win.mountMap(second, { label: "Second map" });
+        await Promise.all([one.ready, two.ready]);
+        const both = hold();
+        const moved = new Promise((resolve) =>
+          two.on("viewchange", (view) => resolve(view.zoom)),
+        );
+        one.destroy();
+        const afterFirst = {
+          ...hold(),
+          firstChildren: first.childElementCount,
+          firstAttributes: first.getAttributeNames(),
+          secondCanvases: second.querySelectorAll("canvas").length,
+          secondZoom: undefined,
+        };
+        // The other map must still answer: it is asked to move and says so.
+        two.setView({ zoom }, { animate: false });
+        afterFirst.secondZoom = await Promise.race([
+          moved,
+          new Promise((resolve) => setTimeout(resolve, timeout)),
+        ]);
+        two.destroy();
+        return { attributes, both, afterFirst };
+      },
+      { zoom: MOVED_ZOOM, timeout: MOVE_TIMEOUT },
+    );
     await page
       .waitForFunction(
         () => {
@@ -115,11 +135,14 @@ async function twoMapCycles(page) {
         regions: document.querySelectorAll("[aria-live]").length,
         listeners: activity.listeners(),
         workers: activity.workers(),
-        containerAttributes: ["first", "second"].flatMap((id) =>
-          /** @type {HTMLElement} */ (
-            document.getElementById(id)
+        containerAttributes: {
+          first: /** @type {HTMLElement} */ (
+            document.getElementById("first")
           ).getAttributeNames(),
-        ),
+          second: /** @type {HTMLElement} */ (
+            document.getElementById("second")
+          ).getAttributeNames(),
+        },
       };
     });
     const { attributes, both, afterFirst } = afterBoth;
@@ -128,7 +151,7 @@ async function twoMapCycles(page) {
       cycle: {
         both,
         afterFirst,
-        end: { ...end, containerAttributes: attributes },
+        end,
       },
     });
   }
@@ -277,7 +300,7 @@ async function checkPlainPage(browser, folder) {
     );
   }
 
-  /** @type {{ cycle: import("./bundleLeg.mjs").Cycle, attributes: string[] }[]} */
+  /** @type {{ cycle: import("./bundleLeg.mjs").Cycle, attributes: import("./bundleLeg.mjs").Attributes }[]} */
   let cycles = [];
   const two = await openUnder(
     browser,

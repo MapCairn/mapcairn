@@ -30,6 +30,9 @@ export const BUNDLE_POLICY = [
   "frame-ancestors 'none'",
 ].join("; ");
 
+/** Where the second map is asked to go once the first is destroyed. */
+export const MOVED_ZOOM = 3;
+
 /** The smallest a control may be, in CSS pixels, on each side. */
 export const TARGET_SIZE = 44;
 
@@ -190,12 +193,18 @@ export function fileRequestProblems(urls, folder, pageOrigin) {
  */
 
 /**
+ * The attributes of the two containers.
+ *
+ * @typedef {{ first: string[], second: string[] }} Attributes
+ */
+
+/**
  * What one cycle of mounting two maps and destroying them saw.
  *
  * @typedef {object} Cycle
  * @property {Moment} both Both maps drawn.
- * @property {Moment & { firstChildren: number, firstAttributes: string[], secondCanvases: number }} afterFirst The first map destroyed.
- * @property {Moment & { containerAttributes: string[] }} end Both destroyed.
+ * @property {Moment & { firstChildren: number, firstAttributes: string[], secondCanvases: number, secondZoom: number | undefined }} afterFirst The first map destroyed, and the second asked to move to zoom 3: the zoom it reported, if it did.
+ * @property {Moment & { containerAttributes: Attributes }} end Both destroyed.
  */
 
 /**
@@ -205,7 +214,7 @@ export function fileRequestProblems(urls, folder, pageOrigin) {
  * worker running.
  *
  * @param {Cycle} cycle
- * @param {string[]} attributes The attributes each container had before any map.
+ * @param {Attributes} attributes The attributes each container had before any map.
  * @returns {string[]}
  */
 export function cycleProblems(cycle, attributes) {
@@ -228,9 +237,14 @@ export function cycleProblems(cycle, attributes) {
   if (afterFirst.regions >= both.regions) {
     problems.push("destroying a map left its live regions in the page");
   }
-  if (afterFirst.firstAttributes.join() !== attributes.join()) {
+  if (afterFirst.secondZoom !== MOVED_ZOOM) {
     problems.push(
-      `the destroyed map's container has the attributes ${afterFirst.firstAttributes.join(", ")}, not the ${attributes.join(", ")} it had`,
+      `the other map did not move when asked to, after the first was destroyed (zoom ${afterFirst.secondZoom})`,
+    );
+  }
+  if (afterFirst.firstAttributes.join() !== attributes.first.join()) {
+    problems.push(
+      `the destroyed map's container has the attributes ${afterFirst.firstAttributes.join(", ")}, not the ${attributes.first.join(", ")} it had`,
     );
   }
   if (end.canvases !== 0 || end.regions !== 0) {
@@ -238,10 +252,12 @@ export function cycleProblems(cycle, attributes) {
       `after both maps were destroyed the page holds ${end.canvases} canvases and ${end.regions} live regions`,
     );
   }
-  if (end.containerAttributes.join() !== attributes.join()) {
-    problems.push(
-      `a container has the attributes ${end.containerAttributes.join(", ")} after destroy, not the ${attributes.join(", ")} it had`,
-    );
+  for (const name of /** @type {const} */ (["first", "second"])) {
+    if (end.containerAttributes[name].join() !== attributes[name].join()) {
+      problems.push(
+        `the ${name} container has the attributes ${end.containerAttributes[name].join(", ")} after destroy, not the ${attributes[name].join(", ")} it had`,
+      );
+    }
   }
   return problems;
 }

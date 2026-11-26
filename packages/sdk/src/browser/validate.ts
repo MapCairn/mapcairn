@@ -175,13 +175,11 @@ export function sameOriginWorkerUrl(candidate: string): string {
   try {
     url = new URL(candidate, document.baseURI);
   } catch {
-    return invalid(
-      "workerUrl must be an address, such as /mapcairn/browser-worker.js.",
-    );
+    return invalid("workerUrl must be an address on this page's origin.");
   }
   if (url.origin !== new URL(document.URL).origin) {
     invalid(
-      "workerUrl must be on this page's origin. Serve the worker file from your own site, or leave workerUrl out.",
+      "workerUrl must be on this page's origin. Leave workerUrl out to use the bundle's own worker.",
     );
   }
   return url.href;

@@ -6,18 +6,19 @@
  * modules, which would silently switch the architecture rules off.
  */
 import { spawnSync } from "node:child_process";
-import { existsSync, readdirSync } from "node:fs";
+import { readdirSync } from "node:fs";
 import { BUILT_SDK_PACKAGES } from "./sdkPackages.mjs";
 
 /**
- * Every example app with a `src` folder, so a new one is cruised without
- * editing this list. A plain page (`examples/browser`) has no source to cruise:
- * it imports files copied beside it, not packages.
+ * `examples/browser` is a plain page with no `src`: its script imports files
+ * copied beside it, not packages, and nothing in it can break a layer rule.
  */
+const PLAIN_PAGES = ["browser"];
+
+/** Every other example app, so a new one is cruised without editing this list. */
 const examples = readdirSync("examples", { withFileTypes: true })
-  .filter((entry) => entry.isDirectory())
-  .map((entry) => `examples/${entry.name}/src`)
-  .filter((folder) => existsSync(folder));
+  .filter((entry) => entry.isDirectory() && !PLAIN_PAGES.includes(entry.name))
+  .map((entry) => `examples/${entry.name}/src`);
 
 /** The documentation site's code folders. */
 const sites = ["src", "plugins", "scripts"].map((name) => `sites/docs/${name}`);

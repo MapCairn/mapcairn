@@ -39,11 +39,12 @@
  * needed. `--upgrade-from <version>` runs it from another version, and on a
  * branch whose version is not newer.
  *
- * The umbrella app also draws a real map in a browser (`checkRealMap`): the
- * one leg that starts a server, a static one on 127.0.0.1, and the repository's
- * Playwright Chromium, and so does the quickstart leg (`checkQuickstart`). The
- * other legs start none: the page is rendered by calling the built render
- * function in Node.
+ * The umbrella app also draws a real map in a browser (`checkRealMap`), and so
+ * do the quickstart leg (`checkQuickstart`) and the browser bundle's
+ * (`checkBrowserBundle`). They start the repository's Playwright Chromium and a
+ * static server on 127.0.0.1, and the bundle's also a Vite development server;
+ * each runs in a child process that stops what it started. The other legs start
+ * none: the page is rendered by calling the built render function in Node.
  */
 import { spawnSync } from "node:child_process";
 import {

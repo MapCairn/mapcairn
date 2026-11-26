@@ -360,7 +360,7 @@ describe("what it refuses, and says how to fix", () => {
         workerUrl: "https://cdn.example/browser-worker.js",
       }),
     ).toThrow(
-      /workerUrl must be on this page's origin\. Serve the worker file from your own site, or leave workerUrl out\./,
+      /workerUrl must be on this page's origin\. Leave workerUrl out to use the bundle's own worker\./,
     );
   });
 
