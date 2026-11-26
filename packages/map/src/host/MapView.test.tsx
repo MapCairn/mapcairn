@@ -218,6 +218,24 @@ describe("mounting and accessibility", () => {
     expect(text).toMatch(/Arrow keys: Pan the map\./);
   });
 
+  it("leaves out only the P line when only pin is false", async () => {
+    const { host } = await setup({ shortcuts: { pin: false } });
+    const text = document.getElementById(
+      host().getAttribute("aria-describedby") as string,
+    )?.textContent;
+    expect(text).not.toMatch(/\bP: /);
+    expect(text).toMatch(/\bI: /);
+  });
+
+  it("leaves out only the I line when only identify is false", async () => {
+    const { host } = await setup({ shortcuts: { identify: false } });
+    const text = document.getElementById(
+      host().getAttribute("aria-describedby") as string,
+    )?.textContent;
+    expect(text).toMatch(/\bP: /);
+    expect(text).not.toMatch(/\bI: /);
+  });
+
   it("includes rotation and pointing north in the instructions", async () => {
     const { host } = await setup();
     const help = document.getElementById(

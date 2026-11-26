@@ -25,7 +25,15 @@ import {
   useMessages,
   useSettings,
 } from "@mapcairn/map";
-import { type ReactNode, useEffect, useId, useRef, useState } from "react";
+import {
+  type Dispatch,
+  type ReactNode,
+  type SetStateAction,
+  useEffect,
+  useId,
+  useRef,
+  useState,
+} from "react";
 import { showResult } from "./showResult";
 import type { MapTool } from "./tools";
 import { useShowFix } from "./useShowFix";
@@ -41,7 +49,7 @@ export const MOUNTED_SHORTCUTS = {
 } as const;
 
 /** Which group of sections the sheet holds, or null while it is closed. */
-type OpenSheet = "map-options" | "settings" | null;
+export type OpenSheet = "map-options" | "settings" | null;
 
 /** What the chrome of one mounted map reads and changes. */
 export interface MountedChromeProps {
@@ -60,6 +68,9 @@ export interface MountedChromeProps {
   readonly locate: UseLocate;
   readonly pin: LatLng | null;
   readonly setPin: (pin: LatLng | null) => void;
+  /** The open sheet group, held by the map so Escape on the map can close it. */
+  readonly open: OpenSheet;
+  readonly setOpen: Dispatch<SetStateAction<OpenSheet>>;
 }
 
 /**
@@ -91,12 +102,13 @@ function ChromeSlots({
   locate,
   pin,
   setPin,
+  open,
+  setOpen,
 }: MountedChromeProps) {
   const map = useMap();
   const { settings } = useSettings();
   const { t } = useMessages();
   const sheetId = useId();
-  const [open, setOpen] = useState<OpenSheet>(null);
   const [detent, setDetent] = useState<SheetDetent>("half");
   const [modal, setModal] = useState(false);
   const restoreFocus = useFocusReturn();

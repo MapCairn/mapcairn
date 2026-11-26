@@ -630,3 +630,75 @@ describe("keyboard help on a mounted map", () => {
     expect(element.querySelector('[data-testid="help-drawing"]')).toBeNull();
   });
 });
+
+describe("Escape on the map region", () => {
+  function escapeOn(element: HTMLElement): void {
+    element
+      .querySelector('[aria-roledescription="map"]')
+      ?.dispatchEvent(
+        new KeyboardEvent("keydown", { key: "Escape", bubbles: true }),
+      );
+  }
+
+  async function expanded(opener: HTMLElement, value: "true" | "false") {
+    await vi.waitFor(() =>
+      expect(opener.getAttribute("aria-expanded")).toBe(value),
+    );
+  }
+
+  it("closes the open sheet and returns focus to its button", async () => {
+    const element = container();
+    await drawn(mountOn(element, harness(), { tools: ["settings"] }));
+    const opener = await button(element, "Settings");
+    opener.focus();
+    opener.click();
+    await expanded(opener, "true");
+    escapeOn(element);
+    await expanded(opener, "false");
+    await vi.waitFor(() => expect(document.activeElement).toBe(opener));
+  });
+
+  it("does nothing when nothing is open", async () => {
+    const element = container();
+    await drawn(mountOn(element, harness(), { tools: ["settings"] }));
+    const opener = await button(element, "Settings");
+    escapeOn(element);
+    await expanded(opener, "false");
+    expect(
+      element.querySelector('[aria-roledescription="map"]'),
+    ).not.toBeNull();
+  });
+
+  it("ends measuring", async () => {
+    const element = container();
+    await drawn(mountOn(element, harness(), { tools: ["measure"] }));
+    (await button(element, "Measure distance and area")).click();
+    await vi.waitFor(() =>
+      expect(
+        element.querySelector('[data-testid="measure-toolbar"]'),
+      ).not.toBeNull(),
+    );
+    escapeOn(element);
+    await vi.waitFor(() =>
+      expect(
+        element.querySelector('[data-testid="measure-toolbar"]'),
+      ).toBeNull(),
+    );
+  });
+
+  it("closes only the sheet of the map it was pressed on", async () => {
+    const first = container();
+    const second = container();
+    await drawn(mountOn(first, harness(), { tools: ["settings"] }));
+    await drawn(mountOn(second, harness(), { tools: ["settings"] }));
+    const firstOpener = await button(first, "Settings");
+    const secondOpener = await button(second, "Settings");
+    firstOpener.click();
+    secondOpener.click();
+    await expanded(firstOpener, "true");
+    await expanded(secondOpener, "true");
+    escapeOn(first);
+    await expanded(firstOpener, "false");
+    expect(secondOpener.getAttribute("aria-expanded")).toBe("true");
+  });
+});
