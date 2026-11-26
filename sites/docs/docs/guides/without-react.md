@@ -21,10 +21,10 @@ What you leave out is `@mapcairn/map` (the chrome, sheet, search box and tools),
 ## Install
 
 ```bash
-npm install @mapcairn/core @mapcairn/adapter-maplibre maplibre-gl
+npm install @mapcairn/core @mapcairn/theme @mapcairn/adapter-maplibre maplibre-gl
 ```
 
-- The adapter pins `@mapcairn/core` to its own version, so install both at the same version.
+- The adapter takes `@mapcairn/core` and `@mapcairn/theme` as peers at its own version, so install all three at the same version. npm and recent pnpm install the peers for you if you leave them out; Yarn does not, and a version that differs from the adapter's fails the npm install.
 - `maplibre-gl` is a required peer of the adapter, with the range its `package.json` gives. npm installs it for you, and a strict package manager wants it listed.
 - The packages are ESM only, and a TypeScript project needs `moduleResolution` set to `bundler`, `node16` or `nodenext`.
 - The declarations of `core` use the global types `Blob` and `AbortSignal`, so the project's `lib` includes `DOM`, as the example's `tsconfig.json` does, or the project has `@types/node`. A project with neither fails with `Cannot find name 'Blob'` from `node_modules/@mapcairn/core`.

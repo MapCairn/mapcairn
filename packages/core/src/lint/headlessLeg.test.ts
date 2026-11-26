@@ -29,9 +29,10 @@ const VERSIONS = {
 describe("headlessManifest", () => {
   const manifest = headlessManifest({ tarballs: TARBALLS, versions: VERSIONS });
 
-  it("lists only core, the adapter and the engine, with the tools beside them", () => {
+  it("lists only core, theme (the adapter's peers), the adapter and the engine, with the tools beside them", () => {
     expect(manifest.dependencies).toEqual({
       "@mapcairn/core": "file:../tarballs/mapcairn-core-0.0.0.tgz",
+      "@mapcairn/theme": "file:../tarballs/mapcairn-theme-0.0.0.tgz",
       "@mapcairn/adapter-maplibre":
         "file:../tarballs/mapcairn-adapter-maplibre-0.0.0.tgz",
       "maplibre-gl": "6.18.0",
@@ -69,6 +70,7 @@ describe("headlessManifest", () => {
     });
     expect(published.dependencies).toEqual({
       "@mapcairn/core": "0.2.0",
+      "@mapcairn/theme": "0.2.0",
       "@mapcairn/adapter-maplibre": "0.2.0",
       "maplibre-gl": "6.18.0",
     });
@@ -78,14 +80,14 @@ describe("headlessManifest", () => {
   it("fails when a tarball for a listed package is missing", () => {
     expect(() =>
       headlessManifest({
-        tarballs: { core: TARBALLS.core },
+        tarballs: { core: TARBALLS.core, theme: TARBALLS.theme },
         versions: VERSIONS,
       }),
     ).toThrow(/adapter-maplibre/);
   });
 
-  it("names the two packages in HEADLESS_DIRECT", () => {
-    expect(HEADLESS_DIRECT).toEqual(["core", "adapter-maplibre"]);
+  it("names the three packages in HEADLESS_DIRECT", () => {
+    expect(HEADLESS_DIRECT).toEqual(["core", "theme", "adapter-maplibre"]);
   });
 });
 

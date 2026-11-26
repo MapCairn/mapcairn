@@ -409,14 +409,15 @@ describe("SDK package manifests", () => {
     }
   });
 
-  it("@mapcairn/adapter-maplibre takes the engine from the host as a peer, and depends on core and theme only", () => {
+  it("@mapcairn/adapter-maplibre takes the engine, core and theme from the host as peers, and depends on no other package", () => {
     const manifest = manifestOf("adapter-maplibre");
     const version = manifestOf("core").version ?? "";
-    expect(manifest.dependencies).toEqual({
+    expect(manifest.dependencies ?? {}).toEqual({});
+    expect(manifest.peerDependencies).toEqual({
       "@mapcairn/core": expectedRange(version),
       "@mapcairn/theme": expectedRange(version),
+      "maplibre-gl": "^6.18.0",
     });
-    expect(manifest.peerDependencies).toEqual({ "maplibre-gl": "^6.18.0" });
     expect(manifest.peerDependenciesMeta).toBeUndefined();
     // The tests run against the engine, so it is installed beside them, at
     // the range the host installs. That range is the newest the repository
@@ -428,6 +429,47 @@ describe("SDK package manifests", () => {
     expect(manifest.devDependencies?.["maplibre-gl"]).toBe(
       manifestAt("packages/web").dependencies?.["maplibre-gl"],
     );
+  });
+
+  it("@mapcairn/map takes core, react and theme from the host as peers, so an app has one copy of each", () => {
+    const manifest = manifestOf("map");
+    const version = manifestOf("core").version ?? "";
+    const own = (block: Record<string, string> | undefined) =>
+      Object.keys(block ?? {}).filter((name) => name.startsWith("@mapcairn/"));
+    expect(own(manifest.dependencies)).toEqual([]);
+    expect(own(manifest.peerDependencies).sort()).toEqual([
+      "@mapcairn/core",
+      "@mapcairn/react",
+      "@mapcairn/theme",
+    ]);
+    for (const name of own(manifest.peerDependencies)) {
+      expect(manifest.peerDependencies?.[name]).toBe(expectedRange(version));
+    }
+  });
+
+  it.each([
+    ["map", ["core", "react", "theme"]],
+    ["adapter-maplibre", ["core", "theme"]],
+  ])(
+    "@mapcairn/%s keeps the packages it peers on as dev dependencies, for the workspace",
+    (name, siblings) => {
+      const manifest = manifestOf(name);
+      const version = manifestOf("core").version ?? "";
+      for (const sibling of siblings) {
+        expect(manifest.devDependencies?.[`@mapcairn/${sibling}`]).toBe(
+          expectedRange(version),
+        );
+      }
+    },
+  );
+
+  it("only the umbrella depends on other SDK packages at run time", () => {
+    const dependent = BUILT_PACKAGES.filter((name) =>
+      Object.keys(manifestOf(name).dependencies ?? {}).some((dependency) =>
+        BUILT_PACKAGES.some((sdk) => dependency === `@mapcairn/${sdk}`),
+      ),
+    );
+    expect(dependent).toEqual(["sdk"]);
   });
 
   it("the reference host declares every MapCairn package its source imports", () => {
@@ -461,6 +503,7 @@ describe("SDK package manifests", () => {
       const version = manifestOf("core").version ?? "";
       const internal = Object.entries({
         ...manifest.dependencies,
+        ...manifest.devDependencies,
         ...manifest.peerDependencies,
       }).filter(([name]) =>
         BUILT_PACKAGES.some((sdk) => name === `@mapcairn/${sdk}`),

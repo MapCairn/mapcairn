@@ -15,6 +15,7 @@
   "dependencies": {
     "@mapcairn/adapter-maplibre": "0.2.0",
     "@mapcairn/core": "0.2.0",
+    "@mapcairn/theme": "0.2.0",
     "maplibre-gl": "^6.19.0"
   },
   "devDependencies": {

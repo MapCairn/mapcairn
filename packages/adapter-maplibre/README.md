@@ -14,12 +14,12 @@ With `@mapcairn/core` it is also the whole route for a host that brings its own 
 ## Install
 
 ```bash
-npm install @mapcairn/adapter-maplibre maplibre-gl
-pnpm add @mapcairn/adapter-maplibre maplibre-gl
-yarn add @mapcairn/adapter-maplibre maplibre-gl
+npm install @mapcairn/adapter-maplibre @mapcairn/core @mapcairn/theme maplibre-gl
+pnpm add @mapcairn/adapter-maplibre @mapcairn/core @mapcairn/theme maplibre-gl
+yarn add @mapcairn/adapter-maplibre @mapcairn/core @mapcairn/theme maplibre-gl
 ```
 
-`maplibre-gl` is a peer dependency, so the app chooses the engine version (`^6.18.0`).
+`@mapcairn/core` and `@mapcairn/theme` are peer dependencies at the adapter's own version, listed in the install line because Yarn does not install peers. `maplibre-gl` is a peer dependency too, so the app chooses the engine version (`^6.18.0`).
 
 ## Usage
 
@@ -46,7 +46,7 @@ A Vite app takes the URL from the bundler's own worker import, and another bundl
 
 The package is ESM only: it has no `main` field and no CommonJS build. A TypeScript project needs `moduleResolution` set to `node16`, `nodenext` or `bundler`; `node10` is not supported.
 
-The six MapCairn packages share one version, and this package depends on `@mapcairn/core` and `@mapcairn/theme` at that exact version, so keep every `@mapcairn/*` package you list at one version. If you list `@mapcairn/core` at another version, npm installs a second copy of it under this package and prints no warning. Errors from one copy then fail an `instanceof` check against the other (`MapEngineError`, `LayerError`, `SearchError`), and the `Fake*` classes of the two copies do not mix. `npm ls @mapcairn/core` shows one version when all is well.
+The six MapCairn packages share one version, and this package takes `@mapcairn/core` and `@mapcairn/theme` as exact peers, so you list them yourself and keep every `@mapcairn/*` package you list at one version. If you list `@mapcairn/core` at another version, the npm install fails with `ERESOLVE`, and pnpm shares one copy and warns. With two copies, which a package manager that ignores peers can leave you with, errors from one copy fail an `instanceof` check against the other (`MapEngineError`, `LayerError`, `SearchError`), and the `Fake*` classes of the two copies do not mix. `npm ls @mapcairn/core` shows one version when all is well.
 
 ## Exports
 
