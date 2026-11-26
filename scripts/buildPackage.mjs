@@ -12,8 +12,9 @@ import {
 } from "node:fs";
 import { createRequire } from "node:module";
 import path from "node:path";
-import { buildBundle, bundleOf } from "./buildBundle.mjs";
+import { buildBundle } from "./buildBundle.mjs";
 import { hashBuildScripts } from "./buildInputs.mjs";
+import { bundleOf } from "./bundleSettings.mjs";
 import { isEntryPoint } from "./entryPoint.mjs";
 import {
   MAIN_ENTRY,

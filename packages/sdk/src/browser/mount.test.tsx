@@ -146,8 +146,19 @@ describe("two maps on one page", () => {
     expect(two.getView().zoom).not.toBe(7);
     expect(first.querySelectorAll('[role="status"]')).toHaveLength(1);
     expect(second.querySelectorAll('[role="status"]')).toHaveLength(1);
-    const ids = [...document.querySelectorAll("[id]")].map((node) => node.id);
-    expect(new Set(ids).size).toBe(ids.length);
+    const prefixesIn = (element: HTMLElement) =>
+      new Set(
+        [...element.querySelectorAll("[id]")].map(
+          (node) => /^_?(mc\d+[a-z0-9]*-)/.exec(node.id)?.[1] ?? node.id,
+        ),
+      );
+    // Every id in a map carries that map's own prefix, so a second copy of the
+    // bundle, or the page's own React, cannot make the same id twice.
+    const [prefixA, prefixB] = [prefixesIn(first), prefixesIn(second)];
+    expect(prefixA.size).toBe(1);
+    expect(prefixB.size).toBe(1);
+    expect([...prefixA][0]).toMatch(/^mc\d+[a-z0-9]*-$/);
+    expect([...prefixA][0]).not.toBe([...prefixB][0]);
     expect(b).toBeDefined();
   });
 
@@ -223,8 +234,14 @@ describe("destroy", () => {
       await vi.advanceTimersByTimeAsync(0);
       handle.destroy();
       await vi.advanceTimersByTimeAsync(0);
+      // React DOM listens for `selectionchange` once for each document and never
+      // lets go of it, whichever roots come and go. That is one listener for the
+      // page, not one for each map, and nothing of this package's.
+      const kept = new Set(["document:selectionchange"]);
       for (const entry of new Set(added)) {
-        expect(removed, entry).toContain(entry);
+        if (!kept.has(entry)) {
+          expect(removed, entry).toContain(entry);
+        }
       }
       expect(vi.getTimerCount()).toBe(0);
     } finally {

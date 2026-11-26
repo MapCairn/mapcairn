@@ -15,7 +15,7 @@ import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { gzipSync } from "node:zlib";
-import { bundleOf, NOTICES_FILE } from "../buildBundle.mjs";
+import { bundleOf, NOTICES_FILE } from "../bundleSettings.mjs";
 import { isEntryPoint } from "../entryPoint.mjs";
 import { SDK_PACKAGES } from "../sdkPackages.mjs";
 import { parsePackListing, runNpm } from "./npm.mjs";

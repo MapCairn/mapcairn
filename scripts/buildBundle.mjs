@@ -8,37 +8,14 @@ import {
   judgeBundledPackages,
   noticesOf,
 } from "./bundleLicences.mjs";
+import { NOTICES_FILE } from "./bundleSettings.mjs";
 import { ALLOWLIST_FILE } from "./sdkLicences.mjs";
-
-/** The file `buildBundle` writes at the root of the package, and the manifest lists in `files`. */
-export const NOTICES_FILE = "THIRD-PARTY-NOTICES.md";
 
 /** The stylesheet the engine's loader imports on demand, which the bundle merges into its own. */
 const ENGINE_STYLESHEET = "maplibre-gl/dist/maplibre-gl.css";
 
 /** The id of the empty module the engine's stylesheet import is given. */
 const EMPTY_STYLESHEET_MODULE = "\0mapcairn-engine-stylesheet";
-
-/**
- * @typedef {object} BundleSettings
- * @property {string[]} entries The output names built as a bundle, such as `browser`.
- * @property {Record<string, string>} copy Files copied into `dist` as they are, by their name in `dist` and the path inside an installed package.
- */
-
-/**
- * What a manifest says about its bundle: the entries that are built as one
- * self-contained module graph, and the files that are copied beside them.
- *
- * @param {Record<string, any>} manifest
- * @returns {BundleSettings | undefined} `undefined` for a package that builds no bundle.
- */
-export function bundleOf(manifest) {
-  const bundle = manifest.mapcairn?.bundle;
-  if (bundle === undefined) {
-    return undefined;
-  }
-  return { entries: bundle.entries ?? [], copy: bundle.copy ?? {} };
-}
 
 /**
  * Vite's `build` for a bundle: every import is bundled, React and the engine
@@ -150,7 +127,7 @@ async function bundleModules({ folder, entries, stylesheet }) {
  *
  * @param {object} input
  * @param {string} input.folder The package folder.
- * @param {BundleSettings} input.bundle
+ * @param {import("./bundleSettings.mjs").BundleSettings} input.bundle
  * @param {Record<string, string>} input.entries Output name to source path, for the bundle's entries only.
  * @param {string} [input.root] The repository root, where the allowlist is.
  * @returns {Promise<void>}

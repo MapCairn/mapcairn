@@ -37,6 +37,25 @@ describe("entryPointSpecifiers", () => {
     ]);
   });
 
+  it("leaves out a file the package copies for a page to serve, such as a worker script, which is no module an app imports", () => {
+    const exports = {
+      ".": { types: "./a.d.ts", default: "./dist/a.js" },
+      "./browser/worker": {
+        types: "./dist/w.d.ts",
+        default: "./dist/browser-worker.js",
+      },
+    };
+    expect(
+      entryPointSpecifiers("@mapcairn/sdk", exports, {
+        copied: ["browser-worker.js"],
+      }),
+    ).toEqual(["@mapcairn/sdk"]);
+    expect(entryPointSpecifiers("@mapcairn/sdk", exports)).toEqual([
+      "@mapcairn/sdk",
+      "@mapcairn/sdk/browser/worker",
+    ]);
+  });
+
   it("can list the style entries instead", () => {
     const exports = { ".": "./a.js", "./styles.css": "./styles.css" };
     expect(
