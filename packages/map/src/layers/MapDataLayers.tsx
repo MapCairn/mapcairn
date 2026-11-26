@@ -301,6 +301,7 @@ export function MapDataLayers({
     setView: layers.setView,
     reportTilesSlow: layers.reportTilesSlow,
     reportTilesUnavailable: layers.reportTilesUnavailable,
+    reportTilesWrongFormat: layers.reportTilesWrongFormat,
     reportTilesRecovered: layers.reportTilesRecovered,
     onFeatureTap,
     ignoreTaps,
@@ -318,6 +319,12 @@ export function MapDataLayers({
         latest.current.reportTilesUnavailable(layerId, tiles);
       },
     );
+    const stopWrongFormat = adapter.on(
+      "tileLayerWrongFormat",
+      ({ layerId, tiles }) => {
+        latest.current.reportTilesWrongFormat(layerId, tiles);
+      },
+    );
     const stopRecovered = adapter.on(
       "tileLayerRecovered",
       ({ layerId, tiles }) => {
@@ -327,6 +334,7 @@ export function MapDataLayers({
     return () => {
       stopSlow();
       stopUnavailable();
+      stopWrongFormat();
       stopRecovered();
     };
   }, [adapter, latest]);

@@ -160,6 +160,18 @@ for (const [name, basemap] of [
             vi.useRealTimers();
           }
         },
+        simulateTileFormatFailure: (layerId) => {
+          const map = latestMap();
+          // maplibre-gl 6.19 words a tile it cannot decode this way (`loadVectorTile` in its worker).
+          map.fire("error", {
+            error: new Error(
+              "Unable to parse the tile at https://v.test/3/4/5.pbf, got error: Unimplemented type: 7",
+            ),
+            tile: {},
+            sourceId: `mapcairn:${layerId}`,
+          });
+          map.fire("idle");
+        },
         simulateTileLayerRecovery: (layerId) => {
           latestMap().fire("sourcedata", {
             sourceId: `mapcairn:${layerId}`,

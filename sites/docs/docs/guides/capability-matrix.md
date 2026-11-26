@@ -31,7 +31,7 @@ Paths are relative to the repository root. A row describes the SDK unless it nam
 | Vector tiles styled by source layer                                                | has     | `VectorTileSource`, [Layer definitions](layer-definitions.md)                                                              | none       |
 | Worked recipes for OGC API Features, WMS and WMTS endpoints                        | has     | [Serving layers to MapCairn](serving-layers.md), checked in `packages/core/src/layers/openStandards.test.ts`               | none       |
 | Tiles read from a single-file archive                                              | lacks   | none                                                                                                                       | [#192]     |
-| Newer vector tile encodings                                                        | lacks   | none                                                                                                                       | [#197]     |
+| MapLibre Tile (MLT) vector tiles, when the host serves them                        | has     | `VectorTileSource.encoding`, [Layer definitions](layer-definitions.md)                                                     | none       |
 | Layers supplied at runtime, per user, validated one at a time                      | has     | `createRuntimeLayerCatalogue` and `partitionDefinitions`                                                                   | none       |
 | Hosts that sit behind a login                                                      | lacks   | the reference site calls only public providers, so a host cannot attach credentials or react to a refused request          | [#45]      |
 | One place for tile and layer request limits, retry, priority and a host hook       | partial | each load is cancelled when replaced, and a slow tile layer says so (`useDataLayers`)                                      | [#195]     |
@@ -268,7 +268,6 @@ These come from [`ROADMAP.md`](https://github.com/MapCairn/mapcairn/blob/main/RO
 [#194]: https://github.com/MapCairn/mapcairn/issues/194
 [#195]: https://github.com/MapCairn/mapcairn/issues/195
 [#196]: https://github.com/MapCairn/mapcairn/issues/196
-[#197]: https://github.com/MapCairn/mapcairn/issues/197
 [#199]: https://github.com/MapCairn/mapcairn/issues/199
 [#220]: https://github.com/MapCairn/mapcairn/issues/220
 [#221]: https://github.com/MapCairn/mapcairn/issues/221

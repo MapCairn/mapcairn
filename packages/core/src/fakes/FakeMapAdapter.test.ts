@@ -37,6 +37,8 @@ function subjectFor(
           adapter.simulateTileLayerFailure(layerId),
         simulateTileLayerSlow: async (layerId) =>
           adapter.simulateTileLayerSlow(layerId),
+        simulateTileFormatFailure: (layerId) =>
+          adapter.simulateTileFormatFailure(layerId),
         simulateTileLayerRecovery: (layerId) =>
           adapter.simulateTileLayerRecovery(layerId),
         simulateLoading: (loading) => adapter.simulateLoading(loading),

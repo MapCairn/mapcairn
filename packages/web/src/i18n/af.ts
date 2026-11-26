@@ -129,6 +129,7 @@ export const AF_CATALOGUE: Record<MessageKey, string> = {
   "describe.tilesUnavailable": "Kon nie laai nie. Kyk na jou verbinding.",
   "describe.tilesSlow":
     "Wag nog op beelde. Die verskaffer is dalk stadig of antwoord nie.",
+  "describe.tilesWrongFormat": "Hierdie laag se teëls is in 'n ander formaat.",
   // Announcements
   "announce.layerLoaded": "{name}: {count} op die kaart gewys.",
   "announce.layerStatus": "{name}: {status}",

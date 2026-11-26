@@ -238,6 +238,7 @@ export interface MapAdapterControls {
     simulateFeatureTap(layerId: string, featureId: string): void;
     simulateLoading(loading: boolean): void;
     simulateTileError(): void;
+    simulateTileFormatFailure(layerId: string): void;
     simulateTileLayerFailure(layerId: string): void;
     simulateTileLayerRecovery(layerId: string): void;
     simulateTileLayerSlow(layerId: string): Promise<void>;

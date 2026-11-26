@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
+import { VECTOR_TILE_ENCODINGS, type VectorTileEncoding } from "./definition";
 import { checkShapeStyle, PROPERTY_NAME } from "./validateShapes";
 import {
   checkColourSlot,
@@ -207,6 +208,15 @@ export function checkVectorTiles(
   options: ValidationOptions,
 ): void {
   checkUrl(problems, source.tiles, "source.tiles", known, { engine: true });
+  if (
+    source.encoding !== undefined &&
+    !VECTOR_TILE_ENCODINGS.includes(source.encoding as VectorTileEncoding)
+  ) {
+    problems.add(
+      "source.encoding",
+      `must be ${VECTOR_TILE_ENCODINGS.join(" or ")}`,
+    );
+  }
   const { minzoom, maxzoom } = source;
   if (
     !Number.isInteger(maxzoom) ||

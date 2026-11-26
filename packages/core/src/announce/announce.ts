@@ -402,6 +402,23 @@ export function describeTilesSlow(): Message {
   return message("describe.tilesSlow", {});
 }
 
+/**
+ * The status line of a vector tile layer whose tiles the map could not read
+ * in the encoding its source declares, because the service answers in
+ * another.
+ */
+export function describeTilesWrongFormat(): Message {
+  return message("describe.tilesWrongFormat", {});
+}
+
+/** A vector tile layer's tiles are in another format, in the words of {@link describeTilesWrongFormat}. */
+export function announceTilesWrongFormat(name: MessagePart): Message {
+  return message("announce.layerStatus", {
+    name,
+    status: describeTilesWrongFormat(),
+  });
+}
+
 /** A tile layer is still waiting for its first tile, in the words of {@link describeTilesSlow}. */
 export function announceTilesSlow(name: MessagePart): Message {
   return message("announce.layerStatus", {

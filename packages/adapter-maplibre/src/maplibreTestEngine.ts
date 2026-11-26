@@ -5,6 +5,7 @@ import type {
   DrawnLayer,
   LatLng,
   PixelPoint,
+  VectorTileEncoding,
 } from "@mapcairn/core";
 import { mercatorProject, mercatorUnproject, pngHeader } from "@mapcairn/core";
 
@@ -763,6 +764,15 @@ function firstPosition(coordinates: unknown): [number, number] {
   return Array.isArray(current) ? (current as [number, number]) : [0, 0];
 }
 
+/** The encoding an engine vector source declares, as the part of a {@link DrawnLayer} that holds it, or nothing. */
+function declaredEncoding(source: Record<string, unknown>): {
+  encoding?: VectorTileEncoding;
+} {
+  return source.encoding
+    ? { encoding: source.encoding as VectorTileEncoding }
+    : {};
+}
+
 /**
  * Describes the data layers the adapter added to a test engine, lowest
  * first, in the map adapter contract's terms. A data layer owns several
@@ -815,6 +825,7 @@ export function describeDataLayers(map: FakeMapLibreMap): DrawnLayer[] {
         kind: "vector",
         tiles: (source.tiles as string[])[0] as string,
         sourceLayers,
+        ...declaredEncoding(source),
       });
     } else if (part === "heat") {
       drawn.push({

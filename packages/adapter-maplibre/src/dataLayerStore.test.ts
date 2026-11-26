@@ -48,12 +48,15 @@ function setup(ready = true) {
   );
   const register = vi.fn();
   const release = vi.fn();
+  const registerVector = vi.fn();
+  const releaseVector = vi.fn();
   const changed = vi.fn();
   const tileRequests = new DataLayerTileRequests();
   const store = new DataLayerStore({
     readyMap: () => (state.ready ? map : undefined),
     changed,
     tileSources: { carriedReport: carried, register, release },
+    vectorSources: { register: registerVector, release: releaseVector },
     tileRequests,
   });
   return {
@@ -64,6 +67,8 @@ function setup(ready = true) {
     carried,
     register,
     release,
+    registerVector,
+    releaseVector,
     changed,
     tileRequests,
   };
@@ -150,6 +155,51 @@ describe("DataLayerStore", () => {
     expect(engine.sources.size).toBe(0);
     expect(engine.getLayer("mapcairn:imagery:tiles")).toBeUndefined();
     expect(tileRequests.transform(tile).referrerPolicy).toBeUndefined();
+  });
+
+  it("watches a drawn vector layer's source, and stops when the layer is removed", () => {
+    const { store, registerVector, releaseVector } = setup();
+    store.set("roads", {
+      kind: "vector",
+      tiles: {
+        source: {
+          tiles: "https://v.test/{z}/{x}/{y}.pbf",
+          minzoom: 0,
+          maxzoom: 14,
+          encoding: "mlt",
+        },
+        layers: [
+          {
+            sourceLayer: "roads",
+            geometry: "line",
+            rule: {
+              kind: "fixed",
+              look: {
+                colour: "#0072b2",
+                fillOpacity: 0,
+                pattern: "solid",
+                dash: "solid",
+                width: 2,
+              },
+            },
+          },
+        ],
+      },
+    });
+    expect(registerVector).toHaveBeenCalledExactlyOnceWith(
+      "mapcairn:roads",
+      "roads",
+      "https://v.test/{z}/{x}/{y}.pbf",
+    );
+    store.remove("roads");
+    expect(releaseVector).toHaveBeenCalledWith("mapcairn:roads");
+  });
+
+  it("watches no source of a raster layer or one that holds its own data", () => {
+    const { store, registerVector } = setup();
+    store.setTiles("imagery", OVERLAY);
+    store.set("area", { kind: "shapes", shapes: SHAPES });
+    expect(registerVector).not.toHaveBeenCalled();
   });
 
   it("keeps no template for a layer that holds its own data", () => {

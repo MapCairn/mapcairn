@@ -1,6 +1,11 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
-import type { FillPattern, LineDash, MarkerShape } from "../layers/definition";
+import type {
+  FillPattern,
+  LineDash,
+  MarkerShape,
+  VectorTileEncoding,
+} from "../layers/definition";
 import type { BasemapDefinition } from "./basemap";
 import type { MapEngineError, MapImageExportError } from "./errors";
 import type { Bounds, LatLng, PixelPoint, ViewState } from "./geometry";
@@ -138,6 +143,13 @@ export type MapTileLayerSlow = MapTileLayerUnavailable;
  */
 export type MapTileLayerRecovered = MapTileLayerUnavailable;
 
+/**
+ * What {@link MapEvents.tileLayerWrongFormat} carries: the vector tile layer
+ * and the tiles it was drawn from, so a report that arrives after the layer
+ * was set again can be told from one for what is on the map now.
+ */
+export type MapTileLayerWrongFormat = MapTileLayerUnavailable;
+
 /** Polygons and lines drawn on request, such as an event's affected area. */
 export interface MapShapes {
   /** The polygons and lines to draw, in one look. */
@@ -201,6 +213,11 @@ export interface MapVectorSource {
   readonly minzoom: number;
   /** The deepest tile level the service has; the engine scales beyond it. */
   readonly maxzoom: number;
+  /**
+   * How the service encodes its tiles, handed to the engine as it is. Without
+   * it the tiles are Mapbox Vector Tiles. The adapter decodes nothing itself.
+   */
+  readonly encoding?: VectorTileEncoding;
 }
 
 /**
@@ -520,8 +537,19 @@ export interface MapEvents {
    */
   tileLayerSlow: MapTileLayerSlow;
   /**
+   * The engine could not read the tiles of a vector tile data layer in the
+   * encoding its source declares (`mvt` by default), and none of them loaded:
+   * the service answers in another encoding, for example Mapbox Vector Tiles
+   * from a static host to a source that says `mlt`, or the reverse. It is
+   * reported when the map settles, at most once each time the layer is drawn,
+   * and never once any tile of the layer has loaded. If a tile loads later (the
+   * server was fixed), `tileLayerRecovered` follows. The layer's failures raise
+   * no general `tileError`, so the ui can say what is wrong with that layer.
+   */
+  tileLayerWrongFormat: MapTileLayerWrongFormat;
+  /**
    * A tile of a tile data layer loaded after the layer reported
-   * `tileLayerSlow` or `tileLayerUnavailable` for the same tiles, for example
+   * `tileLayerSlow`, `tileLayerUnavailable` or `tileLayerWrongFormat` for the same tiles, for example
    * once a transient failure has passed and the person pans. It is emitted once
    * for each drawing that reported, when the first tile loads, however many
    * of the two it reported, and never for a layer that has not

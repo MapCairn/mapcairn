@@ -4,6 +4,7 @@ import {
   describeChosenTime,
   describeTilesSlow,
   describeTilesUnavailable,
+  describeTilesWrongFormat,
   describeZoomIn,
   describeZoomOut,
   type FormatterRegistry,
@@ -399,6 +400,17 @@ export function LayerItem({
                     describeChosenTime(definition, layer.controls),
                   ),
                 )}
+              </span>
+            </p>
+          ) : null}
+          {status.kind === "tiles-format" ? (
+            <p
+              className={styles.status}
+              data-testid={`layer-status-${definition.id}`}
+            >
+              <span className={styles.statusError}>
+                <Icon icon={Warning} />
+                {format(describeTilesWrongFormat())}
               </span>
             </p>
           ) : null}
