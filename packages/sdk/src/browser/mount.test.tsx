@@ -529,3 +529,123 @@ describe("the services it builds", () => {
     expect(seen?.search).toBe(search);
   });
 });
+
+/** The button with an accessible name, once the interface has drawn it. */
+function button(element: HTMLElement, name: string): Promise<HTMLElement> {
+  return vi.waitFor(() => {
+    const found = element.querySelector<HTMLElement>(
+      `button[aria-label="${name}"]`,
+    );
+    expect(found, name).not.toBeNull();
+    return found as HTMLElement;
+  });
+}
+
+describe("the controls", () => {
+  it("zoom the map through the adapter", async () => {
+    const tools = harness();
+    const element = container();
+    const handle = mountOn(element, tools);
+    await drawn(handle);
+    const before = handle.getView().zoom;
+    // The interface hands the adapter to its controls a moment after it is drawing.
+    await vi.waitFor(async () => {
+      (await button(element, "Zoom in")).click();
+      expect(handle.getView().zoom).toBeGreaterThan(before);
+    });
+    const zoomedIn = handle.getView().zoom;
+    (await button(element, "Zoom out")).click();
+    await vi.waitFor(() =>
+      expect(handle.getView().zoom).toBeLessThan(zoomedIn),
+    );
+  });
+
+  it("turn the map back to north from the compass", async () => {
+    const tools = harness();
+    const element = container();
+    const handle = mountOn(element, tools);
+    await drawn(handle);
+    handle.setView({ bearing: 90 });
+    await vi.waitFor(async () => {
+      (await button(element, "Reset bearing to north")).click();
+      expect(handle.getView().bearing).toBe(0);
+    });
+  });
+});
+
+describe("options that are not usable", () => {
+  it.each([
+    [{ label: 3 as never }, /label must be text/],
+    [
+      { view: { center: { lat: 0, lng: 999 }, zoom: 1, bearing: 0 } },
+      /view\.center\.lng/,
+    ],
+    [
+      {
+        view: { center: { lat: 0, lng: 0 }, zoom: "far" as never, bearing: 0 },
+      },
+      /view\.zoom/,
+    ],
+    [
+      { view: { center: { lat: 0, lng: 0 }, zoom: 1, bearing: 400 } },
+      /view\.bearing/,
+    ],
+    [{ workerUrl: "http://[bad" }, /workerUrl must be an address/],
+  ])("%j", (options, message) => {
+    expect(() => mountOn(container(), harness(), options)).toThrow(message);
+  });
+
+  it("an options value that is not an object", () => {
+    expect(() => mountOn(container(), harness(), 4 as never)).toThrow(
+      /options must be an object/,
+    );
+  });
+
+  it("basemaps that name an id twice, or none", () => {
+    const one = { ...BASEMAPS[0], id: "same" };
+    expect(() =>
+      mountOn(container(), harness(), { basemaps: [one, one] as never }),
+    ).toThrow(/basemaps: .*used twice/);
+    expect(() => mountOn(container(), harness(), { basemaps: [] })).toThrow(
+      /basemaps: /,
+    );
+  });
+
+  it("an empty label, which is no label", async () => {
+    const element = container();
+    mountOn(element, harness(), { label: "" });
+    expect(element.getAttribute("data-mapcairn")).toBe("unlabelled");
+  });
+});
+
+describe("the suggestion provider", () => {
+  it("passes through to the services", async () => {
+    let seen: Services | undefined;
+    const suggestions = { suggest: vi.fn() };
+    const handle = mount(
+      container(),
+      { services: { suggestions: suggestions as never } },
+      {
+        ...harness().dependencies,
+        decorateServices: (services: Services) => {
+          seen = services;
+          return services;
+        },
+      },
+    );
+    mounted.push(handle);
+    await drawn(handle);
+    expect(seen?.suggestions).toBe(suggestions);
+  });
+});
+
+describe("after a destroy that came before the engine", () => {
+  it("moves nothing for a move asked for first", async () => {
+    const tools = harness();
+    const handle = mountOn(container(), tools);
+    handle.setView({ zoom: 9 });
+    handle.destroy();
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(handle.getView().zoom).toBeLessThan(4);
+  });
+});
