@@ -11,3 +11,4 @@ Open plans:
 - [0007: Multi-feature selection](0007-multi-feature-selection.md), tracking issue [#49](https://github.com/MapCairn/mapcairn/issues/49).
 - [0014: Release the SDK packages on GitHub and npm](0014-sdk-release.md), tracking issue [#1](https://github.com/MapCairn/mapcairn/issues/1).
 - [0017: A documentation site on its own hostname](0017-documentation-site.md), tracking issue [#199](https://github.com/MapCairn/mapcairn/issues/199).
+- [0019: Move the map interface to Lit, behind one element](0019-lit-interface.md), tracking issue [#1015](https://github.com/MapCairn/mapcairn/issues/1015).
