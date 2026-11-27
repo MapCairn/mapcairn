@@ -99,10 +99,15 @@ describe("the SDK packages job in sdk-packages.yml", () => {
       /grep -Eq '(.+?)' <<</.exec(job)?.[1] ?? "no filter found",
     );
 
-    it("always runs on a push", () => {
-      expect(job).toMatch(
-        /if \[ "\$EVENT_NAME" != "pull_request" \]; then\n\s+echo "run=true" >> "\$GITHUB_OUTPUT"\n\s+exit 0/,
-      );
+    /* A retarget to main runs nothing, so a pass made against another base stays. */
+    it("always runs on a push, and on a pull request into any base but main, before it reads the diff", () => {
+      const early =
+        /if \[ "\$EVENT_NAME" != "pull_request" \] \|\| \[ "\$BASE_REF" != "main" \]; then\n\s+echo "run=true" >> "\$GITHUB_OUTPUT"\n\s+exit 0\n\s+fi\n/.exec(
+          job,
+        );
+      expect(early).not.toBeNull();
+      expect(early?.index).toBeLessThan(job.indexOf("changed="));
+      expect(early?.index).toBeLessThan(job.indexOf('echo "run=false"'));
     });
 
     it("reads the diff on its own line and greps a here-string, so a failing git or a closed pipe cannot pass it", () => {

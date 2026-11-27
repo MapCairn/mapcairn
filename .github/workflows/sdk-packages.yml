@@ -54,7 +54,10 @@ jobs:
         # a here-string, so there is no pipe to close early (status 141).
         shell: bash
         run: |
-          if [ "$EVENT_NAME" != "pull_request" ]; then
+          # Only a pull request into main may skip. A change of base runs
+          # nothing here, so a skip made against another base would still stand
+          # after the pull request is retargeted to main.
+          if [ "$EVENT_NAME" != "pull_request" ] || [ "$BASE_REF" != "main" ]; then
             echo "run=true" >> "$GITHUB_OUTPUT"
             exit 0
           fi
