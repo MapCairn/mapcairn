@@ -1,9 +1,15 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
 import { describe, expect, it } from "vitest";
-import { type AccentResolution, resolveAccent } from "./accent";
-import { checkThemeContrast, type ThemeColours } from "./checkThemeContrast";
-import { parseColour, toHex, toOklch } from "./contrast";
+import {
+  type AccentResolution,
+  hexAt,
+  nearestHolding,
+  resolveAccent,
+} from "./accent";
+import { checkThemeContrast } from "./checkThemeContrast";
+import type { ThemeColours } from "./colourReason";
+import { maxSrgbChroma, parseColour, toHex, toOklch } from "./contrast";
 import type { ThemeName } from "./tokenValues";
 
 const noExplicit = { light: {}, dark: {} };
@@ -35,57 +41,106 @@ function roleValue(
   )?.value;
 }
 
-/** The six colours of the decision record, with the lightness each theme settles on. */
-const records: ReadonlyArray<{
+/**
+ * The six colours of the decision record and the accent each theme settles on.
+ * The record is the contract, so these are exact: a change to the search, the
+ * derivation or the clamp that moves one is a decision, not a refactor.
+ */
+const golden: ReadonlyArray<{
   name: string;
   colour: string;
-  light: number | "given";
-  dark: number | "given";
+  light: string;
+  dark: string;
+  recordLight: number | "given";
+  recordDark: number | "given";
 }> = [
-  { name: "navy", colour: "#0b2545", light: "given", dark: 0.72 },
-  { name: "green", colour: "#0b5c3a", light: "given", dark: 0.72 },
-  { name: "mid green", colour: "#2e8b57", light: 0.5, dark: 0.71 },
-  { name: "red", colour: "#d62828", light: 0.54, dark: 0.74 },
-  { name: "yellow", colour: "#ffd60a", light: 0.52, dark: "given" },
-  { name: "pure green", colour: "#00ff00", light: 0.51, dark: "given" },
+  {
+    name: "navy",
+    colour: "#0b2545",
+    light: "#0b2545",
+    dark: "#8aa8d0",
+    recordLight: "given",
+    recordDark: 0.72,
+  },
+  {
+    name: "green",
+    colour: "#0b5c3a",
+    light: "#0b5c3a",
+    dark: "#6eb58e",
+    recordLight: "given",
+    recordDark: 0.72,
+  },
+  {
+    name: "mid green",
+    colour: "#2e8b57",
+    light: "#137846",
+    dark: "#5eb881",
+    recordLight: 0.5,
+    recordDark: 0.71,
+  },
+  {
+    name: "red",
+    colour: "#d62828",
+    light: "#cc1a1f",
+    dark: "#ff8074",
+    recordLight: 0.54,
+    recordDark: 0.74,
+  },
+  {
+    name: "yellow",
+    colour: "#ffd60a",
+    light: "#7c6700",
+    dark: "#ffd60a",
+    recordLight: 0.52,
+    recordDark: "given",
+  },
+  {
+    name: "pure green",
+    colour: "#00ff00",
+    light: "#007b00",
+    dark: "#00ff00",
+    recordLight: 0.51,
+    recordDark: "given",
+  },
 ];
 
-describe.each(records)("$name $colour", (record) => {
-  const resolution = accepted(record.colour);
+describe.each(golden)("$name $colour", (record) => {
+  it.each(["light", "dark"] as const)(
+    "settles the %s accent on the exact colour in the table",
+    (theme) => {
+      const resolution = accepted(record.colour);
+      expect(roleValue(resolution, theme, "accent")).toBe(record[theme]);
+    },
+  );
 
   it.each(["light", "dark"] as const)(
-    "passes every pair in the %s theme",
+    "passes every pair in the %s theme and is as near the record as it lists",
     (theme) => {
+      const resolution = accepted(record.colour);
       const check = checkThemeContrast({
         colour: { [theme]: Object.fromEntries(colourOf(resolution, theme)) },
       });
       expect(check.invalid).toEqual([]);
       expect(check.findings.filter((finding) => !finding.passes)).toEqual([]);
-    },
-  );
 
-  it.each(["light", "dark"] as const)(
-    "settles the %s accent as the record lists, or nearer",
-    (theme) => {
-      const used = roleValue(resolution, theme, "accent") as string;
-      const expected = record[theme];
+      const expected = record[theme === "light" ? "recordLight" : "recordDark"];
       const entry = resolution.derived.find(
         (item) => item.theme === theme && item.role === "accent",
       );
       if (expected === "given") {
-        expect(used).toBe(toHex(parseColour(record.colour)));
         expect(entry?.source).toBe("given");
         return;
       }
       const start = lightnessOf(record.colour);
       expect(entry?.source).toBe("moved");
-      expect(Math.abs(lightnessOf(used) - start)).toBeLessThanOrEqual(
-        Math.abs(expected - start) + 0.01,
-      );
+      expect(
+        Math.abs(lightnessOf(entry?.value as string) - start),
+      ).toBeLessThanOrEqual(Math.abs(expected - start) + 0.01);
     },
   );
 
   it("keeps the hue of the accent when it moves lightness", () => {
+    const resolution = accepted(record.colour);
     const start = toOklch(parseColour(record.colour));
     for (const theme of ["light", "dark"] as const) {
       const used = toOklch(
@@ -290,5 +345,130 @@ describe("resolveAccent invalid input", () => {
       invalid: [{ theme: null, role: "accent", value: accent, reason }],
       failures: [],
     });
+  });
+});
+
+describe("resolveAccent search", () => {
+  const start = "#808080";
+  const lightness = lightnessOf(start);
+
+  it.each([
+    ["light", -1],
+    ["dark", 1],
+  ] as const)(
+    "tries away from the page background first in the %s theme when both directions are as near",
+    (theme, direction) => {
+      const found = nearestHolding(
+        start,
+        theme,
+        (colour) => Math.abs(lightnessOf(colour) - lightness) > 0.09,
+      ) as string;
+
+      expect(Math.sign(lightnessOf(found) - lightness)).toBe(direction);
+    },
+  );
+
+  it("stops within a thousandth of lightness of the nearest passing value", () => {
+    const found = nearestHolding(
+      start,
+      "light",
+      (colour) => lightnessOf(colour) <= lightness - 0.0305,
+    ) as string;
+
+    expect(lightness - lightnessOf(found)).toBeGreaterThanOrEqual(0.0305);
+    expect(lightness - lightnessOf(found)).toBeLessThan(0.0325);
+  });
+
+  it("returns the start when it already holds, and nothing when no lightness does", () => {
+    expect(nearestHolding(start, "light", () => true)).toBe(start);
+    expect(nearestHolding(start, "light", () => false)).toBeUndefined();
+  });
+});
+
+describe("hexAt", () => {
+  it.each([
+    [0.5, 145],
+    [0.95, 255],
+    [0.15, 25],
+    [0.97, 100],
+  ])(
+    "cuts chroma to the gamut at lightness %s and hue %s",
+    (lightness, hue) => {
+      const clamped = hexAt(lightness, 0.4, hue);
+
+      expect(clamped).toBe(
+        hexAt(lightness, maxSrgbChroma(lightness, hue), hue),
+      );
+      const read = toOklch(parseColour(clamped));
+      expect(read.chroma).toBeLessThanOrEqual(
+        maxSrgbChroma(lightness, hue) + 0.01,
+      );
+      expect(Math.abs(read.lightness - lightness)).toBeLessThan(0.01);
+    },
+  );
+
+  it("leaves a chroma already inside the gamut alone", () => {
+    expect(hexAt(0.5, 0.05, 145)).toBe(
+      toHex(parseColour("oklch(0.5 0.05 145)")),
+    );
+  });
+
+  it("holds lightness to 0 to 1", () => {
+    expect(hexAt(-0.5, 0.1, 145)).toBe("#000000");
+    expect(hexAt(1.5, 0.1, 145)).toBe("#ffffff");
+  });
+});
+
+describe("resolveAccent themes and explicit", () => {
+  it("resolves only the theme it is asked for", () => {
+    const resolution = accepted("#2e8b57");
+    const dark = resolveAccent("#2e8b57", undefined, ["dark"]);
+
+    expect(dark.ok).toBe(true);
+    if (!dark.ok) {
+      return;
+    }
+    expect(dark.derived.every((entry) => entry.theme === "dark")).toBe(true);
+    expect(dark.colour.light).toEqual({});
+    expect(dark.colour.dark).toEqual(resolution.colour.dark);
+  });
+
+  it("works with no explicit roles at all", () => {
+    expect(resolveAccent("#2e8b57").ok).toBe(true);
+  });
+
+  it("leaves out an explicit colour it cannot read instead of throwing", () => {
+    const resolution = resolveAccent("#2e8b57", {
+      light: {
+        text: "not a colour",
+        surface: "#ffffff80",
+        nope: "#000000",
+      } as unknown as Partial<ThemeColours>,
+    });
+
+    expect(resolution.ok).toBe(true);
+  });
+
+  it("names the failing pair when a colour the host set outside the four is the cause", () => {
+    const resolution = resolveAccent("#0b5c3a", {
+      light: { textMuted: "#aaaaaa" },
+    });
+
+    expect(resolution.ok).toBe(false);
+    if (resolution.ok) {
+      return;
+    }
+    const [failure] = resolution.failures;
+    expect(resolution.failures).toHaveLength(1);
+    expect(failure).toMatchObject({
+      theme: "light",
+      role: "accent",
+      nearest: undefined,
+      pair: { foreground: "textMuted", background: "accentTint" },
+    });
+    expect(failure?.pair?.ratio).toBeLessThan(failure?.pair?.required ?? 0);
+    expect(failure?.message).toMatch(
+      /textMuted on accentTint reaches \d\.\d\d:1 where 4\.5:1/,
+    );
   });
 });

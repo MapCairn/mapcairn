@@ -2,6 +2,7 @@
 // Copyright MapCairn contributors
 export {
   type AccentFailure,
+  type AccentPair,
   type AccentResolution,
   type AccentRole,
   type DerivedRole,
@@ -11,12 +12,14 @@ export {
 export {
   type ContrastFinding,
   checkThemeContrast,
-  type InvalidColour,
-  type InvalidColourReason,
-  type ThemeColours,
   type ThemeContrastCheck,
   type ThemeOverride,
 } from "./checkThemeContrast";
+export type {
+  InvalidColour,
+  InvalidColourReason,
+  ThemeColours,
+} from "./colourReason";
 export {
   type ColourInput,
   compositeOver,

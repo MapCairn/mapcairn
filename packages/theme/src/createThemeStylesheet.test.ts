@@ -1195,8 +1195,54 @@ describe("createThemeStylesheet accent shorthand", () => {
     });
   });
 
-  it("leaves accent out of checkThemeContrast's unknown keys", () => {
-    expect(checkThemeContrast({ accent: "#0b5c3a" }).invalid).toEqual([]);
+  it("measures a refused accent unmoved, so the findings show what fails", () => {
+    const result = createThemeStylesheet(
+      {
+        accent: "#0b5c3a",
+        colour: { light: { surface: "#595959", surfaceRaised: "#595959" } },
+      },
+      { scope: ":root" },
+    );
+
+    expect(!result.ok && result.findings).toContainEqual(
+      expect.objectContaining({
+        theme: "light",
+        foreground: "accent",
+        passes: false,
+      }),
+    );
+  });
+
+  it("names the pair when a colour set outside the accent's roles is the cause", () => {
+    const result = createThemeStylesheet(
+      { accent: "#0b5c3a", colour: { light: { textMuted: "#aaaaaa" } } },
+      { scope: ":root" },
+    );
+
+    expect(!result.ok && result.failures).toEqual([
+      expect.objectContaining({
+        theme: "light",
+        pair: expect.objectContaining({
+          foreground: "textMuted",
+          background: "accentTint",
+        }),
+      }),
+    ]);
+  });
+
+  it("has no failures on a refusal that is not about the accent", () => {
+    const result = createThemeStylesheet({}, { scope: "body" });
+
+    expect(!result.ok && result.failures).toEqual([]);
+  });
+
+  it("reports an accent that cannot be read through checkThemeContrast, without a second entry", () => {
+    const result = createThemeStylesheet(
+      { accent: "nope" },
+      { scope: ":root" },
+    );
+
+    expect(!result.ok && result.invalid).toHaveLength(1);
   });
 });
 

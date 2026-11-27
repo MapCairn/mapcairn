@@ -1,12 +1,11 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
 import {
-  type ContrastFinding,
-  checkThemeContrast,
   type InvalidColour,
   invalidReason,
+  isRole,
   type ThemeColours,
-} from "./checkThemeContrast";
+} from "./colourReason";
 import {
   contrastRatio,
   maxSrgbChroma,
@@ -14,7 +13,14 @@ import {
   toHex,
   toOklch,
 } from "./contrast";
-import { type ThemeName, themeValues } from "./tokenValues";
+import {
+  type ContrastBackground,
+  type ContrastPair,
+  contrastPairs,
+  measurePair,
+  type ThemeColourRole,
+} from "./contrastPairs";
+import { type ColourRoles, type ThemeName, themeValues } from "./tokenValues";
 
 /** The roles one accent colour drives. */
 export type AccentRole =
@@ -42,6 +48,18 @@ export interface DerivedRole {
   source: DerivedSource;
 }
 
+/** The first pair that fails in a theme: what is measured and what it reaches. */
+export interface AccentPair {
+  /** The role drawn. */
+  foreground: ThemeColourRole;
+  /** What it sits on. */
+  background: ContrastBackground;
+  /** The ratio reached, unrounded. */
+  ratio: number;
+  /** The WCAG 2.2 AA minimum for this pair. */
+  required: number;
+}
+
 /** A colour that cannot reach WCAG 2.2 AA, and the nearest one that can. */
 export interface AccentFailure {
   /** The theme it fails in. */
@@ -52,6 +70,8 @@ export interface AccentFailure {
   value: string;
   /** The nearest colour in lightness that passes, or `undefined` when none does. */
   nearest: string | undefined;
+  /** The first pair that fails, or `undefined` when none could be found. */
+  pair: AccentPair | undefined;
   /** A sentence that says what failed and the nearest passing colour. */
   message: string;
 }
@@ -59,9 +79,9 @@ export interface AccentFailure {
 /** The result of {@link resolveAccent}. */
 export type AccentResolution =
   | {
-      /** True: every theme has an accent that holds. */
+      /** True: every theme asked for has an accent that holds. */
       ok: true;
-      /** The roles to write for each theme. A role the host set is not in it. */
+      /** The roles to write for each theme asked for. A role the host set is not in it. */
       colour: Record<ThemeName, Partial<ThemeColours>>;
       /** Each role in `colour`, with how it was reached. */
       derived: DerivedRole[];
@@ -89,8 +109,36 @@ const LIGHTNESS_STEP = 0.001;
 /** Which way a search tries first when both directions are as near: away from the page background. */
 const PREFERRED_DIRECTION: Record<ThemeName, 1 | -1> = { light: -1, dark: 1 };
 
-/** The colour at this OKLCH position, with chroma cut to the sRGB gamut. */
-function hexAt(lightness: number, chroma: number, hue: number): string {
+/** The pairs that involve one of the four roles: the only ones the accent can change. */
+const GROUP_PAIRS: readonly ContrastPair[] = contrastPairs.filter((pair) =>
+  touches(pair, ROLES),
+);
+
+/** The SDK's own roles in each theme, parsed once, so a search does not parse `oklch()` again. */
+const DEFAULT_ROLES: Record<ThemeName, ColourRoles> = {
+  light: exactRoles(themeValues.light.colour),
+  dark: exactRoles(themeValues.dark.colour),
+};
+
+/** Each role as `rgb()` with its channels unrounded, so a search measures what the check does. */
+function exactRoles(roles: ColourRoles): ColourRoles {
+  return Object.fromEntries(
+    Object.entries(roles).map(([role, colour]) => {
+      const { r, g, b, a } = parseColour(colour);
+      return [role, `rgb(${r} ${g} ${b} / ${a})`];
+    }),
+  ) as unknown as ColourRoles;
+}
+
+function touches(pair: ContrastPair, roles: readonly string[]): boolean {
+  return roles.includes(pair.foreground) || roles.includes(pair.background);
+}
+
+/**
+ * The colour at this OKLCH position, with chroma cut to the sRGB gamut.
+ * Exported for tests only: it is not part of the package's public surface.
+ */
+export function hexAt(lightness: number, chroma: number, hue: number): string {
   const l = Math.min(1, Math.max(0, lightness));
   const c = Math.min(chroma, maxSrgbChroma(l, hue));
   return toHex(parseColour(`oklch(${l} ${c} ${hue})`));
@@ -98,28 +146,28 @@ function hexAt(lightness: number, chroma: number, hue: number): string {
 
 /** White or near black, whichever reads better on the accent. */
 function onAccent(accent: string): string {
-  return [
-    themeValues.light.colour.accentContrast,
-    themeValues.dark.colour.accentContrast,
-  ]
-    .map((colour) => toHex(parseColour(colour)))
-    .reduce((best, colour) =>
-      contrastRatio(colour, accent) > contrastRatio(best, accent)
-        ? colour
-        : best,
-    );
+  const best = [
+    DEFAULT_ROLES.light.accentContrast,
+    DEFAULT_ROLES.dark.accentContrast,
+  ].reduce((chosen, colour) =>
+    contrastRatio(colour, accent) > contrastRatio(chosen, accent)
+      ? colour
+      : chosen,
+  );
+  return toHex(parseColour(best));
 }
 
 /**
- * The roles an accent drives in one theme. The tint keeps the SDK's own
- * lightness and chroma, in the accent's hue, and the focus ring is the accent.
+ * The roles an accent drives in one theme, unmoved. The tint keeps the SDK's
+ * own lightness and chroma, in the accent's hue, and the focus ring is the
+ * accent.
  */
 function deriveRoles(
   theme: ThemeName,
   accent: string,
 ): Record<AccentRole, string> {
   const { chroma, hue } = toOklch(parseColour(accent));
-  const tint = toOklch(parseColour(themeValues[theme].colour.accentTint));
+  const tint = toOklch(parseColour(DEFAULT_ROLES[theme].accentTint));
   return {
     accent,
     accentTint: hexAt(tint.lightness, Math.min(tint.chroma, chroma), hue),
@@ -128,31 +176,58 @@ function deriveRoles(
   };
 }
 
-/** The pairs that fail in one theme and involve one of `roles`. */
-function failing(
+/**
+ * The pairs that fail in one theme, one at a time, among those that involve
+ * one of `only` (the four roles when it is left out). It measures this theme
+ * alone, with `set` over the SDK's own roles.
+ */
+function* failedPairs(
   theme: ThemeName,
   set: Partial<ThemeColours>,
-  roles: readonly string[],
-): ContrastFinding[] {
-  return checkThemeContrast({ colour: { [theme]: set } }).findings.filter(
-    (finding) =>
-      finding.theme === theme &&
-      !finding.passes &&
-      (roles.includes(finding.foreground) ||
-        roles.includes(finding.background)),
-  );
+  only: readonly string[] = ROLES,
+): Generator<AccentPair> {
+  const roles = { ...DEFAULT_ROLES[theme], ...set } as ColourRoles;
+  for (const pair of GROUP_PAIRS) {
+    if (!touches(pair, only)) {
+      continue;
+    }
+    for (const backdrop of pair.backdrops.length === 0
+      ? [undefined]
+      : pair.backdrops) {
+      const ratio = measurePair(roles, pair, backdrop);
+      if (ratio < pair.required) {
+        yield {
+          foreground: pair.foreground,
+          background: pair.background,
+          ratio,
+          required: pair.required,
+        };
+      }
+    }
+  }
+}
+
+function holds(
+  theme: ThemeName,
+  set: Partial<ThemeColours>,
+  only?: readonly string[],
+): boolean {
+  return failedPairs(theme, set, only).next().done === true;
 }
 
 /**
  * The colour nearest in lightness to `start` that `holds`, trying `start`
- * itself first. Hue stays and chroma is cut to the sRGB gamut.
+ * itself first. Hue stays and chroma is cut to the sRGB gamut. A linear scan,
+ * on purpose: what passes is not a single band, because the text on the accent
+ * switches between white and near black.
+ * Exported for tests only: it is not part of the package's public surface.
  */
-function nearestHolding(
+export function nearestHolding(
   start: string,
   theme: ThemeName,
-  holds: (colour: string) => boolean,
+  accepts: (colour: string) => boolean,
 ): string | undefined {
-  if (holds(start)) {
+  if (accepts(start)) {
     return start;
   }
   const { lightness, chroma, hue } = toOklch(parseColour(start));
@@ -167,7 +242,7 @@ function nearestHolding(
       );
       if (!tried.has(colour)) {
         tried.add(colour);
-        if (holds(colour)) {
+        if (accepts(colour)) {
           return colour;
         }
       }
@@ -176,17 +251,22 @@ function nearestHolding(
   return undefined;
 }
 
+function describePair(pair: AccentPair): string {
+  return `${pair.foreground} on ${pair.background} reaches ${pair.ratio.toFixed(2)}:1 where ${pair.required}:1 is needed`;
+}
+
 function failure(
   theme: ThemeName,
   role: AccentRole,
   value: string,
   nearest: string | undefined,
+  pair: AccentPair | undefined,
 ): AccentFailure {
   const message =
     nearest === undefined
-      ? `No lightness of ${value} reaches WCAG 2.2 AA for the ${role} in the ${theme} theme.`
+      ? `No lightness of ${value} reaches WCAG 2.2 AA for the ${role} in the ${theme} theme${pair === undefined ? "" : `: ${describePair(pair)}`}.`
       : `The ${role} ${value} in the ${theme} theme is below WCAG 2.2 AA. The nearest colour that passes is ${nearest}.`;
-  return { theme, role, value, nearest, message };
+  return { theme, role, value, nearest, pair, message };
 }
 
 /** What the resolver found for one theme. */
@@ -198,7 +278,8 @@ interface ThemeResolution {
 
 /**
  * Settles one theme. `fixed` holds the roles the host set, which are never
- * moved: the accent is searched only when the host left it out.
+ * moved: the accent is searched only when the host left it out. When it is
+ * set, it drives the theme's derivation and is only checked.
  */
 function resolveTheme(
   theme: ThemeName,
@@ -206,15 +287,8 @@ function resolveTheme(
   fixed: Partial<ThemeColours>,
 ): ThemeResolution {
   const start = fixed.accent ?? given;
-  const setFor = (accent: string): Partial<ThemeColours> => ({
-    ...deriveRoles(theme, accent),
-    ...fixed,
-    accent,
-  });
-  const settled = nearestHolding(
-    start,
-    theme,
-    (colour) => failing(theme, setFor(colour), ROLES).length === 0,
+  const settled = nearestHolding(start, theme, (colour) =>
+    holds(theme, { ...deriveRoles(theme, colour), ...fixed, accent: colour }),
   );
   if (
     settled !== undefined &&
@@ -248,7 +322,9 @@ const BLAME_ORDER: readonly AccentRole[] = [
 /**
  * Names what fails in a theme that cannot be settled: each role the host set
  * that fails, with the nearest colour that fixes it given the roles already
- * put right, else the accent as given.
+ * put right. When none of those fails, the pair that does: a derived role
+ * against a colour the host set outside the four, which no lightness of the
+ * accent fixes.
  */
 function explainFailure(
   theme: ThemeName,
@@ -267,25 +343,51 @@ function explainFailure(
       ...now,
       [role]: colour,
     });
-    const holds = (colour: string): boolean =>
-      failing(theme, set(colour), [role]).length === 0;
-    if (holds(value)) {
+    const accepts = (colour: string): boolean =>
+      holds(theme, set(colour), [role]);
+    if (accepts(value)) {
       continue;
     }
-    const nearest = nearestHolding(value, theme, holds);
-    found.push(failure(theme, role, value, nearest));
+    const nearest = nearestHolding(value, theme, accepts);
+    const pair = failedPairs(theme, set(value), [role]).next().value;
+    found.push(failure(theme, role, value, nearest, pair));
     if (nearest !== undefined) {
       now[role] = nearest;
     }
   }
-  return found.length > 0
-    ? found
-    : [failure(theme, "accent", start, undefined)];
+  if (found.length > 0) {
+    return found;
+  }
+  const baseline = { ...deriveRoles(theme, start), ...fixed, accent: start };
+  const pair = failedPairs(theme, baseline).next().value;
+  return [failure(theme, "accent", start, undefined, pair)];
+}
+
+/** The explicit roles that can be measured: known roles with valid, opaque-where-needed colours. */
+function usable(
+  explicit: Partial<ThemeColours> | undefined,
+): Partial<ThemeColours> {
+  return Object.fromEntries(
+    Object.entries(explicit ?? {}).filter(
+      ([role, colour]) => isRole(role) && invalidReason(role, colour) === null,
+    ),
+  ) as Partial<ThemeColours>;
+}
+
+/** The accent as `#rrggbb`, or why it cannot be read. */
+function readAccent(
+  accent: unknown,
+): { given: string } | { invalid: InvalidColour[] } {
+  const reason = invalidReason("accent", accent);
+  return reason === null
+    ? { given: toHex(parseColour(accent as string)) }
+    : { invalid: [{ theme: null, role: "accent", value: accent, reason }] };
 }
 
 /**
- * Resolves one accent colour into the roles it drives, in both themes, and
- * checks each against WCAG 2.2 AA with {@link checkThemeContrast}.
+ * Resolves one accent colour into the roles it drives, and checks each
+ * against WCAG 2.2 AA with the same pairs and backdrops as
+ * {@link checkThemeContrast}.
  *
  * The accent is used as given in a theme where it passes with its derived
  * roles: the tint (the SDK's own lightness and chroma, in the accent's hue),
@@ -294,39 +396,40 @@ function explainFailure(
  * nearest value that does, with the hue kept and the chroma cut to the sRGB
  * gamut, and `derived` says so. A role the host set in `explicit` is never
  * moved and is not in the result: it is checked, and a failure is refused with
- * the nearest passing colour named. When no lightness passes, the failure has
- * no `nearest`.
+ * the nearest passing colour named. A host-set accent drives its own theme's
+ * derivation. When no lightness passes, the failure has no `nearest` and names
+ * the pair that fails.
  *
- * Pure and total: the same input gives the same result, and it never throws.
- * Only the pairs that involve the four roles are judged here; the caller
- * checks the whole theme.
+ * Pure, and total for input of the declared types: the same input gives the
+ * same result. An `explicit` colour that cannot be read, or a role that is not
+ * one a host may set, is left out: {@link checkThemeContrast} reports it. Only
+ * the pairs that involve the four roles are judged here; the caller checks the
+ * whole theme.
  *
  * @param accent - The brand colour: hex, `rgb()` or `oklch()`, opaque and inside sRGB.
- * @param explicit - The roles the host set for each theme, as valid opaque colours.
+ * @param explicit - The roles the host set for each theme. Left out, none.
+ * @param themes - The themes to resolve. Left out, both; the runtime route
+ *   passes the one that changed, so a theme change does not search the other.
  * @returns The roles to use and how each was reached, or why it was refused.
  */
 export function resolveAccent(
   accent: unknown,
-  explicit: Record<ThemeName, Partial<ThemeColours>>,
+  explicit: Partial<Record<ThemeName, Partial<ThemeColours>>> = {},
+  themes: readonly ThemeName[] = themeNames,
 ): AccentResolution {
-  const reason = invalidReason("accent", accent);
-  if (reason !== null) {
-    return {
-      ok: false,
-      invalid: [{ theme: null, role: "accent", value: accent, reason }],
-      failures: [],
-    };
+  const read = readAccent(accent);
+  if ("invalid" in read) {
+    return { ok: false, invalid: read.invalid, failures: [] };
   }
-  const given = toHex(parseColour(accent as string));
   const colour: Record<ThemeName, Partial<ThemeColours>> = {
     light: {},
     dark: {},
   };
   const derived: DerivedRole[] = [];
   const failures: AccentFailure[] = [];
-  for (const theme of themeNames) {
-    const fixed = explicit[theme];
-    const result = resolveTheme(theme, given, fixed);
+  for (const theme of themes) {
+    const fixed = usable(explicit[theme]);
+    const result = resolveTheme(theme, read.given, fixed);
     failures.push(...result.failures);
     for (const role of ROLES) {
       const value = result.roles[role];
@@ -344,4 +447,25 @@ export function resolveAccent(
   return failures.length > 0
     ? { ok: false, invalid: [], failures }
     : { ok: true, colour, derived };
+}
+
+/**
+ * The roles a valid accent drives in one theme: the resolved ones, or, when it
+ * cannot be resolved, the unmoved derivation, so a check can measure what
+ * fails. A role the host set is left out. Internal to the package.
+ */
+export function accentRolesFor(
+  theme: ThemeName,
+  accent: string,
+  explicit: Partial<ThemeColours> | undefined,
+): Partial<ThemeColours> {
+  const resolution = resolveAccent(accent, { [theme]: explicit }, [theme]);
+  if (resolution.ok) {
+    return resolution.colour[theme];
+  }
+  const fixed = usable(explicit);
+  const unmoved = deriveRoles(theme, toHex(parseColour(accent)));
+  return Object.fromEntries(
+    Object.entries(unmoved).filter(([role]) => !(role in fixed)),
+  ) as Partial<ThemeColours>;
 }

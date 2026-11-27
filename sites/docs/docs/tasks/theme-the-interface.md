@@ -2,7 +2,7 @@
 
 title: Theme the interface
 sidebar_label: Theme the interface
-description: Give the interface your own colours, font and corners with a stylesheet that refuses colours too faint to read.
+description: Give the interface one brand accent, your own font and corners with a generated stylesheet that keeps every colour readable.
 ---
 
 # Theme the interface
@@ -16,6 +16,17 @@ Run this in your build or a script and write the string it returns to a file you
 ```ts check
 import { createThemeStylesheet } from "@mapcairn/sdk";
 
+const result = createThemeStylesheet(
+  { accent: "#0b5c3a", fontFamily: '"Brand Sans", system-ui, sans-serif' },
+  { scope: ":root" },
+);
+```
+
+`result.css` is the stylesheet when `result.ok` is true. A build script that stops on a refusal and says why:
+
+```ts check
+import { createThemeStylesheet } from "@mapcairn/sdk";
+
 /** The brand stylesheet, or an error that says what was refused. */
 export function brandStylesheet(): string {
   const result = createThemeStylesheet(
@@ -25,7 +36,7 @@ export function brandStylesheet(): string {
   if (!result.ok) {
     const failing = result.findings.filter((finding) => !finding.passes);
     throw new Error(
-      `Theme refused: ${failing.length} colour pairs fail WCAG 2.2 AA, ${result.invalid.length} values cannot be used. ${(result.failures ?? []).map((failure) => failure.message).join(" ")}`,
+      `Theme refused: ${failing.length} colour pairs fail WCAG 2.2 AA, ${result.invalid.length} values cannot be used. ${result.failures.map((failure) => failure.message).join(" ")}`,
     );
   }
   return result.css;
@@ -42,9 +53,9 @@ The interface now uses your accent in both themes, and everything you leave out 
 
 ## How one accent becomes a theme
 
-`accent` is one brand colour, in hex, `rgb()` or `oklch()`, for both themes. The stylesheet derives three more roles from it: the tint behind a selected row, the text on an accent fill (white or near black, whichever reads better) and the focus ring. Each theme is checked on its own against WCAG 2.2 AA. Where your colour passes it is used as you wrote it. Where it does not, for example a dark navy on the dark theme or a bright yellow on the light one, its lightness moves to the nearest value that passes, with the hue kept and the chroma cut to what sRGB can show, so the same brand reads in both. `result.derived` lists each role, theme and value written, and whether it is `given`, `moved` or `derived`, so you can see what the SDK chose.
+`accent` is one brand colour, in hex, `rgb()` or `oklch()` (anything else is listed in `result.invalid` as `unparseable`), for both themes. The stylesheet derives three more roles from it: the tint behind a selected row, the text on an accent fill (white or near black, whichever reads better) and the focus ring. Each theme is checked on its own against WCAG 2.2 AA. Where your colour passes it is used as you wrote it. Where it does not, for example a dark navy on the dark theme or a bright yellow on the light one, its lightness moves to the nearest value that passes, with the hue kept and the chroma cut to what sRGB can show, so the same brand reads in both. `result.derived` lists each role, theme and value written, and whether it is `given`, `moved` or `derived`, so you can see what the SDK chose.
 
-The accent is never refused for being too light or too dark; it is refused only when no lightness passes against the other colours you set. To pin a role, set it under `colour` as before: a role you set is used as written and is never moved. If it fails, the stylesheet is refused and `result.failures` names the nearest colour that passes, for example `The accentContrast #888888 in the light theme is below WCAG 2.2 AA. The nearest colour that passes is #c2c2c2.`
+The accent is never refused for being too light or too dark; it is refused only when no lightness passes against the other colours you set. To pin a role, set it under `colour` as before: a role you set is used as written and is never moved, and an `accent` you set under `colour` for a theme is the accent that theme's tint, text and focus ring derive from. If it fails, the stylesheet is refused and `result.failures` names the nearest colour that passes, for example `The accentContrast #888888 in the light theme is below WCAG 2.2 AA. The nearest colour that passes is #c2c2c2.`
 
 ## More you can change
 
@@ -65,7 +76,7 @@ For two maps with different looks, make one stylesheet for each, with its own sc
 | Light or dark for one map                        | No, per page  | The rules read `data-theme` on `<html>`, so every map on the page shares it.                                                                                                                                              |
 | Spacing and density                              | No            | They stay the SDK's so the layout and the collision checks hold.                                                                                                                                                          |
 | Slot positions and icons                         | No            | `MapChrome` owns the slots, and the icons are the SDK's own set ([DESIGN.md](https://github.com/MapCairn/mapcairn/blob/main/DESIGN.md#layout-and-slots)).                                                                 |
-| The data palette and the map overlay colours     | No            | Layers and overlays keep a fixed overlay colour so they read over every basemap, so they do not follow your accent. The page background is yours to set.                                                                  |
+| The data palette and the map overlay colours     | No            | Layers and overlays keep a fixed overlay colour so they read over every basemap, so they do not follow your accent. The page background is fixed too.                                                                     |
 | Arbitrary CSS                                    | No            | The custom property names are generated and private, so a stylesheet of your own cannot name them.                                                                                                                        |
 
 A tooltip renders outside your scope, so in a `#id` or `.class` scope it keeps the SDK's colours. In high-contrast and forced-colours modes the SDK keeps its own values and skips your theme.

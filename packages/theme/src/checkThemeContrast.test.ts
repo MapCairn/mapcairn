@@ -526,3 +526,82 @@ describe("checkThemeContrast", () => {
     expect(ratio("black")).toBeCloseTo(3.83, 2);
   });
 });
+
+describe("checkThemeContrast with an accent", () => {
+  function failingPairs(check: ReturnType<typeof checkThemeContrast>) {
+    return check.findings.filter((finding) => !finding.passes);
+  }
+
+  it.each(["not a colour", "", 42, "#0b5c3a80", "oklch(0.7 0.4 150)"])(
+    "lists an accent of %j as invalid and does not pass",
+    (accent) => {
+      const check = checkThemeContrast({ accent } as unknown as ThemeOverride);
+
+      expect(check.passes).toBe(false);
+      expect(check.invalid).toEqual([
+        expect.objectContaining({ theme: null, role: "accent", value: accent }),
+      ]);
+    },
+  );
+
+  it("measures the roles an accent resolves to, so a yellow that fails as given passes", () => {
+    const check = checkThemeContrast({ accent: "#ffd60a" });
+
+    expect(check.invalid).toEqual([]);
+    expect(check.passes).toBe(true);
+    expect(failingPairs(check)).toEqual([]);
+  });
+
+  it("measures the same colours the accent resolves to", () => {
+    const viaAccent = checkThemeContrast({ accent: "#2e8b57" });
+    const light = {
+      accent: "#137846",
+      accentTint: "#d8efdf",
+      accentContrast: "#ffffff",
+      focusRing: "#137846",
+    };
+    const written = checkThemeContrast({ colour: { light } });
+
+    expect(
+      viaAccent.findings.filter((finding) => finding.theme === "light"),
+    ).toEqual(written.findings.filter((finding) => finding.theme === "light"));
+  });
+
+  it("lets a role set in colour win, and fails when it fails", () => {
+    const check = checkThemeContrast({
+      accent: "#0b5c3a",
+      colour: { light: { accent: "#0b5c3a", accentContrast: "#888888" } },
+    });
+
+    expect(check.passes).toBe(false);
+    expect(failingPairs(check)).toContainEqual(
+      expect.objectContaining({
+        theme: "light",
+        foreground: "accentContrast",
+        background: "accent",
+      }),
+    );
+  });
+
+  it("measures an accent no lightness can fix unmoved, so its failing pairs show", () => {
+    const check = checkThemeContrast({
+      accent: "#0b5c3a",
+      colour: { light: { surface: "#595959", surfaceRaised: "#595959" } },
+    });
+
+    expect(check.passes).toBe(false);
+    expect(failingPairs(check)).toContainEqual(
+      expect.objectContaining({ theme: "light", foreground: "accent" }),
+    );
+  });
+
+  it("leaves an unreadable accent alone for the other roles", () => {
+    const check = checkThemeContrast({
+      accent: "nope",
+      colour: { light: { text: "#111111" } },
+    });
+
+    expect(check.invalid).toHaveLength(1);
+    expect(check.findings.length).toBeGreaterThan(0);
+  });
+});

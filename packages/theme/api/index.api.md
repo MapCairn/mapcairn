@@ -8,9 +8,18 @@
 export interface AccentFailure {
     message: string;
     nearest: string | undefined;
+    pair: AccentPair | undefined;
     role: AccentRole;
     theme: ThemeName;
     value: string;
+}
+
+// @public
+export interface AccentPair {
+    background: ContrastBackground;
+    foreground: ThemeColourRole;
+    ratio: number;
+    required: number;
 }
 
 // @public
@@ -116,7 +125,7 @@ export type PairKind = "text" | "non-text";
 export function parseColour(colour: string): Rgba;
 
 // @public
-export function resolveAccent(accent: unknown, explicit: Record<ThemeName, Partial<ThemeColours>>): AccentResolution;
+export function resolveAccent(accent: unknown, explicit?: Partial<Record<ThemeName, Partial<ThemeColours>>>, themes?: readonly ThemeName[]): AccentResolution;
 
 // @public
 export interface Rgba {
@@ -169,7 +178,7 @@ export type ThemeStylesheet = ThemeStylesheetCreated | ThemeStylesheetRefused;
 // @public
 export interface ThemeStylesheetCreated {
     css: string;
-    derived?: DerivedRole[];
+    derived: DerivedRole[];
     findings: ContrastFinding[];
     ok: true;
 }
@@ -182,7 +191,7 @@ export interface ThemeStylesheetOptions {
 // @public
 export interface ThemeStylesheetRefused {
     css: undefined;
-    failures?: AccentFailure[];
+    failures: AccentFailure[];
     findings: ContrastFinding[];
     invalid: InvalidColour[];
     invalidScope: boolean;

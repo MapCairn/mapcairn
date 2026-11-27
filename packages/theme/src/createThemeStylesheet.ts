@@ -4,13 +4,14 @@ import { type AccentFailure, type DerivedRole, resolveAccent } from "./accent";
 import {
   type ContrastFinding,
   checkThemeContrast,
-  type InvalidColour,
-  type InvalidColourReason,
-  invalidReason,
-  type ThemeColours,
   type ThemeContrastCheck,
   type ThemeOverride,
 } from "./checkThemeContrast";
+import type {
+  InvalidColour,
+  InvalidColourReason,
+  ThemeColours,
+} from "./colourReason";
 import { compositeOver, parseColour, toHex } from "./contrast";
 import { readFontFamily } from "./fontFamily";
 import { readShape, SHAPE_RADIUS_ROLES } from "./shape";
@@ -60,11 +61,9 @@ export interface ThemeStylesheetCreated {
   /**
    * Each role the `accent` shorthand chose, in each theme, with the value
    * written and whether it is the accent as given, the accent moved to reach
-   * AA, or derived from it. Empty when `accent` is not set. Always present on
-   * an accepted theme: it is typed as optional only so that adding it did not
-   * change the type for code that already builds one.
+   * AA, or derived from it. Empty when `accent` is not set.
    */
-  derived?: DerivedRole[];
+  derived: DerivedRole[];
 }
 
 /** A theme override that was refused, with the reasons and no stylesheet. */
@@ -92,11 +91,10 @@ export interface ThemeStylesheetRefused {
   /**
    * The accent roles that cannot reach WCAG 2.2 AA, each with the nearest
    * colour that does, or none when no lightness passes (see
-   * {@link resolveAccent}). Present only when `accent` is set and it, or a
-   * role the host set beside it, fails. Then `findings` describe the
-   * override without the accent.
+   * {@link resolveAccent}). Empty unless `accent` is set and it, or a role the
+   * host set beside it, fails; `findings` then measure the accent unmoved.
    */
-  failures?: AccentFailure[];
+  failures: AccentFailure[];
 }
 
 /** The result of {@link createThemeStylesheet}. */
@@ -373,20 +371,9 @@ function readShapeField(value: unknown): StaticReading {
   };
 }
 
-/** Reads `accent`, which the resolver turns into colours: only its form is judged here. */
-function readAccentField(value: unknown): StaticReading {
-  const reason = value === undefined ? null : invalidReason("accent", value);
-  return {
-    declarations: [],
-    invalid:
-      reason === null ? [] : [{ theme: null, role: "accent", value, reason }],
-  };
-}
-
-/** Reads the fields that are not themselves colours: the accent, the font family and the shape. */
+/** Reads the fields that are not colours: the font family and the shape. */
 function readStaticFields(override: unknown): StaticReading {
   const readings = [
-    readAccentField(fieldOf(override, "accent")),
     readFont(fieldOf(override, "fontFamily")),
     readShapeField(fieldOf(override, "shape")),
   ];
@@ -408,7 +395,7 @@ function refused(
   findings: ContrastFinding[],
   invalid: InvalidColour[],
   invalidScope: boolean,
-  failures?: AccentFailure[],
+  failures: AccentFailure[] = [],
 ): ThemeStylesheetRefused {
   const result: ThemeStylesheetRefused = {
     ok: false,
@@ -416,10 +403,8 @@ function refused(
     findings,
     invalid,
     invalidScope,
+    failures,
   };
-  if (failures !== undefined) {
-    result.failures = failures;
-  }
   return result;
 }
 
