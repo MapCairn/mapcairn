@@ -626,6 +626,39 @@ describe("the guide", () => {
     expect(section).toContain("one yes covers one deployment");
   });
 
+  it("bans the gh auth commands, a hand publish and edits to who may publish, in the rules", () => {
+    const start = guide.indexOf("## Keeping agents from publishing");
+    const section = guide.slice(start, guide.indexOf("\n## ", start + 1));
+    expect(section).toContain(
+      "never runs `gh auth login`, `logout`, `switch`, `refresh`, `token` or `setup-git`",
+    );
+    expect(section).toContain("never publishes by hand");
+    expect(section).toContain(
+      "never edits an environment, a ruleset or a trusted publisher",
+    );
+  });
+
+  it("says the npm reviewer stays recommended, and that rule-only paths are not residual", () => {
+    const start = guide.indexOf("## Keeping agents from publishing");
+    const section = guide.slice(start, guide.indexOf("\n## ", start + 1));
+    expect(section).toContain("stays recommended");
+    expect(section).toContain("`release:check` blocks");
+    expect(section).not.toMatch(/optional/);
+    expect(section).toContain("rule-only");
+    expect(section).toContain("`gh pr merge --admin`");
+  });
+
+  it("agrees with the release skill on the approval and the deny entries", () => {
+    const agreed =
+      "still refuse the call, so the maintainer runs it or changes their own settings";
+    const skill = read(".claude/skills/release/SKILL.md");
+    expect(guide).toContain(agreed);
+    expect(skill).toContain(agreed);
+    expect(skill).toContain("never reword the call");
+    expect(guide).not.toContain("env -u");
+    expect(skill).not.toContain("env -u");
+  });
+
   it("no longer describes a limited token or forbids unsetting an environment variable", () => {
     expect(guide).not.toMatch(/GH_TOKEN/);
     expect(guide).not.toContain(
@@ -647,5 +680,11 @@ describe("the release skill's identity check", () => {
     );
     expect(skill).toContain("`gh` is signed in");
     expect(skill).toContain("you ask first (one yes covers one deployment)");
+    expect(skill).toContain(
+      "You never read or print a token, run `gh auth` commands, use `--admin` or publish by hand",
+    );
+    expect(skill).toContain(
+      "Approve a deployment (`pending_deployments`) only after you ask the maintainer in the conversation and get a yes for that deployment at that moment",
+    );
   });
 });

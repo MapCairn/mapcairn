@@ -467,7 +467,7 @@ function credentialLines({ facts, warnings }) {
 }
 
 /**
- * What the session's GitHub identity means for the gate: a warning, never a
+ * What the session's GitHub identity means for the gate: a notice, never a
  * blocker, when it has administrator access.
  *
  * @param {object} input
@@ -478,10 +478,10 @@ function credentialLines({ facts, warnings }) {
 function identityLines({ facts, warnings }) {
   if (facts.identity === "administrator") {
     const text =
-      "administrator access in this session, so it could approve the npm environment's deployment or edit the environment. An agent must stop and say so; run agents with a limited fine-grained token in GH_TOKEN instead.";
+      "administrator access in this session, so the agent's own rules and the deny lists are the guard for the npm environment's deployment. This is expected, not a stop, when agents run under the maintainer's own login.";
     warnings.push(text);
     return [
-      `  Warning: GitHub identity: ${text} (${GUIDE}, "Running agents under a limited GitHub identity")`,
+      `  Warning: GitHub identity: ${text} (${GUIDE}, "Keeping agents from publishing")`,
     ];
   }
   if (facts.identity === "limited") {

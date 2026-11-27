@@ -678,10 +678,17 @@ describe("parseEnvironment", () => {
 });
 
 describe("the GitHub identity of the session", () => {
-  it("warns, without blocking, when the session has administrator access, and says to use a limited token", () => {
+  it("warns, without blocking, when the session has administrator access, and says it is expected", () => {
     const { text, warnings, blockers } = report({ identity: "administrator" });
     expect(text).toContain("GitHub identity: administrator access");
-    expect(text).toContain("limited fine-grained token");
+    expect(text).toContain(
+      "the agent's own rules and the deny lists are the guard",
+    );
+    expect(text).toContain("expected, not a stop");
+    expect(text).toContain('"Keeping agents from publishing"');
+    expect(text).not.toMatch(
+      /limited fine-grained|GH_TOKEN|Running agents under/,
+    );
     expect(warnings.join("\n")).toContain("administrator access");
     expect(blockers).toEqual([]);
   });
