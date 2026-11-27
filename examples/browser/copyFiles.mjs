@@ -2,8 +2,8 @@
 // Copyright MapCairn contributors
 /**
  * Copies the files of `@mapcairn/sdk/browser` that a page serves into
- * `./mapcairn`: `browser.css` and every `browser*.js` beside it. The page
- * loads them from there, so any static server can serve it.
+ * `./mapcairn`: `browser.css`, `browser.js` and every `browser-*.js` beside
+ * it. The page loads them from there, so any static server can serve it.
  *
  *   node copyFiles.mjs
  */

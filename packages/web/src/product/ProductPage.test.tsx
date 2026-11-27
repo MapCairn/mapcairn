@@ -559,10 +559,10 @@ describe("the product page stands on its own", () => {
     expect(ready).toHaveTextContent(
       "The published packages are checked in a plain Vite and React app in Chromium. The reference site's browser tests run in Chromium and WebKit.",
     );
+    // True of the latest release until one carries the browser route.
     expect(ready).toHaveTextContent(
-      "The project has one volunteer maintainer.",
+      "Releases 0.2.0 and earlier have no prebuilt bundle for pages without React, and the project has one volunteer maintainer.",
     );
-    expect(ready).not.toHaveTextContent(/prebuilt bundle/);
     expect(ready).not.toHaveTextContent("The latest release is");
     expect(
       within(ready).getByRole("link", { name: "capability matrix" }),
@@ -577,8 +577,8 @@ describe("the product page stands on its own", () => {
         .getAllByRole("heading", { level: 3 })
         .map((heading) => heading.textContent),
     ).toEqual(["It fits a team that", "It does not fit if you need"]);
-    expect(fit).not.toHaveTextContent(/prebuilt bundle/);
     for (const reason of [
+      "a prebuilt bundle for pages without React: releases 0.2.0 and earlier have none",
       "only Vite has",
       "the project has one volunteer maintainer",
       "the AGPL-3.0 asks you to offer the source of an app you distribute with the SDK inside",

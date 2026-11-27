@@ -86,6 +86,8 @@ Leave `worker-src` out and the engine's worker never loads, which the adapter tr
 
 ## The browser route
 
+This section is about `@mapcairn/sdk/browser`, the route for a page with no React. It is not in `0.2.0` or any earlier release.
+
 A page that draws its map with [`@mapcairn/sdk/browser`](browser-route.md) needs this policy for a map on the default basemaps. It is the one the release's consumer check serves the example page under (`BUNDLE_POLICY` in `scripts/release/bundleLeg.mjs`; a test keeps this block and that constant the same). Each line is one directive, and the header is these lines joined into one:
 
 ```text
@@ -121,11 +123,11 @@ frame-ancestors 'none';
 The policy covers the default basemaps only. Add origins for anything else you offer:
 
 - **More basemaps.** With the `"map-options"` tool and no `basemaps` option, a person can choose any built-in basemap, and some are served from `tile.openstreetmap.org` and `tiles.versatiles.org`. Allow each basemap you offer in `img-src` and `connect-src`, or pass `basemaps` with only those you allow. A basemap's style can name more hosts than its address does.
-- **Layers.** A feed or query layer's origin and its detail origins go in `connect-src`; a tile layer's origin goes in `img-src` and `connect-src` ([connect-src](#connect-src)).
+- **Layers.** A feed or query layer's origin and its detail origins go in `connect-src`. A tile layer's tile origin goes in `img-src` and `connect-src`, and the origin of its `identify` request, if it has one, in `connect-src` ([connect-src](#connect-src)).
 - **Providers.** The origin your search, suggestion, location or layer source provider calls goes in `connect-src`.
 - **Another origin for the files.** If the map's files are not on your origin, that origin goes in `script-src` and `style-src`. No check serves them that way.
 
-Check a policy of your own in the browser's console, which names the directive to change. The consumer check holds this policy with the built-in Bright basemap's real style, answered from local stand-ins: the style, tile set, tiles, sprite and glyphs. It does not cover the other basemaps, a layer, a provider or saving the map as an image. Which browsers need `child-src` too, and what Trusted Types prevents, are under [worker-src](#worker-src).
+Check a policy of your own in the browser's console, which names the directive to change. The consumer check holds this policy with the built-in Bright basemap's real style, with local stand-ins for its tile set, tile and sprite. It does not check a glyph request: its first view is the whole world, where the style draws no labels, so the check leaves that request out of what it requires (`bundleRun.mjs`). It does not cover the other basemaps, a layer, a provider or saving the map as an image. Which browsers need `child-src` too, and what Trusted Types prevents, are under [worker-src](#worker-src).
 
 ## The nonce question
 

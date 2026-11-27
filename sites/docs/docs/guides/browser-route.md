@@ -29,7 +29,7 @@ Install the package in a folder on the machine where you prepare your site:
 npm install @mapcairn/sdk
 ```
 
-The page serves `browser.css` and every `browser*.js` file in `node_modules/@mapcairn/sdk/dist`, all from one folder on the page's own origin:
+The page serves `browser.css`, `browser.js` and every `browser-*.js` file in `node_modules/@mapcairn/sdk/dist`, all from one folder on the page's own origin:
 
 ```bash
 mkdir -p wwwroot/mapcairn

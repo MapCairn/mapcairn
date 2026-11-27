@@ -525,6 +525,9 @@ export const SECTIONS: readonly Section[] = [
               ["a hosted service, a dataset or a GIS analysis engine;"],
               ["a map engine other than MapLibre GL JS;"],
               [
+                "a prebuilt bundle for pages without React: releases 0.2.0 and earlier have none;",
+              ],
+              [
                 "a bundler other than Vite that has been tried with it: only Vite has;",
               ],
               [
@@ -612,7 +615,7 @@ export const SECTIONS: readonly Section[] = [
             heading: "What it lacks",
             text: [
               [
-                "The project has one volunteer maintainer. The ",
+                "Releases 0.2.0 and earlier have no prebuilt bundle for pages without React, and the project has one volunteer maintainer. The ",
                 {
                   text: "capability matrix",
                   href: CAPABILITY_MATRIX_LINK.href,

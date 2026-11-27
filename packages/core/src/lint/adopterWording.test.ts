@@ -94,6 +94,35 @@ const DENIALS_OF_THE_BROWSER_ROUTE: readonly RegExp[] = [
   /(?:mount\s+function|pre-?built\s+bundle)[^|]*\|(?:[^|]*\|)?\s*(?:lacks|proposed)\s*\|/i,
 ];
 
+/**
+ * The limitation that stays until a release carries the browser route: merging
+ * deploys the site while the latest release has no `./browser`, so these three
+ * places still say so to someone who installs it. Each phrase names the
+ * releases it is true of, so a denial without them still fails, and each must
+ * be there, so the release that ships the route removes the text and its entry
+ * here together.
+ */
+const UNTIL_THE_ROUTE_IS_RELEASED: Readonly<Record<string, readonly string[]>> =
+  {
+    "README.md": [
+      "to mount it in a page without React with `0.2.0` or an earlier release",
+    ],
+    "DESIGN.md": [
+      "no prebuilt bundle for pages without React in 0.2.0 or earlier",
+    ],
+    "packages/web/src/product/productContent.ts": [
+      "0.2.0 and earlier have no prebuilt bundle for pages without React",
+    ],
+  };
+
+/** `text` without the limitation `file` may still state. */
+function withoutAllowed(file: string, text: string): string {
+  return (UNTIL_THE_ROUTE_IS_RELEASED[file] ?? []).reduce(
+    (rest, phrase) => rest.replaceAll(phrase, ""),
+    text,
+  );
+}
+
 /** `file:line: denies the browser route` for each line of `text` that does. */
 function denialsIn(file: string, text: string): string[] {
   return text
@@ -281,9 +310,23 @@ describe("what an adopter reads", () => {
     const product = "packages/web/src/product/productContent.ts";
     expect(
       [...adopterPages(), "DESIGN.md", "ROADMAP.md"]
-        .flatMap((file) => denialsIn(file, read(file)))
-        .concat(denialsIn(product, literalsOf(read(product)))),
+        .flatMap((file) => denialsIn(file, withoutAllowed(file, read(file))))
+        .concat(
+          denialsIn(
+            product,
+            withoutAllowed(product, literalsOf(read(product))),
+          ),
+        ),
     ).toEqual([]);
+  });
+
+  it("still states the limitation of the latest release where it is allowed to", () => {
+    for (const [file, phrases] of Object.entries(UNTIL_THE_ROUTE_IS_RELEASED)) {
+      const text = file.endsWith(".ts") ? literalsOf(read(file)) : read(file);
+      for (const phrase of phrases) {
+        expect(text, file).toContain(phrase);
+      }
+    }
   });
 
   it("names no internal of the SDK in an error or a warning of the browser route", () => {
