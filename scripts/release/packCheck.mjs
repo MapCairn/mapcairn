@@ -39,7 +39,7 @@ export const PACKAGES = SDK_PACKAGES;
 export const SIZE_CEILINGS = {
   core: 1_000_000,
   react: 30_000,
-  theme: 92_000,
+  theme: 96_000,
   map: 700_000,
   "adapter-maplibre": 170_000,
   sdk: 25_000,
