@@ -69,8 +69,8 @@ test.describe("the browser route, languages @a11y", () => {
     }
   });
 
-  // No `dir` on the element and none left to inherit from: what is on the
-  // map's own element is what the map wrote.
+  // The page puts no `lang` or `dir` on the map's element, and an attribute is
+  // read from that element alone, so what is there is what the map wrote.
   for (const route of ["function", "element"] as const satisfies Route[]) {
     for (const language of ROUTE_LANGUAGES) {
       test(`the ${route} page's map carries lang and dir for ${language.tag} @a11y`, async ({
