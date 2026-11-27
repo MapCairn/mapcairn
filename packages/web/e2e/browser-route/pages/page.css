@@ -1,0 +1,19 @@
+body {
+  margin: 0;
+}
+
+.page-title {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+#map,
+#host,
+mapcairn-map {
+  display: block;
+  height: 100vh;
+}

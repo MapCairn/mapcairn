@@ -19,6 +19,15 @@ const executablePath = existsSync(remoteSessionChromium)
 const port = process.env.MAPCAIRN_E2E_PORT || "4173";
 const baseURL = `http://localhost:${port}`;
 
+// The browser-route checks (e2e/browser-route) drive plain pages that load
+// the SDK's browser bundle, served on a port of their own by
+// scripts/serveBrowserRoute.mjs, which reads the same variable. They run in
+// their own projects, so the host's projects leave them out.
+const browserPort = process.env.MAPCAIRN_BROWSER_E2E_PORT || "4892";
+const browserBaseURL = `http://127.0.0.1:${browserPort}`;
+const BROWSER_ROUTE_SPECS = /browser-route\/[\w-]+\.spec\.ts$/;
+const BROWSER_ROUTE_WALK = /browser-route\/walk\.spec\.ts$/;
+
 // Specs that WebKit (iPhone) runs as well: MapLibre's worker startup, the
 // keyboard model and the bottom sheet are where iOS has behaved differently.
 // The layout and accessibility matrices stay on Chromium: they share CSS with
@@ -127,6 +136,7 @@ export default defineConfig<MapCairnOptions>({
     expanded.mobile,
     {
       name: "chromium",
+      testIgnore: BROWSER_ROUTE_SPECS,
       use: { ...devices["Desktop Chrome"], launchOptions: { executablePath } },
     },
     mirrored.mobile,
@@ -163,6 +173,7 @@ export default defineConfig<MapCairnOptions>({
     },
     {
       name: "mobile-chromium",
+      testIgnore: BROWSER_ROUTE_SPECS,
       // Desktop-sized viewports in the layout and accessibility matrices run
       // on the desktop project only (DESKTOP_VIEWPORT_TAG in e2e/support/states.ts).
       grepInvert: /@desktop-viewport/,
@@ -183,12 +194,34 @@ export default defineConfig<MapCairnOptions>({
       testMatch: WEBKIT_SPECS,
       use: { ...devices["iPhone 15"] },
     },
+    {
+      name: "browser-route-chromium",
+      testMatch: BROWSER_ROUTE_SPECS,
+      use: {
+        ...devices["Desktop Chrome"],
+        baseURL: browserBaseURL,
+        launchOptions: { executablePath },
+      },
+    },
+    {
+      name: "browser-route-webkit",
+      testMatch: BROWSER_ROUTE_WALK,
+      use: { ...devices["Desktop Safari"], baseURL: browserBaseURL },
+    },
   ],
-  webServer: {
-    command: "npm run start",
-    url: baseURL,
-    reuseExistingServer: !process.env.CI,
-    // The e2e build runs before the server starts.
-    timeout: 240_000,
-  },
+  webServer: [
+    {
+      command: "npm run start",
+      url: baseURL,
+      reuseExistingServer: !process.env.CI,
+      // The e2e build runs before the server starts.
+      timeout: 240_000,
+    },
+    {
+      command: "node scripts/serveBrowserRoute.mjs",
+      url: `${browserBaseURL}/function.html`,
+      reuseExistingServer: !process.env.CI,
+      timeout: 60_000,
+    },
+  ],
 });
