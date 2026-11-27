@@ -64,6 +64,11 @@ describe("dependency-cruiser boundaries", () => {
       'import { z } from "zod";\nexport const x = z;\n',
     "packages/core/src/good/importsTurf.ts":
       'import area from "@turf/area";\nexport const x = area;\n',
+    // Lit is the interface's library: map may import it, core may not.
+    "packages/core/src/bad/importsLit.ts":
+      'import { html } from "lit";\nexport const x = html;\n',
+    "packages/map/src/ui/goodLit.ts":
+      'import { html, LitElement } from "lit";\nexport const x = [html, LitElement];\n',
 
     // ports are types only.
     "packages/core/src/ports/badValue.ts":
@@ -286,6 +291,7 @@ describe("dependency-cruiser boundaries", () => {
     ],
     ["core-uses-only-pure-packages", "packages/core/src/bad/importsNode.ts"],
     ["core-uses-only-pure-packages", "packages/core/src/bad/importsZod.ts"],
+    ["core-uses-only-pure-packages", "packages/core/src/bad/importsLit.ts"],
     ["core-is-dependency-free", "packages/core/src/bad/importsUi.ts"],
     ["ports-are-types-only", "packages/core/src/ports/badValue.ts"],
     ["ports-import-no-packages", "packages/core/src/ports/badNpm.ts"],
@@ -434,6 +440,7 @@ describe("dependency-cruiser boundaries", () => {
     "packages/web/src/composition/goodAdapterPackage.ts",
     "packages/web/src/composition/goodAdapterPackageByName.ts",
     "packages/map/src/ui/goodPhosphor.ts",
+    "packages/map/src/ui/goodLit.ts",
     "packages/map/src/ui/Switch/goodRadix.ts",
     "packages/map/src/ui/Tooltip/goodRadix.ts",
     "examples/demo/src/goodEntry.ts",
