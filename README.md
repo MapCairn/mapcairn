@@ -290,7 +290,7 @@ Most apps install only `@mapcairn/sdk`. The packages inside it are published on 
 
 | Package                                                             | Provides                                                                                                                                      |
 | ------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
-| [`@mapcairn/sdk`](packages/sdk/README.md)                           | Recommended. Everything below from one install and one import, with one stylesheet. It holds no code of its own                               |
+| [`@mapcairn/sdk`](packages/sdk/README.md)                           | Recommended. Everything below from one install and one import, with one stylesheet                                                            |
 | [`@mapcairn/core`](packages/core/README.md)                         | Inside the SDK. The port interfaces, pure logic, basemap definitions, fakes and contract suites. No React, no browser globals                 |
 | [`@mapcairn/map`](packages/map/README.md)                           | Inside the SDK. The map interface: chrome, sheet and panels, tools, `MapView` and the services provider                                       |
 | [`@mapcairn/react`](packages/react/README.md)                       | Inside the SDK. Generic React hooks                                                                                                           |
