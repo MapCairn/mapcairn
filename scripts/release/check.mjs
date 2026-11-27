@@ -467,7 +467,7 @@ function credentialLines({ facts, warnings }) {
 }
 
 /**
- * What the session's GitHub identity means for the gate: a notice, never a
+ * What the session's GitHub identity means for the gate: a warning, never a
  * blocker, when it has administrator access.
  *
  * @param {object} input

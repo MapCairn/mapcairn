@@ -655,6 +655,10 @@ describe("the guide", () => {
     expect(guide).toContain(agreed);
     expect(skill).toContain(agreed);
     expect(skill).toContain("never reword the call");
+    const tools =
+      "the committed deny entries (Claude Code, opencode, Qwen Code, Cursor)";
+    expect(guide.toLowerCase()).toContain(tools.toLowerCase());
+    expect(skill.toLowerCase()).toContain(tools.toLowerCase());
     expect(guide).not.toContain("env -u");
     expect(skill).not.toContain("env -u");
   });
@@ -668,6 +672,37 @@ describe("the guide", () => {
     expect(read("docs/guides/releasing.md")).not.toMatch(
       /GH_TOKEN|limited GitHub identity/,
     );
+  });
+});
+
+describe("the release documents agree on approvals and the reviewer", () => {
+  const skill = read(".claude/skills/release/SKILL.md");
+  const releasing = read("docs/guides/releasing.md");
+  const plan = read("docs/plans/0014-sdk-release.md");
+  const threshold =
+    "once any SDK package is on npm (or the registry cannot be read)";
+
+  it("states the reviewer threshold as release:check applies it", () => {
+    for (const text of [skill, releasing, plan]) {
+      expect(text).toContain(threshold);
+      expect(text).not.toMatch(
+        /once every SDK package is on npm|when all four packages are on npm/,
+      );
+    }
+  });
+
+  it("allows an approval only after a yes for that deployment", () => {
+    const yes =
+      "only after it asks the maintainer in the conversation and gets a yes for that deployment; one yes covers one deployment (the question names the run and the version)";
+    expect(releasing).toContain(yes);
+    expect(plan).toContain(yes);
+    expect(skill).toContain("without the maintainer's yes for that deployment");
+  });
+
+  it("lists the environment edit and --admin as rule-only in the plan, not as residual", () => {
+    expect(plan).toContain("are rule-only");
+    expect(plan).not.toContain("an environment edit by an administrator token");
+    expect(plan).not.toContain("a notice from `npm run release:check`");
   });
 });
 
