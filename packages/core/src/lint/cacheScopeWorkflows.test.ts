@@ -98,7 +98,10 @@ describe("cache scope in the workflows", () => {
     const found = JOBS.filter(runsThirdPartyCode).map(
       (job) => `${job.file}:${job.name}`,
     );
-    expect(found.sort()).toEqual(["ci.yml:sdk-packages", "release.yml:check"]);
+    expect(found.sort()).toEqual([
+      "release.yml:check",
+      "sdk-packages.yml:sdk-packages",
+    ]);
   });
 
   it("cannot save a cache from a job that runs the consumer check", () => {
