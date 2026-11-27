@@ -131,6 +131,8 @@ async function bundleModules({ folder, entries, stylesheet, embedded }) {
                 test: /node_modules[\\/]maplibre-gl[\\/]|\0mapcairn-engine-stylesheet/,
               },
               { name: "worker", test: (id) => embedded.has(id) },
+              // What both entries load, so the element's file is a few lines over the module's.
+              { name: "shared", minShareCount: 2 },
             ],
           },
           entryFileNames: "[name].js",
@@ -162,7 +164,7 @@ export async function buildBundle({
   entries,
   root = path.resolve(folder, "../.."),
 }) {
-  const [stylesheet] = bundle.entries;
+  const stylesheet = String(bundle.main);
   const require = createRequire(path.join(folder, "package.json"));
   const embedded = new Map();
   const embeddedFolders = [];

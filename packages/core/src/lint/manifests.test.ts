@@ -164,6 +164,16 @@ const BUILT_ENTRY_POINTS: Readonly<
       types: "./dist/browser.css.d.ts",
       default: "./dist/browser.css",
     },
+    "./browser/element": {
+      [SOURCE_CONDITION]: "./src/browser/element/register.ts",
+      types: "./dist/browser-element.d.ts",
+      default: "./dist/browser-element.js",
+    },
+    "./browser/react-jsx": {
+      [SOURCE_CONDITION]: "./src/browser/reactJsx.ts",
+      types: "./dist/browserReactJsx.d.ts",
+      default: "./dist/browserReactJsx.js",
+    },
   },
 };
 
@@ -180,7 +190,7 @@ const SIDE_EFFECTS: Readonly<Record<string, unknown>> = {
   "adapter-maplibre": ["**/*.css", "**/*.css.ts"],
   react: false,
   theme: ["**/*.css"],
-  sdk: ["**/*.css"],
+  sdk: ["**/*.css", "**/browser-element.js"],
 };
 
 /**

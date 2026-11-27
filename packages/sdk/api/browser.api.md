@@ -112,6 +112,9 @@ export interface DateTimeControlDefinition extends ControlBase {
 }
 
 // @public
+export function defineMapElement(name?: string): MapCairnMapElementClass | undefined;
+
+// @public
 export type DefinitionText = MessageKey | string | HostText;
 
 // @public
@@ -386,6 +389,31 @@ export interface LocationProvider {
 export interface LocationWatchHandlers {
     onError(error: Error): void;
     onFix(fix: LocationFix): void;
+}
+
+// @public
+export interface MapCairnMapElement extends HTMLElement {
+    addEventListener<K extends keyof MapCairnMapEventMap>(type: K, listener: (this: MapCairnMapElement, event: MapCairnMapEventMap[K]) => void, options?: boolean | AddEventListenerOptions): void;
+    addEventListener(type: string, listener: EventListenerOrEventListenerObject, options?: boolean | AddEventListenerOptions): void;
+    basemaps: readonly BasemapDefinition[] | undefined;
+    languages: readonly MountLanguage[] | undefined;
+    layers: MountMapOptions["layers"];
+    readonly map: MapHandle | undefined;
+    removeEventListener<K extends keyof MapCairnMapEventMap>(type: K, listener: (this: MapCairnMapElement, event: MapCairnMapEventMap[K]) => void, options?: boolean | EventListenerOptions): void;
+    removeEventListener(type: string, listener: EventListenerOrEventListenerObject, options?: boolean | EventListenerOptions): void;
+    services: MountServices | undefined;
+    view: ViewState | undefined;
+}
+
+// @public
+export type MapCairnMapElementClass = new () => MapCairnMapElement;
+
+// @public
+export interface MapCairnMapEventMap {
+    "mapcairn-click": CustomEvent<LatLng>;
+    "mapcairn-error": CustomEvent<MapEngineError | MountMapError>;
+    "mapcairn-feature-tap": CustomEvent<MapFeatureTap>;
+    "mapcairn-view-change": CustomEvent<ViewState>;
 }
 
 // @public

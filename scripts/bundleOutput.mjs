@@ -21,8 +21,10 @@ export function moduleIdsOf(bundle) {
 }
 
 /**
- * What the bundle's stylesheet starts with, for every element of a mounted map
- * (below the container the mount marks with `data-mapcairn`), in four parts.
+ * What the bundle's stylesheet starts with. First, the `mapcairn-map` element
+ * is a block, because an element the browser does not know is inline. Then,
+ * for every element of a mounted map (below the container the mount marks with
+ * `data-mapcairn`), four parts.
  *
  * 1. The browser's own defaults in place of any rule the page wrote for that
  *    element, such as `* { margin: 0 }`, `button { height: 2rem }` or a global
@@ -53,6 +55,7 @@ export function moduleIdsOf(bundle) {
  */
 export function pageReset({ tokens, focusRing }) {
   return [
+    "mapcairn-map{display:block}",
     "[data-mapcairn] *:where(:not(svg,svg *)){all:revert}",
     "[data-mapcairn],[data-mapcairn] *,[data-mapcairn] *::before,[data-mapcairn] *::after{box-sizing:border-box}",
     `[data-mapcairn] :where(:focus-visible){outline:${focusRing.outline};outline-offset:${focusRing.outlineOffset}}`,

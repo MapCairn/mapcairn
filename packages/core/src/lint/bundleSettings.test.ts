@@ -44,15 +44,33 @@ describe("bundleOf", () => {
     expect(
       bundleOf({
         mapcairn: {
-          bundle: { entries: ["a"], embed: { "src/w.ts": "p/x.js" } },
+          bundle: {
+            main: "a",
+            entries: ["a", "b"],
+            embed: { "src/w.ts": "p/x.js" },
+          },
         },
       }),
-    ).toEqual({ entries: ["a"], embed: { "src/w.ts": "p/x.js" } });
+    ).toEqual({
+      entries: ["a", "b"],
+      main: "a",
+      embed: { "src/w.ts": "p/x.js" },
+    });
     expect(bundleOf({ mapcairn: { bundle: {} } })).toEqual({
       entries: [],
+      main: undefined,
       embed: {},
     });
     expect(bundleOf({})).toBeUndefined();
+  });
+
+  it("refuses a bundle whose main entry is missing or is not one of its entries", () => {
+    expect(() =>
+      bundleOf({ mapcairn: { bundle: { entries: ["a", "b"] } } }),
+    ).toThrow(/main must name one of the entries \(a, b\)/);
+    expect(() =>
+      bundleOf({ mapcairn: { bundle: { main: "c", entries: ["a"] } } }),
+    ).toThrow(/main must name/);
   });
 });
 

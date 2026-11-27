@@ -70,6 +70,10 @@ describe("pageReset", () => {
   };
   const reset = pageReset(theme);
 
+  it("makes the map element a block, which an unknown element is not, with the specificity of an element", () => {
+    expect(reset.startsWith("mapcairn-map{display:block}")).toBe(true);
+  });
+
   it("gives every element under a mounted map, drawings apart, the browser's own defaults, with the specificity of one class", () => {
     expect(reset).toContain(
       "[data-mapcairn] *:where(:not(svg,svg *)){all:revert}",

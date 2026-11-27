@@ -51,6 +51,17 @@ describe("the plain page example", () => {
     );
   });
 
+  it("has a second page that draws the map with the tag alone: a module that registers it, no script of its own and no option passed", () => {
+    const html = readFileSync(path.join(EXAMPLE, "element.html"), "utf8");
+    expect(lines("element.html").length).toBeLessThanOrEqual(MOST_LINES);
+    expect(html).toContain('href="./mapcairn/browser.css"');
+    expect(html).toContain(
+      '<script type="module" src="./mapcairn/browser-element.js"></script>',
+    );
+    expect(html).toContain("<mapcairn-map></mapcairn-map>");
+    expect(html).not.toMatch(/<style|\sstyle=|<script(?![^>]*\ssrc=)/i);
+  });
+
   it("is a workspace that depends on the umbrella alone", () => {
     const manifest = JSON.parse(
       readFileSync(path.join(EXAMPLE, "package.json"), "utf8"),
@@ -83,9 +94,9 @@ describe("the files the example copies", () => {
     );
   }
 
-  it("are the stylesheet, the module and every file the module loads, and nothing else", () => {
-    const needed = new Set(["browser.js", "browser.css"]);
-    const queue = ["browser.js"];
+  it("are the stylesheet, the module, the element's file and every file they load, and nothing else", () => {
+    const needed = new Set(["browser.js", "browser-element.js", "browser.css"]);
+    const queue = ["browser.js", "browser-element.js"];
     for (const file of queue) {
       for (const next of loadedBy(file)) {
         if (!needed.has(next)) {
