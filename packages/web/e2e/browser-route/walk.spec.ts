@@ -91,7 +91,7 @@ test.describe("the browser route, keyboard walk @a11y", () => {
   for (const route of ["function", "element"] as const satisfies Route[]) {
     for (const language of ROUTE_LANGUAGES) {
       for (const viewport of VIEWPORTS) {
-        test.describe(`${route} page in ${language.tag} at${viewport.width}x${viewport.height}`, () => {
+        test.describe(`${route} page in ${language.tag} at ${viewport.width}x${viewport.height}`, () => {
           test.beforeEach(async ({ page }) => {
             await page.setViewportSize(viewport);
             await page.clock.install();

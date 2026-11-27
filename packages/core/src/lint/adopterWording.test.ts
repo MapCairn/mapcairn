@@ -110,13 +110,10 @@ function repositoryFiles(...paths: string[]): string[] {
 }
 
 /**
- * Pages of the documentation site that are written for people who change the
- * SDK, not for people who use it, each with why. Every other page there is
- * checked, so a new page is covered without a change to this test.
+ * Every page and README an adopter reads. Every page of the documentation site
+ * is checked, with no exclusion, so a new page is covered without a change to
+ * this test.
  */
-const FOR_CONTRIBUTORS: Readonly<Record<string, string>> = {};
-
-/** Every page and README an adopter reads. */
 function adopterPages(): string[] {
   const site = repositoryFiles("sites/docs/docs").filter((file) =>
     /\.mdx?$/.test(file),
@@ -128,9 +125,7 @@ function adopterPages(): string[] {
       (name) => `packages/${name}/README.md`,
     ),
   ];
-  return [...readmes, ...site].filter(
-    (file) => !Object.hasOwn(FOR_CONTRIBUTORS, file),
-  );
+  return [...readmes, ...site];
 }
 
 /** The browser route's source, whose strings include its errors and warnings. */
@@ -228,11 +223,5 @@ describe("what an adopter reads", () => {
         findingsIn(file, literalsOf(read(file))),
       ),
     ).toEqual([]);
-  });
-
-  it("excludes only pages that exist and would otherwise fail", () => {
-    for (const file of Object.keys(FOR_CONTRIBUTORS)) {
-      expect(findingsIn(file, read(file)), file).not.toEqual([]);
-    }
   });
 });
