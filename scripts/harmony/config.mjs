@@ -12,7 +12,7 @@
  * engine style file, committed basemap assets and map style definitions, tests
  * and fixtures, and build output. The inline script in `packages/web/src/root.tsx`
  * is a string, so it needs no exemption: no rule here reads inside a string
- * except for colour and selector patterns.
+ * except for colour and selector patterns, and the markup of a Lit template.
  */
 
 /**

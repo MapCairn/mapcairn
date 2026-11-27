@@ -40,27 +40,39 @@ const DRAWS_NOTHING = new Set(["§", "nothing", '""', "''", "null"]);
 /** The properties that name an element, as Lit's `.name=${...}` writes them. */
 const NAME_PROPERTIES = new Set(["ariaLabel", "title"]);
 
-const STYLE_MESSAGE =
-  "in a Lit template. The production CSP is style-src 'self', which refuses it. Use a vanilla-extract class, or set a computed value with element.style.setProperty.";
+const STYLE_FIX =
+  "Use a vanilla-extract class, or set each computed value with element.style.setProperty.";
+
+const REFUSED_BY_POLICY = `in a Lit template. The production CSP is style-src 'self', which refuses it. ${STYLE_FIX}`;
+
+const PROPERTY_MESSAGE = `A .style binding in a Lit template sets the element's whole style from one value. ${STYLE_FIX}`;
+
+/** @param {LitAttribute} attr @returns {string} */
+function styleMessage(attr) {
+  return attr.prefix === "."
+    ? PROPERTY_MESSAGE
+    : `A ${attr.prefix}style attribute ${REFUSED_BY_POLICY}`;
+}
 
 /**
  * Refuses a `style` attribute, bound or not, and a `style` element. Lit writes
  * an attribute binding with `setAttribute`, which the policy blocks, even for a
- * custom property.
+ * custom property. A `.style` binding is refused too, so a computed style is
+ * set one way only.
  * @param {LitElement} element
  * @param {Report} report
  */
 function checkStyle(element, report) {
   if (element.name === "style") {
-    report("inline-style", element.line, `A style element ${STYLE_MESSAGE}`);
+    report(
+      "inline-style",
+      element.line,
+      `A style element ${REFUSED_BY_POLICY}`,
+    );
   }
   for (const attr of element.attrs) {
     if (attr.prefix !== "@" && attr.name.toLowerCase() === "style") {
-      report(
-        "inline-style",
-        attr.line,
-        `A ${attr.prefix}style binding or attribute ${STYLE_MESSAGE}`,
-      );
+      report("inline-style", attr.line, styleMessage(attr));
     }
   }
 }
