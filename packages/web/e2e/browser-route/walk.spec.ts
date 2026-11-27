@@ -1,10 +1,12 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
+import { EN_GB_CATALOGUE } from "@mapcairn/core";
 import { expect, type Locator, test } from "@playwright/test";
 import type { MapPage } from "../pages/MapPage";
 import { tabKey } from "../support/keys";
 import { collapseCredits } from "../support/states";
 import {
+  builtLanguages,
   currentView,
   openRoute,
   ROUTE_LANGUAGES,
@@ -47,11 +49,49 @@ function nextKey(language: RouteLanguage): "ArrowRight" | "ArrowLeft" {
   return language.direction === "ltr" ? "ArrowRight" : "ArrowLeft";
 }
 
+test.describe("the browser route, languages @a11y", () => {
+  test("the page builds two languages from the English messages, one marked right to left @a11y", async ({
+    page,
+  }) => {
+    const built = await builtLanguages(page, "function");
+    expect(built.map(({ tag, direction }) => [tag, direction])).toEqual(
+      ROUTE_LANGUAGES.map(({ tag, direction }) => [
+        tag,
+        direction === "rtl" ? "rtl" : undefined,
+      ]),
+    );
+    for (const { messages } of built) {
+      expect(Object.keys(messages)).toEqual(Object.keys(EN_GB_CATALOGUE));
+      // The walk finds controls by these texts, so English would prove nothing.
+      expect(messages["host.map.label"]).not.toBe(
+        EN_GB_CATALOGUE["host.map.label"],
+      );
+    }
+  });
+
+  // No `dir` on the element and none left to inherit from: what is on the
+  // map's own element is what the map wrote.
+  for (const route of ["function", "element"] as const satisfies Route[]) {
+    for (const language of ROUTE_LANGUAGES) {
+      test(`the ${route} page's map carries lang and dir for ${language.tag} @a11y`, async ({
+        page,
+      }) => {
+        await openRoute(page, { route, language, theme: "light" });
+        const container = page.locator(
+          route === "function" ? "#map" : "mapcairn-map",
+        );
+        await expect(container).toHaveAttribute("lang", language.tag);
+        await expect(container).toHaveAttribute("dir", language.direction);
+      });
+    }
+  }
+});
+
 test.describe("the browser route, keyboard walk @a11y", () => {
   for (const route of ["function", "element"] as const satisfies Route[]) {
     for (const language of ROUTE_LANGUAGES) {
       for (const viewport of VIEWPORTS) {
-        test.describe(`${route} page in ${language.sample.tag} at ${viewport.width}x${viewport.height}`, () => {
+        test.describe(`${route} page in ${language.tag} at${viewport.width}x${viewport.height}`, () => {
           test.beforeEach(async ({ page }) => {
             await page.setViewportSize(viewport);
             await page.clock.install();

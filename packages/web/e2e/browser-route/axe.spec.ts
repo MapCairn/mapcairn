@@ -52,7 +52,7 @@ test.describe("the browser route, axe and control checks @a11y", () => {
   for (const route of ["function", "element"] as const satisfies Route[]) {
     for (const language of ROUTE_LANGUAGES) {
       for (const viewport of ROUTE_VIEWPORTS) {
-        test(`${route} page in ${language.sample.tag} at ${viewport.width}x${viewport.height} passes in both themes @a11y`, async ({
+        test(`${route} page in ${language.tag} at${viewport.width}x${viewport.height} passes in both themes @a11y`, async ({
           page,
         }) => {
           test.setTimeout(120_000);
