@@ -281,7 +281,7 @@ interface ThemeResolution {
  * moved: the accent is searched only when the host left it out. When it is
  * set, it drives the theme's derivation and is only checked.
  */
-function resolveTheme(
+function resolveAccentTheme(
   theme: ThemeName,
   given: string,
   fixed: Partial<ThemeColours>,
@@ -429,7 +429,7 @@ export function resolveAccent(
   const failures: AccentFailure[] = [];
   for (const theme of themes) {
     const fixed = usable(explicit[theme]);
-    const result = resolveTheme(theme, read.given, fixed);
+    const result = resolveAccentTheme(theme, read.given, fixed);
     failures.push(...result.failures);
     for (const role of ROLES) {
       const value = result.roles[role];
