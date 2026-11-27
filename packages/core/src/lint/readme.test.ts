@@ -334,7 +334,7 @@ describe("README.md", () => {
   it("does not list a host's own colours as missing, and says what is still missing", () => {
     expect(README).not.toContain("your own colours and font with contrast");
     expect(README).toContain(
-      "your own font, or colours beyond the 14 interface roles",
+      "your own font with `0.2.0` or an earlier release, colours beyond the 14 interface roles",
     );
   });
 
