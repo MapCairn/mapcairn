@@ -613,4 +613,113 @@ describe("the guide", () => {
     const section = guide.slice(start, guide.indexOf("\n## ", start + 1));
     expect(section).toContain(tool);
   });
+
+  it("states the rules that hold under the maintainer's own gh login", () => {
+    const start = guide.indexOf("## Keeping agents from publishing");
+    const section = guide.slice(start, guide.indexOf("\n## ", start + 1));
+    expect(section).toContain("the maintainer's own signed-in `gh` login");
+    expect(section).toContain("never reads or prints a token");
+    expect(section).toContain("never uses `--admin`");
+    expect(section).toContain(
+      "only after it asks the maintainer in the conversation and gets a yes for that deployment at that moment",
+    );
+    expect(section).toContain("one yes covers one deployment");
+  });
+
+  it("bans the gh auth commands, a hand publish and edits to who may publish, in the rules", () => {
+    const start = guide.indexOf("## Keeping agents from publishing");
+    const section = guide.slice(start, guide.indexOf("\n## ", start + 1));
+    expect(section).toContain(
+      "never runs `gh auth login`, `logout`, `switch`, `refresh`, `token` or `setup-git`",
+    );
+    expect(section).toContain("never publishes by hand");
+    expect(section).toContain(
+      "never edits an environment, a ruleset or a trusted publisher",
+    );
+  });
+
+  it("says the npm reviewer stays recommended, and that rule-only paths are not residual", () => {
+    const start = guide.indexOf("## Keeping agents from publishing");
+    const section = guide.slice(start, guide.indexOf("\n## ", start + 1));
+    expect(section).toContain("stays recommended");
+    expect(section).toContain("release:check` blocks");
+    expect(section).not.toMatch(/optional/);
+    expect(section).toContain("rule-only");
+    expect(section).toContain("`gh pr merge --admin`");
+  });
+
+  it("agrees with the release skill on the approval and the deny entries", () => {
+    const agreed =
+      "still refuse the call, so the maintainer runs it or changes their own settings";
+    const skill = read(".claude/skills/release/SKILL.md");
+    expect(guide).toContain(agreed);
+    expect(skill).toContain(agreed);
+    expect(skill).toContain("never reword the call");
+    const tools =
+      "the committed deny entries (Claude Code, opencode, Qwen Code, Cursor)";
+    expect(guide.toLowerCase()).toContain(tools.toLowerCase());
+    expect(skill.toLowerCase()).toContain(tools.toLowerCase());
+    expect(guide).not.toContain("env -u");
+    expect(skill).not.toContain("env -u");
+  });
+
+  it("no longer describes a limited token or forbids unsetting an environment variable", () => {
+    expect(guide).not.toMatch(/GH_TOKEN/);
+    expect(guide).not.toContain(
+      "Running agents under a limited GitHub identity",
+    );
+    expect(guide).not.toContain("limited fine-grained");
+    expect(read("docs/guides/releasing.md")).not.toMatch(
+      /GH_TOKEN|limited GitHub identity/,
+    );
+  });
+});
+
+describe("the release documents agree on approvals and the reviewer", () => {
+  const skill = read(".claude/skills/release/SKILL.md");
+  const releasing = read("docs/guides/releasing.md");
+  const plan = read("docs/plans/0014-sdk-release.md");
+  const threshold =
+    "once any SDK package is on npm (or the registry cannot be read)";
+
+  it("states the reviewer threshold as release:check applies it", () => {
+    for (const text of [skill, releasing, plan]) {
+      expect(text).toContain(threshold);
+      expect(text).not.toMatch(
+        /once every SDK package is on npm|when all four packages are on npm/,
+      );
+    }
+  });
+
+  it("allows an approval only after a yes for that deployment", () => {
+    const yes =
+      "only after it asks the maintainer in the conversation and gets a yes for that deployment; one yes covers one deployment (the question names the run and the version)";
+    expect(releasing).toContain(yes);
+    expect(plan).toContain(yes);
+    expect(skill).toContain("without the maintainer's yes for that deployment");
+  });
+
+  it("lists the environment edit and --admin as rule-only in the plan, not as residual", () => {
+    expect(plan).toContain("are rule-only");
+    expect(plan).not.toContain("an environment edit by an administrator token");
+    expect(plan).not.toContain("a notice from `npm run release:check`");
+  });
+});
+
+describe("the release skill's identity check", () => {
+  const skill = read(".claude/skills/release/SKILL.md");
+
+  it("checks that gh is signed in with write access and that the agent asks before approving", () => {
+    expect(skill).not.toMatch(
+      /GH_TOKEN|limited token|administrator login is active/,
+    );
+    expect(skill).toContain("`gh` is signed in");
+    expect(skill).toContain("you ask first (one yes covers one deployment)");
+    expect(skill).toContain(
+      "You never read or print a token, run `gh auth` commands, use `--admin` or publish by hand",
+    );
+    expect(skill).toContain(
+      "Approve a deployment (`pending_deployments`) only after you ask the maintainer in the conversation and get a yes for that deployment at that moment",
+    );
+  });
 });
