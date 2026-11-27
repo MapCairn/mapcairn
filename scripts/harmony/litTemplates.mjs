@@ -84,8 +84,11 @@ const TRAILING_NAME = /(?<![\w$./-])([A-Za-z_$][\w$]*)$/;
 /** The longest text before a backtick that is looked at for a tag name. */
 const TAG_WINDOW = 80;
 
-/** A character, or the word `return`, after which `/` starts a regular expression. */
-const BEFORE_REGEX = /(?:^|[(,=:[!&|?{};+*%<>~^-]|\breturn)\s*$/;
+/**
+ * A character, or the word `return`, after which `/` starts a regular
+ * expression. `<` is left out, so the `/` of a closing JSX tag does not.
+ */
+const BEFORE_REGEX = /(?:^|[(,=:[!&|?{};+*%>~^-]|\breturn)\s*$/;
 
 /** A regular expression literal: classes and escapes may hold a `/`. */
 const REGEX_LITERAL = /\/(?:\\.|\[(?:\\.|[^\]\\\n])*\]|[^/\\[\n])+\//y;
@@ -147,7 +150,9 @@ function skipPlain(code, i) {
     return skipString(code, i);
   }
   const before = code.slice(Math.max(0, i - TAG_WINDOW), i);
-  if (code[i] === "/" && BEFORE_REGEX.test(before)) {
+  // `/>` ends a JSX tag.
+  const startsSlash = code[i] === "/" && code[i + 1] !== ">";
+  if (startsSlash && BEFORE_REGEX.test(before)) {
     REGEX_LITERAL.lastIndex = i;
     return REGEX_LITERAL.test(code) ? REGEX_LITERAL.lastIndex : i + 1;
   }

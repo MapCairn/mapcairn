@@ -731,6 +731,16 @@ describe("Lit templates in the harmony scanner", () => {
     ).toEqual(["inline-style"]);
   });
 
+  it("still reads a template between two closing JSX tags on one line", () => {
+    const source =
+      'export const A = () => <p>{x}</p>; export const b = html`<i style="x"></i>`;\n';
+    expect(
+      scanSource("packages/map/src/a.tsx", source).map(
+        (v: { rule: string }) => v.rule,
+      ),
+    ).toContain("inline-style");
+  });
+
   it("reads a template nested in an untagged one", () => {
     expect(
       rules('export const a = `${html`<i style="x"></i>`} here`;\n'),

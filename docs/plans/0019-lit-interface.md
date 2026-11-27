@@ -1,6 +1,6 @@
 # 0019: Move the map interface to Lit, behind one element
 
-Status: proposed. Tracking issue: [#1015](https://github.com/MapCairn/mapcairn/issues/1015).
+Status: in progress. Tracking issue: [#1015](https://github.com/MapCairn/mapcairn/issues/1015).
 
 ## Goal
 
