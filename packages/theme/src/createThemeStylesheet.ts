@@ -1,14 +1,17 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
+import { type AccentFailure, type DerivedRole, resolveAccent } from "./accent";
 import {
   type ContrastFinding,
   checkThemeContrast,
-  type InvalidColour,
-  type InvalidColourReason,
-  type ThemeColours,
   type ThemeContrastCheck,
   type ThemeOverride,
 } from "./checkThemeContrast";
+import type {
+  InvalidColour,
+  InvalidColourReason,
+  ThemeColours,
+} from "./colourReason";
 import { compositeOver, parseColour, toHex } from "./contrast";
 import { readFontFamily } from "./fontFamily";
 import { readShape, SHAPE_RADIUS_ROLES } from "./shape";
@@ -55,6 +58,12 @@ export interface ThemeStylesheetCreated {
    * listed here.
    */
   findings: ContrastFinding[];
+  /**
+   * Each role the `accent` shorthand chose, in each theme, with the value
+   * written and whether it is the accent as given, the accent moved to reach
+   * AA, or derived from it. Empty when `accent` is not set.
+   */
+  derived: DerivedRole[];
 }
 
 /** A theme override that was refused, with the reasons and no stylesheet. */
@@ -79,6 +88,13 @@ export interface ThemeStylesheetRefused {
   invalid: InvalidColour[];
   /** True when `scope` is not `:root`, `#id` or `.class`, or could not be read. */
   invalidScope: boolean;
+  /**
+   * The accent roles that cannot reach WCAG 2.2 AA, each with the nearest
+   * colour that does, or none when no lightness passes (see
+   * {@link resolveAccent}). Empty unless `accent` is set and it, or a role the
+   * host set beside it, fails; `findings` then measure the accent unmoved.
+   */
+  failures: AccentFailure[];
 }
 
 /** The result of {@link createThemeStylesheet}. */
@@ -288,7 +304,10 @@ interface StaticReading {
 }
 
 /** One field of an override that may be anything, or `undefined` when it has none. */
-function fieldOf(override: unknown, key: "fontFamily" | "shape"): unknown {
+function fieldOf(
+  override: unknown,
+  key: "accent" | "fontFamily" | "shape",
+): unknown {
   return typeof override === "object" && override !== null
     ? (override as Record<string, unknown>)[key]
     : undefined;
@@ -376,8 +395,17 @@ function refused(
   findings: ContrastFinding[],
   invalid: InvalidColour[],
   invalidScope: boolean,
+  failures: AccentFailure[] = [],
 ): ThemeStylesheetRefused {
-  return { ok: false, css: undefined, findings, invalid, invalidScope };
+  const result: ThemeStylesheetRefused = {
+    ok: false,
+    css: undefined,
+    findings,
+    invalid,
+    invalidScope,
+    failures,
+  };
+  return result;
 }
 
 /**
@@ -404,6 +432,13 @@ function refused(
  * `#rrggbbaa`, parsed with the same strict reader as
  * {@link checkThemeContrast}, so nothing else can enter the stylesheet.
  *
+ * `accent` is one brand colour for both themes. The tint, the text on the
+ * accent and the focus ring are derived from it, and in a theme where it falls
+ * below AA its lightness moves to the nearest value that passes, with the hue
+ * kept. `derived` on the result lists each role and the value written. A role
+ * set in `colour` is never moved: a failing one refuses the override, and
+ * `failures` names the nearest colour that passes (see {@link resolveAccent}).
+ *
  * `shape` (`square`, `default` or `round`) sets the pill, sheet, control and
  * inner radii once for the scope, in the same rule as the font. `default`
  * writes nothing. The circular role stays circular and the round preset keeps
@@ -426,7 +461,7 @@ function refused(
  * Total: it never throws. A tooltip renders in a portal outside the scope, so
  * it keeps the SDK's colours in a `#id` or `.class` scope.
  *
- * @param override - The colours to change, per theme, and the font family.
+ * @param override - The accent or the colours to change, per theme, and the font family.
  * @param options - The scope to apply them in.
  * @returns The stylesheet and the findings, or the reasons it was refused.
  */
@@ -442,7 +477,7 @@ export function createThemeStylesheet(
     if (invalid.length > 0 || scope === undefined) {
       return refused(initial.findings, invalid, scope === undefined);
     }
-    return create(override, scope, fields.declarations);
+    return create(override, scope, fields.declarations, initial.findings);
   } catch {
     return refused(
       [],
@@ -456,19 +491,39 @@ function create(
   override: ThemeOverride,
   scope: string,
   fields: string[],
+  initialFindings: ContrastFinding[],
 ): ThemeStylesheet {
   const sets = normalise(override);
-  const derived = {
+  const accent = fieldOf(override, "accent");
+  const resolution =
+    accent === undefined
+      ? undefined
+      : resolveAccent(accent, {
+          light: derive("light", sets.light).colours,
+          dark: derive("dark", sets.dark).colours,
+        });
+  if (resolution?.ok === false) {
+    return refused(
+      initialFindings,
+      resolution.invalid,
+      false,
+      resolution.failures,
+    );
+  }
+  for (const theme of themeNames) {
+    sets[theme] = { ...resolution?.colour[theme], ...sets[theme] };
+  }
+  const themeSets = {
     light: derive("light", sets.light),
     dark: derive("dark", sets.dark),
   };
   const check = checkSets({
-    light: derived.light.colours,
-    dark: derived.dark.colours,
+    light: themeSets.light.colours,
+    dark: themeSets.dark.colours,
   });
   const opaqueCheck = checkSets({
-    light: { ...derived.light.colours, ...derived.light.opaque },
-    dark: { ...derived.dark.colours, ...derived.dark.opaque },
+    light: { ...themeSets.light.colours, ...themeSets.light.opaque },
+    dark: { ...themeSets.dark.colours, ...themeSets.dark.opaque },
   });
   const findings = [
     ...check.findings,
@@ -478,8 +533,15 @@ function create(
     return refused(findings, [...check.invalid, ...opaqueCheck.invalid], false);
   }
   const css = [
-    ...themeNames.flatMap((theme) => renderTheme(theme, scope, derived[theme])),
+    ...themeNames.flatMap((theme) =>
+      renderTheme(theme, scope, themeSets[theme]),
+    ),
     ...renderStatic(scope, fields),
   ].join("\n");
-  return { ok: true, css: css === "" ? css : `${css}\n`, findings };
+  return {
+    ok: true,
+    css: css === "" ? css : `${css}\n`,
+    findings,
+    derived: resolution?.derived ?? [],
+  };
 }

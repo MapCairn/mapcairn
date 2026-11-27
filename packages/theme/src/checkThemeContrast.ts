@@ -1,27 +1,37 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
-import { isInSrgbGamut, parseColour } from "./contrast";
+import { accentRolesFor } from "./accent";
+import {
+  type InvalidColour,
+  type InvalidColourReason,
+  invalidReason,
+  isRole,
+  type ThemeColours,
+} from "./colourReason";
 import {
   type BackdropName,
   type ContrastBackground,
   type ContrastPair,
   contrastPairs,
   measurePair,
-  opaqueRoles,
   type PairKind,
   type ThemeColourRole,
 } from "./contrastPairs";
 import { type ColourRoles, type ThemeName, themeValues } from "./tokenValues";
 
-/**
- * The interface colour roles a host may override. Page and map roles, the
- * overlay roles and the data palette are not here: they carry their own
- * guarantees or belong to the host.
- */
-export type ThemeColours = Record<ThemeColourRole, string>;
-
 /** A proposed theme: some colour roles, per theme. A role left out keeps its default. */
 export interface ThemeOverride {
+  /**
+   * One brand colour for both themes: hex, `rgb()` or `oklch()`, opaque and
+   * inside sRGB. The accent's tint, the text on it and the focus ring are
+   * derived from it, and where it falls below WCAG 2.2 AA in a theme its
+   * lightness moves to the nearest value that passes (see
+   * {@link resolveAccent}). A role set in `colour` is used as written and
+   * never moved, and wins over this. {@link checkThemeContrast} resolves it
+   * the same way and measures the roles that result, and
+   * {@link createThemeStylesheet} writes them.
+   */
+  accent?: string;
   /** Colour roles to change, per theme. */
   colour?: {
     light?: Partial<ThemeColours>;
@@ -71,32 +81,6 @@ export interface ContrastFinding {
   passes: boolean;
 }
 
-/** Why a proposed colour could not be checked. */
-export type InvalidColourReason =
-  | "unknown-role"
-  | "unparseable"
-  | "out-of-gamut"
-  | "translucent"
-  | "unknown-key"
-  | "malformed"
-  | "unreadable";
-
-/** A proposed colour that was not checked, so its pairs are missing from the findings. */
-export interface InvalidColour {
-  /** The theme it was proposed for, or `null` when it concerns the whole override. */
-  theme: ThemeName | null;
-  /**
-   * The role, or the key or section that could not be used: `override` for
-   * an override that is not a plain object, `colour` for a section that is not
-   * (with `theme` set when it is one theme's section).
-   */
-  role: string;
-  /** The value as the host supplied it. */
-  value: unknown;
-  /** Why it could not be checked. */
-  reason: InvalidColourReason;
-}
-
 /** The result of {@link checkThemeContrast}. */
 export interface ThemeContrastCheck {
   /** True when nothing is invalid and every finding passes. */
@@ -118,45 +102,6 @@ function isPlainRecord(value: unknown): value is Record<string, unknown> {
   return prototype === Object.prototype || prototype === null;
 }
 
-const overridable: Record<keyof ThemeColours, true> = {
-  surface: true,
-  surfaceRaised: true,
-  text: true,
-  textMuted: true,
-  accent: true,
-  accentTint: true,
-  accentContrast: true,
-  hairline: true,
-  controlBoundary: true,
-  danger: true,
-  dangerTint: true,
-  scrim: true,
-  focusRing: true,
-  focusRingInner: true,
-};
-
-function isRole(role: string): role is keyof ThemeColours {
-  return Object.hasOwn(overridable, role);
-}
-
-function invalidReason(
-  role: keyof ThemeColours,
-  value: unknown,
-): InvalidColourReason | null {
-  if (typeof value !== "string") {
-    return "unparseable";
-  }
-  try {
-    const colour = parseColour(value);
-    if (!isInSrgbGamut(value)) {
-      return "out-of-gamut";
-    }
-    return opaqueRoles.has(role) && colour.a < 1 ? "translucent" : null;
-  } catch {
-    return "unparseable";
-  }
-}
-
 interface ResolvedTheme {
   roles: ColourRoles;
   invalidRoles: ReadonlySet<string>;
@@ -166,6 +111,8 @@ interface ResolvedTheme {
 /** What could be read of an override's shape before any colour is looked at. */
 interface ProposedThemes {
   proposed: Partial<Record<ThemeName, Record<string, unknown>>>;
+  /** The `accent` shorthand as written, or `undefined` when it is not set. */
+  accent: unknown;
   /** Themes whose section is not an object: nothing is checked for them. */
   skipped: Set<ThemeName>;
   invalid: InvalidColour[];
@@ -183,6 +130,7 @@ function isThemeName(key: string): key is ThemeName {
 function readProposedThemes(override: unknown): ProposedThemes {
   const result: ProposedThemes = {
     proposed: {},
+    accent: undefined,
     skipped: new Set(),
     invalid: [],
   };
@@ -202,7 +150,9 @@ function readProposedThemes(override: unknown): ProposedThemes {
     if (NON_COLOUR_KEYS.has(key)) {
       continue;
     }
-    if (key !== "colour") {
+    if (key === "accent") {
+      result.accent = colour;
+    } else if (key !== "colour") {
       report(null, key, colour, "unknown-key");
     } else if (colour !== undefined && !isPlainRecord(colour)) {
       report(null, "colour", colour, "malformed");
@@ -238,8 +188,9 @@ function readThemeSections(
 function resolveThemeColours(
   theme: ThemeName,
   proposed: Record<string, unknown> | undefined,
+  fromAccent: Partial<ThemeColours>,
 ): ResolvedTheme {
-  const roles: ColourRoles = { ...themeValues[theme].colour };
+  const roles: ColourRoles = { ...themeValues[theme].colour, ...fromAccent };
   const invalidRoles = new Set<string>();
   const invalid: InvalidColour[] = [];
   for (const [role, value] of Object.entries(proposed ?? {})) {
@@ -290,6 +241,14 @@ function findingsFor(
  * map backdrop (white, black, a light map and the default basemap), so the
  * worst case is reported.
  *
+ * An `accent` is resolved as {@link resolveAccent} does, in each theme, and the
+ * roles that come out (the accent as given or moved, its tint, the text on it
+ * and the focus ring) are the ones measured, so what this reports is what
+ * {@link createThemeStylesheet} would write. An accent that cannot be resolved
+ * is measured unmoved, so its failing pairs show. A role set in `colour` wins
+ * over what the accent derives. An `accent` that cannot be read is listed in
+ * `invalid` with the role `accent`.
+ *
  * Pure and total: it never throws and never decides whether a theme is
  * accepted. A colour it cannot check is reported in `invalid`, and the pairs
  * that depend on it are left out of `findings`; the host decides what a
@@ -305,11 +264,40 @@ export function checkThemeContrast(
   const findings: ContrastFinding[] = [];
   const invalid: InvalidColour[] = [];
   try {
-    const { proposed, skipped, invalid: shape } = readProposedThemes(override);
+    const {
+      proposed,
+      accent,
+      skipped,
+      invalid: shape,
+    } = readProposedThemes(override);
     invalid.push(...shape);
+    const accentReason =
+      accent === undefined ? null : invalidReason("accent", accent);
+    if (accentReason !== null) {
+      invalid.push({
+        theme: null,
+        role: "accent",
+        value: accent,
+        reason: accentReason,
+      });
+    }
+    const usableAccent =
+      accent !== undefined && accentReason === null ? accent : undefined;
     for (const theme of themeNames.filter((name) => !skipped.has(name))) {
       try {
-        const resolved = resolveThemeColours(theme, proposed[theme]);
+        const fromAccent =
+          usableAccent === undefined
+            ? {}
+            : accentRolesFor(
+                theme,
+                usableAccent as string,
+                proposed[theme] as Partial<ThemeColours>,
+              );
+        const resolved = resolveThemeColours(
+          theme,
+          proposed[theme],
+          fromAccent,
+        );
         invalid.push(...resolved.invalid);
         findings.push(...findingsFor(theme, resolved));
       } catch {

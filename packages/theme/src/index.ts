@@ -1,14 +1,25 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
 export {
+  type AccentFailure,
+  type AccentPair,
+  type AccentResolution,
+  type AccentRole,
+  type DerivedRole,
+  type DerivedSource,
+  resolveAccent,
+} from "./accent";
+export {
   type ContrastFinding,
   checkThemeContrast,
-  type InvalidColour,
-  type InvalidColourReason,
-  type ThemeColours,
   type ThemeContrastCheck,
   type ThemeOverride,
 } from "./checkThemeContrast";
+export type {
+  InvalidColour,
+  InvalidColourReason,
+  ThemeColours,
+} from "./colourReason";
 export {
   type ColourInput,
   compositeOver,
