@@ -475,7 +475,7 @@ async function drawProblems(open, { checkCreated = false } = {}) {
   const problems = [];
   const run = await open(async (page) => {
     problems.push(...(await drawnFrame(page, frame)));
-    // The glyph and sprite requests follow the first frame; let them land.
+    // Requests such as the sprite follow the first frame; let them land.
     await page.waitForLoadState("networkidle");
     if (checkCreated) {
       problems.push(

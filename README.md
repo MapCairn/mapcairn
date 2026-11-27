@@ -256,7 +256,7 @@ It is not the right choice today if you need:
 - GIS analysis. MapCairn is not a GIS analysis engine: it measures, draws and has geometry helpers, but does no overlay analysis or geoprocessing;
 - a map engine other than MapLibre GL JS, or tilt, terrain and 3D buildings;
 - to mount it in a page without React with `0.2.0` or an earlier release, or to reach layers behind a login;
-- your own font, or colours beyond the 14 interface roles, clustering of dense points or offline use.
+- your own font with `0.2.0` or an earlier release, colours beyond the 14 interface roles, clustering of dense points or offline use.
 
 A map renderer on its own leaves every interface decision to you, which is the better choice when your interface has little in common with a map application. The [capability matrix](https://docs.mapcairn.com/guides/capability-matrix/) lists what MapCairn has, partly has and lacks, with the issue for each gap that has one, and [`ROADMAP.md`](ROADMAP.md) says what comes next.
 
