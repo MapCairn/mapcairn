@@ -599,6 +599,20 @@ const cases: readonly Case[] = [
     bad: lit("<button>${on ? svg`<svg></svg>` : html`<svg></svg>`}</button>"),
     good: lit('<button>${on ? svg`<svg></svg>` : t("close")}</button>'),
   },
+  {
+    rule: "lit-import",
+    name: "static styles from Lit in the map package",
+    file: TS,
+    bad: 'import { css, html } from "lit";\n',
+    good: 'import { html } from "lit";\n',
+  },
+  {
+    rule: "unreadable-template",
+    name: "a template that never closes",
+    file: TS,
+    bad: "export const a = html`<p>",
+    good: "export const a = html`<p></p>`;\n",
+  },
 ];
 
 describe("harmony rules", () => {
@@ -626,6 +640,7 @@ describe("harmony rules", () => {
         "icon-only-button",
         "icon-sizing",
         "inline-style",
+        "lit-import",
         "live-region",
         "logical-property",
         "motion",
@@ -635,6 +650,7 @@ describe("harmony rules", () => {
         "service-singleton",
         "spacing",
         "tab-index",
+        "unreadable-template",
         "viewport",
         "z-index",
       ].sort(),
@@ -756,6 +772,249 @@ describe("Lit templates in the harmony scanner", () => {
     );
     expect(found).toEqual([
       expect.objectContaining({ line: 6, rule: "inline-style" }),
+    ]);
+  });
+});
+
+describe("ways round the Lit template rules", () => {
+  const rules = (source: string, file: string = TS): string[] =>
+    scanSource(file, source).map((v: { rule: string }) => v.rule);
+  /** A style attribute after `hole`: it is found only if the hole was read to its end. */
+  const after = (hole: string): string =>
+    lit(`<p>\${${hole}}</p><button style="x"><svg></svg></button>`);
+
+  it.each([
+    ["a regular expression with a quote", 's.replace(/\'/g, "")'],
+    ["a regular expression with a brace", 's.replace(/}/g, "")'],
+    ["a regular expression with an opening brace", "s.split(/{/)"],
+    ["a regular expression with a backtick", 's.replace(/`/g, "")'],
+    ["a regular expression that starts with >", 's.replace(/>/g, "a/`")'],
+    ["a line comment with an apostrophe", "// it's here\n s"],
+    ["a block comment with a brace and a backtick", "/* } ` */ s"],
+  ])("reads on past a hole with %s", (_name, hole) => {
+    expect(rules(after(hole))).toEqual(["inline-style", "icon-only-button"]);
+  });
+
+  it.each([
+    ["template", 'export const a = html`<p style="x">'],
+    ["hole", "export const a = html`<p>${ open ? 1 : 2 </p>`;"],
+    ["untagged template", "export const a = `never closed;\n"],
+  ])("refuses a %s that never closes", (_name, source) => {
+    expect(rules(source)).toContain("unreadable-template");
+  });
+
+  it.each([
+    ["an apostrophe in a line comment", "// isn't it\n "],
+    ["a block comment", "/* c */ "],
+  ])("reads an icon-only button whose hole has %s", (_name, comment) => {
+    expect(
+      rules(
+        lit(`<button>\${${comment}on ? svg\`<svg></svg>\` : nothing}</button>`),
+      ),
+    ).toEqual(["icon-only-button"]);
+  });
+
+  it("reads the attributes of a tag whose name is a hole", () => {
+    expect(
+      rules(
+        lit('<${tag} style="y" .controller=${c}></${tag}><i fill="red"></i>'),
+      ),
+    ).toEqual(["inline-style", "colour-literal"]);
+  });
+
+  it.each([
+    ["a bound role", "lit", '<div role=${"alert"}></div>', "live-region"],
+    [
+      "a role property",
+      "lit",
+      '<div .role=${on ? "status" : nothing}></div>',
+      "live-region",
+    ],
+    [
+      "a bound aria-live",
+      "lit",
+      '<div aria-live=${on ? "polite" : "off"}></div>',
+      "live-region",
+    ],
+    [
+      "an ariaLive property",
+      "lit",
+      '<div .ariaLive=${"assertive"}></div>',
+      "live-region",
+    ],
+    [
+      "a written ariaLive property",
+      "lit",
+      '<div .ariaLive="polite"></div>',
+      "live-region",
+    ],
+    [
+      "a bound tabindex",
+      "lit",
+      "<div tabindex=${on ? 3 : 0}></div>",
+      "tab-index",
+    ],
+    ["a tabIndex property", "lit", "<div .tabIndex=${3}></div>", "tab-index"],
+    [
+      "a tabindex bound to a string",
+      "lit",
+      '<div tabindex=${"2"}></div>',
+      "tab-index",
+    ],
+  ])("flags %s", (_name, _kind, body, rule) => {
+    expect(rules(lit(body))).toEqual([rule]);
+  });
+
+  it.each([
+    '<div role=${"group"} .role=${this.role}></div>',
+    '<div aria-live=${"off"}></div>',
+    "<div tabindex=${-1} .tabIndex=${on ? 0 : this.index}></div>",
+  ])("passes the bound values in %s", (body) => {
+    expect(rules(lit(body))).toEqual([]);
+  });
+
+  it("lets the live region components bind their roles", () => {
+    expect(
+      rules(
+        lit('<div role=${"status"}></div>'),
+        "packages/map/src/ui/LiveRegion/live.ts",
+      ),
+    ).toEqual([]);
+  });
+
+  it.each([
+    'fill="red"',
+    'stroke="white"',
+    'fill=${on ? "black" : "none"}',
+    'fill=${this.colour ?? "rebeccapurple"}',
+    '.color=${"red"}',
+    'fill="var(--ink, red)"',
+    'fill="#${hex}"',
+  ])("flags the colour in %s", (attribute) => {
+    expect(rules(lit(`<svg ${attribute}></svg>`))).toEqual(["colour-literal"]);
+  });
+
+  it.each([
+    'fill="currentColor"',
+    'fill="none" stroke="transparent" color="inherit"',
+    'fill="context-fill" stroke="context-stroke"',
+    'fill="url(#gradient)" stroke="url(#${id})"',
+    "fill=${`url(#${id})`}",
+    'fill="var(--ink)"',
+    "fill=${this.colour} stroke=${paint(role)}",
+    'fill=${tone === "warm" ? this.warm : "none"}',
+  ])("passes the paint in %s", (attribute) => {
+    expect(rules(lit(`<svg ${attribute}></svg>`))).toEqual([]);
+  });
+
+  it.each([
+    ["an svg in a wrapper", "<button><span><svg></svg></span></button>"],
+    [
+      "an svg two wrappers down",
+      "<button><span><i><svg></svg></i></span></button>",
+    ],
+    [
+      "an undefined branch",
+      "<button>${on ? svg`<svg></svg>` : undefined}</button>",
+    ],
+    ["a false branch", "<button>${on ? svg`<svg></svg>` : false}</button>"],
+    [
+      "an empty template branch",
+      "<button>${on ? svg`<svg></svg>` : html``}</button>",
+    ],
+    [
+      "a parenthesised conditional",
+      "<button>${(on ? svg`<svg></svg>` : nothing)}</button>",
+    ],
+    [
+      "nested conditionals",
+      "<button>${a ? (b ? svg`<svg></svg>` : nothing) : svg`<svg></svg>`}</button>",
+    ],
+  ])("flags a button that holds only %s", (_name, body) => {
+    expect(rules(lit(body))).toEqual(["icon-only-button"]);
+  });
+
+  it.each([
+    [
+      "a value before ??",
+      "<button>${this.label ?? html`<svg></svg>`}</button>",
+    ],
+    [
+      "a value before ||",
+      "<button>${this.label || html`<svg></svg>`}</button>",
+    ],
+    [
+      "a name by labelling elements",
+      "<button .ariaLabelledByElements=${[heading]}><svg></svg></button>",
+    ],
+    [
+      "text drawn in the icon",
+      '<button><svg><text>${t("a")}</text></svg></button>',
+    ],
+    [
+      "only branches that draw nothing",
+      "<button>${on ? html`` : nothing}</button>",
+    ],
+    [
+      "a wrapper with a name",
+      '<button><span aria-label=${t("a")}><svg></svg></span></button>',
+    ],
+  ])("passes a button with %s", (_name, body) => {
+    expect(rules(lit(body))).toEqual([]);
+  });
+
+  it.each([
+    'import { css } from "lit";',
+    'import { html, unsafeCSS as raw } from "lit";',
+    'import { unsafeHTML } from "lit/directives/unsafe-html.js";',
+    'import { unsafeSVG } from "lit/directives/unsafe-svg.js";',
+    'import { html, unsafeStatic } from "lit/static-html.js";',
+    'import * as lit from "lit";',
+    'export { css } from "@lit/reactive-element";',
+    'export * from "lit/directives/unsafe-html.js";',
+  ])("refuses %s in packages/map", (statement) => {
+    expect(rules(`${statement}\n`)).toEqual(["lit-import"]);
+  });
+
+  it.each([
+    'import { html, LitElement, nothing, svg } from "lit";',
+    'import type { CSSResult } from "lit";',
+    'import { literal } from "lit/static-html.js";',
+    'import { css } from "./css";',
+    'const lit = await import("lit");',
+  ])("allows %s in packages/map", (statement) => {
+    expect(rules(`${statement}\n`)).toEqual([]);
+  });
+
+  it("holds only packages/map to the Lit import rule", () => {
+    expect(
+      rules('import { css } from "lit";\n', "packages/web/src/a.ts"),
+    ).toEqual([]);
+  });
+
+  it.each([
+    ['element.setAttribute("style", value);', "inline-style"],
+    ["element.style.cssText = value;", "inline-style"],
+    ['element.style.setProperty("--ink", "#336699");', "colour-literal"],
+    [
+      'element.style.setProperty(\n  name,\n  on ? "rgb(0 0 0)" : value,\n);',
+      "colour-literal",
+    ],
+  ])("flags %s in a script", (statement, rule) => {
+    expect(rules(`${statement}\n`)).toEqual([rule]);
+  });
+
+  it("passes a computed value set through the CSSOM", () => {
+    expect(
+      rules('element.style.setProperty("--offset", `${offset}px`);\n'),
+    ).toEqual([]);
+  });
+
+  it("does not read a Lit template's tags as JSX in a .tsx file", () => {
+    const source =
+      'export const a = html`<p><br><button><svg></svg></button></p>`;\nexport const B = () => <i>{t("a")}</i>;\n';
+    expect(rules(source, "packages/map/src/a.tsx")).toEqual([
+      "icon-only-button",
     ]);
   });
 });

@@ -2,16 +2,20 @@
 // Copyright MapCairn contributors
 /**
  * The harmony rules that need a Lit template read as markup: `inline-style`,
- * `colour-literal` and `icon-only-button`. The rules that match text, such as
- * `live-region` and `tab-index`, already read a template as part of its file.
+ * `colour-literal`, `icon-only-button`, and the bound forms of `live-region`
+ * and `tab-index`. The rules that match text already read what a template
+ * writes out. A template that never closes is `unreadable-template`.
  */
-import { branchValues } from "../copy-check/scan.mjs";
+import { branchValues, literalValue } from "../copy-check/scan.mjs";
+import { LIVE_REGION_DIRS } from "./config.mjs";
 import { tokenize } from "./lex.mjs";
 import { findLitTemplates, walkLitNodes } from "./litTemplates.mjs";
 import {
   checkColours,
   ICON_ONLY_BUTTON_MESSAGE,
+  LIVE_REGION_MESSAGE,
   NAME_ATTRS,
+  TAB_INDEX_MESSAGE,
 } from "./shared.mjs";
 
 /** @typedef {import("./shared.mjs").Report} Report */
@@ -19,6 +23,8 @@ import {
 /** @typedef {import("./litTemplates.mjs").LitNode} LitNode */
 /** @typedef {import("./litTemplates.mjs").LitTemplate} LitTemplate */
 /** @typedef {import("./litTemplates.mjs").LitAttribute} LitAttribute */
+
+/** @typedef {"icon" | "nothing" | "other"} Drawing What content draws. */
 
 /** The attributes, and the properties of the same names, that paint. */
 const COLOUR_ATTRS = new Set([
@@ -34,11 +40,37 @@ const COLOUR_ATTRS = new Set([
 /** A reference such as `url(#gradient)`, whose name may look like a colour. */
 const REFERENCE = /url\([^)]*\)/g;
 
-/** What a hole may give, besides a template, and still draw only icons. */
-const DRAWS_NOTHING = new Set(["§", "nothing", '""', "''", "null"]);
+/**
+ * What paint written as a literal may say, once references are gone: a
+ * keyword that names no colour, or one custom property with no fallback.
+ */
+const PAINT_WITHOUT_COLOUR =
+  /^(?:currentcolor|none|transparent|inherit|context-fill|context-stroke|var\(\s*--[^,()]*\))?$/i;
+
+/** The roles that make an element a live region. */
+const LIVE_ROLES = new Set(["status", "alert", "log"]);
+
+/** What a hole may give, besides a template, and draw nothing. */
+const DRAWS_NOTHING = new Set([
+  "§",
+  "nothing",
+  "undefined",
+  "null",
+  "false",
+  '""',
+  "''",
+  "``",
+]);
 
 /** The properties that name an element, as Lit's `.name=${...}` writes them. */
-const NAME_PROPERTIES = new Set(["ariaLabel", "title"]);
+const NAME_PROPERTIES = new Set([
+  "ariaLabel",
+  "ariaLabelledByElements",
+  "title",
+]);
+
+/** The elements whose content names the icon that holds them. */
+const NAMING_ELEMENTS = new Set(["title", "text"]);
 
 const STYLE_FIX =
   "Use a vanilla-extract class, or set each computed value with element.style.setProperty.";
@@ -77,69 +109,147 @@ function checkStyle(element, report) {
   }
 }
 
+/** Whether a binding sets a value: an attribute or a property. */
+const setsValue = (/** @type {LitAttribute} */ attr) =>
+  attr.prefix === "" || attr.prefix === ".";
+
+/** What the holes of an attribute may give, each as written. */
+const boundValues = (/** @type {LitAttribute} */ attr) =>
+  attr.holes.flatMap((hole) => branchValues(hole.expr));
+
+/** The string literals among what the holes of an attribute may give. */
+const boundStrings = (/** @type {LitAttribute} */ attr) =>
+  boundValues(attr).flatMap((value) => literalValue(value) ?? []);
+
 /**
- * Refuses a colour literal in an attribute that paints, written out or as a
- * string in a hole.
+ * Refuses a colour in an attribute that paints: a colour literal anywhere in
+ * it, or a literal value, such as a colour's name, that is not one of the
+ * paints that name no colour. A computed value passes.
+ * @param {LitAttribute} attr
+ * @param {Report} report
+ */
+function checkPaintValue(attr, report) {
+  const written = {
+    t: /** @type {const} */ ("str"),
+    v: attr.text,
+    line: attr.line,
+  };
+  const inHoles = attr.holes.flatMap((hole) =>
+    tokenize(hole.expr).map((token) => ({ ...token, line: hole.line })),
+  );
+  let found = false;
+  checkColours(
+    [written, ...inHoles].map((token) => ({
+      ...token,
+      v: token.v.replace(REFERENCE, ""),
+    })),
+    (...violation) => {
+      found = true;
+      report(...violation);
+    },
+  );
+  const named = [attr.text, ...boundStrings(attr)]
+    .map((value) => value.replace(REFERENCE, "").trim())
+    .find((value) => !PAINT_WITHOUT_COLOUR.test(value));
+  if (!found && named !== undefined) {
+    report(
+      "colour-literal",
+      attr.line,
+      `Colour "${named}" in ${attr.prefix}${attr.name}. Use a tokens.color role, currentColor or a custom property.`,
+    );
+  }
+}
+
+/** @param {LitElement} element @param {Report} report */
+function checkPaint(element, report) {
+  for (const attr of element.attrs) {
+    if (setsValue(attr) && COLOUR_ATTRS.has(attr.name.toLowerCase())) {
+      checkPaintValue(attr, report);
+    }
+  }
+}
+
+/**
+ * Whether a binding makes a live region that the rule matching text does not
+ * see: a bound role, or the `ariaLive` property.
+ * @param {LitAttribute} attr
+ * @returns {boolean}
+ */
+function bindsLiveRegion(attr) {
+  if (attr.name === "role") {
+    return boundStrings(attr).some((value) => LIVE_ROLES.has(value));
+  }
+  if (attr.prefix !== "." || attr.name !== "ariaLive") {
+    return false;
+  }
+  return [attr.text.trim(), ...boundStrings(attr)].some(
+    (value) => value !== "" && value !== "off",
+  );
+}
+
+/** Whether a hole may set a `tabindex` above 0. */
+const bindsTabIndex = (/** @type {LitAttribute} */ attr) =>
+  attr.name.toLowerCase() === "tabindex" &&
+  boundValues(attr).some((value) => Number(literalValue(value) ?? value) > 0);
+
+/**
+ * @param {string} file
  * @param {LitElement} element
  * @param {Report} report
  */
-function checkPaint(element, report) {
-  const painted = element.attrs.filter(
-    (attr) =>
-      (attr.prefix === "" || attr.prefix === ".") &&
-      COLOUR_ATTRS.has(attr.name.toLowerCase()),
-  );
-  for (const attr of painted) {
-    const written = {
-      t: /** @type {const} */ ("str"),
-      v: attr.text,
-      line: attr.line,
-    };
-    const bound = attr.holes.flatMap((hole) =>
-      tokenize(hole.expr).map((token) => ({ ...token, line: hole.line })),
-    );
-    checkColours(
-      [written, ...bound].map((token) => ({
-        ...token,
-        v: token.v.replace(REFERENCE, ""),
-      })),
-      report,
-    );
+function checkBindings(file, element, report) {
+  const mayAnnounce = LIVE_REGION_DIRS.some((dir) => file.startsWith(dir));
+  for (const attr of element.attrs.filter(setsValue)) {
+    if (!mayAnnounce && bindsLiveRegion(attr)) {
+      report("live-region", attr.line, LIVE_REGION_MESSAGE);
+    }
+    if (bindsTabIndex(attr)) {
+      report("tab-index", attr.line, TAB_INDEX_MESSAGE);
+    }
   }
 }
 
-/** Whether a node is white space between others. */
-const isBlank = (/** @type {LitNode} */ node) =>
-  node.kind === "text" && node.value.trim() === "";
-
 /**
- * Whether a template draws icons and nothing else.
- * @param {LitTemplate} template
- * @returns {boolean}
+ * What several pieces of content draw together: icons only when at least one
+ * is an icon and none is anything else.
+ * @param {Drawing[]} drawings
+ * @returns {Drawing}
  */
-function isIconTemplate(template) {
-  return (
-    template.nodes.length > 0 &&
-    (template.isSvg || template.nodes.every(isIcon))
-  );
+function together(drawings) {
+  if (drawings.includes("other")) {
+    return "other";
+  }
+  return drawings.includes("icon") ? "icon" : "nothing";
+}
+
+/** @param {LitTemplate} template @returns {Drawing} */
+function templateDrawing(template) {
+  if (template.nodes.length === 0) {
+    return "nothing";
+  }
+  return template.isSvg ? "icon" : together(template.nodes.map(drawing));
 }
 
 /**
- * Whether a node is an icon: an `svg` element, or a hole whose every value is a
- * template of icons or nothing. An icon held in a variable is not seen.
+ * What a node draws. An `svg` element is an icon, and so is an element that
+ * holds only icons; any other element is something else, even an empty one. A
+ * hole draws what its values do. An icon held in a variable is not seen.
  * @param {LitNode} node
- * @returns {boolean}
+ * @returns {Drawing}
  */
-function isIcon(node) {
-  if (node.kind === "element") {
-    return node.name === "svg";
+function drawing(node) {
+  if (node.kind === "text") {
+    return node.value.trim() === "" ? "nothing" : "other";
   }
-  return (
-    node.kind === "hole" &&
-    node.templates.length > 0 &&
-    branchValues(node.expr).every((value) => DRAWS_NOTHING.has(value)) &&
-    node.templates.every(isIconTemplate)
-  );
+  if (node.kind === "element") {
+    const isIcon =
+      node.name === "svg" || together(node.children.map(drawing)) === "icon";
+    return isIcon ? "icon" : "other";
+  }
+  const values = branchValues(node.expr);
+  return values.every((value) => DRAWS_NOTHING.has(value))
+    ? together(node.templates.map(templateDrawing))
+    : "other";
 }
 
 /** @param {LitAttribute} attr @returns {boolean} */
@@ -161,14 +271,17 @@ function mayBeNamed(element) {
 }
 
 /**
- * Whether an icon names its button, by an attribute or a `title` element.
+ * Whether the icons of a button name it, by an attribute, or by the content of
+ * a `title` or `text` element.
  * @param {LitNode[]} nodes
  * @returns {boolean}
  */
 function namesButton(nodes) {
   return [...walkLitNodes(nodes)].some((node) => {
     if (node.kind === "element") {
-      return node.name === "title" || mayBeNamed(node);
+      const hasNamingContent =
+        NAMING_ELEMENTS.has(node.name) && node.children.length > 0;
+      return hasNamingContent || mayBeNamed(node);
     }
     return (
       node.kind === "hole" &&
@@ -186,23 +299,33 @@ function checkNamedButton(element, report) {
   if (element.name !== "button" || mayBeNamed(element)) {
     return;
   }
-  const content = element.children.filter((node) => !isBlank(node));
-  if (content.length > 0 && content.every(isIcon) && !namesButton(content)) {
+  const content = element.children;
+  if (together(content.map(drawing)) === "icon" && !namesButton(content)) {
     report("icon-only-button", element.line, ICON_ONLY_BUTTON_MESSAGE);
   }
 }
 
 /**
  * Applies the template rules to every Lit template of one script file.
+ * @param {string} file Repository relative path with forward slashes.
  * @param {string} code Comment-stripped source.
  * @param {Report} report
  */
-export function scanLitTemplates(code, report) {
-  for (const template of findLitTemplates(code)) {
+export function scanLitTemplates(file, code, report) {
+  const { templates, unreadable } = findLitTemplates(code);
+  for (const line of unreadable) {
+    report(
+      "unreadable-template",
+      line,
+      "A template literal or hole never closes, so what follows cannot be checked. If the code compiles, the scanner has misread it: fix scripts/harmony/lex.mjs.",
+    );
+  }
+  for (const template of templates) {
     for (const node of walkLitNodes(template.nodes)) {
       if (node.kind === "element") {
         checkStyle(node, report);
         checkPaint(node, report);
+        checkBindings(file, node, report);
         checkNamedButton(node, report);
       }
     }

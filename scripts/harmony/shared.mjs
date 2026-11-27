@@ -14,6 +14,14 @@ export const NAME_ATTRS = ["aria-label", "aria-labelledby", "title"];
 export const ICON_ONLY_BUTTON_MESSAGE =
   "A button with only an icon has no accessible name. Use IconButton with a label, or add aria-label.";
 
+/** What to say about a live region made outside the components that own them. */
+export const LIVE_REGION_MESSAGE =
+  "Live regions are created only by LiveRegion and StatusMessage in packages/map/src/ui. Announce through the useAnnounce hook.";
+
+/** What to say about a `tabindex` above 0. */
+export const TAB_INDEX_MESSAGE =
+  "A tabindex above 0 breaks the natural focus order. Use 0 or -1.";
+
 /**
  * Checks colour literals in the string and template tokens of a style region.
  * @param {Array<Pick<import("./lex.mjs").Token, "t" | "v" | "line">>} tokens

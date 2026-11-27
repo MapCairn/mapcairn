@@ -14,7 +14,10 @@
  * - architecture: `service-singleton`
  *
  * In a Lit template, `inline-style`, `colour-literal` (the attributes that
- * paint) and `icon-only-button` are checked by `litRules.mjs`.
+ * paint), `icon-only-button` and the bound forms of `live-region` and
+ * `tab-index` are checked by `litRules.mjs`, which also reports
+ * `unreadable-template`. `mapRules.mjs` holds `packages/map` to `lit-import`,
+ * and applies `inline-style` and `colour-literal` to its style writes.
  *
  * Import and global rules live in Biome (`biome.jsonc`) and dependency-cruiser
  * (`.dependency-cruiser.cjs`), because they are exact there.
@@ -37,10 +40,14 @@ import {
   tokenize,
 } from "./lex.mjs";
 import { scanLitTemplates } from "./litRules.mjs";
+import { blankLitTemplates } from "./litTemplates.mjs";
+import { scanMapScript } from "./mapRules.mjs";
 import {
   checkColours,
   ICON_ONLY_BUTTON_MESSAGE,
+  LIVE_REGION_MESSAGE,
   NAME_ATTRS,
+  TAB_INDEX_MESSAGE,
 } from "./shared.mjs";
 
 /**
@@ -519,14 +526,13 @@ function scanText(file, code, report) {
   eachMatch(
     /\btab[Ii]ndex\s*(?:=|:)\s*\{?\s*["']?\s*[1-9]|setAttribute\(\s*["']tabindex["']\s*,\s*["']?[1-9]|\.tabIndex\s*=\s*[1-9]/g,
     "tab-index",
-    () => "A tabindex above 0 breaks the natural focus order. Use 0 or -1.",
+    () => TAB_INDEX_MESSAGE,
   );
   if (!insideAny(file, LIVE_REGION_DIRS)) {
     eachMatch(
-      /aria-live(?!\s*[=:]\s*\{?\s*["']off["'])|\brole\s*[=:]\s*\{?\s*["'](?:status|alert|log)["']|setAttribute\(\s*["']role["']\s*,\s*["'](?:status|alert|log)["']/g,
+      /aria-live(?!\s*[=:]\s*\$?\{?\s*["']off["'])|\brole\s*[=:]\s*\{?\s*["'](?:status|alert|log)["']|setAttribute\(\s*["']role["']\s*,\s*["'](?:status|alert|log)["']/g,
       "live-region",
-      () =>
-        "Live regions are created only by LiveRegion and StatusMessage in packages/map/src/ui. Announce through the useAnnounce hook.",
+      () => LIVE_REGION_MESSAGE,
     );
   }
   if (!isHtml) {
@@ -670,7 +676,8 @@ export function scanSource(file, source) {
     : stripComments(source);
   scanText(file, code, report);
   if (/\.tsx?$/.test(file)) {
-    scanLitTemplates(code, report);
+    scanLitTemplates(file, code, report);
+    scanMapScript(file, code, lineFinder(code), report);
   }
 
   const regions = [];
@@ -679,7 +686,7 @@ export function scanSource(file, source) {
   }
   if (file.endsWith(".tsx")) {
     const icons = iconImportNames(code);
-    for (const tag of findJsxTags(code)) {
+    for (const tag of findJsxTags(blankLitTemplates(code))) {
       const region = checkStyleProp(tag, code, report);
       if (region) {
         regions.push(region);

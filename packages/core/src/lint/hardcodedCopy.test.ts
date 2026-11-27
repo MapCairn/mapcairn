@@ -209,6 +209,50 @@ describe("the hardcoded copy scanner on Lit templates", () => {
     ]);
   });
 
+  it.each([
+    [
+      "a ternary after a line comment with an apostrophe",
+      '<p>${// it\'s one of two\n on ? "Open" : "Closed"}</p>',
+      ["Open", "Closed"],
+    ],
+    ["a literal after a block comment", '<p>${/* c */ "Close"}</p>', ["Close"]],
+    [
+      "text after a hole with a quote in a regular expression",
+      '<p>${s.replace(/\'/g, "")}</p><p>Close</p>',
+      ["Close"],
+    ],
+    [
+      "the attributes and text of a tag whose name is a hole",
+      '<${tag} aria-label="Close">Open</${tag}>',
+      ["Close", "Open"],
+    ],
+    ["textContent", '<i .textContent=${"Close"}></i>', ["Close"]],
+    ["innerText", '<i .innerText="Close"></i>', ["Close"]],
+    ["innerHTML", '<i .innerHTML=${"<b>Close</b>"}></i>', ["<b>Close</b>"]],
+    [
+      "a parenthesised conditional",
+      '<p>${(on ? "Open" : "Closed")}</p>',
+      ["Open", "Closed"],
+    ],
+  ])("flags %s", (_name, body, expected) => {
+    expect(litTextsIn(body)).toEqual(expected);
+  });
+
+  it("reports a template that never closes", () => {
+    expect(
+      scanLit("export const a = html`<p>${t()}</p>").map((f) => f.kind),
+    ).toEqual(["unreadable"]);
+  });
+
+  it("does not let the JSX reader run into a Lit template in a .tsx file", () => {
+    expect(
+      scanFile(
+        "packages/map/src/a.tsx",
+        'export const a = html`<p><br>${t("a")}`;\nexport const b = count > 1;\nexport const c = {};\n',
+      ),
+    ).toEqual([]);
+  });
+
   it("reads a .ts file's templates and not its string tables or type arguments", () => {
     const source =
       'import { html } from "lit";\nexport const table = { a: "Close" };\nexport const list = new Array<string>();\nexport const b = html`<p>Open</p>`;\n';

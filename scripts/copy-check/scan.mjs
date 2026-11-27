@@ -24,8 +24,16 @@
 import { readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { findJsxTags, parseTagAt, stripComments } from "../harmony/lex.mjs";
-import { findLitTemplates } from "../harmony/litTemplates.mjs";
+import {
+  findJsxTags,
+  parseTagAt,
+  skipPlain,
+  stripComments,
+} from "../harmony/lex.mjs";
+import {
+  blankLitTemplates,
+  findLitTemplates,
+} from "../harmony/litTemplates.mjs";
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 
@@ -52,14 +60,17 @@ const COPY_PROPERTIES = new Set([
   "ariaRoleDescription",
   "ariaValueText",
   "alt",
+  "innerHTML",
+  "innerText",
   "placeholder",
+  "textContent",
   "title",
 ]);
 
 /**
  * @typedef {object} Finding
  * @property {number} line One-based line.
- * @property {"text"|"attribute"} kind
+ * @property {"text"|"attribute"|"unreadable"} kind
  * @property {string} text The literal text, whitespace collapsed.
  * @property {string} [attribute] The attribute name, for an attribute.
  */
@@ -214,10 +225,12 @@ function separatorLength(expr, i) {
 /**
  * Splits an expression at its top-level `?`, `:`, `&&`, `||` and `??`.
  * @param {string} expr
- * @returns {string[]}
+ * @returns {{ pieces: string[], operators: string[] }} Each operator follows
+ *   the piece at the same index.
  */
 function branches(expr) {
   const pieces = [];
+  const operators = [];
   let depth = 0;
   let start = 0;
   let i = 0;
@@ -227,8 +240,13 @@ function branches(expr) {
       i = skipElement(expr, i);
       continue;
     }
-    if (c === '"' || c === "'" || c === "`") {
+    if (c === "`") {
       i = skipQuoted(expr, i);
+      continue;
+    }
+    const plainEnd = skipPlain(expr, i);
+    if (plainEnd > i + 1) {
+      i = plainEnd;
       continue;
     }
     if ("([{".includes(c)) {
@@ -239,24 +257,69 @@ function branches(expr) {
     const length = depth === 0 ? separatorLength(expr, i) : 0;
     if (length > 0) {
       pieces.push(expr.slice(start, i));
+      operators.push(expr.slice(i, i + length));
       start = i + length;
     }
     i += length || (expr.slice(i, i + 2) === "?." ? 2 : 1);
   }
   pieces.push(expr.slice(start));
-  return pieces;
+  return { pieces, operators };
 }
 
 /**
- * What a JS expression may give: the whole expression, or the branches after a
- * condition, trimmed.
+ * Whether the whole of `expr` stands in one pair of round brackets.
+ * @param {string} expr Trimmed.
+ * @returns {boolean}
+ */
+function isBracketed(expr) {
+  if (!(expr.startsWith("(") && expr.endsWith(")"))) {
+    return false;
+  }
+  let depth = 0;
+  let i = 0;
+  while (i < expr.length - 1) {
+    const plainEnd = expr[i] === "`" ? skipQuoted(expr, i) : skipPlain(expr, i);
+    depth += expr[i] === "(" ? 1 : 0;
+    depth -= expr[i] === ")" ? 1 : 0;
+    if (depth === 0) {
+      return false;
+    }
+    i = plainEnd;
+  }
+  return true;
+}
+
+/** What follows an operand that is only tested, never given. */
+const TESTED_BEFORE = new Set(["?", "&&"]);
+
+/**
+ * What a JS expression may give, trimmed: the whole expression, or each branch
+ * of a condition and each side of `||` and `??`. The test of a conditional and
+ * the left of `&&` are not among them.
  * @param {string} expr
  * @returns {string[]}
  */
 export function branchValues(expr) {
-  const pieces = branches(expr);
-  const values = pieces.length === 1 ? pieces : pieces.slice(1);
-  return values.map((value) => value.trim());
+  const trimmed = expr.trim();
+  if (isBracketed(trimmed)) {
+    return branchValues(trimmed.slice(1, -1));
+  }
+  const { pieces, operators } = branches(trimmed);
+  if (pieces.length === 1) {
+    return [trimmed];
+  }
+  return pieces
+    .filter((_piece, index) => !TESTED_BEFORE.has(operators[index]))
+    .flatMap(branchValues);
+}
+
+/**
+ * The text of the string or template literal `value` is, or undefined.
+ * @param {string} value One of {@link branchValues}.
+ * @returns {string | undefined}
+ */
+export function literalValue(value) {
+  return literalText(value);
 }
 
 /**
@@ -278,7 +341,7 @@ export function literalCopyIn(expr) {
  * @returns {Finding[]}
  */
 export function findHardcodedCopy(source) {
-  const code = stripComments(source);
+  const code = blankLitTemplates(stripComments(source));
   const tags = findJsxTags(code);
   const byStart = new Map(tags.map((tag) => [tag.start, tag]));
   const lineStarts = [0];
@@ -477,16 +540,22 @@ function litCopyOf(nodes) {
 
 /**
  * Finds user-facing literal text in the Lit templates of one source file. Text
- * outside a template, such as a string table, is not read.
+ * outside a template, such as a string table, is not read. A template that
+ * never closes is a finding too, because what it holds cannot be read.
  * @param {string} source
  * @returns {Finding[]}
  */
 export function findLitCopy(source) {
-  return eachOnce(
-    findLitTemplates(stripComments(source)).flatMap((template) =>
-      litCopyOf(template.nodes),
-    ),
-  );
+  const { templates, unreadable } = findLitTemplates(stripComments(source));
+  const lost = unreadable.map((line) => ({
+    line,
+    kind: /** @type {const} */ ("unreadable"),
+    text: "A template literal or hole that never closes.",
+  }));
+  return eachOnce([
+    ...lost,
+    ...templates.flatMap((template) => litCopyOf(template.nodes)),
+  ]);
 }
 
 /**

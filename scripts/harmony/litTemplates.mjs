@@ -9,11 +9,13 @@
  * from, so a template re-exported through a local module is still read.
  *
  * It is not a full HTML parser: it reads start tags, end tags, comments, text
- * and the `${...}` holes between and inside them. It does not read a template
- * with a hole for a tag name, or one whose tag is reached through a member
- * (`lit.html`).
+ * and the `${...}` holes between and inside them. A tag whose name is a hole
+ * (`lit/static-html.js`) is read as an element with an empty name. It does not
+ * read a template whose tag is reached through a member (`lit.html`). A
+ * template or hole that never closes is reported, so a reader that loses its
+ * place does not pass the file in silence.
  */
-import { lineFinder, skipBalanced } from "./lex.mjs";
+import { closingBrace, lineFinder, skipPlain } from "./lex.mjs";
 
 /**
  * @typedef {object} LitHole
@@ -45,7 +47,8 @@ import { lineFinder, skipBalanced } from "./lex.mjs";
 /**
  * @typedef {object} LitElement
  * @property {"element"} kind
- * @property {string} name The tag name in lower case.
+ * @property {string} name The tag name in lower case, or empty when it is a
+ *   hole.
  * @property {LitAttribute[]} attrs
  * @property {LitHole[]} directives Holes among the attributes, which may set any
  *   attribute.
@@ -58,14 +61,9 @@ import { lineFinder, skipBalanced } from "./lex.mjs";
 /**
  * @typedef {object} LitTemplate
  * @property {boolean} isSvg Whether it is written with the `svg` tag.
- * @property {LitNode[]} nodes The nodes at its root.
- */
-
-/**
- * @typedef {object} Found
  * @property {number} start Offset of the tag.
  * @property {number} end Offset just after the closing backtick.
- * @property {LitTemplate} template
+ * @property {LitNode[]} nodes The nodes at its root.
  */
 
 /** @typedef {Map<number, { end: number, node: LitHole }>} Holes */
@@ -76,6 +74,8 @@ import { lineFinder, skipBalanced } from "./lex.mjs";
  * @property {(index: number) => number} lineAt
  * @property {Map<string, boolean>} tags See `templateTags`.
  * @property {LitTemplate[]} all Receives every template parsed.
+ * @property {Set<number>} unreadable Receives the line of each template or
+ *   hole that never closes.
  */
 
 /** A tag name at the end of the text, not reached through a member or a path. */
@@ -83,15 +83,6 @@ const TRAILING_NAME = /(?<![\w$./-])([A-Za-z_$][\w$]*)$/;
 
 /** The longest text before a backtick that is looked at for a tag name. */
 const TAG_WINDOW = 80;
-
-/**
- * A character, or the word `return`, after which `/` starts a regular
- * expression. `<` is left out, so the `/` of a closing JSX tag does not.
- */
-const BEFORE_REGEX = /(?:^|[(,=:[!&|?{};+*%>~^-]|\breturn)\s*$/;
-
-/** A regular expression literal: classes and escapes may hold a `/`. */
-const REGEX_LITERAL = /\/(?:\\.|\[(?:\\.|[^\]\\\n])*\]|[^/\\[\n])+\//y;
 
 const LIT_IMPORT =
   /import\s*\{([^}]*)\}\s*from\s*["'](?:lit|lit-html|lit-element)(?:\/[^"']*)?["']/g;
@@ -123,64 +114,30 @@ function templateTags(code) {
 }
 
 /**
- * Index just after the quoted string that starts at `start`. It ends at the
- * line's end at the latest, so a stray apostrophe hides one line at most.
- * @param {string} code
- * @param {number} start
- * @returns {number}
- */
-function skipString(code, start) {
-  const quote = code[start];
-  let i = start + 1;
-  while (i < code.length && code[i] !== quote && code[i] !== "\n") {
-    i += code[i] === "\\" ? 2 : 1;
-  }
-  return i + 1;
-}
-
-/**
- * Index just after what starts at `i` and cannot hold a template: a string or
- * a regular expression. Otherwise the next index.
- * @param {string} code
- * @param {number} i
- * @returns {number}
- */
-function skipPlain(code, i) {
-  if (code[i] === '"' || code[i] === "'") {
-    return skipString(code, i);
-  }
-  const before = code.slice(Math.max(0, i - TAG_WINDOW), i);
-  // `/>` ends a JSX tag.
-  const startsSlash = code[i] === "/" && code[i + 1] !== ">";
-  if (startsSlash && BEFORE_REGEX.test(before)) {
-    REGEX_LITERAL.lastIndex = i;
-    return REGEX_LITERAL.test(code) ? REGEX_LITERAL.lastIndex : i + 1;
-  }
-  return i + 1;
-}
-
-/**
  * Finds where the template that opens at `tick` closes, and where its holes are.
  * @param {string} code
  * @param {number} tick
- * @returns {{ close: number, spans: Array<{ from: number, to: number }> }}
+ * @returns {{ close: number, closed: boolean, spans: Array<{ from: number, to: number }> }}
  */
 function templateSpans(code, tick) {
   /** @type {Array<{ from: number, to: number }>} */
   const spans = [];
+  let holesClosed = true;
   let i = tick + 1;
   while (i < code.length && code[i] !== "`") {
     if (code[i] === "\\") {
       i += 2;
     } else if (code.startsWith("${", i)) {
-      const to = skipBalanced(code, i + 1);
+      const end = closingBrace(code, i + 1);
+      const to = end === -1 ? code.length : end;
+      holesClosed &&= end !== -1;
       spans.push({ from: i, to });
       i = to;
     } else {
       i += 1;
     }
   }
-  return { close: i, spans };
+  return { close: i, closed: holesClosed && code[i] === "`", spans };
 }
 
 /**
@@ -188,11 +145,11 @@ function templateSpans(code, tick) {
  * Those nested in them are parsed too, and join `source.all`.
  * @param {Source} source
  * @param {{ from: number, to: number }} range
- * @returns {Found[]}
+ * @returns {LitTemplate[]}
  */
 function findIn(source, { from, to }) {
   const { code } = source;
-  /** @type {Found[]} */
+  /** @type {LitTemplate[]} */
   const found = [];
   let i = from;
   while (i < to) {
@@ -212,11 +169,14 @@ function findIn(source, { from, to }) {
  * other gives the tagged templates inside its holes.
  * @param {Source} source
  * @param {number} tick
- * @returns {{ end: number, found: Found[] }}
+ * @returns {{ end: number, found: LitTemplate[] }}
  */
 function readTemplateLiteral(source, tick) {
-  const { code, tags } = source;
-  const { close, spans } = templateSpans(code, tick);
+  const { code, tags, lineAt } = source;
+  const { close, closed, spans } = templateSpans(code, tick);
+  if (!closed) {
+    source.unreadable.add(lineAt(tick));
+  }
   const before = code.slice(Math.max(0, tick - TAG_WINDOW), tick);
   const tag = TRAILING_NAME.exec(before)?.[1] ?? "";
   const holes = spans.map((span) => ({
@@ -229,6 +189,8 @@ function readTemplateLiteral(source, tick) {
   }
   const template = {
     isSvg,
+    start: tick - tag.length,
+    end: close + 1,
     nodes: parseMarkup(
       source,
       { from: tick + 1, to: close },
@@ -236,15 +198,12 @@ function readTemplateLiteral(source, tick) {
     ),
   };
   source.all.push(template);
-  return {
-    end: close + 1,
-    found: [{ start: tick - tag.length, end: close + 1, template }],
-  };
+  return { end: close + 1, found: [template] };
 }
 
 /**
  * @param {Source} source
- * @param {{ from: number, to: number, nested: Found[] }} hole
+ * @param {{ from: number, to: number, nested: LitTemplate[] }} hole
  * @returns {{ end: number, node: LitHole }}
  */
 function holeNode({ code, lineAt }, { from, to, nested }) {
@@ -260,7 +219,7 @@ function holeNode({ code, lineAt }, { from, to, nested }) {
     node: {
       kind: "hole",
       expr,
-      templates: nested.map((inner) => inner.template),
+      templates: nested,
       line: lineAt(from),
     },
   };
@@ -344,10 +303,17 @@ function readAttribute(source, holes, start) {
  * @param {Source} source
  * @param {Holes} holes
  * @param {number} start Offset of `<`.
- * @param {string} name The tag name as written.
+ * @param {string} name The tag name as written, empty when it is a hole.
+ * @param {number} [attributesFrom] Offset just after the name.
  * @returns {{ end: number, element: LitElement, selfClosing: boolean }}
  */
-function readStartTag(source, holes, start, name) {
+function readStartTag(
+  source,
+  holes,
+  start,
+  name,
+  attributesFrom = start + 1 + name.length,
+) {
   const { code, lineAt } = source;
   /** @type {LitElement} */
   const element = {
@@ -358,7 +324,7 @@ function readStartTag(source, holes, start, name) {
     children: [],
     line: lineAt(start),
   };
-  let i = start + 1 + name.length;
+  let i = attributesFrom;
   while (i < code.length && code[i] !== ">" && code[i] !== "`") {
     const hole = holes.get(i);
     const attribute = hole ? undefined : readAttribute(source, holes, i);
@@ -402,6 +368,51 @@ function parseMarkup(source, { from, to }, holes) {
   const startTag = /<([A-Za-z][\w:-]*)/y;
   const endTag = /<\/([A-Za-z][\w:-]*)\s*>/y;
 
+  /** The name of the start or end tag at `at`, empty when it is a hole. */
+  const tagName = (
+    /** @type {RegExp} */ pattern,
+    /** @type {string} */ opening,
+    /** @type {number} */ at,
+  ) => {
+    if (code.startsWith(opening, at) && holes.has(at + opening.length)) {
+      return "";
+    }
+    pattern.lastIndex = at;
+    return pattern.exec(code)?.[1];
+  };
+
+  /** Closes the element the end tag at `at` names, and says where it ends. */
+  const closeElement = (
+    /** @type {number} */ at,
+    /** @type {string} */ name,
+  ) => {
+    const matching = open.findLastIndex((element) => element.name === name);
+    if (matching !== -1) {
+      open.length = matching;
+    }
+    const afterName = holes.get(at + 2)?.end ?? at;
+    return code.indexOf(">", afterName) + 1 || to;
+  };
+
+  /** Adds the element whose start tag is at `at`, and says where it ends. */
+  const openElement = (
+    /** @type {number} */ at,
+    /** @type {string} */ name,
+  ) => {
+    const tag = readStartTag(
+      source,
+      holes,
+      at,
+      name,
+      holes.get(at + 1)?.end ?? at + 1 + name.length,
+    );
+    add(tag.element);
+    if (!(tag.selfClosing || VOID_ELEMENTS.has(tag.element.name))) {
+      open.push(tag.element);
+    }
+    return tag.end;
+  };
+
   /** Handles what starts at `i`, and says where the markup goes on. */
   const readMarkup = (/** @type {number} */ at) => {
     const hole = holes.get(at);
@@ -415,30 +426,17 @@ function parseMarkup(source, { from, to }, holes) {
       const close = code.indexOf("-->", at + 4);
       return close === -1 || close > to ? to : close + 3;
     }
-    endTag.lastIndex = at;
-    const closing = endTag.exec(code)?.[1].toLowerCase();
+    const closing = tagName(endTag, "</", at)?.toLowerCase();
     if (closing !== undefined) {
       addText(at);
-      const matching = open.findLastIndex(
-        (element) => element.name === closing,
-      );
-      if (matching !== -1) {
-        open.length = matching;
-      }
-      return endTag.lastIndex;
+      return closeElement(at, closing);
     }
-    startTag.lastIndex = at;
-    const name = startTag.exec(code)?.[1];
+    const name = tagName(startTag, "<", at);
     if (name === undefined) {
       return undefined;
     }
     addText(at);
-    const tag = readStartTag(source, holes, at, name);
-    add(tag.element);
-    if (!(tag.selfClosing || VOID_ELEMENTS.has(tag.element.name))) {
-      open.push(tag.element);
-    }
-    return tag.end;
+    return openElement(at, name);
   };
 
   let i = from;
@@ -457,9 +455,10 @@ function parseMarkup(source, { from, to }, holes) {
 
 /**
  * Every Lit template in comment-stripped source, nested ones included, each
- * once.
+ * once, and the lines of the template literals and holes, tagged or not, that
+ * never close.
  * @param {string} code Output of `stripComments`.
- * @returns {LitTemplate[]}
+ * @returns {{ templates: LitTemplate[], unreadable: number[] }}
  */
 export function findLitTemplates(code) {
   /** @type {Source} */
@@ -468,9 +467,26 @@ export function findLitTemplates(code) {
     lineAt: lineFinder(code),
     tags: templateTags(code),
     all: [],
+    unreadable: new Set(),
   };
   findIn(source, { from: 0, to: code.length });
-  return source.all;
+  return { templates: source.all, unreadable: [...source.unreadable] };
+}
+
+/**
+ * The source with each Lit template turned to spaces, keeping line breaks and
+ * offsets, so that the JSX readers do not take its tags for JSX.
+ * @param {string} code Output of `stripComments`.
+ * @returns {string}
+ */
+export function blankLitTemplates(code) {
+  return findLitTemplates(code).templates.reduce(
+    (blanked, { start, end }) =>
+      blanked.slice(0, start) +
+      blanked.slice(start, end).replace(/[^\n]/g, " ") +
+      blanked.slice(end),
+    code,
+  );
 }
 
 /**
