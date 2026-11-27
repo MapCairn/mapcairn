@@ -309,6 +309,36 @@ export function checkSourceMap(file, text) {
 }
 
 /**
+ * What is wrong with the declaration files that must carry a `declare global`
+ * or `declare module` block (`mapcairn.declarationBlocks` in the manifest):
+ * API Extractor drops such a block, so the build adds it back, and a packed
+ * file without it would teach a project nothing about the element.
+ *
+ * @param {Record<string, any>} manifest
+ * @param {(file: string) => string | undefined} readFile
+ * @returns {string[]}
+ */
+function declarationBlockProblems(manifest, readFile) {
+  return Object.keys(manifest.mapcairn?.declarationBlocks ?? {}).flatMap(
+    (name) => {
+      const file = `dist/${name}.d.ts`;
+      const text = readFile(file);
+      if (text === undefined) {
+        return [
+          `${file}: the manifest names a declaration block for it, but the tarball has no such file`,
+        ];
+      }
+      if (/^declare (?:global|module)\b/m.test(text)) {
+        return [];
+      }
+      return [
+        `${file}: the manifest names a declaration block for it, but the packed file has no declare global or declare module (API Extractor drops them and the build adds them back: run npm run build:sdk)`,
+      ];
+    },
+  );
+}
+
+/**
  * Whether a path in the tarball is a file of the package's bundle: under
  * `dist`, named for one of the bundle's entries, such as `dist/browser.js`,
  * `dist/browser-engine-AbC.js` or `dist/browser-worker-AbC.js`.
@@ -564,6 +594,7 @@ export function checkPackage({
       warnings,
     }),
   );
+  problems.push(...declarationBlockProblems(manifest, readFile));
   const expectedFiles = [...EXPECTED_FILES_FIELD, ...extraRootFiles];
   if (JSON.stringify(manifest.files) !== JSON.stringify(expectedFiles)) {
     problems.push(

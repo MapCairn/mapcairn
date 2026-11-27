@@ -41,6 +41,9 @@ function read(file: string): string {
 const scripts = () => bundleFiles().filter((file) => file.endsWith(".js"));
 const engineChunk = () =>
   bundleFiles().filter((file) => /^browser-engine-[\w-]+\.js$/.test(file));
+/** What `browser.js` and `browser-element.js` share: the code of the module. */
+const sharedChunk = () =>
+  bundleFiles().filter((file) => /^browser-shared-[\w-]+\.js$/.test(file));
 const workerChunk = () =>
   bundleFiles().filter((file) => /^browser-worker-[\w-]+\.js$/.test(file));
 
@@ -63,12 +66,15 @@ describe("the files of @mapcairn/sdk/browser", () => {
     const files = bundleFiles();
     for (const file of [
       "browser.js",
+      "browser-element.js",
       "browser.css",
       "browser.css.d.ts",
       "browser.d.ts",
+      "browser-element.d.ts",
     ]) {
       expect(files, file).toContain(file);
     }
+    expect(sharedChunk()).toHaveLength(1);
     expect(engineChunk()).toHaveLength(1);
     expect(workerChunk()).toHaveLength(1);
     // A page that serves the bundle's files serves no worker file: the worker
@@ -90,8 +96,20 @@ describe("the files of @mapcairn/sdk/browser", () => {
 
   it("load the worker's text from a chunk of its own beside the module, never from the first load", () => {
     const [chunk] = workerChunk();
-    expect(read("browser.js")).toContain(`import("./${chunk}")`);
-    expect(read("browser.js")).not.toContain("maplibre-gl-worker");
+    const [shared = ""] = sharedChunk();
+    expect(read(shared)).toContain(`import("./${chunk}")`);
+    expect(read(shared)).not.toContain("maplibre-gl-worker");
+    expect(read("browser.js")).not.toContain("import(");
+  });
+
+  it("make the element's file a call of the module's own function, so a page that loads the tag loads the module once", () => {
+    const [shared = ""] = sharedChunk();
+    expect(read("browser-element.js")).toContain(`from "./${shared}"`);
+    expect(read("browser-element.js").length).toBeLessThan(200);
+    expect(read("browser.js")).toContain(`from "./${shared}"`);
+    expect(read("browser.js")).toMatch(
+      /\bdefineMapElement\b|\bt as defineMapElement\b/,
+    );
   });
 
   it("have process.env.NODE_ENV replaced", () => {
@@ -102,7 +120,8 @@ describe("the files of @mapcairn/sdk/browser", () => {
 
   it("load the engine from a chunk beside the module, with a plain import and no preload helper", () => {
     const [chunk] = engineChunk();
-    const source = read("browser.js");
+    const [shared = ""] = sharedChunk();
+    const source = read(shared);
     expect(source).toContain(`import("./${chunk}")`);
     expect(source).not.toMatch(/__vitePreload|vite\/preload-helper/);
     expect(source).not.toMatch(new RegExp(`from\\s*"\\./${chunk}"`));
@@ -146,7 +165,7 @@ describe("the files of @mapcairn/sdk/browser", () => {
     expect(count(sheet)).toBe(count(engine) + count(adapter));
     const reset = sheet.slice(0, sheet.indexOf("\n"));
     expect(reset).toMatch(
-      /^\[data-mapcairn\] \*:where\(:not\(svg,svg \*\)\)\{all:revert\}/,
+      /^mapcairn-map\{display:block\}\[data-mapcairn\] \*:where\(:not\(svg,svg \*\)\)\{all:revert\}/,
     );
     expect(sheet.startsWith(`${reset}\n${engine}`)).toBe(true);
     expect(sheet.indexOf("[data-map-host]")).toBeGreaterThan(engine.length);

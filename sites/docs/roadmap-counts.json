@@ -1,5 +1,5 @@
 {
-  "fetchedAt": "2026-11-26T13:56:18.711Z",
+  "fetchedAt": "2026-11-27T04:05:41.838Z",
   "milestones": {
     "1": {
       "open": 0,
@@ -22,8 +22,8 @@
       "closed": 6
     },
     "6": {
-      "open": 26,
-      "closed": 50
+      "open": 24,
+      "closed": 57
     },
     "7": {
       "open": 0,
@@ -34,12 +34,12 @@
       "closed": 68
     },
     "9": {
-      "open": 8,
+      "open": 9,
       "closed": 4
     },
     "10": {
-      "open": 6,
-      "closed": 1
+      "open": 5,
+      "closed": 2
     },
     "11": {
       "open": 3,
@@ -54,7 +54,7 @@
       "closed": 1
     },
     "14": {
-      "open": 16,
+      "open": 19,
       "closed": 211
     }
   }

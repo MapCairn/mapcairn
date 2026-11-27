@@ -285,6 +285,98 @@ export function cycleProblems(cycle, attributes) {
 }
 
 /**
+ * What a page with two `<mapcairn-map>` elements held as they were used: the
+ * first has a `zoom` attribute of 2 and a view of zoom 4 set before the element is defined, and the second is asked to zoom through its
+ * attribute, moved in the page, and removed, after the first is removed.
+ *
+ * @typedef {object} ElementRun
+ * @property {string} display The computed `display` of the first element.
+ * @property {number} startZoom The zoom the first map started at.
+ * @property {{ canvases: number, regions: number }} both Both drawn.
+ * @property {number | undefined} movedZoom The zoom `mapcairn-view-change` carried after the second's `zoom` attribute changed, and whether it bubbled to the document: `undefined` when it did not arrive.
+ * @property {string[]} writtenBack The view attributes the first element had after its map was moved by script and was not given them.
+ * @property {{ canvases: number, regions: number, firstChildren: number, firstMarked: boolean }} afterFirst The first element removed.
+ * @property {boolean} keptMap Whether the second element still held the same map after it was moved in the page.
+ * @property {{ canvases: number, regions: number, marked: number, workers: { made: number, ended: number } }} end Both removed.
+ * @property {string | undefined} errorKind The `kind` of the `MountMapError` a `mapcairn-error` event carried for a tool name that is not one.
+ * @property {string | undefined} errorMessage Its message.
+ * @property {string[]} logged What the element wrote to `console.error` meanwhile.
+ */
+
+/**
+ * The problems with a run of two elements.
+ *
+ * @param {ElementRun} run
+ * @returns {string[]}
+ */
+export function elementProblems(run) {
+  const problems = [];
+  if (run.display !== "block") {
+    problems.push(
+      `the element's display is ${run.display}, so the stylesheet did not make it a block`,
+    );
+  }
+  if (run.startZoom !== 4) {
+    problems.push(
+      `a view set before the element was defined, after the zoom attribute of the markup, gave a map at zoom ${run.startZoom}, not 4`,
+    );
+  }
+  if (run.both.canvases !== 2 || run.both.regions < 2) {
+    problems.push(
+      `two elements drew ${run.both.canvases} canvases and ${run.both.regions} live regions`,
+    );
+  }
+  if (run.movedZoom !== MOVED_ZOOM) {
+    problems.push(
+      `changing the zoom attribute of the second element sent mapcairn-view-change with zoom ${run.movedZoom}, not ${MOVED_ZOOM}`,
+    );
+  }
+  if (run.writtenBack.length > 0) {
+    problems.push(
+      `the element wrote ${run.writtenBack.join(", ")} back to its attributes`,
+    );
+  }
+  if (!run.keptMap) {
+    problems.push("moving an element in the page rebuilt its map");
+  }
+  const { afterFirst, end } = run;
+  if (
+    afterFirst.canvases !== 1 ||
+    afterFirst.regions >= run.both.regions ||
+    afterFirst.firstChildren !== 0 ||
+    afterFirst.firstMarked
+  ) {
+    problems.push(
+      `removing the first element left ${afterFirst.canvases} canvases, ${afterFirst.regions} live regions, ${afterFirst.firstChildren} children and ${afterFirst.firstMarked ? "its marker" : "no marker"}`,
+    );
+  }
+  if (end.canvases !== 0 || end.regions !== 0 || end.marked !== 0) {
+    problems.push(
+      `after both elements were removed the page holds ${end.canvases} canvases, ${end.regions} live regions and ${end.marked} marked containers`,
+    );
+  }
+  if (end.workers.made !== end.workers.ended) {
+    problems.push(
+      `${end.workers.made} workers were made and ${end.workers.ended} ended`,
+    );
+  }
+  if (run.errorKind !== "invalid-option") {
+    problems.push(
+      `a tool name that is not one gave the error kind ${run.errorKind}, not invalid-option, through mapcairn-error`,
+    );
+  }
+  if (
+    run.errorMessage === undefined ||
+    run.logged.join("\n") !== run.errorMessage
+  ) {
+    problems.push(
+      `the element logged ${JSON.stringify(run.logged)} for an error whose message is ${JSON.stringify(run.errorMessage)}; it logs the message once`,
+    );
+  }
+  return problems;
+}
+
+/**
  * The problems with what two cycles left behind: the second leaves no more
  * listeners than the first (the first may add the page-wide ones that load
  * once), and the engine's worker is ended when the last map is.
@@ -370,8 +462,13 @@ export function hostilePageProblems({ clean, hostile }) {
   return problems;
 }
 
-/** What a page downloads before the engine: the module, the shared runtime chunk and the stylesheet. */
-const FIRST_LOAD = /^browser(?:-rolldown-runtime-[\w-]+\.js|\.js|\.css)$/;
+/**
+ * What a page downloads before the engine: the module, the chunk the module
+ * and the element's file share, the runtime chunk, the stylesheet and the
+ * element's file (a few lines, which a page that uses the tag loads too).
+ */
+const FIRST_LOAD =
+  /^browser(?:-(?:rolldown-runtime|shared)-[\w-]+\.js|-element\.js|\.js|\.css)$/;
 
 /** What the first map brings in after: the engine's chunk and the worker's text. */
 const LAZY = /^browser-(?:engine|worker)-[\w-]+\.js$/;

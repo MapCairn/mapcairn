@@ -15,6 +15,10 @@ import path from "node:path";
 import { buildBundle } from "./buildBundle.mjs";
 import { hashBuildScripts } from "./buildInputs.mjs";
 import { bundleOf } from "./bundleSettings.mjs";
+import {
+  declarationBlock,
+  withDeclarationBlock,
+} from "./declarationBlocks.mjs";
 import { isEntryPoint } from "./entryPoint.mjs";
 import {
   MAIN_ENTRY,
@@ -286,6 +290,34 @@ async function rollUpDeclarations(
 }
 
 /**
+ * Adds the `declare global` and `declare module` blocks the manifest names
+ * (`mapcairn.declarationBlocks`, output name to source file) to the rolled-up
+ * declaration files, because API Extractor drops them.
+ *
+ * @param {object} input
+ * @param {Record<string, any>} input.manifest
+ * @param {import("./bundleSettings.mjs").BundleSettings | undefined} input.bundle
+ * @param {string} input.dist
+ * @param {(source: string) => string} input.declarationOf Where `tsc` emitted a source file's declarations.
+ */
+function appendDeclarationBlocks({ manifest, bundle, dist, declarationOf }) {
+  const mainEntry = bundle?.main;
+  for (const [name, source] of Object.entries(
+    manifest.mapcairn?.declarationBlocks ?? {},
+  )) {
+    const target = path.join(dist, `${name}.d.ts`);
+    const block = declarationBlock(
+      readFileSync(declarationOf(`./${source}`), "utf8"),
+      { inEntry: name === mainEntry, entryFile: `./${mainEntry}.js` },
+    );
+    writeFileSync(
+      target,
+      withDeclarationBlock(readFileSync(target, "utf8"), block),
+    );
+  }
+}
+
+/**
  * Builds one SDK package into `dist`: JavaScript, rolled-up declarations and,
  * for a package that compiles styles, its stylesheet. A stamp file is written
  * last, so `buildSdk.mjs` can tell a finished build from a partial one.
@@ -329,9 +361,7 @@ export async function buildPackage(folder) {
     await buildBundle({ folder, bundle, entries: entriesWhere(true) });
     // The stylesheet is a file a page links, and a project that checks
     // side-effect imports needs something to resolve it to.
-    for (const name of bundle.entries) {
-      writeFileSync(path.join(dist, `${name}.css.d.ts`), "export {};\n");
-    }
+    writeFileSync(path.join(dist, `${bundle.main}.css.d.ts`), "export {};\n");
   }
   emitDeclarations(folder);
   const declarationOf = (/** @type {string} */ source) =>
@@ -369,6 +399,12 @@ export async function buildPackage(folder) {
       nameMainEntry(path.join(dist, `${name}.d.ts`), manifest.name);
     }
   }
+  appendDeclarationBlocks({
+    manifest,
+    bundle,
+    dist,
+    declarationOf,
+  });
   rmSync(path.join(dist, DECLARATION_FOLDER), { recursive: true, force: true });
   // The stamp holds the hash of the build scripts, so a change to them builds
   // again, and the same sources and scripts still pack to the same tarball.

@@ -27,7 +27,12 @@ const SUBPATH_ONLY = [ADAPTER] as const;
 const SOURCE_CONDITION = "@mapcairn/source";
 /** The umbrella's own code: a folder of source, built as a bundle, with its stylesheet. */
 const BROWSER_SOURCE_FOLDER = "browser";
-const BROWSER_SUBPATHS = ["./browser", "./browser/styles.css"] as const;
+const BROWSER_SUBPATHS = [
+  "./browser",
+  "./browser/styles.css",
+  "./browser/element",
+  "./browser/react-jsx",
+] as const;
 
 interface Manifest {
   readonly name: string;
@@ -211,8 +216,8 @@ describe("@mapcairn/sdk manifest", () => {
     });
   });
 
-  it("keeps its stylesheet from being dropped by a bundler, and nothing else", () => {
-    expect(manifest.sideEffects).toEqual(["**/*.css"]);
+  it("keeps its stylesheet and the file that registers the element from being dropped by a bundler, and nothing else", () => {
+    expect(manifest.sideEffects).toEqual(["**/*.css", "**/browser-element.js"]);
   });
 
   it("has a README with one Status line, and links the licence", () => {
@@ -252,6 +257,16 @@ describe("@mapcairn/sdk manifest", () => {
     expect(manifest.exports["./browser/styles.css"]).toEqual({
       types: "./dist/browser.css.d.ts",
       default: "./dist/browser.css",
+    });
+    expect(manifest.exports["./browser/element"]).toEqual({
+      [SOURCE_CONDITION]: "./src/browser/element/register.ts",
+      types: "./dist/browser-element.d.ts",
+      default: "./dist/browser-element.js",
+    });
+    expect(manifest.exports["./browser/react-jsx"]).toEqual({
+      [SOURCE_CONDITION]: "./src/browser/reactJsx.ts",
+      types: "./dist/browserReactJsx.d.ts",
+      default: "./dist/browserReactJsx.js",
     });
   });
 

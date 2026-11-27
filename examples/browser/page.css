@@ -2,6 +2,7 @@ body {
   margin: 0;
 }
 
-#map {
+#map,
+mapcairn-map {
   height: 100vh;
 }
