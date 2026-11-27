@@ -49,7 +49,7 @@ The ui layer (`packages/map` and `packages/react`) may read the clock (`performa
 
 ### The browser route's design
 
-The decisions behind `@mapcairn/sdk/browser`, what each refused and what would reopen it. The guides for adopters say what a person must do and name none of these internals (`adopterWording.test.ts` holds that).
+The decisions behind `@mapcairn/sdk/browser`, what each refused and what would reopen it. The guides for adopters say what a person must do, not how the route is built; `adopterWording.test.ts` fails a page that names the shadow DOM, the announcer, the bundling of React or the package layout.
 
 **Where it lives.** A subpath of `@mapcairn/sdk`, so there is one install name and no further package to publish. A package of its own was refused: it costs a first publish, a trusted publisher, another entry in the release lists and another name for adopters to choose between. An entry point of `@mapcairn/map` was refused because it would import the adapter, which the layer table forbids. The price is an install that holds the five MapCairn packages and the peers a page with no React never loads. The peers stay required: marking them optional with `peerDependenciesMeta` would stop npm installing `react`, `react-dom` and `maplibre-gl` for apps that use the root or the adapter subpath, and would make pnpm's strict mode fail for them. If adopters report the install weight as a problem, the move is a separate package that republishes the same files.
 
