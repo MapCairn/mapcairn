@@ -84,7 +84,7 @@ Follow the `pick-up-issue` skill, then `land-pr`. Read AGENTS.md and the documen
 Checks: lint, typecheck, coverage and build, and targeted specs only, on your own port <port>. Leave the full e2e and a11y runs to CI.
 UI work: run the review-ui skill, then the visual-check skill, and describe what they found and what you saw in the pull request.
 Other work in flight on <module>: <issue or pull request>. Keep your change additive; when the project's main moves, merge it into your branch, resolve and `git push`, and avoid a force-push.
-Work only in your own worktree, never the main checkout. Poll CI with one-shot `gh pr checks`; start no `--watch` or other background watcher.
+Work only in your own worktree, never the main checkout. Run each git command as a call of its own, with literal arguments and no chaining, pipe, redirection, `$` or here-document, and edit files with your edit tools, not a shell script. Poll CI with one-shot `gh pr checks`; start no `--watch` or other background watcher.
 No assistant attribution in pull requests, issues or comments. Plain neutral voice on GitHub, no @mentions.
 Stop every server, browser and preview instance you start and confirm with a port check. Keep your worktree until the pull request has merged.
 Wording: <the decision, in the exact words to write>. Use these words; do not paraphrase them.
