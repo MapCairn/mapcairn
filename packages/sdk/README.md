@@ -31,7 +31,9 @@ import { createMapLibreMapAdapter } from "@mapcairn/sdk/adapter-maplibre";
 
 ### A page with no React
 
-`@mapcairn/sdk/browser` draws a map on a plain page, a server-rendered page or a Vue or Svelte one. Serve `browser.css`, `browser.js` and the `browser-*.js` files in `node_modules/@mapcairn/sdk/dist` from your own site, and give the map a height in CSS. A tag is enough:
+`@mapcairn/sdk/browser` draws a map on a plain page or a server-rendered one, with no React written and no build step. It is not in `0.2.0` or any earlier release, so after an install of one of those the subpath and its files are not there. [A map on a server-rendered page, without React](https://docs.mapcairn.com/guides/browser-route/) is the guide. The `<mapcairn-map>` element is a standard custom element; no front-end framework has been tried with it.
+
+Serve `browser.css`, `browser.js` and the `browser-*.js` files in `node_modules/@mapcairn/sdk/dist` from your own site, and give the map a height in CSS. The peers (`react`, `react-dom` and `maplibre-gl`) install but are never loaded by such a page, and their ranges are still checked: a project on React 18 gets `ERESOLVE` from npm. Give each of several maps on a page its own `label`. A tag is enough:
 
 ```html
 <link rel="stylesheet" href="/mapcairn/browser.css" />
@@ -39,7 +41,7 @@ import { createMapLibreMapAdapter } from "@mapcairn/sdk/adapter-maplibre";
 <mapcairn-map></mapcairn-map>
 ```
 
-or one call:
+or one call. A Content Security Policy that allows no inline script needs the call in a file of your own:
 
 ```html
 <script type="module">
@@ -58,7 +60,7 @@ element.services = { search: mySearchProvider };
 
 `defineMapElement("my-map")` from `browser.js` registers the element under another name; give that name `display: block` in your CSS, because the stylesheet does it for `mapcairn-map` only.
 
-`HTMLElementTagNameMap` knows `mapcairn-map`, so TypeScript types `document.querySelector("mapcairn-map")`. A React project that wants `<mapcairn-map>` in JSX adds `import "@mapcairn/sdk/browser/react-jsx";` once, which types the attributes, the properties and the events (`onmapcairn-click` and the others). This route has the built-in basemaps or your own, tile layers from definitions, measuring, settings kept in the page's memory, and the accessible interface. Search and Locate me appear when the page supplies a provider. The map needs `worker-src blob:` in a strict Content Security Policy, which Safari supports from 15.5; [`examples/browser`](https://github.com/MapCairn/mapcairn/tree/main/examples/browser) is a page that does it.
+`HTMLElementTagNameMap` knows `mapcairn-map`, so TypeScript types `document.querySelector("mapcairn-map")`. A React project that wants `<mapcairn-map>` in JSX adds `import "@mapcairn/sdk/browser/react-jsx";` once, which types the attributes, the properties and the events (`onmapcairn-click` and the others). This route has the built-in basemaps or your own, tile layers from definitions, measuring, settings kept in the page's memory, and the accessible interface. Search and Locate me appear when the page supplies a provider. The map needs `worker-src blob:` in a strict Content Security Policy, which Safari supports from 15.5; the [policy for this route](https://docs.mapcairn.com/guides/content-security-policy/#the-browser-route) lists every directive, and [`examples/browser`](https://github.com/MapCairn/mapcairn/tree/main/examples/browser) is a page that runs under it.
 
 ## Next steps
 
@@ -74,19 +76,20 @@ element.services = { search: mySearchProvider };
 
 ## What it exports
 
-| Entry point                       | Same as                                                      |
-| --------------------------------- | ------------------------------------------------------------ |
-| `@mapcairn/sdk`                   | every export of the four packages below, from one flat list  |
-| `@mapcairn/sdk/core`              | `@mapcairn/core`                                             |
-| `@mapcairn/sdk/core/contracts`    | `@mapcairn/core/contracts`                                   |
-| `@mapcairn/sdk/map`               | `@mapcairn/map`                                              |
-| `@mapcairn/sdk/adapter-maplibre`  | `@mapcairn/adapter-maplibre`, only at this subpath           |
-| `@mapcairn/sdk/react`             | `@mapcairn/react`                                            |
-| `@mapcairn/sdk/theme`             | `@mapcairn/theme`                                            |
-| `@mapcairn/sdk/styles.css`        | the three stylesheets, in order                              |
-| `@mapcairn/sdk/browser`           | `mountMap(element)`, a map for a page with no React          |
-| `@mapcairn/sdk/browser/element`   | registers `<mapcairn-map>` when it is imported               |
-| `@mapcairn/sdk/browser/react-jsx` | lets JSX accept `<mapcairn-map>`; add it only if you want it |
+| Entry point                        | Same as                                                      |
+| ---------------------------------- | ------------------------------------------------------------ |
+| `@mapcairn/sdk`                    | every export of the four packages below, from one flat list  |
+| `@mapcairn/sdk/core`               | `@mapcairn/core`                                             |
+| `@mapcairn/sdk/core/contracts`     | `@mapcairn/core/contracts`                                   |
+| `@mapcairn/sdk/map`                | `@mapcairn/map`                                              |
+| `@mapcairn/sdk/adapter-maplibre`   | `@mapcairn/adapter-maplibre`, only at this subpath           |
+| `@mapcairn/sdk/react`              | `@mapcairn/react`                                            |
+| `@mapcairn/sdk/theme`              | `@mapcairn/theme`                                            |
+| `@mapcairn/sdk/styles.css`         | the three stylesheets, in order                              |
+| `@mapcairn/sdk/browser`            | `mountMap(element)`, a map for a page with no React          |
+| `@mapcairn/sdk/browser/styles.css` | that map's stylesheet, `browser.css`                         |
+| `@mapcairn/sdk/browser/element`    | registers `<mapcairn-map>` when it is imported               |
+| `@mapcairn/sdk/browser/react-jsx`  | lets JSX accept `<mapcairn-map>`; add it only if you want it |
 
 Each entry point that stands for a package is an `export * from` it, never a copy, so a type from the umbrella is the same type as the package's own. The contract suites are not in the root, because they import a test runner.
 

@@ -80,6 +80,13 @@ What to know:
 - A tooltip renders in a portal under `body`, outside your wrapper. It takes the colours of the control it belongs to when it opens, so your theme reaches it under any scope, with nothing to add.
 - Each colour must be hex, `rgb()`/`rgba()` or `oklch()`, and is written back as hex. `checkThemeContrast` reports the same findings without producing CSS, for a test of your own.
 
+### Theme a mounted map
+
+A map drawn by `mountMap` or `<mapcairn-map>` ([the route without React](browser-route.md)) takes the same stylesheet. Put a class of your own on the element you pass to `mountMap`, or on the tag, use it as the scope, and link the generated file after `browser.css`. `createThemeStylesheet` is a function, so a page with no build step cannot call it: run it in Node when you prepare your site, importing it from `@mapcairn/sdk/theme` in the same installed version as the files you serve, and generate the file again when you upgrade.
+
+- **Light and dark.** The stylesheet reads the theme from `<html data-theme>`, or from the device's setting when `<html>` has none. A mounted map writes its theme on its own element. Your colours match the map only while the two agree. To keep them in step, leave `theme` unset, so the map follows the device, leave `data-theme` off `<html>`, and leave `"settings"` out of `tools`, because a person can choose a theme there. For a map fixed to `"light"` or `"dark"`, set `data-theme` on `<html>` to the same value and leave `"settings"` out. In any other case the map can show your colours for one theme with the SDK's for the other.
+- **Fonts.** The files hold no IBM Plex Sans. `fontFamily` names a face you supply with your own `@font-face`, served from your own origin or one your `font-src` allows. To use Plex without a theme, [declare it under the SDK's name](browser-route.md#fonts-and-colours).
+
 ## Add a basemap
 
 `BASEMAPS` holds every basemap the SDK defines. A host builds a catalogue from `BASEMAPS`, or from its own definitions, with `createBasemapCatalogue`, and passes it as `Services.basemaps`. [Choose a basemap](../tasks/choose-a-basemap.md) has the picker and the credits. To define a basemap of your own, write a `BasemapDefinition`:

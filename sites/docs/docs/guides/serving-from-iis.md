@@ -13,7 +13,9 @@ Put a MapCairn map in a page that IIS serves, with no Node on the server, includ
 
 ## What exists today
 
-There is no prebuilt bundle and no `mountMap` function for a page without React ([#44](https://github.com/MapCairn/mapcairn/issues/44)). A page builds a small entry of its own that imports the SDK packages and calls React's `createRoot`, as [`examples/embed`](https://github.com/MapCairn/mapcairn/blob/main/examples/embed/README.md) does.
+A page without React can use `@mapcairn/sdk/browser`: a stylesheet and module scripts that need no build step. It is not in `0.2.0` or any earlier release. [A map on a server-rendered page, without React](browser-route.md) says which files to copy and how to draw the map, and its [policy](content-security-policy.md#the-browser-route) differs from a React build's in how the worker starts. For those files, skip "Build the bundle" below. "Media types", "Compression" and the response headers apply to them too. Only some of their names hold a hash, so give `browser.js`, `browser-element.js` and `browser.css` a lifetime you can wait out when you upgrade.
+
+The rest of this section and "Build the bundle" are for a page that builds a React entry itself, which imports the SDK packages and calls React's `createRoot`, as [`examples/embed`](https://github.com/MapCairn/mapcairn/blob/main/examples/embed/README.md) does.
 
 An app that builds its own entry installs `@mapcairn/sdk`, which holds the whole SDK. A real map needs the adapter, `@mapcairn/adapter-maplibre` (also at `@mapcairn/sdk/adapter-maplibre`), with `maplibre-gl` and a URL for the engine's worker that your server serves; [Show a real map](extending.md#show-a-real-map) has the steps. `examples/embed` runs on the SDK's fakes and draws no map.
 
@@ -192,7 +194,7 @@ A stock layout may load Bootstrap and jQuery from `ajax.aspnetcdn.com`, which a 
 
 The SDK ships no base stylesheet, so the page gives `html`, `body` and the container a height and removes the body margin ([Extending MapCairn](extending.md#embed-the-sdk-in-an-app-of-your-own)).
 
-An existing site stylesheet is a risk. The SDK's primitives sit in a cascade layer, so an unlayered rule in the page, such as a framework's `button` rule or a reset, beats them whatever its specificity or position ([Overriding a primitive](https://github.com/MapCairn/mapcairn/blob/main/DESIGN.md#overriding-a-primitive)). Put the page's own base styles in an `@layer` declared before `@mapcairn/map/styles.css`. For a stylesheet you cannot edit, CSS can import a file into a named layer (`@import url("site.css") layer(base);`), which was not tried here. Check the buttons and the focus outline in a browser after you add the map to an old page.
+An existing site stylesheet is a risk. In a React build, the SDK's primitives sit in a cascade layer, so an unlayered rule in the page, such as a framework's `button` rule or a reset, beats them whatever its specificity or position ([Overriding a primitive](https://github.com/MapCairn/mapcairn/blob/main/DESIGN.md#overriding-a-primitive)). Put the page's own base styles in an `@layer` declared before `@mapcairn/map/styles.css`. For a stylesheet you cannot edit, CSS can import a file into a named layer (`@import url("site.css") layer(base);`), which was not tried here. Check the buttons and the focus outline in a browser after you add the map to an old page. The browser route's stylesheet is different: [Your page's own styles](browser-route.md#your-pages-own-styles).
 
 ### Language and direction
 
@@ -211,7 +213,7 @@ MapLibre needs WebGL. When it is missing, an adapter rejects with a `MapEngineEr
 ## What was not tested
 
 - Nothing ran on IIS, IIS Express, ASP.NET Core or classic ASP.NET. The `web.config` and Razor samples, the section lock behaviour, the effect of `cacheControlCustom` and the response headers were not observed.
-- No page loaded the real map, a layer endpoint or the policy, and no page used a mount function, because [#44](https://github.com/MapCairn/mapcairn/issues/44) does not exist yet.
+- No page on IIS loaded the real map, a layer endpoint or the policy, and the browser route's files were not served from IIS or placed in a Razor page.
 - Mounting in a server-rendered view is not covered: keeping the container outside any region a partial postback replaces, and destroying the map when the page unloads.
 - Range requests for a single-file tile archive ([#192](https://github.com/MapCairn/mapcairn/issues/192)), which the issue asks this guide to cover. [#221](https://github.com/MapCairn/mapcairn/issues/221) stays open for this and for the server trial.
 - Whether the `@import ... layer()` form fixes a framework's rules, and whether `immutable` can be sent from `clientCache`.
