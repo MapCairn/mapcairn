@@ -642,7 +642,7 @@ describe("the guide", () => {
     const start = guide.indexOf("## Keeping agents from publishing");
     const section = guide.slice(start, guide.indexOf("\n## ", start + 1));
     expect(section).toContain("stays recommended");
-    expect(section).toContain("`release:check` blocks");
+    expect(section).toContain("release:check` blocks");
     expect(section).not.toMatch(/optional/);
     expect(section).toContain("rule-only");
     expect(section).toContain("`gh pr merge --admin`");
