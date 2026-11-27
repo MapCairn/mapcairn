@@ -408,7 +408,8 @@ function readAccent(
  *
  * @param accent - The brand colour: hex, `rgb()` or `oklch()`, opaque and inside sRGB.
  * @param explicit - The roles the host set for each theme. Left out, none.
- * @param themes - The themes to resolve. Left out, both; the runtime route
+ * @param themes - The themes to resolve; a name that is not `light` or
+ *   `dark` is ignored. Left out, both; the runtime route
  *   passes the one that changed, so a theme change does not search the other.
  * @returns The roles to use and how each was reached, or why it was refused.
  */
@@ -427,14 +428,17 @@ export function resolveAccent(
   };
   const derived: DerivedRole[] = [];
   const failures: AccentFailure[] = [];
-  for (const theme of themes) {
+  // Walk the known names, never the caller's list, so only `light` and `dark`
+  // can be used as a key below.
+  for (const theme of themeNames.filter((name) => themes.includes(name))) {
     const fixed = usable(explicit[theme]);
     const result = resolveAccentTheme(theme, read.given, fixed);
     failures.push(...result.failures);
+    const written: Partial<ThemeColours> = {};
     for (const role of ROLES) {
       const value = result.roles[role];
       if (value !== undefined && fixed[role] === undefined) {
-        colour[theme][role] = value;
+        written[role] = value;
         derived.push({
           theme,
           role,
@@ -443,6 +447,7 @@ export function resolveAccent(
         });
       }
     }
+    colour[theme] = written;
   }
   return failures.length > 0
     ? { ok: false, invalid: [], failures }

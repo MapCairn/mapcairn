@@ -471,4 +471,19 @@ describe("resolveAccent themes and explicit", () => {
       /textMuted on accentTint reaches \d\.\d\d:1 where 4\.5:1/,
     );
   });
+
+  it("ignores a theme name that is not light or dark, and pollutes nothing", () => {
+    const resolution = resolveAccent("#0b5c3a", {}, [
+      "__proto__",
+      "constructor",
+    ] as never);
+
+    expect(resolution).toEqual({
+      ok: true,
+      colour: { light: {}, dark: {} },
+      derived: [],
+    });
+    expect(({} as Record<string, unknown>).accent).toBeUndefined();
+    expect(Object.keys(Object.prototype)).toEqual([]);
+  });
 });
