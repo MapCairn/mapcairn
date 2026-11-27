@@ -174,8 +174,10 @@ describe("the workflows that name the SDK packages", () => {
     );
   });
 
-  it("decide in ci.yml whether the pack check runs for a change to any SDK package folder", () => {
-    const workflow = withoutComments(read(".github/workflows/ci.yml"));
+  it("decide in sdk-packages.yml whether the pack check runs for a change to any SDK package folder", () => {
+    const workflow = withoutComments(
+      read(".github/workflows/sdk-packages.yml"),
+    );
     const alternation = /\^\(packages\/\(([a-z|-]+)\)\//.exec(workflow)?.[1];
     expect(alternation?.split("|").sort()).toEqual([...LIST].sort());
   });
