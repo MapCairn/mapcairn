@@ -159,7 +159,7 @@ Build the services separately for each request on the server, and once in the br
 
 ## What is not covered
 
-Rendering the map itself on the server, or producing a map image where no one is looking at the map, is not offered; the [capability matrix](../guides/capability-matrix.md) lists it as missing. There is no prebuilt script with a mount function for pages without React either, so a host that does not use React needs a small React island of its own.
+Rendering the map itself on the server, or producing a map image where no one is looking at the map, is not offered; the [capability matrix](../guides/capability-matrix.md) lists it as missing. This page is for React. A page without React can use `@mapcairn/sdk/browser`, which is not in `0.2.0` or any earlier release: [A map on a server-rendered page, without React](../guides/browser-route.md).
 
 ## When it goes wrong
 

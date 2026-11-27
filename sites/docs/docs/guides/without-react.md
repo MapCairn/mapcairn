@@ -7,7 +7,7 @@ description: Draw a map with only @mapcairn/core and @mapcairn/adapter-maplibre 
 
 # Build a map without React
 
-`@mapcairn/core` and `@mapcairn/adapter-maplibre` hold the map port, the logic around it and the MapLibre adapter that fills it, with no interface. An app that brings its own interface, on any framework or none, can use only those two. This page builds one in plain TypeScript with Vite, and lists what your own interface has to do, because the SDK's interface does none of it for you on this route.
+`@mapcairn/core` and `@mapcairn/adapter-maplibre` hold the map port, the logic around it and the MapLibre adapter that fills it, with no interface. An app that brings its own interface, on any framework or none, can use only those two. To have the SDK's interface on a page without React, read [A map on a server-rendered page](browser-route.md) instead. This page builds one in plain TypeScript with Vite, and lists what your own interface has to do, because the SDK's interface does none of it for you on this route.
 
 The files are in [`examples/headless`](https://github.com/MapCairn/mapcairn/tree/main/examples/headless). The release's consumer check installs the two packages from the packed files into an empty app, builds that example, and fails if the install holds React, `@mapcairn/map`, `@mapcairn/react` or `@mapcairn/sdk`. The code on this page is copied from the example, and a documentation test fails when a block stops matching its file.
 
@@ -419,5 +419,6 @@ None of this is done for you when you leave the SDK's interface out.
 
 ## Next
 
+- [A map on a server-rendered page, without React](browser-route.md) is the route with the SDK's interface and no React, through `@mapcairn/sdk/browser`. It is not in `0.2.0` or any earlier release.
 - [Embed a map](embed-a-map.md) is the route with the SDK's interface, in React.
 - [Extending MapCairn](extending.md) lists what an app provides around the SDK, and how to add a basemap, a data layer or an adapter of your own.

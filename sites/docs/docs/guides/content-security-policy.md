@@ -84,6 +84,51 @@ The browser route (`@mapcairn/sdk/browser`) always starts the worker from a `blo
 
 Leave `worker-src` out and the engine's worker never loads, which the adapter treats as fatal, so the map stays blank (`MapLibreMapAdapter.ts`). Reasoned from the adapter's code. The browser leg was also run once with `worker-src 'none'` while it was written: the browser refused the worker, the console and the leg's violation report said so, and the map stayed in its error state. That run is not a standing test.
 
+## The browser route
+
+This section is about `@mapcairn/sdk/browser`, the route for a page with no React. It is not in `0.2.0` or any earlier release.
+
+A page that draws its map with [`@mapcairn/sdk/browser`](browser-route.md) needs this policy for a map on the default basemaps. It is the one the release's consumer check serves the example page under (`BUNDLE_POLICY` in `scripts/release/bundleLeg.mjs`; a test keeps this block and that constant the same). Each line is one directive, and the header is these lines joined into one:
+
+```text
+default-src 'self';
+script-src 'self';
+style-src 'self';
+img-src 'self' data: blob: https://tiles.openfreemap.org;
+font-src 'self';
+connect-src 'self' https://tiles.openfreemap.org;
+worker-src 'self' blob:;
+frame-src 'none';
+object-src 'none';
+base-uri 'self';
+form-action 'none';
+frame-ancestors 'none';
+```
+
+| Directive         | Why the route needs it                                                                                                                                                                                      |
+| ----------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `default-src`     | `'self'`, so a request of any kind that no other line names stays on your origin.                                                                                                                           |
+| `script-src`      | `'self'`, for the files you serve from your own origin. No inline script is needed: load the tag's module, or call `mountMap` from a script file. An inline script of your own needs its own hash or nonce. |
+| `style-src`       | `'self'`, for `browser.css` and your page's stylesheet. No `'unsafe-inline'` and no nonce: the map creates no `style`, `link` or `script` element while it runs, which the consumer check holds.            |
+| `img-src`         | `'self'`, `data:` and `blob:` for the engine's images ([img-src](#img-src)), and the tile host. `https://tiles.openfreemap.org` serves both default basemaps, Bright and Fiord.                             |
+| `font-src`        | `'self'`, for a font you serve yourself, such as IBM Plex Sans. The map's own files fetch no font.                                                                                                          |
+| `connect-src`     | `'self'`, and the host of the basemap's style, sprites, glyphs and tiles.                                                                                                                                   |
+| `worker-src`      | `blob:`, because the engine's worker starts from a `blob:` URL your own page makes. Without it the browser refuses the worker and reports a violation, which the consumer check holds.                      |
+| `frame-src`       | `'none'`: the map uses no frame.                                                                                                                                                                            |
+| `object-src`      | `'none'`: the map uses no plug-in.                                                                                                                                                                          |
+| `base-uri`        | `'self'`, so injected markup cannot move your page's relative addresses to another origin.                                                                                                                  |
+| `form-action`     | `'none'`: the map submits no form. Allow your own pages' form targets here if the page has forms.                                                                                                           |
+| `frame-ancestors` | `'none'`: no site may frame the page. Widen it if you mean the page to be framed.                                                                                                                           |
+
+The policy covers the default basemaps only. Add origins for anything else you offer:
+
+- **More basemaps.** With the `"map-options"` tool and no `basemaps` option, a person can choose any built-in basemap, and some are served from `tile.openstreetmap.org` and `tiles.versatiles.org`. Allow each basemap you offer in `img-src` and `connect-src`, or pass `basemaps` with only those you allow. A basemap's style can name more hosts than its address does.
+- **Layers.** A feed or query layer's origin and its detail origins go in `connect-src`. A tile layer's tile origin goes in `img-src` and `connect-src`, and the origin of its `identify` request, if it has one, in `connect-src` ([connect-src](#connect-src)).
+- **Providers.** The origin your search, suggestion, location or layer source provider calls goes in `connect-src`.
+- **Another origin for the files.** If the map's files are not on your origin, that origin goes in `script-src` and `style-src`. No check serves them that way.
+
+Check a policy of your own in the browser's console, which names the directive to change. The consumer check holds this policy with the built-in Bright basemap's real style, with local stand-ins for its tile set, tile and sprite. It does not check a glyph request: its first view is the whole world, where the style draws no labels, so the check leaves that request out of what it requires (`bundleRun.mjs`). It does not cover the other basemaps, a layer, a provider or saving the map as an image. Which browsers need `child-src` too, and what Trusted Types prevents, are under [worker-src](#worker-src).
+
 ## The nonce question
 
 A host that server-renders React has inline scripts it cannot hash: the streaming and hydration scripts React injects change with every request. The reference host makes one nonce per request, adds it to `script-src` beside the static hash, passes it to the streaming renderer and to the router, so both reach the scripts they inject themselves, and sets the built policy on the response before rendering (`entry.server.tsx`). A nonce is 16 cryptographically random bytes, base64-encoded, and a fresh one is made for every response (`securityHeaders.ts`).

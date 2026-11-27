@@ -1,5 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
+import { readFileSync } from "node:fs";
+import path from "node:path";
 import { describe, expect, it } from "vitest";
 import { buildContentSecurityPolicy } from "../../../../examples/embed/src/contentSecurityPolicy";
 import {
@@ -36,6 +38,30 @@ describe("the bundle leg's policy", () => {
     );
     expect(BUNDLE_POLICY).not.toContain("unsafe-inline");
     expect(BUNDLE_POLICY).toContain("worker-src 'self' blob:");
+  });
+});
+
+describe("the documented policy of the browser route", () => {
+  const read = (file: string) =>
+    readFileSync(
+      path.resolve(import.meta.dirname, "../../../..", file),
+      "utf8",
+    );
+
+  it("is, directive by directive, the one the consumer check serves the example under", () => {
+    const section = read("sites/docs/docs/guides/content-security-policy.md")
+      .split("## The browser route\n")[1]
+      ?.split("\n## ")[0];
+    const block = /```text\n([\s\S]*?)\n```/.exec(section ?? "")?.[1];
+    expect(block?.split("\n")).toEqual(
+      (BUNDLE_POLICY as string).split("; ").map((directive) => `${directive};`),
+    );
+  });
+
+  it("is the policy line of the example's README", () => {
+    expect(read("examples/browser/README.md")).toContain(
+      `\`\`\`text\n${BUNDLE_POLICY}\n\`\`\``,
+    );
   });
 });
 

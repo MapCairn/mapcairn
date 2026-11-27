@@ -75,6 +75,65 @@ function internalsNamed(text: string): string[] {
     .map(([name]) => name);
 }
 
+/**
+ * What was true before `@mapcairn/sdk/browser` was built and is not now: that a
+ * page without React has no bundle or mount function. The patterns name those
+ * claims, not the words, so "there is no worker file to serve" passes.
+ */
+const DENIALS_OF_THE_BROWSER_ROUTE: readonly RegExp[] = [
+  /\bno\s+pre-?built\s+(?:bundle|script)\b/i,
+  /\bno\s+(?:`?mountMap`?|mount)\s+function\b/i,
+  /\bused\s+a\s+mount\s+function,\s+because\b/i,
+  /\bneeds\s+a\s+(?:small\s+)?React\s+island\b/i,
+  /\bnext\s+is\b[^.]*\bmount\s+function\b/i,
+  // The item as a list of what the SDK does not fit.
+  /^a\s+pre-?built\s+bundle\s+for\s+pages\s+without\s+React;$/i,
+  // An entry in a list of what the SDK is not the right choice for.
+  /\bto\s+mount\s+it\s+in\s+a\s+page\s+without\s+React\b/i,
+  // A table row that marks it missing or not started.
+  /(?:mount\s+function|pre-?built\s+bundle)[^|]*\|(?:[^|]*\|)?\s*(?:lacks|proposed)\s*\|/i,
+];
+
+/**
+ * The limitation that stays until a release carries the browser route: merging
+ * deploys the site while the latest release has no `./browser`, so these three
+ * places still say so to someone who installs it. Each phrase names the
+ * releases it is true of, so a denial without them still fails, and each must
+ * be there, so the release that ships the route removes the text and its entry
+ * here together.
+ */
+const UNTIL_THE_ROUTE_IS_RELEASED: Readonly<Record<string, readonly string[]>> =
+  {
+    "README.md": [
+      "to mount it in a page without React with `0.2.0` or an earlier release",
+    ],
+    "DESIGN.md": [
+      "no prebuilt bundle for pages without React in 0.2.0 or earlier",
+    ],
+    "packages/web/src/product/productContent.ts": [
+      "0.2.0 and earlier have no prebuilt bundle for pages without React",
+    ],
+  };
+
+/** `text` without the limitation `file` may still state. */
+function withoutAllowed(file: string, text: string): string {
+  return (UNTIL_THE_ROUTE_IS_RELEASED[file] ?? []).reduce(
+    (rest, phrase) => rest.replaceAll(phrase, ""),
+    text,
+  );
+}
+
+/** `file:line: denies the browser route` for each line of `text` that does. */
+function denialsIn(file: string, text: string): string[] {
+  return text
+    .split("\n")
+    .flatMap((line, index) =>
+      DENIALS_OF_THE_BROWSER_ROUTE.some((pattern) => pattern.test(line.trim()))
+        ? [`${file}:${index + 1}: denies the browser route`]
+        : [],
+    );
+}
+
 /** `file:line: names <internal>` for each line of `text` that names one. */
 function findingsIn(file: string, text: string): string[] {
   return text
@@ -200,6 +259,36 @@ describe("the check for internals in adopter-facing text", () => {
   });
 });
 
+describe("the check for text that denies the browser route", () => {
+  it.each([
+    "There is no prebuilt bundle for pages without React yet.",
+    "There is no prebuilt script with a mount function for pages without React either.",
+    "There is no prebuilt bundle and no `mountMap` function for a page without React.",
+    "No page used a mount function, because the issue is open.",
+    "A host that does not use React needs a small React island of its own.",
+    "Next is the other route, a framework-neutral mount function and a custom element.",
+    "a prebuilt bundle for pages without React;",
+    "- to mount it in a page without React, or to reach layers behind a login;",
+    "| A script and stylesheet with a mount function for pages without React | lacks | none |",
+    "| Embedding | A prebuilt bundle and custom element | proposed | none |",
+  ])("fails on %j", (text) => {
+    expect(denialsIn("page.md", text)).toEqual([
+      "page.md:1: denies the browser route",
+    ]);
+  });
+
+  it.each([
+    "There is no worker file to serve.",
+    "There is no directions tool.",
+    "There is no classic script, only a module.",
+    "`@mapcairn/sdk/browser` is a prebuilt bundle for pages without React.",
+    "| A script and stylesheet with a mount function | has | `examples/browser` | none |",
+    "The bundle has no mount point of its own.",
+  ])("passes %j", (text) => {
+    expect(denialsIn("page.md", text)).toEqual([]);
+  });
+});
+
 describe("what an adopter reads", () => {
   it("includes the READMEs, every page of the documentation site and the browser route's source", () => {
     const pages = adopterPages();
@@ -215,6 +304,29 @@ describe("what an adopter reads", () => {
     expect(
       adopterPages().flatMap((file) => findingsIn(file, read(file))),
     ).toEqual([]);
+  });
+
+  it("does not say the browser route is missing, in a page, the product page's copy, the design system or the roadmap", () => {
+    const product = "packages/web/src/product/productContent.ts";
+    expect(
+      [...adopterPages(), "DESIGN.md", "ROADMAP.md"]
+        .flatMap((file) => denialsIn(file, withoutAllowed(file, read(file))))
+        .concat(
+          denialsIn(
+            product,
+            withoutAllowed(product, literalsOf(read(product))),
+          ),
+        ),
+    ).toEqual([]);
+  });
+
+  it("still states the limitation of the latest release where it is allowed to", () => {
+    for (const [file, phrases] of Object.entries(UNTIL_THE_ROUTE_IS_RELEASED)) {
+      const text = file.endsWith(".ts") ? literalsOf(read(file)) : read(file);
+      for (const phrase of phrases) {
+        expect(text, file).toContain(phrase);
+      }
+    }
   });
 
   it("names no internal of the SDK in an error or a warning of the browser route", () => {

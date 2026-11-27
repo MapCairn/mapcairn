@@ -1,7 +1,7 @@
 {
   "name": "@mapcairn/sdk",
   "version": "0.2.0",
-  "description": "One install and one import for the MapCairn SDK: core, map, react and theme, with the MapLibre adapter at a subpath",
+  "description": "One install and one import for the MapCairn SDK: core, map, react and theme, with the MapLibre adapter and a browser build for pages without React at subpaths",
   "license": "AGPL-3.0-only",
   "repository": {
     "type": "git",
