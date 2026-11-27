@@ -10,120 +10,220 @@
  * JSX text can corrupt at most one line.
  */
 
+/** The longest text before a `/` that is looked at to tell what it starts. */
+const LOOK_BACK = 80;
+
+/**
+ * A character, or the word `return`, after which `/` starts a regular
+ * expression. `<` is left out, so the `/` of a closing JSX tag does not.
+ */
+const BEFORE_REGEX = /(?:^|[(,=:[!&|?{};+*%>~^-]|\breturn)\s*$/;
+
+/** A regular expression literal: classes and escapes may hold a `/`. */
+const REGEX_LITERAL = /\/(?:\\.|\[(?:\\.|[^\]\\\n])*\]|[^/\\[\n])+\//y;
+
+/** @typedef {(from: number, to: number) => void} OnComment */
+
+/**
+ * Index just after the quoted string that starts at `start`. It ends at the
+ * line's end at the latest, so a stray apostrophe hides one line at most.
+ * @param {string} source
+ * @param {number} start
+ * @returns {number}
+ */
+function skipString(source, start) {
+  const quote = source[start];
+  let i = start + 1;
+  while (i < source.length && source[i] !== quote && source[i] !== "\n") {
+    i += source[i] === "\\" ? 2 : 1;
+  }
+  return source[i] === quote ? i + 1 : i;
+}
+
+/**
+ * Index just after the comment that starts at `start`, or `start` when none
+ * does. The line break that ends a line comment is not part of it.
+ * @param {string} source
+ * @param {number} start
+ * @returns {number}
+ */
+function commentEnd(source, start) {
+  const opening = source.slice(start, start + 2);
+  if (opening !== "//" && opening !== "/*") {
+    return start;
+  }
+  const closing = opening === "//" ? "\n" : "*/";
+  const at = source.indexOf(closing, start + 2);
+  if (at === -1) {
+    return source.length;
+  }
+  return opening === "//" ? at : at + closing.length;
+}
+
+/**
+ * Index just after the string or regular expression that starts at `i`, or the
+ * next index when neither does. Whether a `/` starts a regular expression is
+ * told from the code before it, which ends at `codeEnd`.
+ * @param {string} source
+ * @param {number} i
+ * @param {number} [codeEnd] Where the code before `i` ends, comments aside.
+ * @returns {number}
+ */
+export function skipPlain(source, i, codeEnd = i) {
+  if (source[i] === '"' || source[i] === "'") {
+    return skipString(source, i);
+  }
+  if (source[i] !== "/") {
+    return i + 1;
+  }
+  const before = source.slice(Math.max(0, codeEnd - LOOK_BACK), codeEnd);
+  // `{...props}/>` ends a JSX tag, while `/>/` is a regular expression.
+  const closesTag =
+    source[i + 1] === ">" &&
+    source[i + 2] !== "/" &&
+    before.trimEnd().endsWith("}");
+  if (closesTag || !BEFORE_REGEX.test(before)) {
+    return i + 1;
+  }
+  REGEX_LITERAL.lastIndex = i;
+  return REGEX_LITERAL.test(source) ? REGEX_LITERAL.lastIndex : i + 1;
+}
+
+/**
+ * Reads code from `from`, past its strings, regular expressions, comments and
+ * templates.
+ * @param {string} source
+ * @param {number} from
+ * @param {OnComment} onComment Receives every comment read.
+ * @param {boolean} oneGroup Stop at the `}` that closes the `{` at `from`.
+ * @returns {number} Index just after that `}`, or -1 when the end of the
+ *   source comes first.
+ */
+function readCode(source, from, onComment, oneGroup) {
+  let depth = 0;
+  let codeEnd = from;
+  let i = from;
+  while (i < source.length) {
+    const c = source[i];
+    const comment = commentEnd(source, i);
+    if (comment > i) {
+      onComment(i, comment);
+      i = comment;
+      continue;
+    }
+    if (c === "`") {
+      const end = readTemplate(source, i, onComment);
+      i = end === -1 ? source.length : end;
+    } else if (c === "{" || c === "}") {
+      depth += c === "{" ? 1 : -1;
+      i += 1;
+      if (oneGroup && depth === 0) {
+        return i;
+      }
+    } else {
+      i = skipPlain(source, i, codeEnd);
+    }
+    codeEnd = /\s/.test(c) ? codeEnd : i;
+  }
+  return -1;
+}
+
+/**
+ * Reads the template literal that starts at `start`, honouring nested
+ * `${ ... }` expressions.
+ * @param {string} source
+ * @param {number} start
+ * @param {OnComment} onComment Receives every comment in its holes.
+ * @returns {number} Index just after its closing backtick, or -1 when it never
+ *   closes.
+ */
+function readTemplate(source, start, onComment) {
+  let i = start + 1;
+  while (i >= 0 && i < source.length) {
+    if (source[i] === "\\") {
+      i += 2;
+    } else if (source[i] === "`") {
+      return i + 1;
+    } else if (source.startsWith("${", i)) {
+      i = readCode(source, i + 1, onComment, true);
+    } else {
+      i += 1;
+    }
+  }
+  return -1;
+}
+
 /**
  * Replaces comments with spaces, keeping every line break and offset so that
- * line numbers and indices still match the original source.
+ * line numbers and indices still match the original source. Comments in a
+ * template's holes go too; the template's own text stays as written.
  * @param {string} source
  * @returns {string}
  */
 export function stripComments(source) {
   let out = "";
-  let i = 0;
-  const n = source.length;
-  while (i < n) {
-    const c = source[i];
-    const next = source[i + 1];
-    if (c === "/" && next === "/") {
-      while (i < n && source[i] !== "\n") {
-        out += " ";
-        i += 1;
-      }
-    } else if (c === "/" && next === "*") {
-      out += "  ";
-      i += 2;
-      while (i < n && !(source[i] === "*" && source[i + 1] === "/")) {
-        out += source[i] === "\n" ? "\n" : " ";
-        i += 1;
-      }
-      out += "  ";
-      i += 2;
-    } else if (c === '"' || c === "'") {
-      out += c;
-      i += 1;
-      while (i < n && source[i] !== c && source[i] !== "\n") {
-        if (source[i] === "\\" && i + 1 < n) {
-          out += source[i];
-          i += 1;
-        }
-        out += source[i];
-        i += 1;
-      }
-      if (i < n && source[i] === c) {
-        out += c;
-        i += 1;
-      }
-    } else if (c === "`") {
-      const end = skipTemplate(source, i);
-      out += source.slice(i, end);
-      i = end;
-    } else {
-      out += c;
-      i += 1;
-    }
-  }
-  return out;
+  let kept = 0;
+  readCode(
+    source,
+    0,
+    (from, to) => {
+      out += source.slice(kept, from);
+      out += source.slice(from, to).replace(/[^\n]/g, " ");
+      kept = to;
+    },
+    false,
+  );
+  return out + source.slice(kept);
 }
 
 /**
- * Index just after the template literal that starts at `start`, honouring
- * nested `${ ... }` expressions.
+ * Builds a function that maps an offset in `code` to a line number.
+ * @param {string} code
+ * @returns {(index: number) => number}
+ */
+export function lineFinder(code) {
+  const starts = [0];
+  for (let k = 0; k < code.length; k += 1) {
+    if (code[k] === "\n") {
+      starts.push(k + 1);
+    }
+  }
+  return (index) => {
+    let lo = 0;
+    let hi = starts.length - 1;
+    while (lo < hi) {
+      const mid = Math.ceil((lo + hi) / 2);
+      if (starts[mid] <= index) {
+        lo = mid;
+      } else {
+        hi = mid - 1;
+      }
+    }
+    return lo + 1;
+  };
+}
+
+/**
+ * Index just after the `}` that closes the `{` at `start`, skipping strings,
+ * regular expressions, comments and templates inside.
  * @param {string} source
  * @param {number} start
- * @returns {number}
+ * @returns {number} -1 when it never closes.
  */
-function skipTemplate(source, start) {
-  let i = start + 1;
-  const n = source.length;
-  while (i < n) {
-    const c = source[i];
-    if (c === "\\") {
-      i += 2;
-    } else if (c === "`") {
-      return i + 1;
-    } else if (c === "$" && source[i + 1] === "{") {
-      i = skipBalanced(source, i + 1);
-    } else {
-      i += 1;
-    }
-  }
-  return n;
+export function closingBrace(source, start) {
+  return readCode(source, start, () => {}, true);
 }
 
 /**
- * Index just after the `{ ... }` group that starts at `start` (which must be
- * a `{`), skipping strings and templates inside.
+ * {@link closingBrace}, with the end of the source for a group that never
+ * closes.
  * @param {string} source
  * @param {number} start
  * @returns {number}
  */
 export function skipBalanced(source, start) {
-  let depth = 0;
-  let i = start;
-  const n = source.length;
-  while (i < n) {
-    const c = source[i];
-    if (c === "{") {
-      depth += 1;
-      i += 1;
-    } else if (c === "}") {
-      depth -= 1;
-      i += 1;
-      if (depth === 0) {
-        return i;
-      }
-    } else if (c === '"' || c === "'") {
-      i += 1;
-      while (i < n && source[i] !== c && source[i] !== "\n") {
-        i += source[i] === "\\" ? 2 : 1;
-      }
-      i += 1;
-    } else if (c === "`") {
-      i = skipTemplate(source, i);
-    } else {
-      i += 1;
-    }
-  }
-  return n;
+  const end = closingBrace(source, start);
+  return end === -1 ? source.length : end;
 }
 
 /**
@@ -393,25 +493,7 @@ export function extractDeclarations(tokens, code) {
 export function findJsxTags(code) {
   /** @type {JsxTag[]} */
   const tags = [];
-  const lineStarts = [0];
-  for (let k = 0; k < code.length; k += 1) {
-    if (code[k] === "\n") {
-      lineStarts.push(k + 1);
-    }
-  }
-  const lineOf = (index) => {
-    let lo = 0;
-    let hi = lineStarts.length - 1;
-    while (lo < hi) {
-      const mid = Math.ceil((lo + hi) / 2);
-      if (lineStarts[mid] <= index) {
-        lo = mid;
-      } else {
-        hi = mid - 1;
-      }
-    }
-    return lo + 1;
-  };
+  const lineOf = lineFinder(code);
   const re = /<([A-Za-z][A-Za-z0-9_.:-]*)(?=[\s/>])/g;
   for (let match = re.exec(code); match !== null; match = re.exec(code)) {
     const start = match.index;

@@ -13,6 +13,13 @@
  *   `live-region`, `icon-sizing`, `icon-only-button`
  * - architecture: `service-singleton`
  *
+ * In a Lit template, `inline-style`, `colour-literal` (the attributes that
+ * paint), `icon-only-button` and the bound forms of `live-region` and
+ * `tab-index` are checked by `litRules.mjs`, which also reports
+ * `unreadable-template`. `mapRules.mjs` holds `packages/map` to `lit-import`
+ * and `markup-from-string`, and applies `inline-style` and `colour-literal` to
+ * its style writes.
+ *
  * Import and global rules live in Biome (`biome.jsonc`) and dependency-cruiser
  * (`.dependency-cruiser.cjs`), because they are exact there.
  */
@@ -28,10 +35,21 @@ import {
 import {
   extractDeclarations,
   findJsxTags,
+  lineFinder,
   skipBalanced,
   stripComments,
   tokenize,
 } from "./lex.mjs";
+import { scanLitTemplates } from "./litRules.mjs";
+import { blankLitTemplates } from "./litTemplates.mjs";
+import { scanMapScript } from "./mapRules.mjs";
+import {
+  checkColours,
+  ICON_ONLY_BUTTON_MESSAGE,
+  LIVE_REGION_MESSAGE,
+  NAME_ATTRS,
+  TAB_INDEX_MESSAGE,
+} from "./shared.mjs";
 
 /**
  * @typedef {object} Violation
@@ -41,7 +59,7 @@ import {
  * @property {string} message What is wrong and what to use instead.
  */
 
-/** @typedef {(rule: string, line: number, message: string) => void} Report */
+/** @typedef {import("./shared.mjs").Report} Report */
 
 /**
  * @typedef {object} DeclarationContext
@@ -53,8 +71,6 @@ import {
  * @property {Report} report
  */
 
-const COLOUR =
-  /#[0-9a-fA-F]{3,8}\b|(?<![\w-])(?:rgba?|hsla?|hwb|lab|lch|oklab|oklch|color)\(/;
 const LENGTH = /(?<![\w.#§-])(-?\d*\.?\d+)(px|rem|em|pt|%)(?![\w%])/g;
 const TIME = /(?<![\w.#§-])(-?\d*\.?\d+)(ms|s)(?![\w%])/g;
 
@@ -377,25 +393,6 @@ function checkDeclaration(file, decl, code, report) {
 }
 
 /**
- * Checks colour literals in the string and template tokens of a style region.
- * @param {import("./lex.mjs").Token[]} tokens
- * @param {Report} report
- */
-function checkColours(tokens, report) {
-  for (const tok of tokens) {
-    const hit =
-      tok.t === "str" || tok.t === "tpl" ? COLOUR.exec(tok.v)?.[0] : undefined;
-    if (hit !== undefined) {
-      report(
-        "colour-literal",
-        tok.line,
-        `Colour literal "${hit}". Use a tokens.color role.`,
-      );
-    }
-  }
-}
-
-/**
  * Names imported from `@phosphor-icons/react`.
  * @param {string} code
  * @returns {Set<string>}
@@ -418,8 +415,6 @@ function iconImportNames(code) {
   }
   return names;
 }
-
-const NAME_ATTRS = ["aria-label", "aria-labelledby", "title"];
 
 /**
  * Removes icon children from the inside of a button and reports whether
@@ -498,27 +493,6 @@ function moduleScopeCalls(code) {
 }
 
 /**
- * Builds a function that maps an offset in `code` to a line number.
- * @param {string} code
- * @returns {(index: number) => number}
- */
-function lineFinder(code) {
-  const starts = [0];
-  for (const [i, c] of [...code].entries()) {
-    if (c === "\n") {
-      starts.push(i + 1);
-    }
-  }
-  return (index) => {
-    let line = 0;
-    while (line + 1 < starts.length && starts[line + 1] <= index) {
-      line += 1;
-    }
-    return line + 1;
-  };
-}
-
-/**
  * Text-pattern rules that read every file kind.
  * @param {string} file
  * @param {string} code
@@ -553,14 +527,13 @@ function scanText(file, code, report) {
   eachMatch(
     /\btab[Ii]ndex\s*(?:=|:)\s*\{?\s*["']?\s*[1-9]|setAttribute\(\s*["']tabindex["']\s*,\s*["']?[1-9]|\.tabIndex\s*=\s*[1-9]/g,
     "tab-index",
-    () => "A tabindex above 0 breaks the natural focus order. Use 0 or -1.",
+    () => TAB_INDEX_MESSAGE,
   );
   if (!insideAny(file, LIVE_REGION_DIRS)) {
     eachMatch(
-      /aria-live(?!\s*[=:]\s*\{?\s*["']off["'])|\brole\s*[=:]\s*\{?\s*["'](?:status|alert|log)["']|setAttribute\(\s*["']role["']\s*,\s*["'](?:status|alert|log)["']/g,
+      /aria-live(?!\s*[=:]\s*\$?\{?\s*["']off["'])|\brole\s*[=:]\s*\{?\s*["'](?:status|alert|log)["']|setAttribute\(\s*["']role["']\s*,\s*["'](?:status|alert|log)["']/g,
       "live-region",
-      () =>
-        "Live regions are created only by LiveRegion and StatusMessage in packages/map/src/ui. Announce through the useAnnounce hook.",
+      () => LIVE_REGION_MESSAGE,
     );
   }
   if (!isHtml) {
@@ -682,11 +655,7 @@ function checkIconOnlyButton(tag, code, icons, report) {
     named ||
     tag.attrs.some((a) => NAME_ATTRS.includes(a.name) || a.kind === "spread");
   if (onlyIcons && !hasName) {
-    report(
-      "icon-only-button",
-      tag.line,
-      "A button with only an icon has no accessible name. Use IconButton with a label, or add aria-label.",
-    );
+    report("icon-only-button", tag.line, ICON_ONLY_BUTTON_MESSAGE);
   }
 }
 
@@ -707,6 +676,10 @@ export function scanSource(file, source) {
     ? source.replace(/<!--[\s\S]*?-->/g, (m) => m.replace(/[^\n]/g, " "))
     : stripComments(source);
   scanText(file, code, report);
+  if (/\.tsx?$/.test(file)) {
+    scanLitTemplates(file, code, report);
+    scanMapScript(file, code, lineFinder(code), report);
+  }
 
   const regions = [];
   if (file.endsWith(".css.ts")) {
@@ -714,7 +687,7 @@ export function scanSource(file, source) {
   }
   if (file.endsWith(".tsx")) {
     const icons = iconImportNames(code);
-    for (const tag of findJsxTags(code)) {
+    for (const tag of findJsxTags(blankLitTemplates(code))) {
       const region = checkStyleProp(tag, code, report);
       if (region) {
         regions.push(region);
