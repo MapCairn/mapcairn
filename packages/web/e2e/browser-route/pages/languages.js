@@ -4,7 +4,7 @@
 // Two pseudo-translations of the English messages, in the shape the public
 // `languages` option takes: one longer than English and read left to right,
 // and one marked right to left. The server writes `english.js` from the
-// messages `@mapcairn/sdk/core` exports. The check reads these back to name
+// messages `@mapcairn/core` exports. The check reads these back to name
 // what it looks for, so they are built here and nowhere else.
 import english from "./english.js";
 

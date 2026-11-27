@@ -18,7 +18,7 @@ import { readFile } from "node:fs/promises";
 import { createServer } from "node:http";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { EN_GB_CATALOGUE } from "@mapcairn/sdk/core";
+import { EN_GB_CATALOGUE } from "@mapcairn/core";
 import {
   contentTypeOf,
   staticFile,
@@ -30,7 +30,7 @@ const PAGES = path.resolve(HERE, "../e2e/browser-route/pages");
 const FILES_PREFIX = "/mapcairn";
 const DEFAULT_PORT = "4892";
 // The English messages, which the bundle does not export, so `pages/languages.js`
-// can translate them. They come from the SDK's public `core` entry point.
+// can translate them. They come from the public entry point of `@mapcairn/core`.
 const ENGLISH_PATH = "/english.js";
 const ENGLISH_MODULE = `export default ${JSON.stringify(EN_GB_CATALOGUE)};\n`;
 
