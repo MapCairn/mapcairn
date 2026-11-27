@@ -1,27 +1,31 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
 /**
- * Finds user-facing literal text in JSX: text nodes, and the attributes that
- * assistive technology or the browser shows to a person. Copy belongs in the
- * message catalogue, looked up by key, so a host can translate it.
+ * Finds user-facing literal text in JSX and in Lit templates: text nodes, and
+ * the attributes (in a Lit template, also the properties) that assistive
+ * technology or the browser shows to a person. Copy belongs in the message
+ * catalogue, looked up by key, so a host can translate it.
  *
- * It builds on the harmony lexer and is not a full parser. It reads the
- * children of each element, skips `{...}` containers except where one holds
- * only a string literal (or a conditional whose branches are string
- * literals), and reports text that holds a letter. Numbers, punctuation,
- * icon names, class names, token names, URLs and test ids are not reported,
- * because none of them is written as a text node or in a copy attribute.
+ * It builds on the harmony lexer and its Lit template reader and is not a full
+ * parser. It reads the children of each element, skips `{...}` and `${...}`
+ * containers except where one holds only a string literal (or a conditional
+ * whose branches are string literals), and reports text that holds a letter.
+ * Numbers, punctuation, icon names, class names, token names, URLs and test ids
+ * are not reported, because none of them is written as a text node or in a copy
+ * attribute.
  *
  * What it does not detect, each with a fixture in `hardcodedCopy.test.ts`:
  * copy built by string concatenation, in an array or in a spread object, copy
  * held in a variable and passed to an attribute, and props of SDK components
- * that carry copy (`label`, `tooltip`). It reads only `.tsx` files, so copy in
- * a `.ts` string table is not scanned.
+ * and attributes of custom elements that carry copy (`label`, `tooltip`). In a
+ * `.ts` file it reads only Lit templates, so copy in a string table is not
+ * scanned.
  */
 import { readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { findJsxTags, parseTagAt, stripComments } from "../harmony/lex.mjs";
+import { findLitTemplates } from "../harmony/litTemplates.mjs";
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 
@@ -38,6 +42,18 @@ export const COPY_ATTRIBUTES = new Set([
   "alt",
   "aria-valuetext",
   "aria-placeholder",
+]);
+
+/** The properties Lit's `.name=${...}` sets that a person reads or hears. */
+const COPY_PROPERTIES = new Set([
+  "ariaDescription",
+  "ariaLabel",
+  "ariaPlaceholder",
+  "ariaRoleDescription",
+  "ariaValueText",
+  "alt",
+  "placeholder",
+  "title",
 ]);
 
 /**
@@ -232,6 +248,18 @@ function branches(expr) {
 }
 
 /**
+ * What a JS expression may give: the whole expression, or the branches after a
+ * condition, trimmed.
+ * @param {string} expr
+ * @returns {string[]}
+ */
+export function branchValues(expr) {
+  const pieces = branches(expr);
+  const values = pieces.length === 1 ? pieces : pieces.slice(1);
+  return values.map((value) => value.trim());
+}
+
+/**
  * The copy a JS expression writes out as literals: the whole expression when
  * it is one literal, otherwise the branches after a condition. Calls and
  * property reads are lookups, so they are never copy.
@@ -239,9 +267,7 @@ function branches(expr) {
  * @returns {string[]}
  */
 export function literalCopyIn(expr) {
-  const pieces = branches(expr);
-  const candidates = pieces.length === 1 ? pieces : pieces.slice(1);
-  return candidates
+  return branchValues(expr)
     .map(literalText)
     .filter((text) => text !== undefined && isCopy(text));
 }
@@ -366,6 +392,15 @@ export function findHardcodedCopy(source) {
   }
 
   scanCode(0, code.length);
+  return eachOnce(findings);
+}
+
+/**
+ * Drops repeated findings and puts the rest in line order.
+ * @param {Finding[]} findings
+ * @returns {Finding[]}
+ */
+function eachOnce(findings) {
   const seen = new Set();
   return findings
     .filter((f) => {
@@ -380,11 +415,98 @@ export function findHardcodedCopy(source) {
 }
 
 /**
- * The files that make up the interface: every `.tsx` file under
- * `packages/map/src` and `packages/web/src`, without tests and stories. The
- * browser specs (`packages/web/e2e`), `examples/` and `sites/docs` lie outside
- * those folders: the docs site is written in English only and has no message
- * catalogue to look text up in.
+ * The text of a Lit element's attribute or property that a person reads or
+ * hears: the words written in it, and the literals its holes may give. Event
+ * and boolean bindings carry no text.
+ * @param {import("../harmony/litTemplates.mjs").LitAttribute} attr
+ * @returns {string[]}
+ */
+function litAttributeCopy(attr) {
+  const isCopyName =
+    (attr.prefix === "" && COPY_ATTRIBUTES.has(attr.name.toLowerCase())) ||
+    (attr.prefix === "." && COPY_PROPERTIES.has(attr.name));
+  if (!isCopyName) {
+    return [];
+  }
+  return [
+    ...[attr.text].filter(isCopy),
+    ...attr.holes.flatMap((hole) => literalCopyIn(hole.expr)),
+  ];
+}
+
+/**
+ * The findings of one node of a Lit template. The text of a `style` or
+ * `script` element is code, and the harmony scanner refuses the former.
+ * @param {import("../harmony/litTemplates.mjs").LitNode} node
+ * @returns {Finding[]}
+ */
+function litNodeCopy(node) {
+  const textFinding = (raw, line) => ({
+    line,
+    kind: /** @type {const} */ ("text"),
+    text: raw.replace(/\s+/g, " ").trim(),
+  });
+  if (node.kind === "text") {
+    return isCopy(node.value) ? [textFinding(node.value, node.line)] : [];
+  }
+  if (node.kind === "hole") {
+    return literalCopyIn(node.expr).map((text) => textFinding(text, node.line));
+  }
+  return node.attrs.flatMap((attr) =>
+    litAttributeCopy(attr).map((text) => ({
+      line: attr.line,
+      kind: /** @type {const} */ ("attribute"),
+      attribute: `${attr.prefix}${attr.name}`,
+      text: text.replace(/\s+/g, " ").trim(),
+    })),
+  );
+}
+
+/**
+ * @param {import("../harmony/litTemplates.mjs").LitNode[]} nodes
+ * @returns {Finding[]}
+ */
+function litCopyOf(nodes) {
+  return nodes.flatMap((node) => {
+    const own = litNodeCopy(node);
+    const isMarkup =
+      node.kind === "element" && !["script", "style"].includes(node.name);
+    return isMarkup ? [...own, ...litCopyOf(node.children)] : own;
+  });
+}
+
+/**
+ * Finds user-facing literal text in the Lit templates of one source file. Text
+ * outside a template, such as a string table, is not read.
+ * @param {string} source
+ * @returns {Finding[]}
+ */
+export function findLitCopy(source) {
+  return eachOnce(
+    findLitTemplates(stripComments(source)).flatMap((template) =>
+      litCopyOf(template.nodes),
+    ),
+  );
+}
+
+/**
+ * Finds user-facing literal text in a file of the interface: its Lit templates,
+ * and the JSX of a `.tsx` file.
+ * @param {string} file Repository relative path.
+ * @param {string} source
+ * @returns {Finding[]}
+ */
+export function findCopyIn(file, source) {
+  const jsx = file.endsWith(".tsx") ? findHardcodedCopy(source) : [];
+  return eachOnce([...jsx, ...findLitCopy(source)]);
+}
+
+/**
+ * The files that make up the interface: every `.ts` and `.tsx` file under
+ * `packages/map/src` and `packages/web/src`, without tests, stories and
+ * declaration files. The browser specs (`packages/web/e2e`), `examples/` and
+ * `sites/docs` lie outside those folders: the docs site is written in English
+ * only and has no message catalogue to look text up in.
  * @param {string} [root]
  * @returns {string[]} Repository relative paths with forward slashes.
  */
@@ -399,8 +521,8 @@ export function listCopyFiles(root = REPO_ROOT) {
       if (entry.isDirectory()) {
         walk(rel);
       } else if (
-        entry.name.endsWith(".tsx") &&
-        !/\.(test|spec|stories)\.tsx$/.test(entry.name)
+        /\.tsx?$/.test(entry.name) &&
+        !/(\.(test|spec|stories)\.tsx?|\.d\.ts)$/.test(entry.name)
       ) {
         out.push(rel);
       }

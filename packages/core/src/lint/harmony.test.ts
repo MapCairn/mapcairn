@@ -27,6 +27,10 @@ const CSS = "packages/map/src/ui/Example/Example.css.ts";
 const TSX = "packages/map/src/ui/Example/Example.tsx";
 const TS = "packages/map/src/host/example.ts";
 
+/** A Lit source file that renders `body`. */
+const lit = (body: string): string =>
+  `import { html, svg } from "lit";\nexport const view = (on: boolean, t: (key: string) => string) =>\n  html\`${body}\`;\n`;
+
 const css = (body: string): string =>
   `import { style } from "@vanilla-extract/css";\nimport { focusRing, tokens } from "@mapcairn/theme";\nexport const a = style({\n${body}\n});\n`;
 
@@ -533,6 +537,68 @@ const cases: readonly Case[] = [
     bad: `const clip = new BrowserClipboard();`,
     good: `const clip = useClipboard();`,
   },
+  {
+    rule: "inline-style",
+    name: "a style attribute binding in a Lit template",
+    file: TS,
+    bad: lit("<div style=${on ? 'display: none' : ''}></div>"),
+    good: lit('<div class=${on ? "a" : "b"}></div>'),
+  },
+  {
+    rule: "inline-style",
+    name: "a static style attribute in a Lit template",
+    file: TS,
+    bad: lit('<div style="--offset: 4px"></div>'),
+    good: lit('<div data-style="wide"></div>'),
+  },
+  {
+    rule: "inline-style",
+    name: "a style property or boolean binding in a Lit template",
+    file: TS,
+    bad: lit("<div .style=${'display: none'}></div>"),
+    good: lit("<div .styles=${'wide'}></div>"),
+  },
+  {
+    rule: "inline-style",
+    name: "a style element in a Lit template",
+    file: TS,
+    bad: lit("<style>a { display: none }</style>"),
+    good: lit("<span></span>"),
+  },
+  {
+    rule: "colour-literal",
+    name: "a raw colour in a Lit template",
+    file: TS,
+    bad: lit('<svg><path fill="#336699"></path></svg>'),
+    good: lit('<svg><path fill="currentColor"></path></svg>'),
+  },
+  {
+    rule: "colour-literal",
+    name: "a raw colour bound in a nested svg template",
+    file: TS,
+    bad: lit(
+      '<svg>${svg`<path stroke=${on ? "rgb(0, 0, 0)" : "none"} />`}</svg>',
+    ),
+    good: lit('<a href="#add" aria-controls="#face">${t("a")}</a>'),
+  },
+  {
+    rule: "icon-only-button",
+    name: "an icon-only button with no name in a Lit template",
+    file: TS,
+    bad: lit(
+      '<button type="button" @click=${() => on}><svg viewBox="0 0 8 8"><path d="M0 0"></path></svg></button>',
+    ),
+    good: lit(
+      '<button type="button" aria-label=${t("close")}><svg viewBox="0 0 8 8"></svg></button>',
+    ),
+  },
+  {
+    rule: "icon-only-button",
+    name: "a button whose conditional content is only icons in a Lit template",
+    file: TS,
+    bad: lit("<button>${on ? svg`<svg></svg>` : html`<svg></svg>`}</button>"),
+    good: lit('<button>${on ? svg`<svg></svg>` : t("close")}</button>'),
+  },
 ];
 
 describe("harmony rules", () => {
@@ -580,6 +646,106 @@ describe("harmony rules", () => {
     expect(found).toEqual([
       expect.objectContaining({ file: CSS, line: 4, rule: "z-index" }),
       expect.objectContaining({ file: CSS, line: 5, rule: "colour-literal" }),
+    ]);
+  });
+});
+
+describe("Lit templates in the harmony scanner", () => {
+  const rules = (source: string): string[] =>
+    scanSource(TS, source).map((v: { rule: string }) => v.rule);
+
+  it.each([
+    [
+      "a name by aria-labelledby",
+      '<button aria-labelledby="a"><svg></svg></button>',
+    ],
+    ["a name by title", '<button title=${t("a")}><svg></svg></button>'],
+    [
+      "a name set as a property",
+      '<button .ariaLabel=${t("a")}><svg></svg></button>',
+    ],
+    ["a name on the icon", '<button><svg aria-label=${t("a")}></svg></button>'],
+    [
+      "a title inside the icon",
+      '<button><svg><title>${t("a")}</title></svg></button>',
+    ],
+    [
+      "an element directive, which may set the name",
+      "<button ${named(t)}><svg></svg></button>",
+    ],
+    ["text beside the icon", '<button><svg></svg> ${t("a")}</button>'],
+    [
+      "a hidden label element",
+      '<button><svg></svg><span class=${hidden}>${t("a")}</span></button>',
+    ],
+    ["an empty button", "<button></button>"],
+    ["a button inside a comment", "<!-- <button><svg></svg></button> -->"],
+  ])("accepts %s", (_name, body) => {
+    expect(rules(lit(body))).not.toContain("icon-only-button");
+  });
+
+  it("does not detect an icon held in a variable (a known limit)", () => {
+    expect(rules(lit("<button>${closeIcon}</button>"))).toEqual([]);
+  });
+
+  it("reads a template whose tag is an alias of the Lit import", () => {
+    const source =
+      'import { html as markup } from "lit";\nexport const a = markup`<div style="x"></div>`;\n';
+    expect(rules(source)).toEqual(["inline-style"]);
+  });
+
+  it("reads no template from text that only ends in the word", () => {
+    expect(
+      rules(
+        'export const type = `text/html`;\nexport const b = "<i style=1>";\n',
+      ),
+    ).toEqual([]);
+  });
+
+  it.each([
+    [
+      "an untagged template that ends in a tag name",
+      'export const a = `${name} > svg`;\nexport const b = "<i style=1>";\nexport const c = `x`;\n',
+    ],
+    [
+      "a quoted string",
+      'export const a = "write html` here";\nexport const b = \'<i style="1">\';\n',
+    ],
+    [
+      "a regular expression that holds a backtick",
+      'export const a = /`/g;\nexport const b = "<i style=1>";\n',
+    ],
+  ])("reads no template from %s", (_name, source) => {
+    expect(rules(source)).toEqual([]);
+  });
+
+  it.each([
+    [
+      "a regular expression that holds a backtick",
+      "export const a = (v) => v.replace(/[`']/g, '');\n",
+    ],
+    ["a division", "export const a = (v) => v / 2 / 3;\n"],
+  ])("still reads a template after %s", (_name, before) => {
+    expect(
+      rules(`${before}export const b = html\`<i style="x"></i>\`;\n`),
+    ).toEqual(["inline-style"]);
+  });
+
+  it("reads a template nested in an untagged one", () => {
+    expect(
+      rules('export const a = `${html`<i style="x"></i>`} here`;\n'),
+    ).toEqual(["inline-style"]);
+  });
+
+  it("reports the line of a binding deep in a template", () => {
+    const found = scanSource(
+      TS,
+      lit(
+        '\n    <ul>\n      ${on ? html`\n        <li style=${"x"}></li>` : ""}\n    </ul>',
+      ),
+    );
+    expect(found).toEqual([
+      expect.objectContaining({ line: 6, rule: "inline-style" }),
     ]);
   });
 });

@@ -65,6 +65,33 @@ export function stripComments(source) {
 }
 
 /**
+ * Builds a function that maps an offset in `code` to a line number.
+ * @param {string} code
+ * @returns {(index: number) => number}
+ */
+export function lineFinder(code) {
+  const starts = [0];
+  for (let k = 0; k < code.length; k += 1) {
+    if (code[k] === "\n") {
+      starts.push(k + 1);
+    }
+  }
+  return (index) => {
+    let lo = 0;
+    let hi = starts.length - 1;
+    while (lo < hi) {
+      const mid = Math.ceil((lo + hi) / 2);
+      if (starts[mid] <= index) {
+        lo = mid;
+      } else {
+        hi = mid - 1;
+      }
+    }
+    return lo + 1;
+  };
+}
+
+/**
  * Index just after the template literal that starts at `start`, honouring
  * nested `${ ... }` expressions.
  * @param {string} source
@@ -393,25 +420,7 @@ export function extractDeclarations(tokens, code) {
 export function findJsxTags(code) {
   /** @type {JsxTag[]} */
   const tags = [];
-  const lineStarts = [0];
-  for (let k = 0; k < code.length; k += 1) {
-    if (code[k] === "\n") {
-      lineStarts.push(k + 1);
-    }
-  }
-  const lineOf = (index) => {
-    let lo = 0;
-    let hi = lineStarts.length - 1;
-    while (lo < hi) {
-      const mid = Math.ceil((lo + hi) / 2);
-      if (lineStarts[mid] <= index) {
-        lo = mid;
-      } else {
-        hi = mid - 1;
-      }
-    }
-    return lo + 1;
-  };
+  const lineOf = lineFinder(code);
   const re = /<([A-Za-z][A-Za-z0-9_.:-]*)(?=[\s/>])/g;
   for (let match = re.exec(code); match !== null; match = re.exec(code)) {
     const start = match.index;
