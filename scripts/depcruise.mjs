@@ -9,9 +9,15 @@ import { spawnSync } from "node:child_process";
 import { readdirSync } from "node:fs";
 import { BUILT_SDK_PACKAGES } from "./sdkPackages.mjs";
 
-/** Every example app, so a new one is cruised without editing this list. */
+/**
+ * `examples/browser` is a plain page with no `src`: its script imports files
+ * copied beside it, not packages, and nothing in it can break a layer rule.
+ */
+const PLAIN_PAGES = ["browser"];
+
+/** Every other example app, so a new one is cruised without editing this list. */
 const examples = readdirSync("examples", { withFileTypes: true })
-  .filter((entry) => entry.isDirectory())
+  .filter((entry) => entry.isDirectory() && !PLAIN_PAGES.includes(entry.name))
   .map((entry) => `examples/${entry.name}/src`);
 
 /** The documentation site's code folders. */

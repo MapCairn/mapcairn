@@ -47,6 +47,7 @@ export default defineConfig({
         // Drive a real browser or workerd against packed packages; the
         // `consumer:check` run in the release is their test.
         "scripts/release/browserRun.mjs",
+        "scripts/release/bundleRun.mjs",
         "scripts/release/quickstartRun.mjs",
         "scripts/release/workerdRun.mjs",
         // Source files that are built and run inside a packed consumer app.

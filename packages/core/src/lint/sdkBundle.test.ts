@@ -41,6 +41,8 @@ function read(file: string): string {
 const scripts = () => bundleFiles().filter((file) => file.endsWith(".js"));
 const engineChunk = () =>
   bundleFiles().filter((file) => /^browser-engine-[\w-]+\.js$/.test(file));
+const workerChunk = () =>
+  bundleFiles().filter((file) => /^browser-worker-[\w-]+\.js$/.test(file));
 
 /** The module specifiers a script imports, re-exports or loads. */
 function specifiersOf(source: string): string[] {
@@ -57,44 +59,39 @@ function specifiersOf(source: string): string[] {
 describe("the files of @mapcairn/sdk/browser", () => {
   beforeAll(() => assertBuilt("sdk"));
 
-  it("are the module, one lazy engine chunk, the stylesheet, the worker and their declarations, with no source map", () => {
+  it("are the module, its lazy chunks, the stylesheet and their declarations, with no source map and no file for the worker", () => {
     const files = bundleFiles();
     for (const file of [
       "browser.js",
       "browser.css",
       "browser.css.d.ts",
       "browser.d.ts",
-      "browser-worker.js",
-      "browser-worker.d.ts",
     ]) {
       expect(files, file).toContain(file);
     }
     expect(engineChunk()).toHaveLength(1);
+    expect(workerChunk()).toHaveLength(1);
+    // A page that serves the bundle's files serves no worker file: the worker
+    // is a string in a chunk, started from a blob.
+    expect(files).not.toContain("browser-worker.js");
     expect(files.filter((file) => file.endsWith(".map"))).toEqual([]);
-    // The worker is the engine's own file, as published, and names its map.
-    for (const file of files.filter(
-      (name) => name.endsWith(".js") && name !== "browser-worker.js",
-    )) {
+    for (const file of files.filter((name) => name.endsWith(".js"))) {
       expect(read(file), file).not.toMatch(/\/\/# sourceMappingURL=\S+\s*$/);
     }
   });
 
   it("leave nothing external: every import is a relative file", () => {
-    for (const file of scripts().filter((f) => f !== "browser-worker.js")) {
+    for (const file of scripts()) {
       for (const specifier of specifiersOf(read(file))) {
         expect(specifier, `${file} imports ${specifier}`).toMatch(/^\.\//);
       }
     }
   });
 
-  it("look for the worker by the name the build copies it to", () => {
-    const { copy } = JSON.parse(
-      readFileSync(path.join(SDK, "package.json"), "utf8"),
-    ).mapcairn.bundle;
-    expect(Object.keys(copy)).toEqual(["browser-worker.js"]);
-    for (const name of Object.keys(copy)) {
-      expect(read("browser.js")).toContain(`"${name}"`);
-    }
+  it("load the worker's text from a chunk of its own beside the module, never from the first load", () => {
+    const [chunk] = workerChunk();
+    expect(read("browser.js")).toContain(`import("./${chunk}")`);
+    expect(read("browser.js")).not.toContain("maplibre-gl-worker");
   });
 
   it("have process.env.NODE_ENV replaced", () => {
@@ -147,24 +144,51 @@ describe("the files of @mapcairn/sdk/browser", () => {
       text.split(".maplibregl-canvas-container").length - 1;
     // One copy of MapLibre's rules and one of the adapter's, and no second copy of either.
     expect(count(sheet)).toBe(count(engine) + count(adapter));
-    expect(sheet.startsWith(engine)).toBe(true);
+    const reset = sheet.slice(0, sheet.indexOf("\n"));
+    expect(reset).toMatch(
+      /^\[data-mapcairn\] \*:where\(:not\(svg,svg \*\)\)\{all:revert\}/,
+    );
+    expect(sheet.startsWith(`${reset}\n${engine}`)).toBe(true);
     expect(sheet.indexOf("[data-map-host]")).toBeGreaterThan(engine.length);
   });
 
-  it("serve the engine's worker as a copy of the installed file", () => {
-    const installed = path.join(
-      path.dirname(
-        createRequire(import.meta.url).resolve("maplibre-gl/package.json"),
-      ),
-      "dist",
-      "maplibre-gl-worker.mjs",
+  it("start with the reset that gives a page's element rules no hold on the interface, and hold no cascade layer", () => {
+    const sheet = read("browser.css");
+    expect(sheet).toContain(
+      "[data-mapcairn],[data-mapcairn] *,[data-mapcairn] *::before",
     );
-    const copied = read("browser-worker.js");
-    const original = readFileSync(installed, "utf8");
-    expect(original.startsWith(copied.trimEnd())).toBe(true);
-    expect(copied).not.toMatch(/\/\/# sourceMappingURL=\S+\s*$/);
-    expect(original.length - copied.length).toBeLessThan(200);
+    expect(sheet).toContain("box-sizing:border-box}");
+    expect(sheet).not.toMatch(/@layer/);
+    // The primitives' rules are still there, now outside any layer.
+    expect(sheet).toContain("min-height:var(");
   });
+
+  it(
+    "hold the engine's worker as the installed file's text, as the one thing the worker chunk exports",
+    async () => {
+      const installed = path.join(
+        path.dirname(
+          createRequire(import.meta.url).resolve("maplibre-gl/package.json"),
+        ),
+        "dist",
+        "maplibre-gl-worker.mjs",
+      );
+      const original = readFileSync(installed, "utf8");
+      const [chunk] = workerChunk();
+      const exported = await import(
+        /* @vite-ignore */ pathToFileURL(path.join(DIST, chunk ?? "")).href
+      );
+      // The bundler gives the module's namespace a short name, so it is read by position.
+      const [namespace] = Object.values(exported) as [{ default: string }];
+      const text = namespace.default;
+      expect(Object.keys(exported)).toHaveLength(1);
+      expect(Object.keys(namespace)).toEqual(["default"]);
+      expect(original.startsWith(text.trimEnd())).toBe(true);
+      expect(text).not.toMatch(/\/\/# sourceMappingURL=\S+\s*$/);
+      expect(original.length - text.length).toBeLessThan(200);
+    },
+    LOAD_TIMEOUT_MS,
+  );
 
   it("declare their types in one file that imports no @mapcairn package and no react", () => {
     for (const specifier of specifiersOf(read("browser.d.ts"))) {

@@ -12,6 +12,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
+  BROWSER_BUNDLE_BUILDS,
   BUNDLE_CEILINGS,
   bundleSizeProblems,
   CHROME_LANDMARKS,
@@ -493,6 +494,16 @@ describe("engineModules", () => {
     ).toHaveLength(4);
   });
 
+  it("names the umbrella's browser bundle, which carries the engine, as a specifier and as a built file", () => {
+    expect(
+      engineModules([
+        "@mapcairn/sdk/browser",
+        "/app/node_modules/@mapcairn/sdk/dist/browser.js",
+        "/app/node_modules/@mapcairn/sdk/dist/browser-engine-AbC.js",
+      ]),
+    ).toHaveLength(3);
+  });
+
   it("leaves other modules alone, including a name that only starts like the engine's and the adapter's own stylesheet", () => {
     expect(
       engineModules([
@@ -576,14 +587,36 @@ describe("engineGraphProblems", () => {
 });
 
 describe("bundleSizeProblems", () => {
+  it("checks the browser bundle's two groups by name, apart from the app's builds", () => {
+    const sizes = BROWSER_BUNDLE_BUILDS.map((name: string) => ({
+      name,
+      gzipBytes: BUNDLE_CEILINGS[name],
+    }));
+    expect(bundleSizeProblems(sizes, BROWSER_BUNDLE_BUILDS)).toEqual([]);
+    expect(
+      bundleSizeProblems(
+        sizes.map((entry: { name: string; gzipBytes: number }) => ({
+          ...entry,
+          gzipBytes: entry.gzipBytes + 1,
+        })),
+        BROWSER_BUNDLE_BUILDS,
+      ),
+    ).toHaveLength(2);
+    expect(bundleSizeProblems([], BROWSER_BUNDLE_BUILDS)).toHaveLength(2);
+  });
+
   const within = (name: string) => ({
     name,
     gzipBytes: BUNDLE_CEILINGS[name],
   });
-  const passing = Object.keys(BUNDLE_CEILINGS).map(within);
+  const passing = Object.keys(BUNDLE_CEILINGS)
+    .filter((name) => !BROWSER_BUNDLE_BUILDS.includes(name))
+    .map(within);
 
-  it("budgets the client, server and Worker bundles, through the root and through the adapter subpath", () => {
+  it("budgets the browser bundle's first load and its engine and worker, then the client, server and Worker bundles, through the root and through the adapter subpath", () => {
     expect(Object.keys(BUNDLE_CEILINGS)).toEqual([
+      "browser first load",
+      "browser engine and worker",
       "client",
       "server",
       "worker",
@@ -610,7 +643,7 @@ describe("bundleSizeProblems", () => {
   });
 
   it("fails when a budgeted build is missing, or measured nothing", () => {
-    const budgeted = Object.keys(BUNDLE_CEILINGS).length;
+    const budgeted = passing.length;
     expect(bundleSizeProblems([])).toHaveLength(budgeted);
     expect(
       bundleSizeProblems(passing.map((entry) => ({ ...entry, gzipBytes: 0 }))),

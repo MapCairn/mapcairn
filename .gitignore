@@ -39,3 +39,6 @@ AGENTS.local.md
 reports/
 .stryker-tmp/
 packages/sdk/THIRD-PARTY-NOTICES.md
+
+# Copied by examples/browser/copyFiles.mjs from the installed SDK.
+examples/browser/mapcairn/

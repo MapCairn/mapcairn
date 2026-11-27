@@ -1,11 +1,9 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
 import { createMapLibreMapAdapter } from "@mapcairn/adapter-maplibre";
+import { embeddedWorkerUrl } from "./embeddedWorker";
 import { mount } from "./mount";
 import type { MapHandle, MountMapOptions } from "./types";
-
-/** The file the build copies the engine's worker to, beside the module. */
-const WORKER_FILE = "browser-worker.js";
 
 /**
  * Draws a map in `element` and returns the handle to move, change and remove
@@ -29,10 +27,7 @@ export function mountMap(
   options: MountMapOptions = {},
 ): MapHandle {
   return mount(element, options, {
-    createMapAdapter: (workerUrl) => () =>
-      createMapLibreMapAdapter({
-        loadWorkerUrl: () => Promise.resolve(workerUrl),
-      }),
-    defaultWorkerUrl: () => new URL(WORKER_FILE, import.meta.url).href,
+    createMapAdapter: () =>
+      createMapLibreMapAdapter({ loadWorkerUrl: embeddedWorkerUrl }),
   });
 }

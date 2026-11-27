@@ -61,69 +61,107 @@ const COLLECT_VIOLATIONS = `
 `;
 
 /**
+ * What a run of a page saw.
+ *
+ * @typedef {object} Seen
+ * @property {string} origin
+ * @property {string[]} requests
+ * @property {string[]} workers
+ * @property {string[]} consoleErrors
+ * @property {string[]} pageErrors
+ */
+
+/**
+ * Opens a page in a fresh browser context whose every request outside the
+ * page's own origin is answered from the default basemap's fixtures or
+ * refused, and lets `inspect` look at what happened.
+ *
+ * @param {import("playwright-core").Browser} browser
+ * @param {string} address The page's address; its origin is the page's own.
+ * @param {(page: import("playwright-core").Page, seen: Seen) => Promise<void>} inspect
+ * @param {string} [initScript] Runs in the page before any of its own scripts.
+ * @returns {Promise<Seen & { violations: { violatedDirective: string, blockedURI: string }[] }>}
+ */
+export async function openPage(browser, address, inspect, initScript = "") {
+  const origin = new URL(address).origin;
+  const context = await browser.newContext({
+    viewport: { width: 800, height: 600 },
+    serviceWorkers: "block",
+  });
+  try {
+    await context.addInitScript(COLLECT_VIOLATIONS);
+    await context.addInitScript(initScript);
+    /** @type {string[]} */
+    const requests = [];
+    /** @type {string[]} */
+    const workers = [];
+    /** @type {string[]} */
+    const consoleErrors = [];
+    /** @type {string[]} */
+    const pageErrors = [];
+    context.on("request", (request) => requests.push(request.url()));
+    await context.route(
+      (url) => classifyRequest(url.href, origin) !== "page",
+      (route) => {
+        const answer = openFreeMapResponse(route.request().url());
+        if (answer === undefined) {
+          return route.abort("blockedbyclient");
+        }
+        return route.fulfill({
+          contentType: answer.contentType,
+          headers: { "access-control-allow-origin": "*" },
+          body: answer.body,
+        });
+      },
+    );
+    const page = await context.newPage();
+    page.on("worker", (worker) => workers.push(worker.url()));
+    page.on("console", (message) => {
+      if (message.type() === "error") {
+        consoleErrors.push(message.text());
+      }
+    });
+    page.on("pageerror", (error) => pageErrors.push(error.message));
+    await page.goto(address, { waitUntil: "load" });
+    const seen = { origin, requests, workers, consoleErrors, pageErrors };
+    await inspect(page, seen);
+    const violations = await page.evaluate(
+      () => /** @type {any} */ (window).__violations,
+    );
+    return { ...seen, violations };
+  } finally {
+    await context.close();
+  }
+}
+
+/**
  * Serves the built page under a policy, opens it, and lets `inspect` look at
  * what happened.
  *
  * @param {import("playwright-core").Browser} browser
  * @param {string} folder
  * @param {string} policy
- * @param {(page: import("playwright-core").Page, seen: { origin: string, requests: string[], workers: string[], consoleErrors: string[], pageErrors: string[] }) => Promise<void>} inspect
- * @returns {Promise<{ origin: string, requests: string[], workers: string[], consoleErrors: string[], pageErrors: string[], violations: { violatedDirective: string, blockedURI: string }[] }>}
+ * @param {(page: import("playwright-core").Page, seen: Seen) => Promise<void>} inspect
+ * @param {{ path?: string, initScript?: string }} [options] The page's path in the folder (`/` by default) and a script to run before its own.
  */
-async function openUnder(browser, folder, policy, inspect) {
+export async function openUnder(
+  browser,
+  folder,
+  policy,
+  inspect,
+  options = {},
+) {
   const server = await serve(path.resolve(folder), policy);
   try {
     const { port } = /** @type {import("node:net").AddressInfo} */ (
       server.address()
     );
-    const origin = `http://127.0.0.1:${port}`;
-    const context = await browser.newContext({
-      viewport: { width: 800, height: 600 },
-      serviceWorkers: "block",
-    });
-    try {
-      await context.addInitScript(COLLECT_VIOLATIONS);
-      /** @type {string[]} */
-      const requests = [];
-      /** @type {string[]} */
-      const workers = [];
-      /** @type {string[]} */
-      const consoleErrors = [];
-      /** @type {string[]} */
-      const pageErrors = [];
-      context.on("request", (request) => requests.push(request.url()));
-      await context.route(
-        (url) => classifyRequest(url.href, origin) !== "page",
-        (route) => {
-          const answer = openFreeMapResponse(route.request().url());
-          if (answer === undefined) {
-            return route.abort("blockedbyclient");
-          }
-          return route.fulfill({
-            contentType: answer.contentType,
-            headers: { "access-control-allow-origin": "*" },
-            body: answer.body,
-          });
-        },
-      );
-      const page = await context.newPage();
-      page.on("worker", (worker) => workers.push(worker.url()));
-      page.on("console", (message) => {
-        if (message.type() === "error") {
-          consoleErrors.push(message.text());
-        }
-      });
-      page.on("pageerror", (error) => pageErrors.push(error.message));
-      await page.goto(`${origin}/`, { waitUntil: "load" });
-      const seen = { origin, requests, workers, consoleErrors, pageErrors };
-      await inspect(page, seen);
-      const violations = await page.evaluate(
-        () => /** @type {any} */ (window).__violations,
-      );
-      return { ...seen, violations };
-    } finally {
-      await context.close();
-    }
+    return await openPage(
+      browser,
+      `http://127.0.0.1:${port}${options.path ?? "/"}`,
+      inspect,
+      options.initScript,
+    );
   } finally {
     await closeServer(server);
   }
@@ -134,9 +172,10 @@ async function openUnder(browser, folder, policy, inspect) {
  * region away from the chrome (the left edge, halfway down).
  *
  * @param {import("playwright-core").Page} page
+ * @param {{ pixel?: boolean }} [options] `pixel: false` leaves out the pixel read, for WebKit, where Playwright's screenshot adds an inline `style` element that the policy refuses.
  * @returns {Promise<string[]>} The problems with the drawn frame.
  */
-async function drawnFrame(page) {
+export async function drawnFrame(page, { pixel = true } = {}) {
   const host = page.locator("[data-map-host]");
   await page.waitForFunction(
     () => {
@@ -157,13 +196,22 @@ async function drawnFrame(page) {
   if (region === null) {
     return ["the map region has no box"];
   }
+  const canvas = await page.locator("canvas.maplibregl-canvas").boundingBox();
+  if (canvas === null || canvas.width === 0 || canvas.height === 0) {
+    return ["the engine's canvas has no size"];
+  }
+  if (!pixel) {
+    return [];
+  }
   await page.evaluate(
     () =>
       new Promise((resolve) =>
         requestAnimationFrame(() => requestAnimationFrame(resolve)),
       ),
   );
+  // `caret: "initial"` because the default hides the caret with a `style` element Playwright adds, which the policy refuses in WebKit.
   const shot = await page.screenshot({
+    caret: "initial",
     clip: {
       x: region.x + 8,
       y: region.y + region.height / 2,

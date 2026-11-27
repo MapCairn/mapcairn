@@ -49,11 +49,9 @@ const DECLARATION_FOLDER = ".declarations";
  * as the name of the built file (`index`, `contracts`) and its source.
  *
  * @param {Record<string, unknown>} exportsField The manifest `exports`.
- * @param {readonly string[]} [copied] The names of files the build copies into
- *   `dist` as they are. An export of one has no source to build from.
  * @returns {Record<string, string>} Output name to source path.
  */
-export function entryPointsOf(exportsField, copied = []) {
+export function entryPointsOf(exportsField) {
   /** @type {Record<string, string>} */
   const entries = {};
   for (const target of Object.values(exportsField)) {
@@ -65,9 +63,6 @@ export function entryPointsOf(exportsField, copied = []) {
     if (typeof built === "string" && built.endsWith(".css")) {
       continue;
     }
-    if (typeof built === "string" && copied.includes(path.basename(built))) {
-      continue;
-    }
     if (typeof source !== "string" || typeof built !== "string") {
       throw new Error(`An export needs ${SOURCE_CONDITION} and default.`);
     }
@@ -77,16 +72,13 @@ export function entryPointsOf(exportsField, copied = []) {
 }
 
 /**
- * The entry points of a package, with the files its bundle copies left out.
+ * The entry points of a package.
  *
  * @param {Record<string, any>} manifest The package manifest.
  * @returns {Record<string, string>} Output name to source path.
  */
 export function entryPointsOfManifest(manifest) {
-  return entryPointsOf(
-    manifest.exports ?? {},
-    Object.keys(bundleOf(manifest)?.copy ?? {}),
-  );
+  return entryPointsOf(manifest.exports ?? {});
 }
 
 /**
@@ -335,14 +327,10 @@ export async function buildPackage(folder) {
   }
   if (bundle !== undefined) {
     await buildBundle({ folder, bundle, entries: entriesWhere(true) });
-    // The stylesheet and the worker are files a page links, and a project that
-    // checks side-effect imports needs something to resolve them to.
-    const stubs = [
-      ...bundle.entries.map((name) => `${name}.css.d.ts`),
-      ...Object.keys(bundle.copy).map((file) => file.replace(/\.js$/, ".d.ts")),
-    ];
-    for (const stub of stubs) {
-      writeFileSync(path.join(dist, stub), "export {};\n");
+    // The stylesheet is a file a page links, and a project that checks
+    // side-effect imports needs something to resolve it to.
+    for (const name of bundle.entries) {
+      writeFileSync(path.join(dist, `${name}.css.d.ts`), "export {};\n");
     }
   }
   emitDeclarations(folder);

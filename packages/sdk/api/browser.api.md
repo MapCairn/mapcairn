@@ -473,7 +473,6 @@ export interface MountMapOptions {
     readonly theme?: ThemeChoice;
     readonly tools?: readonly MapTool[];
     readonly view?: ViewState;
-    readonly workerUrl?: string;
 }
 
 // @public

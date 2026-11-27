@@ -789,6 +789,7 @@ describe("repository scanning", () => {
     const expected = [
       "examples/embed/public/page.html",
       "examples/embed/src/a.ts",
+      "packages/map/src/mapcairn/kept.css",
       "packages/map/src/nested/a.tsx",
       "packages/map/src/z.css",
     ];
@@ -812,6 +813,9 @@ describe("repository scanning", () => {
     ]) {
       put(root, `packages/map/${directory}/skipped.ts`);
     }
+    // The plain page's copied files are skipped by path, not by a folder name.
+    put(root, "examples/browser/mapcairn/skipped.css");
+    put(root, "packages/map/src/mapcairn/kept.css");
 
     expect(listSourceFiles(root)).toEqual(expected);
   });

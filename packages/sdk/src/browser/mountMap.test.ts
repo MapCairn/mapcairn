@@ -25,27 +25,23 @@ function container(): HTMLElement {
 }
 
 describe("mountMap", () => {
-  it("gives the MapLibre adapter the worker the page names, and nothing else to load", async () => {
-    const factory = createFakeMapAdapterFactory();
-    adapterFactory.mockImplementation(() => factory());
-    const handle = mountMap(container(), {
-      workerUrl: "/mapcairn/browser-worker.js",
-    });
-    await handle.ready;
-    expect(adapterFactory).toHaveBeenCalledTimes(1);
-    const options: { loadWorkerUrl: () => Promise<string> } =
-      adapterFactory.mock.calls[0]?.[0];
-    const { loadWorkerUrl } = options;
-    await expect(loadWorkerUrl()).resolves.toBe(
-      new URL("/mapcairn/browser-worker.js", document.baseURI).href,
-    );
-    handle.destroy();
-  });
-
-  it("looks for the worker beside its own module when the page names none, and refuses it off this origin", () => {
-    // Under test the module is a file on disk, which is not the page's origin.
-    expect(() => mountMap(container())).toThrow(
-      /workerUrl must be on this page's origin/,
-    );
+  it("starts the engine's worker from one blob made from the bundle's own copy, for every map on the page", async () => {
+    const createObjectURL = vi
+      .spyOn(URL, "createObjectURL")
+      .mockReturnValue("blob:http://localhost:3000/worker");
+    adapterFactory.mockImplementation(() => createFakeMapAdapterFactory()());
+    const first = mountMap(container());
+    const second = mountMap(container());
+    await Promise.all([first.ready, second.ready]);
+    for (const [options] of adapterFactory.mock.calls) {
+      await expect(options.loadWorkerUrl()).resolves.toBe(
+        "blob:http://localhost:3000/worker",
+      );
+    }
+    expect(createObjectURL).toHaveBeenCalledTimes(1);
+    const [blob] = createObjectURL.mock.calls[0] ?? [];
+    expect((blob as Blob).type).toBe("text/javascript");
+    first.destroy();
+    second.destroy();
   });
 });

@@ -45,10 +45,9 @@ describe("the browser entry on a server", () => {
 
   it("refuses to mount, says why and builds nothing", () => {
     const createMapAdapter = vi.fn();
-    const defaultWorkerUrl = vi.fn();
     let thrown: unknown;
     try {
-      mount({} as never, {}, { createMapAdapter, defaultWorkerUrl });
+      mount({} as never, {}, { createMapAdapter });
     } catch (error) {
       thrown = error;
     }
@@ -58,7 +57,6 @@ describe("the browser entry on a server", () => {
       "mountMap needs a browser. Call it from code that runs in the page, not on the server.",
     );
     expect(createMapAdapter).not.toHaveBeenCalled();
-    expect(defaultWorkerUrl).not.toHaveBeenCalled();
   });
 
   it("does the same through mountMap, which is what a page imports", async () => {

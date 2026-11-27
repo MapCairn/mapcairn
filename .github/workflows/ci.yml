@@ -172,7 +172,7 @@ jobs:
             exit 0
           fi
           changed="$(git diff --name-only "origin/$BASE_REF...HEAD")"
-          if grep -Eq '^(packages/(adapter-maplibre|core|map|react|theme|sdk)/|scripts/(release/|buildPackage\.mjs|buildSdk\.mjs|entryPoint\.mjs)|package(-lock)?\.json|tsconfig\.base\.json|examples/headless/|\.npmrc|\.github/workflows/ci\.yml)' <<<"$changed"; then
+          if grep -Eq '^(packages/(adapter-maplibre|core|map|react|theme|sdk)/|scripts/(release/|buildPackage\.mjs|buildSdk\.mjs|buildBundle\.mjs|buildInputs\.mjs|bundle[A-Za-z]+\.mjs|entryPoint\.mjs|shareDeclarations\.mjs|sdkPackages\.mjs|sdkLicences\.mjs|sdkLicences\.allowlist\.json)|package(-lock)?\.json|tsconfig\.base\.json|examples/(headless|browser)/|\.npmrc|\.github/workflows/ci\.yml)' <<<"$changed"; then
             echo "run=true" >> "$GITHUB_OUTPUT"
           else
             echo "run=false" >> "$GITHUB_OUTPUT"
@@ -198,10 +198,10 @@ jobs:
         if: steps.changed.outputs.run == 'true'
         run: npm run pack:check
       # The repository's own Playwright, as the lockfile pins it. The leg that
-      # draws a real map fails, rather than skips, when this browser is missing.
-      - name: Install Chromium for the consumer check's real-map leg
+      # draws a real map fails, rather than skips, when Chromium or WebKit is missing.
+      - name: Install Chromium and WebKit for the consumer check's real-map legs
         if: steps.changed.outputs.run == 'true'
-        run: npx --no-install playwright install --with-deps chromium
+        run: npx --no-install playwright install --with-deps chromium webkit
       - name: Install the tarballs in an app outside the repository, render the chrome and draw a real map
         if: steps.changed.outputs.run == 'true'
         run: npm run consumer:check

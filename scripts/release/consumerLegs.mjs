@@ -254,6 +254,26 @@ export function chromiumExecutable(root, remote = REMOTE_SESSION_CHROMIUM) {
 }
 
 /**
+ * Whether Playwright's own WebKit or Firefox is installed (`npm run
+ * playwright:install -w @mapcairn/web` installs the engines the web host's
+ * projects use; Firefox is there only when it was asked for).
+ *
+ * @param {string} root The repository root.
+ * @param {"webkit" | "firefox"} engine
+ * @returns {boolean}
+ */
+export function engineAvailable(root, engine) {
+  try {
+    const playwright = createRequire(path.join(root, "package.json"))(
+      "playwright-core",
+    );
+    return existsSync(playwright[engine].executablePath());
+  } catch {
+    return false;
+  }
+}
+
+/**
  * Whether Playwright resolves from a repository root.
  *
  * @param {string} root The repository root.
@@ -298,6 +318,35 @@ export function browserLegPlan({ playwright, executable, env = process.env }) {
       playwright
         ? "the browser leg was skipped: Chromium for Playwright is not installed here (run npm run playwright:install -w @mapcairn/web)"
         : "the browser leg was skipped: Playwright is not installed here (run npm ci, then npm run playwright:install -w @mapcairn/web)",
+      env,
+    ),
+  };
+}
+
+/**
+ * What the WebKit part of the bundle leg does, which is a standing check
+ * beside Chromium's (the engine `AGENTS.md` names for iOS): it runs when
+ * WebKit is installed; on GitHub Actions, with Playwright installed, a
+ * missing WebKit fails the leg; elsewhere it skips with a message.
+ *
+ * @param {{ installed: boolean, playwright: boolean, env?: NodeJS.ProcessEnv }} input
+ * @returns {{ action: "run" } | { action: "skip", line: string } | { action: "fail", message: string }}
+ */
+export function webkitLegPlan({ installed, playwright, env = process.env }) {
+  if (installed) {
+    return { action: "run" };
+  }
+  if (playwright && env.GITHUB_ACTIONS === "true") {
+    return {
+      action: "fail",
+      message:
+        "The WebKit leg cannot run: WebKit for Playwright is not installed. It fails instead of skipping when GITHUB_ACTIONS is set, because the engine's worker must be shown to start under the policy on iOS's engine. Install it with `npx --no-install playwright install --with-deps chromium webkit` after `npm ci`.",
+    };
+  }
+  return {
+    action: "skip",
+    line: skipLine(
+      "the WebKit part of the bundle leg was skipped: WebKit for Playwright is not installed here (run npm run playwright:install -w @mapcairn/web)",
       env,
     ),
   };

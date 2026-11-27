@@ -162,27 +162,3 @@ export function validateOptions(options: MountMapOptions): ValidOptions {
     languages: buildLanguages(options.languages, options.language),
   };
 }
-
-/**
- * The absolute address of the engine's worker, which must be on the page's
- * origin, because a worker from another origin cannot start. A `blob:` address
- * counts as the origin that made it, which `URL` reports as its `origin`.
- *
- * @throws MountMapError when it is on another origin or is not an address.
- */
-export function sameOriginWorkerUrl(candidate: string): string {
-  let url: URL;
-  try {
-    url = new URL(candidate, document.baseURI);
-  } catch {
-    return invalid(
-      "workerUrl must be an address, such as /mapcairn/browser-worker.js.",
-    );
-  }
-  if (url.origin !== new URL(document.URL).origin) {
-    invalid(
-      "workerUrl must be on this page's origin. Serve the browser files from your own site.",
-    );
-  }
-  return url.href;
-}

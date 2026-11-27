@@ -31,6 +31,9 @@ const SKIP_DIRS = new Set([
   "paraglide",
 ]);
 
+/** Paths left out whatever their folder's name: the SDK's own built files, copied beside the plain page. */
+const SKIP_PATHS = new Set(["examples/browser/mapcairn"]);
+
 /**
  * Every file the scanner reads: scripts, styles and html under `packages`,
  * and under `examples`, whose apps follow the same design rules. `sites/docs`
@@ -49,7 +52,7 @@ export function listSourceFiles(root = REPO_ROOT) {
     })) {
       const rel = `${dir}/${entry.name}`;
       if (entry.isDirectory()) {
-        if (!SKIP_DIRS.has(entry.name)) {
+        if (!SKIP_DIRS.has(entry.name) && !SKIP_PATHS.has(rel)) {
           walk(rel);
         }
       } else if (/\.(ts|tsx|css|html)$/.test(entry.name)) {

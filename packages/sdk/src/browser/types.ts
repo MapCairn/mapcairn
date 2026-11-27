@@ -79,8 +79,6 @@ export interface MountMapOptions {
   readonly theme?: ThemeChoice;
   /** The name of this map. Give each of several maps on a page its own. */
   readonly label?: string;
-  /** Where the engine's worker is served from, on this page's origin. Beside the module when left out. */
-  readonly workerUrl?: string;
   /** The tools to add. None when left out: zoom, the compass, the credits and the scale are always there. */
   readonly tools?: readonly MapTool[];
   /** The providers the page writes. */

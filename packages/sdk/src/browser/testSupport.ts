@@ -9,13 +9,10 @@ import { expect, vi } from "vitest";
 import { type MountDependencies, mount } from "./mount";
 import type { MapHandle, MountMapOptions } from "./types";
 
-const WORKER = "/mapcairn/browser-worker.js";
-
 /** What a test gets from {@link harness}: the dependencies and what they made. */
 export interface Harness {
   readonly dependencies: MountDependencies;
   readonly adapters: FakeMapAdapter[];
-  readonly workerUrls: string[];
 }
 
 /** Dependencies for `mount` that draw with the fake engine and record what they make. */
@@ -23,7 +20,6 @@ export function harness(
   factory?: (onCreate: (adapter: FakeMapAdapter) => void) => MapAdapterFactory,
 ): Harness {
   const adapters: FakeMapAdapter[] = [];
-  const workerUrls: string[] = [];
   const onCreate = (adapter: FakeMapAdapter) => {
     vi.spyOn(adapter, "mount");
     vi.spyOn(adapter, "setBasemap");
@@ -31,13 +27,8 @@ export function harness(
   };
   return {
     adapters,
-    workerUrls,
     dependencies: {
-      createMapAdapter: (workerUrl) => {
-        workerUrls.push(workerUrl);
-        return (factory ?? createFakeMapAdapterFactory)(onCreate);
-      },
-      defaultWorkerUrl: () => new URL(WORKER, document.baseURI).href,
+      createMapAdapter: (factory ?? createFakeMapAdapterFactory)(onCreate),
     },
   };
 }
