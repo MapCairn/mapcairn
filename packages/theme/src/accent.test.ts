@@ -241,6 +241,8 @@ describe("resolveAccent explicit roles", () => {
       theme: "light",
       role: "accentContrast",
       value: "#888888",
+      message:
+        "The accentContrast #888888 in the light theme is below WCAG 2.2 AA. The nearest colour that passes is #c2c2c2.",
     });
     expect(
       resolveAccent("#0b5c3a", {

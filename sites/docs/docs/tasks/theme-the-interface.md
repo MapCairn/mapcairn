@@ -25,7 +25,7 @@ export function brandStylesheet(): string {
   if (!result.ok) {
     const failing = result.findings.filter((finding) => !finding.passes);
     throw new Error(
-      `Theme refused: ${failing.length} colour pairs fail WCAG 2.2 AA, ${result.invalid.length} values cannot be used.`,
+      `Theme refused: ${failing.length} colour pairs fail WCAG 2.2 AA, ${result.invalid.length} values cannot be used. ${(result.failures ?? []).map((failure) => failure.message).join(" ")}`,
     );
   }
   return result.css;

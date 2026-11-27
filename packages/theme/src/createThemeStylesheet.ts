@@ -93,7 +93,8 @@ export interface ThemeStylesheetRefused {
    * The accent roles that cannot reach WCAG 2.2 AA, each with the nearest
    * colour that does, or none when no lightness passes (see
    * {@link resolveAccent}). Present only when `accent` is set and it, or a
-   * role the host set beside it, fails.
+   * role the host set beside it, fails. Then `findings` describe the
+   * override without the accent.
    */
   failures?: AccentFailure[];
 }
