@@ -37,6 +37,20 @@ const BUILT_PACKAGES: readonly string[] = BUILT_SDK_PACKAGES;
  */
 const LOAD_ENTRY_TIMEOUT_MS = 30_000;
 
+/**
+ * The relative imports a rolled-up declaration file may keep: the JSX entry
+ * names the element's type from the browser entry's declarations beside it.
+ */
+const INTO_ROLLED_ENTRY: Readonly<Record<string, readonly string[]>> = {
+  "browserReactJsx.d.ts": ["./browser.js"],
+};
+
+/**
+ * The entries that export nothing, because they do their work when imported
+ * (register the element) or are declarations only. They must still load.
+ */
+const EXPORTS_NOTHING = ["browser-element.js", "browserReactJsx.js"];
+
 interface Manifest {
   readonly dependencies?: Readonly<Record<string, string>>;
   readonly peerDependencies?: Readonly<Record<string, string>>;
@@ -148,8 +162,10 @@ describe.each(BUILT_PACKAGES)("@mapcairn/%s dist", (name) => {
     const declarations = distFiles(name).filter((f) => f.endsWith(".d.ts"));
     expect(declarations.length).toBeGreaterThan(0);
     for (const file of declarations) {
-      const relative = specifiersOf(read(name, file)).filter((specifier) =>
-        specifier.startsWith("."),
+      const relative = specifiersOf(read(name, file)).filter(
+        (specifier) =>
+          specifier.startsWith(".") &&
+          !(INTO_ROLLED_ENTRY[file] ?? []).includes(specifier),
       );
       expect(relative, file).toEqual([]);
     }
@@ -217,7 +233,7 @@ describe.each(BUILT_PACKAGES)("@mapcairn/%s dist", (name) => {
           "--input-type=module",
           "--eval",
           `const loaded = await import(${JSON.stringify(entry)});
-         if (Object.keys(loaded).length === 0) { throw new Error("no exports"); }`,
+         if (${!EXPORTS_NOTHING.includes(path.basename(target.default))} && Object.keys(loaded).length === 0) { throw new Error("no exports"); }`,
         ],
         { cwd: REPO, encoding: "utf8", timeout: LOAD_ENTRY_TIMEOUT_MS },
       );

@@ -38,6 +38,7 @@ describe("the browser entry on a server", () => {
         "MountMapError",
         "PortAbortError",
         "SearchError",
+        "defineMapElement",
         "mountMap",
       ].sort(),
     );
@@ -57,6 +58,16 @@ describe("the browser entry on a server", () => {
       "mountMap needs a browser. Call it from code that runs in the page, not on the server.",
     );
     expect(createMapAdapter).not.toHaveBeenCalled();
+  });
+
+  it("defines no element and answers undefined, and the element's own file does the same", async () => {
+    const { defineMapElement } = await loadEntry();
+    expect(defineMapElement()).toBeUndefined();
+    expect(defineMapElement("other-map")).toBeUndefined();
+    const before = Object.getOwnPropertyNames(globalThis).sort();
+    await import("./element/register");
+    expect(Object.getOwnPropertyNames(globalThis).sort()).toEqual(before);
+    expect(typeof customElements).toBe("undefined");
   });
 
   it("does the same through mountMap, which is what a page imports", async () => {

@@ -119,6 +119,12 @@ import "@mapcairn/theme/tokens.css";
 import "@mapcairn/map/styles.css";
 import "@mapcairn/adapter-maplibre/styles.css";
 
+export { defineMapElement } from "./element/defineMapElement";
+export type {
+  MapCairnMapElement,
+  MapCairnMapElementClass,
+  MapCairnMapEventMap,
+} from "./element/types";
 export { MountMapError, type MountMapErrorKind } from "./MountMapError";
 export { mountMap } from "./mountMap";
 export type { MapTool } from "./tools";

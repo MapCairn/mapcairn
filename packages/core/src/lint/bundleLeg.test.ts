@@ -320,6 +320,20 @@ describe("bundleLoadSizes", () => {
     expect(lazy.gzipBytes).toBeGreaterThan(0);
     expect(bundleLoadSizes({ "browser.js": bytes("a") })[1].gzipBytes).toBe(0);
   });
+
+  it("counts the module's shared chunk and the element's file in the first load, and says when it cannot place a file", () => {
+    const [first] = bundleLoadSizes({
+      "browser-shared-AbC.js": bytes("a"),
+      "browser-element.js": bytes("b"),
+    });
+    expect(first.gzipBytes).toBe(
+      bundleLoadSizes({ "browser-shared-AbC.js": bytes("a") })[0].gzipBytes +
+        bundleLoadSizes({ "browser-element.js": bytes("b") })[0].gzipBytes,
+    );
+    expect(() =>
+      bundleLoadSizes({ "browser-other-AbC.js": bytes("a") }),
+    ).toThrow(/neither first load nor a lazy chunk/);
+  });
 });
 
 describe("the page activity counter", () => {

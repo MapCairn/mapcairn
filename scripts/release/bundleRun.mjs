@@ -35,6 +35,7 @@ import {
   COUNT_PAGE_ACTIVITY,
   createdElementProblems,
   cycleProblems,
+  elementProblems,
   fileRequestProblems,
   hostilePageProblems,
   hostParityProblems,
@@ -166,6 +167,117 @@ async function twoMapCycles(page) {
     });
   }
   return cycles;
+}
+
+/**
+ * Uses two `<mapcairn-map>` elements as a page would, and reads what each step
+ * left: the second element is zoomed through its attribute, the first is
+ * moved by script and removed, the second is moved in the page and removed.
+ *
+ * @param {import("playwright-core").Page} page The leg's `elements.html`.
+ * @returns {Promise<import("./bundleLeg.mjs").ElementRun>}
+ */
+async function elementRun(page) {
+  await page.waitForFunction(
+    () => document.querySelectorAll("canvas.maplibregl-canvas").length === 2,
+    undefined,
+    { timeout: SERVER_TIMEOUT },
+  );
+  const run = await page.evaluate(
+    async ({ zoom, timeout }) => {
+      const first = /** @type {any} */ (document.getElementById("first"));
+      const second = /** @type {any} */ (document.getElementById("second"));
+      const hold = () => ({
+        canvases: document.querySelectorAll("canvas").length,
+        regions: document.querySelectorAll("[aria-live]").length,
+      });
+      /** @param {number} ms */
+      const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+      /** @returns {Promise<number | undefined>} */
+      const nextZoom = () =>
+        new Promise((resolve) => {
+          const stop = setTimeout(() => resolve(undefined), timeout);
+          document.addEventListener(
+            "mapcairn-view-change",
+            (event) => {
+              clearTimeout(stop);
+              resolve(/** @type {CustomEvent} */ (event).detail.zoom);
+            },
+            { once: true },
+          );
+        });
+      const display = getComputedStyle(first).display;
+      const startZoom = first.map.getView().zoom;
+      const both = hold();
+
+      const arrived = nextZoom();
+      second.setAttribute("zoom", String(zoom));
+      const movedZoom = await arrived;
+
+      const moved = nextZoom();
+      first.map.setView({ bearing: 40 }, { animate: false });
+      await moved;
+      const writtenBack = ["latitude", "longitude", "bearing"].filter((name) =>
+        first.hasAttribute(name),
+      );
+
+      first.remove();
+      await wait(0);
+      const afterFirst = {
+        ...hold(),
+        firstChildren: first.childElementCount,
+        firstMarked: first.hasAttribute("data-mapcairn"),
+      };
+
+      const map = second.map;
+      document.body.append(second);
+      await wait(0);
+      const keptMap = second.map === map;
+
+      second.remove();
+      await wait(0);
+      const bad = document.createElement("mapcairn-map");
+      bad.setAttribute("tools", "warp-drive");
+      const errored = new Promise((resolve) => {
+        bad.addEventListener("mapcairn-error", (event) =>
+          resolve(/** @type {CustomEvent} */ (event).detail.kind),
+        );
+      });
+      document.body.append(bad);
+      const errorKind = await errored;
+      bad.remove();
+      await wait(0);
+      return {
+        display,
+        startZoom,
+        both,
+        movedZoom,
+        writtenBack,
+        afterFirst,
+        keptMap,
+        errorKind,
+        end: {
+          ...hold(),
+          marked: document.querySelectorAll("[data-mapcairn]").length,
+        },
+      };
+    },
+    { zoom: MOVED_ZOOM, timeout: MOVE_TIMEOUT },
+  );
+  await page
+    .waitForFunction(
+      () => {
+        const workers = /** @type {any} */ (window).__activity.workers();
+        return workers.made === workers.ended;
+      },
+      undefined,
+      { timeout: SETTLE_TIMEOUT },
+    )
+    .catch(() => undefined);
+  const workers = await page.evaluate(() =>
+    /** @type {any} */ (window).__activity.workers(),
+  );
+  return { ...run, end: { ...run.end, workers } };
 }
 
 /**
@@ -418,6 +530,39 @@ async function checkPlainPage(browser, folder) {
   );
   problems.push(...workerRefusalProblems(refused.violations));
 
+  const element = await drawProblems(
+    (inspect) =>
+      openUnder(browser, folder, BUNDLE_POLICY, inspect, {
+        ...options,
+        path: "/element.html",
+      }),
+    { checkCreated: true },
+  );
+  problems.push(
+    ...element.problems.map((line) => `element page: ${line}`),
+    ...fileRequestProblems(
+      element.run.requests,
+      FILES_FOLDER,
+      element.run.origin,
+    ),
+  );
+
+  /** @type {import("./bundleLeg.mjs").ElementRun | undefined} */
+  let elements;
+  const elementPage = await openUnder(
+    browser,
+    folder,
+    BUNDLE_POLICY,
+    async (page) => {
+      elements = await elementRun(page);
+    },
+    { ...options, path: "/elements.html" },
+  );
+  problems.push(
+    ...violationProblems(elementPage).map((line) => `two elements: ${line}`),
+    ...(elements === undefined ? [] : elementProblems(elements)),
+  );
+
   /** @type {{ cycle: import("./bundleLeg.mjs").Cycle, attributes: import("./bundleLeg.mjs").Attributes }[]} */
   let cycles = [];
   const two = await openUnder(
@@ -495,6 +640,7 @@ async function checkPlainPage(browser, folder) {
     "the engine's worker started from a blob of the bundle's own copy, the engine's chunk and the worker's text were fetched from beside the module, and the page asked for no worker file: ok",
     "no Content-Security-Policy violation, console error or uncaught error under the policy, and no script created a link, style or script element: ok",
     "without blob: in worker-src the page reports a violation, so the directive is needed: ok",
+    "the plain page with a bare <mapcairn-map> and no script of its own drew the same frame under the policy, and two elements drew in one page, took their start from their attributes, zoomed through an attribute with mapcairn-view-change reaching the document, were not written back to, kept their map when moved and left no canvas, live region, marker or worker when removed, and a tool name that is not one came back as a mapcairn-error: ok",
     `two maps drew in one page, one was destroyed and the other kept drawing, and after both were destroyed no canvas, live region or attribute of either was left (a pair held ${first?.cycle.both.regions} live regions): ok`,
     `a second pair of maps left no more listeners on the window and the document than the first (${first?.cycle.end.listeners} after one pair, ${second?.cycle.end.listeners} after two), and the engine's worker was ended with the last map (${second?.cycle.end.workers.made} made, ${second?.cycle.end.workers.ended} ended): ok`,
     "a map with every tool has what the reference host's base styles give (border-box everywhere read, the container's 15px text, a 26 px credits link and a 44 px Settings radio): ok",

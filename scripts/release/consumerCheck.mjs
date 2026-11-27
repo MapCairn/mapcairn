@@ -1498,7 +1498,13 @@ function checkBrowserBundle(app, prefix) {
 
   const page = path.join(app, "bundle-page");
   mkdirSync(page, { recursive: true });
-  for (const file of ["index.html", "main.js", "page.css", "copyFiles.mjs"]) {
+  for (const file of [
+    "index.html",
+    "element.html",
+    "main.js",
+    "page.css",
+    "copyFiles.mjs",
+  ]) {
     copyFileSync(path.join(BROWSER_EXAMPLE, file), path.join(page, file));
   }
   for (const entry of readdirSync(BUNDLE_FIXTURE, { withFileTypes: true })) {

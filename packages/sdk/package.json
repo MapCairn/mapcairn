@@ -75,6 +75,16 @@
     "./browser/styles.css": {
       "types": "./dist/browser.css.d.ts",
       "default": "./dist/browser.css"
+    },
+    "./browser/element": {
+      "@mapcairn/source": "./src/browser/element/register.ts",
+      "types": "./dist/browser-element.d.ts",
+      "default": "./dist/browser-element.js"
+    },
+    "./browser/react-jsx": {
+      "@mapcairn/source": "./src/browser/reactJsx.ts",
+      "types": "./dist/browserReactJsx.d.ts",
+      "default": "./dist/browserReactJsx.js"
     }
   },
   "files": [
@@ -83,12 +93,18 @@
     "THIRD-PARTY-NOTICES.md"
   ],
   "sideEffects": [
-    "**/*.css"
+    "**/*.css",
+    "**/browser-element.js"
   ],
   "mapcairn": {
+    "declarationBlocks": {
+      "browser": "src/browser/element/global.ts",
+      "browserReactJsx": "src/browser/reactJsx.ts"
+    },
     "bundle": {
       "entries": [
-        "browser"
+        "browser",
+        "browser-element"
       ],
       "embed": {
         "src/browser/engineWorkerSource.ts": "maplibre-gl/dist/maplibre-gl-worker.mjs"

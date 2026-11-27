@@ -536,6 +536,39 @@ function bundleProblems(
   }) as string[];
 }
 
+describe("a package that names declaration blocks", () => {
+  const manifestOverrides = {
+    mapcairn: {
+      declarationBlocks: { browser: "src/browser/element/global.ts" },
+      bundle: { entries: ["browser"], embed: {} },
+    },
+  };
+
+  it("passes when the packed declarations carry the block", () => {
+    expect(
+      bundleProblems(BUNDLE_FILES, {
+        manifestOverrides,
+        contents: {
+          "dist/browser.d.ts": "export { }\n\ndeclare global {\n}\n",
+        },
+      }),
+    ).toEqual([]);
+  });
+
+  it("fails when the block was lost, naming the file and the fix", () => {
+    expect(
+      bundleProblems(BUNDLE_FILES, {
+        manifestOverrides,
+        contents: { "dist/browser.d.ts": "export { }\n" },
+      }),
+    ).toEqual([
+      expect.stringContaining(
+        "dist/browser.d.ts: the manifest names a declaration block",
+      ),
+    ]);
+  });
+});
+
 describe("a package that builds a bundle", () => {
   it("passes with its notices, its bundle files and no source map for them", () => {
     expect(bundleProblems()).toEqual([]);

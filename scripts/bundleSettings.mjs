@@ -7,7 +7,7 @@ export const NOTICES_FILE = "THIRD-PARTY-NOTICES.md";
 
 /**
  * @typedef {object} BundleSettings
- * @property {string[]} entries The output names built as a bundle, such as `browser`.
+ * @property {string[]} entries The output names built as a bundle, such as `browser` and `browser-element`. The first also names the stylesheet.
  * @property {Record<string, string>} embed Files whose text the bundle holds as a string, by the source module that stands in for each (a path inside the package) and the path of the file inside an installed package.
  */
 
