@@ -301,7 +301,7 @@ async function rollUpDeclarations(
  * @param {(source: string) => string} input.declarationOf Where `tsc` emitted a source file's declarations.
  */
 function appendDeclarationBlocks({ manifest, bundle, dist, declarationOf }) {
-  const [mainEntry] = bundle?.entries ?? [];
+  const mainEntry = bundle?.main;
   for (const [name, source] of Object.entries(
     manifest.mapcairn?.declarationBlocks ?? {},
   )) {
@@ -361,11 +361,7 @@ export async function buildPackage(folder) {
     await buildBundle({ folder, bundle, entries: entriesWhere(true) });
     // The stylesheet is a file a page links, and a project that checks
     // side-effect imports needs something to resolve it to.
-    const [bundleStylesheet] = bundle.entries;
-    writeFileSync(
-      path.join(dist, `${bundleStylesheet}.css.d.ts`),
-      "export {};\n",
-    );
+    writeFileSync(path.join(dist, `${bundle.main}.css.d.ts`), "export {};\n");
   }
   emitDeclarations(folder);
   const declarationOf = (/** @type {string} */ source) =>

@@ -40,8 +40,14 @@ export interface MapCairnMapEventMap {
  * starting view, `basemap` and `theme`, and the properties take the data an
  * attribute cannot hold. Give the element a height in CSS.
  *
- * `label`, `language` and `tools` are read when the element is added to the
- * page. Change one by removing the element and adding it again.
+ * `latitude`, `longitude`, `zoom`, `bearing`, `basemap` and `theme` change a
+ * map that is showing. `label`, `language` and `tools`, and each of `services`,
+ * `basemaps`, `layers` and `languages`, draw the map again when they change,
+ * which resets what a person chose in it (the basemap, the theme and the
+ * language, a measurement) and keeps only its view. A new object with the same
+ * data is not a change, but keep objects the same from one render to the next
+ * where you can. Load the element before the page sets an object on it, because
+ * an element that is not defined yet takes an object as text.
  */
 export interface MapCairnMapElement extends HTMLElement {
   /** The providers the page writes: search, suggestions, location and a layer source. Setting it draws the map again. */

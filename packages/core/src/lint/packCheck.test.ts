@@ -470,6 +470,7 @@ function bundleManifest(overrides: Record<string, unknown> = {}) {
     },
     mapcairn: {
       bundle: {
+        main: "browser",
         entries: ["browser"],
         embed: {
           "src/browser/engineWorkerSource.ts":
@@ -530,8 +531,14 @@ function bundleProblems(
     listing: listing(files, options.size ?? 1000),
     ceiling: 5000,
     bundleCeiling: options.bundleCeiling ?? 5000,
-    readFile: (file: string) =>
-      file === "dist/index.js.map" ? sourceMap() : (contents[file] ?? "x"),
+    readFile: (file: string) => {
+      if (!files.includes(file)) {
+        return undefined;
+      }
+      return file === "dist/index.js.map"
+        ? sourceMap()
+        : (contents[file] ?? "x");
+    },
     sourceExists: () => true,
   }) as string[];
 }
@@ -540,7 +547,7 @@ describe("a package that names declaration blocks", () => {
   const manifestOverrides = {
     mapcairn: {
       declarationBlocks: { browser: "src/browser/element/global.ts" },
-      bundle: { entries: ["browser"], embed: {} },
+      bundle: { main: "browser", entries: ["browser"], embed: {} },
     },
   };
 
@@ -553,6 +560,17 @@ describe("a package that names declaration blocks", () => {
         },
       }),
     ).toEqual([]);
+  });
+
+  it("fails when the declaration file is not in the tarball at all", () => {
+    expect(
+      bundleProblems(
+        BUNDLE_FILES.filter((file) => file !== "dist/browser.d.ts"),
+        { manifestOverrides },
+      ).join("\n"),
+    ).toContain(
+      "dist/browser.d.ts: the manifest names a declaration block for it, but the tarball has no such file",
+    );
   });
 
   it("fails when the block was lost, naming the file and the fix", () => {

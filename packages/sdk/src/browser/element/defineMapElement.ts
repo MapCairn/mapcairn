@@ -10,7 +10,9 @@ import type { MapCairnMapElementClass } from "./types";
  * `browser-element.js` needs no call, because that file registers the element
  * itself.
  *
- * @param name - The tag name, with a hyphen in it. `"mapcairn-map"` when left out.
+ * @param name - The tag name, with a hyphen in it. `"mapcairn-map"` when left
+ *   out. Another name needs `display: block` in the page's CSS: the stylesheet
+ *   gives that to `mapcairn-map` only.
  * @returns The element's class, or `undefined` where there is no browser.
  * @throws MountMapError when `name` cannot name an element.
  * @example

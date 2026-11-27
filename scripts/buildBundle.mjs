@@ -164,7 +164,7 @@ export async function buildBundle({
   entries,
   root = path.resolve(folder, "../.."),
 }) {
-  const [stylesheet] = bundle.entries;
+  const stylesheet = String(bundle.main);
   const require = createRequire(path.join(folder, "package.json"));
   const embedded = new Map();
   const embeddedFolders = [];

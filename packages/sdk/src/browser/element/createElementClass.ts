@@ -11,6 +11,7 @@ import type {
   MountServices,
 } from "../types";
 import { WORLD_VIEW } from "../validate";
+import { samePlainData, sameServices } from "./equality";
 import type {
   ElementMount,
   MapCairnMapElement,
@@ -33,8 +34,17 @@ const VIEW_ATTRIBUTES = {
   bearing: "bearing",
 } as const;
 
-/** The properties of the element, which a page may set before the element is defined. */
-const PROPERTIES = ["services", "basemaps", "layers", "languages", "view"];
+/** The data properties a page may set before the element is defined. */
+const DATA_PROPERTIES = ["services", "basemaps", "layers", "languages"];
+
+/** The attributes that name the map and its tools, which are read when the map is drawn. */
+const DRAWING_ATTRIBUTES = ["label", "language", "tools"];
+
+/** The attributes that change a map that is showing. */
+const LIVE_ATTRIBUTES = ["basemap", "theme"];
+
+/** What marks a class as this element's, so a second copy of the SDK on a page can tell it from another element's. */
+export const ELEMENT_MARKER = "mapcairnMapElement";
 
 type ViewAttribute = keyof typeof VIEW_ATTRIBUTES;
 
@@ -84,10 +94,11 @@ export function createElementClass(
   mountMap: ElementMount,
 ): MapCairnMapElementClass {
   class MapCairnMap extends HTMLElement implements MapCairnMapElement {
+    static readonly mapcairnMapElement = true;
     static readonly observedAttributes = [
       ...Object.keys(VIEW_ATTRIBUTES),
-      "basemap",
-      "theme",
+      ...LIVE_ATTRIBUTES,
+      ...DRAWING_ATTRIBUTES,
     ];
 
     #services: MountServices | undefined;
@@ -96,6 +107,9 @@ export function createElementClass(
     #languages: readonly MountLanguage[] | undefined;
     #handle: MapHandle | undefined;
     #lastView: ViewState | undefined;
+    /** The view the element last asked the map for, until the map reports one. */
+    #asked: ViewState | undefined;
+    #upgradedView: ViewState | undefined;
     #pending: ViewParts = {};
     #scheduled = false;
     #remount = false;
@@ -104,20 +118,27 @@ export function createElementClass(
       super();
       // A value set on the element before this class was defined sits on the
       // element itself and would hide the setters below, so it is set again.
-      for (const name of PROPERTIES) {
+      for (const name of DATA_PROPERTIES) {
         if (Object.hasOwn(this, name)) {
           const value = Reflect.get(this, name);
           Reflect.deleteProperty(this, name);
           Reflect.set(this, name, value);
         }
       }
+      // The view is set again when the element connects, after the attributes
+      // the page's markup gave it, which the browser reports after this.
+      if (Object.hasOwn(this, "view")) {
+        this.#upgradedView = Reflect.get(this, "view");
+        Reflect.deleteProperty(this, "view");
+      }
+      Reflect.deleteProperty(this, "map");
     }
 
     get services() {
       return this.#services;
     }
     set services(value) {
-      if (value === this.#services) {
+      if (sameServices(value, this.#services)) {
         return;
       }
       this.#services = value;
@@ -127,7 +148,7 @@ export function createElementClass(
       return this.#basemaps;
     }
     set basemaps(value) {
-      if (value === this.#basemaps) {
+      if (samePlainData(value, this.#basemaps)) {
         return;
       }
       this.#basemaps = value;
@@ -137,7 +158,7 @@ export function createElementClass(
       return this.#layers;
     }
     set layers(value) {
-      if (value === this.#layers) {
+      if (samePlainData(value, this.#layers)) {
         return;
       }
       this.#layers = value;
@@ -147,7 +168,7 @@ export function createElementClass(
       return this.#languages;
     }
     set languages(value) {
-      if (value === this.#languages) {
+      if (samePlainData(value, this.#languages)) {
         return;
       }
       this.#languages = value;
@@ -168,6 +189,7 @@ export function createElementClass(
       if (this.#handle === undefined) {
         this.#lastView = value;
         this.#pending = {};
+        this.#schedule();
         return;
       }
       this.#moveTo({
@@ -179,6 +201,10 @@ export function createElementClass(
     }
 
     connectedCallback() {
+      if (this.#upgradedView !== undefined) {
+        this.view = this.#upgradedView;
+        this.#upgradedView = undefined;
+      }
       this.#schedule();
     }
 
@@ -188,11 +214,23 @@ export function createElementClass(
 
     attributeChangedCallback(
       name: string,
-      _before: string | null,
+      before: string | null,
       value: string | null,
     ) {
+      if (before !== value) {
+        this.#attributeChanged(name, value);
+      }
+      // A map that could not be drawn is tried again on any change.
+      if (this.isConnected && this.#handle === undefined) {
+        this.#schedule();
+      }
+    }
+
+    #attributeChanged(name: string, value: string | null) {
       if (isViewAttribute(name)) {
         this.#viewAttributeChanged(name, value);
+      } else if (DRAWING_ATTRIBUTES.includes(name)) {
+        this.#dataChanged();
       } else if (this.#handle !== undefined) {
         this.#report(() => this.#updateFromAttribute(name, value));
       }
@@ -217,18 +255,29 @@ export function createElementClass(
       }
     }
 
-    /** Draws a change of view now, or keeps it for the map that has yet to be drawn. */
+    /** Keeps a change of view for the next microtask, so changes written in one tick are one move. */
     #moveTo(parts: ViewParts) {
-      const handle = this.#handle;
-      if (handle === undefined) {
-        this.#pending = { ...this.#pending, ...parts };
+      this.#pending = { ...this.#pending, ...parts };
+      this.#schedule();
+    }
+
+    /**
+     * Moves the map to what was written since the last move, on top of the
+     * view the element last asked for (or the one the map reported since), so
+     * a change made while an earlier one is still moving does not undo it.
+     */
+    #applyPending(handle: MapHandle) {
+      if (Object.keys(this.#pending).length === 0) {
         return;
       }
-      const current = handle.getView();
-      const next = viewFrom(current, parts);
-      if (!sameView(current, next)) {
-        handle.setView(next);
-      }
+      const next = viewFrom(this.#asked ?? handle.getView(), this.#pending);
+      this.#pending = {};
+      this.#report(() => {
+        if (!sameView(handle.getView(), next)) {
+          handle.setView(next);
+        }
+        this.#asked = next;
+      });
     }
 
     #dataChanged() {
@@ -255,6 +304,7 @@ export function createElementClass(
         return;
       }
       if (this.#handle !== undefined && !this.#remount) {
+        this.#applyPending(this.#handle);
         return;
       }
       this.#remount = false;
@@ -312,21 +362,28 @@ export function createElementClass(
       this.#report(() => {
         this.#handle = mountMap(this, this.#options());
         this.#pending = {};
+        this.#asked = this.#handle.getView();
         this.#forward(this.#handle);
       });
     }
 
     #forward(handle: MapHandle) {
       const send = <K extends keyof MapEvents>(type: K) =>
-        handle.on(type, (detail) =>
+        handle.on(type, (detail) => {
+          if (type === "viewchange") {
+            this.#asked = detail as ViewState;
+          }
+          if (type === "error") {
+            console.error((detail as Error).message);
+          }
           this.dispatchEvent(
             new CustomEvent(EVENT_NAMES[type], {
               detail,
               bubbles: true,
               composed: true,
             }),
-          ),
-        );
+          );
+        });
       for (const type of Object.keys(EVENT_NAMES) as (keyof MapEvents)[]) {
         send(type);
       }
@@ -337,7 +394,8 @@ export function createElementClass(
       if (handle === undefined) {
         return;
       }
-      this.#lastView = handle.getView();
+      this.#lastView = this.#asked ?? handle.getView();
+      this.#asked = undefined;
       this.#handle = undefined;
       handle.destroy();
     }

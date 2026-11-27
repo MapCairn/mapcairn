@@ -99,9 +99,11 @@
   "mapcairn": {
     "declarationBlocks": {
       "browser": "src/browser/element/global.ts",
+      "browser-element": "src/browser/element/global.ts",
       "browserReactJsx": "src/browser/reactJsx.ts"
     },
     "bundle": {
+      "main": "browser",
       "entries": [
         "browser",
         "browser-element"

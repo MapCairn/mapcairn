@@ -39,10 +39,12 @@ const LOAD_ENTRY_TIMEOUT_MS = 30_000;
 
 /**
  * The relative imports a rolled-up declaration file may keep: the JSX entry
- * names the element's type from the browser entry's declarations beside it.
+ * and the element's entry name the element's type from the browser entry's
+ * declarations beside it.
  */
 const INTO_ROLLED_ENTRY: Readonly<Record<string, readonly string[]>> = {
   "browserReactJsx.d.ts": ["./browser.js"],
+  "browser-element.d.ts": ["./browser.js"],
 };
 
 /**

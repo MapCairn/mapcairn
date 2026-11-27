@@ -286,7 +286,7 @@ export function cycleProblems(cycle, attributes) {
 
 /**
  * What a page with two `<mapcairn-map>` elements held as they were used: the
- * first has a `zoom` attribute, and the second is asked to zoom through its
+ * first has a `zoom` attribute of 2 and a view of zoom 4 set before the element is defined, and the second is asked to zoom through its
  * attribute, moved in the page, and removed, after the first is removed.
  *
  * @typedef {object} ElementRun
@@ -318,7 +318,7 @@ export function elementProblems(run) {
   }
   if (run.startZoom !== 4) {
     problems.push(
-      `the zoom attribute of the page's markup gave a map at zoom ${run.startZoom}, not 4`,
+      `a view set before the element was defined, after the zoom attribute of the markup, gave a map at zoom ${run.startZoom}, not 4`,
     );
   }
   if (run.both.canvases !== 2 || run.both.regions < 2) {

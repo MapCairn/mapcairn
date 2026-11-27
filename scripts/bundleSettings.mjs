@@ -7,7 +7,8 @@ export const NOTICES_FILE = "THIRD-PARTY-NOTICES.md";
 
 /**
  * @typedef {object} BundleSettings
- * @property {string[]} entries The output names built as a bundle, such as `browser` and `browser-element`. The first also names the stylesheet.
+ * @property {string[]} entries The output names built as a bundle, such as `browser` and `browser-element`.
+ * @property {string | undefined} main The entry that holds the bundle's code and names its stylesheet (`browser.css`), and whose declarations hold the types the other entries use. One of `entries`.
  * @property {Record<string, string>} embed Files whose text the bundle holds as a string, by the source module that stands in for each (a path inside the package) and the path of the file inside an installed package.
  */
 
@@ -24,7 +25,13 @@ export function bundleOf(manifest) {
   if (bundle === undefined) {
     return undefined;
   }
-  return { entries: bundle.entries ?? [], embed: bundle.embed ?? {} };
+  const entries = bundle.entries ?? [];
+  if (entries.length > 0 && !entries.includes(bundle.main)) {
+    throw new Error(
+      `mapcairn.bundle.main must name one of the entries (${entries.join(", ")}).`,
+    );
+  }
+  return { entries, main: bundle.main, embed: bundle.embed ?? {} };
 }
 
 /**

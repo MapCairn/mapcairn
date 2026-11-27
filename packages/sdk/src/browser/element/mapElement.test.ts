@@ -79,6 +79,16 @@ describe("defining the element", () => {
     expect(second).toBe(first);
   });
 
+  it("refuses a name another element has, naming the fix, and the names the platform keeps", () => {
+    customElements.define("test-taken", class extends HTMLElement {});
+    expect(() => defineElement("test-taken", vi.fn())).toThrow(
+      /already used by another element.*different name/,
+    );
+    for (const name of ["font-face", "annotation-xml", "missing-glyph"]) {
+      expect(() => defineElement(name, vi.fn())).toThrow(/reserved/);
+    }
+  });
+
   it("says what is wrong with a name that is not a custom element name", () => {
     for (const name of ["map", "My-Map", "my map"]) {
       expect(() => defineElement(name, vi.fn())).toThrow(MountMapError);
@@ -119,6 +129,28 @@ describe("an element that exists before it is defined", () => {
       label: "Depots",
     });
     expect(Object.hasOwn(element, "services")).toBe(false);
+  });
+});
+
+describe("an element upgraded with a view set before it was defined", () => {
+  it("starts at that view, which came after the attributes in the page's markup", async () => {
+    names += 1;
+    const name = `test-order-${names}`;
+    const element = document.createElement(name) as MapCairnMapElement;
+    element.setAttribute("zoom", "3");
+    element.view = { center: { lat: 1, lng: 2 }, zoom: 8, bearing: 0 };
+    (element as unknown as { map: string }).map = "mine";
+    document.body.append(element);
+    const tools = harness();
+    const options: MountMapOptions[] = [];
+    defineElement(name, (host, given) => {
+      options.push(given);
+      return mount(host, given, tools.dependencies);
+    });
+    await settle();
+    expect(options[0]?.view?.zoom).toBe(8);
+    expect(element.map).not.toBe("mine");
+    expect(Object.hasOwn(element, "map")).toBe(false);
   });
 });
 
@@ -234,12 +266,14 @@ describe("attributes that change after the map is drawn", () => {
       longitude: "20",
     });
     element.setAttribute("zoom", "6");
+    await settle();
     expect(handle.setView).toHaveBeenCalledWith({
       center: { lat: 10, lng: 20 },
       zoom: 6,
       bearing: 0,
     });
     element.setAttribute("latitude", "11");
+    await settle();
     expect(handle.setView).toHaveBeenLastCalledWith({
       center: { lat: 11, lng: 20 },
       zoom: 6,
@@ -253,6 +287,7 @@ describe("attributes that change after the map is drawn", () => {
       longitude: "20",
     });
     element.setAttribute("latitude", "10");
+    await settle();
     expect(handle.setView).not.toHaveBeenCalled();
   });
 
@@ -272,16 +307,22 @@ describe("attributes that change after the map is drawn", () => {
     expect(handle.update).not.toHaveBeenCalled();
   });
 
-  it("does not mount again, move or change anything for label, language or tools", async () => {
-    const { test, element, handle } = await drawn();
-    element.setAttribute("label", "Other");
-    element.setAttribute("language", "af");
-    element.setAttribute("tools", "measure");
+  it("draws the map again, once, when label, language or tools change in one tick, and not when set to what they were", async () => {
+    const { test, element, handle } = await drawn({ label: "One" });
+    element.setAttribute("label", "One");
     await settle();
     expect(test.mountFn).toHaveBeenCalledTimes(1);
-    expect(handle.setView).not.toHaveBeenCalled();
-    expect(handle.update).not.toHaveBeenCalled();
-    expect(handle.destroy).not.toHaveBeenCalled();
+    element.setAttribute("label", "Other");
+    element.setAttribute("language", "en-GB");
+    element.setAttribute("tools", "measure");
+    await settle();
+    expect(test.mountFn).toHaveBeenCalledTimes(2);
+    expect(handle.destroy).toHaveBeenCalledTimes(1);
+    expect(test.options[1]).toMatchObject({
+      label: "Other",
+      language: "en-GB",
+      tools: ["measure"],
+    });
   });
 
   it("reports a view attribute that is not a number, and keeps the map where it is", async () => {
@@ -304,6 +345,88 @@ describe("attributes that change after the map is drawn", () => {
     element.addEventListener("mapcairn-error", seen);
     element.setAttribute("basemap", "nowhere");
     expect(seen).toHaveBeenCalledTimes(1);
+  });
+});
+
+/** An element over a handle that reports a view that never changes, as an engine that moves late does, and records what it is asked. */
+function lagging() {
+  names += 1;
+  const name = `test-lag-${names}`;
+  const listeners = new Map<string, (payload: unknown) => void>();
+  const asked: unknown[] = [];
+  const stale = { center: { lat: 0, lng: 0 }, zoom: 1, bearing: 0 };
+  const stub = {
+    ready: new Promise<void>(() => {}),
+    getView: () => stale,
+    setView: (view: unknown) => asked.push(view),
+    update: () => {},
+    destroy: () => listeners.clear(),
+    on: (type: string, listener: (payload: unknown) => void) => {
+      listeners.set(type, listener);
+      return () => listeners.delete(type);
+    },
+  } as unknown as MapHandle;
+  defineElement(name, () => stub);
+  const element = document.createElement(name) as MapCairnMapElement;
+  document.body.append(element);
+  return { element, asked, listeners };
+}
+
+describe("view attributes written one after another", () => {
+  it("move the map once, with both, when they change in one tick", async () => {
+    const { element, asked } = lagging();
+    await settle();
+    element.setAttribute("latitude", "10");
+    element.setAttribute("longitude", "20");
+    await settle();
+    expect(asked).toEqual([
+      { center: { lat: 10, lng: 20 }, zoom: 1, bearing: 0 },
+    ]);
+  });
+
+  it("keep the first when the engine has not moved yet by the time the second changes", async () => {
+    const { element, asked } = lagging();
+    await settle();
+    element.setAttribute("latitude", "10");
+    await settle();
+    element.setAttribute("longitude", "20");
+    await settle();
+    expect(asked.at(-1)).toEqual({
+      center: { lat: 10, lng: 20 },
+      zoom: 1,
+      bearing: 0,
+    });
+  });
+
+  it("start from where the person left the map, not from where the element last asked", async () => {
+    const { element, asked, listeners } = lagging();
+    await settle();
+    element.setAttribute("latitude", "10");
+    await settle();
+    listeners.get("viewchange")?.({
+      center: { lat: 5, lng: 6 },
+      zoom: 3,
+      bearing: 0,
+    });
+    element.setAttribute("zoom", "9");
+    await settle();
+    expect(asked.at(-1)).toEqual({
+      center: { lat: 5, lng: 6 },
+      zoom: 9,
+      bearing: 0,
+    });
+  });
+
+  it("take a view property and an attribute written in one tick as one move, the later one winning", async () => {
+    const { element, asked } = lagging();
+    await settle();
+    element.setAttribute("zoom", "4");
+    element.view = { center: { lat: 1, lng: 2 }, zoom: 8, bearing: 0 };
+    element.setAttribute("bearing", "90");
+    await settle();
+    expect(asked).toEqual([
+      { center: { lat: 1, lng: 2 }, zoom: 8, bearing: 90 },
+    ]);
   });
 });
 
@@ -338,6 +461,7 @@ describe("the view property and the view attributes", () => {
     await settle();
     await element.map?.ready;
     element.view = { center: { lat: 3, lng: 4 }, zoom: 5, bearing: 6 };
+    await settle();
     expect(test.handles[0]?.setView).toHaveBeenCalledWith({
       center: { lat: 3, lng: 4 },
       zoom: 5,
@@ -421,6 +545,24 @@ describe("data properties", () => {
     element.services = { search };
     await settle();
     expect(test.mountFn).not.toHaveBeenCalled();
+  });
+
+  it("do nothing when an equal value is built again, so a render that makes new objects does not draw the map again", async () => {
+    const test = setup();
+    const element = make(test);
+    element.services = { search };
+    element.layers = [{ id: "a", kind: "tile" } as never];
+    element.languages = [{ tag: "af", label: "Afrikaans", messages: {} }];
+    document.body.append(element);
+    await settle();
+    element.services = { search };
+    element.layers = [{ id: "a", kind: "tile" } as never];
+    element.languages = [{ tag: "af", label: "Afrikaans", messages: {} }];
+    await settle();
+    expect(test.mountFn).toHaveBeenCalledTimes(1);
+    element.layers = [{ id: "b", kind: "tile" } as never];
+    await settle();
+    expect(test.mountFn).toHaveBeenCalledTimes(2);
   });
 
   it("do nothing when the same value is set again, so a re-render does not draw the map again", async () => {
@@ -580,6 +722,20 @@ describe("events", () => {
     element.remove();
     await settle();
     expect(listeners.has("click")).toBe(false);
+  });
+});
+
+describe("errors", () => {
+  it("logs an engine error the map reports, as well as sending it", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    const { element, listeners } = lagging();
+    await settle();
+    const seen = vi.fn();
+    element.addEventListener("mapcairn-error", seen);
+    const error = new MountMapError("invalid-option", "A layer was left out.");
+    listeners.get("error")?.(error);
+    expect(seen).toHaveBeenCalledTimes(1);
+    expect(console.error).toHaveBeenCalledWith("A layer was left out.");
   });
 });
 

@@ -1601,6 +1601,33 @@ function checkBrowserBundle(app, prefix) {
     ).map((line) => `vite build, ${line}`),
   );
 
+  // The tag alone, with no call of the page's own: a bundler that drops an
+  // import for its effects would leave a bare tag that never draws.
+  const elementApp = path.join(app, "bundle-element-app");
+  cpSync(path.join(BUNDLE_FIXTURE, "element-app"), elementApp, {
+    recursive: true,
+  });
+  runNode(
+    "vite build (browser element)",
+    [
+      vite,
+      "build",
+      "bundle-element-app",
+      "--outDir",
+      "../dist/bundle-element-vite",
+      "--emptyOutDir",
+    ],
+    app,
+  );
+  lines.push(
+    ...runBundleRun(
+      "built",
+      path.join(app, "dist", "bundle-element-vite"),
+      chromium,
+      app,
+    ).map((line) => `vite build of a bare <mapcairn-map>, ${line}`),
+  );
+
   const webpackApp = path.join(app, "bundle-webpack");
   cpSync(path.join(BUNDLE_FIXTURE, "webpack"), webpackApp, { recursive: true });
   writeFileSync(
@@ -1619,6 +1646,31 @@ function checkBrowserBundle(app, prefix) {
   lines.push(
     ...runBundleRun("built", webpackOut, chromium, app).map(
       (line) => `webpack build, ${line}`,
+    ),
+  );
+  const webpackElementApp = path.join(app, "bundle-element-webpack");
+  cpSync(path.join(BUNDLE_FIXTURE, "element-webpack"), webpackElementApp, {
+    recursive: true,
+  });
+  writeFileSync(
+    path.join(app, "webpack.element.mjs"),
+    webpackBuildScript(
+      "bundle-element-webpack/main.js",
+      "dist/bundle-element-webpack",
+    ),
+  );
+  runNode("webpack build (browser element)", ["webpack.element.mjs"], app);
+  const webpackElementOut = path.join(app, "dist", "bundle-element-webpack");
+  for (const [from, to] of [
+    [path.join(webpackElementApp, "index.html"), "index.html"],
+    [path.join(BUNDLE_FIXTURE, "element-app", "page.css"), "page.css"],
+    [path.join(served, "browser.css"), "browser.css"],
+  ]) {
+    copyFileSync(from, path.join(webpackElementOut, to));
+  }
+  lines.push(
+    ...runBundleRun("built", webpackElementOut, chromium, app).map(
+      (line) => `webpack build of a bare <mapcairn-map>, ${line}`,
     ),
   );
   return lines.map((line) => `${prefix}${line}`);
