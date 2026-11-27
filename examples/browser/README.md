@@ -12,4 +12,4 @@ npm run dev -w @mapcairn/example-browser
 default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data: blob: https://tiles.openfreemap.org; font-src 'self'; connect-src 'self' https://tiles.openfreemap.org; worker-src 'self' blob:; frame-src 'none'; object-src 'none'; base-uri 'self'; form-action 'none'; frame-ancestors 'none'
 ```
 
-The map, or the element, needs a height in CSS (`page.css`). The release's consumer check serves a copy of this page under that policy in Chromium (`docs/guides/releasing.md`). [A map on a server-rendered page](https://docs.mapcairn.com/guides/browser-route/) is the guide for a site of your own.
+The map, or the element, needs a height in CSS (`page.css`). The release's consumer check serves a copy of this page under that policy in Chromium and WebKit (`docs/guides/releasing.md`). [A map on a server-rendered page](https://docs.mapcairn.com/guides/browser-route/) is the guide for a site of your own.

@@ -170,7 +170,7 @@ The map sets `lang` and `dir` on its element from the language it speaks, unless
 
 ## Removing a map
 
-Call `destroy()` on the handle, or remove the element from the page. The map and what it added to its element go, and calling `destroy()` again does nothing. In Chromium, the engine's worker is ended when the last map is destroyed. A few listeners on `window` and `document` that load once stay, and a second pair of maps added none. The engine's code stays loaded. Other browsers were not checked for this.
+Call `destroy()` on the handle, or remove the element from the page. The map and what it added to its element go, and calling `destroy()` again does nothing. In Chromium and WebKit, the engine's worker is ended when the last map is destroyed. A few listeners on `window` and `document` that load once stay, and a second pair of maps added none. The engine's code stays loaded.
 
 Moving a `<mapcairn-map>` within the page keeps its map.
 

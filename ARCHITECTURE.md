@@ -67,7 +67,7 @@ The decisions behind `@mapcairn/sdk/browser`, what each refused and what would r
 
 **The element.** `defineMapElement` does nothing when the name is already this element's, so two copies of the bundle do not throw, and importing `browser.js` registers nothing. Connecting and disconnecting only schedule work for a microtask, so an element a framework moves keeps its map, and several properties set in one tick mount or remount it once. Event names carry the `mapcairn-` prefix because a bare `click` is the browser's. The JSX types are an entry a project opts into, because a project without React's types would fail to compile if the main declarations named them. There is no wrapper package for any framework.
 
-**What is left out of the files.** No font ships: IBM Plex Sans is under OFL-1.1, which is not on the SDK allowlist, so the stylesheet names it and falls back. No source maps ship for the bundle, because the pack check requires a map's sources to sit under the package's own `src` and a bundle's name other packages' files. Size ceilings are in `docs/guides/releasing.md`.
+**What is left out of the files.** No font ships, so the stylesheet names IBM Plex Sans and falls back. The font is under OFL-1.1, which is not on the SDK allowlist; shipping it is [#999](https://github.com/MapCairn/mapcairn/issues/999). No source maps ship for the bundle, because the pack check requires a map's sources to sit under the package's own `src` and a bundle's name other packages' files. Size ceilings are in `docs/guides/releasing.md`.
 
 ## Building the SDK packages
 
