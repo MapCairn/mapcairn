@@ -2,8 +2,8 @@
 // Copyright MapCairn contributors
 /**
  * The harmony rules for the scripts of `packages/map`: the imports from Lit it
- * may not make, and the ways of writing a style through the DOM that go round
- * the style rules.
+ * may not make, the DOM writes that turn a string into markup, and the ways of
+ * writing a style through the DOM that go round the style rules.
  */
 import { tokenize } from "./lex.mjs";
 import { checkColours } from "./shared.mjs";
@@ -73,6 +73,24 @@ function checkLitImports(code, lineAt, report) {
 }
 
 /**
+ * Refuses a string turned into markup, by a script or by a template's
+ * property binding, which reads the same to this rule.
+ * @param {string} code
+ * @param {(index: number) => number} lineAt
+ * @param {Report} report
+ */
+function checkMarkupWrites(code, lineAt, report) {
+  const writes = /\.(?:inner|outer)HTML\s*\+?=(?!=)|\.insertAdjacentHTML\s*\(/g;
+  for (const match of code.matchAll(writes)) {
+    report(
+      "markup-from-string",
+      lineAt(match.index),
+      `"${match[0]}" turns a string into markup. Render a template, or set textContent.`,
+    );
+  }
+}
+
+/**
  * The string tokens of the value a `setProperty(name, value)` call sets.
  * @param {string} code
  * @param {number} open Offset of the call's `(`.
@@ -135,6 +153,7 @@ function checkStyleWrites(code, lineAt, report) {
 export function scanMapScript(file, code, lineAt, report) {
   if (file.startsWith(MAP_PACKAGE)) {
     checkLitImports(code, lineAt, report);
+    checkMarkupWrites(code, lineAt, report);
     checkStyleWrites(code, lineAt, report);
   }
 }

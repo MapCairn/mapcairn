@@ -613,6 +613,34 @@ const cases: readonly Case[] = [
     bad: "export const a = html`<p>",
     good: "export const a = html`<p></p>`;\n",
   },
+  {
+    rule: "markup-from-string",
+    name: "an innerHTML binding in a Lit template in the map package",
+    file: TS,
+    bad: lit("<div .innerHTML=${this.body}></div>"),
+    good: lit("<div .textContent=${this.body}></div>"),
+  },
+  {
+    rule: "markup-from-string",
+    name: "an outerHTML binding in a Lit template in the map package",
+    file: TS,
+    bad: lit("<div .outerHTML=${this.body}></div>"),
+    good: lit("<div>${this.body}</div>"),
+  },
+  {
+    rule: "markup-from-string",
+    name: "markup assigned in a script of the map package",
+    file: TS,
+    bad: "element.innerHTML = body;\n",
+    good: "const same = element.innerHTML === body;\n",
+  },
+  {
+    rule: "markup-from-string",
+    name: "markup inserted in a script of the map package",
+    file: TS,
+    bad: 'element.insertAdjacentHTML("beforeend", body);\n',
+    good: "element.append(body);\n",
+  },
 ];
 
 describe("harmony rules", () => {
@@ -643,6 +671,7 @@ describe("harmony rules", () => {
         "lit-import",
         "live-region",
         "logical-property",
+        "markup-from-string",
         "motion",
         "outline",
         "position",

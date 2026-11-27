@@ -16,8 +16,9 @@
  * In a Lit template, `inline-style`, `colour-literal` (the attributes that
  * paint), `icon-only-button` and the bound forms of `live-region` and
  * `tab-index` are checked by `litRules.mjs`, which also reports
- * `unreadable-template`. `mapRules.mjs` holds `packages/map` to `lit-import`,
- * and applies `inline-style` and `colour-literal` to its style writes.
+ * `unreadable-template`. `mapRules.mjs` holds `packages/map` to `lit-import`
+ * and `markup-from-string`, and applies `inline-style` and `colour-literal` to
+ * its style writes.
  *
  * Import and global rules live in Biome (`biome.jsonc`) and dependency-cruiser
  * (`.dependency-cruiser.cjs`), because they are exact there.
