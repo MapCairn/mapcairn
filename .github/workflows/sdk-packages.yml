@@ -1,0 +1,94 @@
+name: SDK packages
+
+# A workflow of its own, with no `edited` trigger, so that a title or
+# description edit creates no `SDK packages` check. The check list shows the
+# latest run of a name and GitHub counts a skipped job as passed, so a run that
+# skipped the job would replace a failed or unfinished result with a pass.
+# `CI` does run on an edit, which is why this job is not in `ci.yml`.
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: sdk-packages-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # Packs the SDK packages and proves the tarballs hold only what they
+  # should and work in an app outside this repository (`npm run pack:check` and
+  # `npm run consumer:check`, plan 0014 step 6). It is a required check on `main`
+  # (ruleset `main-pull-requests`), though it installs from the registry.
+  # The release workflow's `check` job installs nothing and so never draws the
+  # real map; running this check with Chromium is a go/no-go item of the
+  # `release` skill. `paths` filters a whole workflow, and a required check whose
+  # workflow is filtered out never reports, so the first step decides whether the
+  # rest run. Do not give the job an `if:` either.
+  sdk-packages:
+    name: SDK packages
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    # This job installs from the registry and runs what it finds, and on a push
+    # to main it holds a main-scoped cache token. Read-only access lets it
+    # restore the lockfile cache for speed but not save an entry that the other
+    # jobs on main would restore (issue 515; docs/guides/releasing.md).
+    cache-mode: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Find out whether the SDK packages or the release scripts changed
+        id: changed
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          BASE_REF: ${{ github.base_ref }}
+        # `shell: bash` turns on errexit and pipefail. The diff is assigned on
+        # its own line, so a failing `git diff` fails the step, and grep reads
+        # a here-string, so there is no pipe to close early (status 141).
+        shell: bash
+        run: |
+          if [ "$EVENT_NAME" != "pull_request" ]; then
+            echo "run=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          changed="$(git diff --name-only "origin/$BASE_REF...HEAD")"
+          if grep -Eq '^(packages/(adapter-maplibre|core|map|react|theme|sdk)/|scripts/(release/|buildPackage\.mjs|buildSdk\.mjs|buildBundle\.mjs|buildInputs\.mjs|bundle[A-Za-z]+\.mjs|entryPoint\.mjs|shareDeclarations\.mjs|sdkPackages\.mjs|sdkLicences\.mjs|sdkLicences\.allowlist\.json)|package(-lock)?\.json|tsconfig\.base\.json|examples/(headless|browser)/|\.npmrc|\.github/workflows/sdk-packages\.yml)' <<<"$changed"; then
+            echo "run=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "run=false" >> "$GITHUB_OUTPUT"
+            echo "No SDK package, release script or lockfile changed, so the pack and consumer checks are skipped."
+          fi
+      - if: steps.changed.outputs.run == 'true'
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version-file: .node-version
+          cache: npm
+          cache-dependency-path: package-lock.json
+      - if: steps.changed.outputs.run == 'true'
+        run: npm ci --ignore-scripts
+      # The consumer check's Bun leg runs only when `bun` is on the path.
+      # Bun 1.3 or later reads the minimum release age; 1.4.4 was
+      # published 2026-10-22. The action is pinned by commit, as the others are.
+      - name: Install Bun for the consumer check's Bun leg
+        if: steps.changed.outputs.run == 'true'
+        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version: 1.4.4
+      - name: Check what each tarball holds
+        if: steps.changed.outputs.run == 'true'
+        run: npm run pack:check
+      # The repository's own Playwright, as the lockfile pins it. The leg that
+      # draws a real map fails, rather than skips, when Chromium or WebKit is missing.
+      - name: Install Chromium and WebKit for the consumer check's real-map legs
+        if: steps.changed.outputs.run == 'true'
+        run: npx --no-install playwright install --with-deps chromium webkit
+      - name: Install the tarballs in an app outside the repository, render the chrome and draw a real map
+        if: steps.changed.outputs.run == 'true'
+        run: npm run consumer:check

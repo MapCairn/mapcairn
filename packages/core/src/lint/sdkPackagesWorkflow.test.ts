@@ -14,9 +14,11 @@ function read(file: string): string {
   return readFileSync(path.join(REPO, file), "utf8");
 }
 
+const SDK_WORKFLOW = ".github/workflows/sdk-packages.yml";
+
 /** The text of the `sdk-packages` job: from its key to the end of the file. */
 function sdkPackagesJob(): string {
-  const workflow = read(".github/workflows/ci.yml");
+  const workflow = read(SDK_WORKFLOW);
   const start = workflow.indexOf("\n  sdk-packages:\n");
   expect(start).toBeGreaterThan(-1);
   return workflow.slice(start);
@@ -30,7 +32,7 @@ function withoutComments(text: string): string {
     .join("\n");
 }
 
-describe("the SDK packages job in ci.yml", () => {
+describe("the SDK packages job in sdk-packages.yml", () => {
   const job = withoutComments(sdkPackagesJob());
 
   it("is called SDK packages and runs the pack check and the consumer check", () => {
@@ -48,9 +50,10 @@ describe("the SDK packages job in ci.yml", () => {
     expect(job.indexOf("run: npm ci --ignore-scripts")).toBeLessThan(install);
   });
 
-  it("is the last job, so the text above is all of it, and no other job needs it", () => {
-    const workflow = withoutComments(read(".github/workflows/ci.yml"));
-    expect(workflow).not.toMatch(/needs:\s*\[?sdk-packages/);
+  it("is the only job in its workflow, so the text above is all of it", () => {
+    const workflow = withoutComments(read(SDK_WORKFLOW));
+    const jobs = workflow.slice(workflow.indexOf("\njobs:\n"));
+    expect(jobs.match(/^ {2}[\w-]+:$/gm)).toEqual(["  sdk-packages:"]);
   });
 
   it("reads the repository and nothing else, and does not keep the token", () => {
@@ -78,33 +81,16 @@ describe("the SDK packages job in ci.yml", () => {
     }
   });
 
-  it("does not run again when only the title or description is edited", () => {
-    expect(job).toContain("if: github.event.action != 'edited'");
-    expect(withoutComments(read(".github/workflows/ci.yml"))).toContain(
-      "types: [opened, synchronize, reopened, edited]",
+  it("runs for each pushed head and not for a title or description edit", () => {
+    expect(withoutComments(read(SDK_WORKFLOW))).toContain(
+      "\non:\n  pull_request:\n    types: [opened, synchronize, reopened]\n  push:\n    branches: [main]\n",
     );
   });
 
-  it("keeps a description edit out of the group that cancels the run for the commit", () => {
-    const workflow = withoutComments(read(".github/workflows/ci.yml"));
-    const group =
-      /concurrency:\n\s+group: (.+)\n\s+cancel-in-progress: true/.exec(
-        workflow,
-      )?.[1];
-    expect(group).toBeDefined();
-    expect(group).toContain("github.event.action == 'edited'");
-  });
-
-  it("is the only workflow with a required check that runs on an edit, so no other cancels a run on one", () => {
-    const folder = path.join(REPO, ".github/workflows");
-    const editing = readdirSync(folder).filter((file) =>
-      /\bedited\b/.test(withoutComments(read(`.github/workflows/${file}`))),
+  it("cancels only an older run of its own for the same ref", () => {
+    expect(withoutComments(read(SDK_WORKFLOW))).toContain(
+      "concurrency:\n  group: sdk-packages-${{ github.workflow }}-${{ github.ref }}\n  cancel-in-progress: true",
     );
-    // The title check reads the live title and has a concurrency group of its
-    // own, so an edit cancelling its older run costs nothing; it is not a
-    // required check that a cancelled run could leave missing. The description
-    // check is the same: it reads the live body, has its own group and only warns.
-    expect(editing).toEqual(["ci.yml", "pr-body-check.yml", "pr-title.yml"]);
   });
 
   describe("the step that decides whether to run", () => {
@@ -141,7 +127,7 @@ describe("the SDK packages job in ci.yml", () => {
       "package-lock.json",
       "tsconfig.base.json",
       ".npmrc",
-      ".github/workflows/ci.yml",
+      ".github/workflows/sdk-packages.yml",
     ])("runs for a change to %s", (file) => {
       expect(filter.test(file)).toBe(true);
     });
@@ -152,6 +138,7 @@ describe("the SDK packages job in ci.yml", () => {
       "examples/embed/src/main.tsx",
       "sites/docs/docs/guides/public-api.md",
       "scripts/names-check.mjs",
+      ".github/workflows/ci.yml",
       ".github/workflows/cla.yml",
       "README.md",
     ])("does not run for a change to %s", (file) => {
