@@ -613,4 +613,39 @@ describe("the guide", () => {
     const section = guide.slice(start, guide.indexOf("\n## ", start + 1));
     expect(section).toContain(tool);
   });
+
+  it("states the rules that hold under the maintainer's own gh login", () => {
+    const start = guide.indexOf("## Keeping agents from publishing");
+    const section = guide.slice(start, guide.indexOf("\n## ", start + 1));
+    expect(section).toContain("the maintainer's own signed-in `gh` login");
+    expect(section).toContain("never reads or prints a token");
+    expect(section).toContain("never uses `--admin`");
+    expect(section).toContain(
+      "only after it asks the maintainer in the conversation and gets a yes for that deployment at that moment",
+    );
+    expect(section).toContain("one yes covers one deployment");
+  });
+
+  it("no longer describes a limited token or forbids unsetting an environment variable", () => {
+    expect(guide).not.toMatch(/GH_TOKEN/);
+    expect(guide).not.toContain(
+      "Running agents under a limited GitHub identity",
+    );
+    expect(guide).not.toContain("limited fine-grained");
+    expect(read("docs/guides/releasing.md")).not.toMatch(
+      /GH_TOKEN|limited GitHub identity/,
+    );
+  });
+});
+
+describe("the release skill's identity check", () => {
+  const skill = read(".claude/skills/release/SKILL.md");
+
+  it("checks that gh is signed in with write access and that the agent asks before approving", () => {
+    expect(skill).not.toMatch(
+      /GH_TOKEN|limited token|administrator login is active/,
+    );
+    expect(skill).toContain("`gh` is signed in");
+    expect(skill).toContain("you ask first (one yes covers one deployment)");
+  });
 });
