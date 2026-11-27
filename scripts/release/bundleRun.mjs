@@ -240,11 +240,17 @@ async function elementRun(page) {
       bad.setAttribute("tools", "warp-drive");
       const errored = new Promise((resolve) => {
         bad.addEventListener("mapcairn-error", (event) =>
-          resolve(/** @type {CustomEvent} */ (event).detail.kind),
+          resolve(/** @type {CustomEvent} */ (event).detail),
         );
       });
+      // The element logs what it could not do; the leg reads that line instead of reporting it as a console error.
+      const logged = [];
+      const log = console.error;
+      console.error = (/** @type {unknown} */ line) =>
+        logged.push(String(line));
       document.body.append(bad);
-      const errorKind = await errored;
+      const error = await errored;
+      console.error = log;
       bad.remove();
       await wait(0);
       return {
@@ -255,7 +261,9 @@ async function elementRun(page) {
         writtenBack,
         afterFirst,
         keptMap,
-        errorKind,
+        errorKind: error.kind,
+        errorMessage: error.message,
+        logged,
         end: {
           ...hold(),
           marked: document.querySelectorAll("[data-mapcairn]").length,

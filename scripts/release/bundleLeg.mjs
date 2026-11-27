@@ -299,6 +299,8 @@ export function cycleProblems(cycle, attributes) {
  * @property {boolean} keptMap Whether the second element still held the same map after it was moved in the page.
  * @property {{ canvases: number, regions: number, marked: number, workers: { made: number, ended: number } }} end Both removed.
  * @property {string | undefined} errorKind The `kind` of the `MountMapError` a `mapcairn-error` event carried for a tool name that is not one.
+ * @property {string | undefined} errorMessage Its message.
+ * @property {string[]} logged What the element wrote to `console.error` meanwhile.
  */
 
 /**
@@ -361,6 +363,14 @@ export function elementProblems(run) {
   if (run.errorKind !== "invalid-option") {
     problems.push(
       `a tool name that is not one gave the error kind ${run.errorKind}, not invalid-option, through mapcairn-error`,
+    );
+  }
+  if (
+    run.errorMessage === undefined ||
+    run.logged.join("\n") !== run.errorMessage
+  ) {
+    problems.push(
+      `the element logged ${JSON.stringify(run.logged)} for an error whose message is ${JSON.stringify(run.errorMessage)}; it logs the message once`,
     );
   }
   return problems;

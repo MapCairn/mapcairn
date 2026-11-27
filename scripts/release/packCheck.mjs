@@ -48,8 +48,8 @@ export const SIZE_CEILINGS = {
 /**
  * The most the files of a package's bundle may weigh, in gzipped bytes: each
  * of its `dist` files that starts with the name of a bundle entry (`browser`),
- * and the notices file, each gzipped alone and added up. About 1.06
- * times what the bundle weighs now (800,000 against about 752,000), so small growth passes and a
+ * and the notices file, each gzipped alone and added up. About 1.05
+ * times what the bundle weighs now (820,000 against about 778,000), so small growth passes and a
  * second copy of the engine or of React (about 330 and 75 kilobytes gzipped)
  * does not. The rest of such a package is measured the same way and stays
  * under `SIZE_CEILINGS`. Raising one is a deliberate edit in a pull request.
@@ -57,12 +57,12 @@ export const SIZE_CEILINGS = {
  * @type {Record<string, number>}
  */
 export const BUNDLE_CEILINGS = {
-  sdk: 800_000,
+  sdk: 820_000,
 };
 
 /**
  * The share of a bundle ceiling that is used before the check warns that the
- * headroom is thin: under 3% of the ceiling left (776,000 bytes of 800,000).
+ * headroom is thin: under 3% of the ceiling left (795,400 bytes of 820,000).
  * `docs/guides/releasing.md` says what a change that crosses it does.
  */
 export const HEADROOM_WARNING_SHARE = 0.97;

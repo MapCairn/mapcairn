@@ -10,11 +10,13 @@ import {
   createdElementProblems,
   cycleProblems,
   ENGINE_BUILD,
+  elementProblems,
   FIRST_LOAD_BUILD,
   fileRequestProblems,
   hostilePageProblems,
   hostParityProblems,
   leakProblems,
+  MOVED_ZOOM,
   workerRefusalProblems,
   // @ts-expect-error The scripts are dependency-free JavaScript with JSDoc types.
 } from "../../../../scripts/release/bundleLeg.mjs";
@@ -333,6 +335,84 @@ describe("bundleLoadSizes", () => {
     expect(() =>
       bundleLoadSizes({ "browser-other-AbC.js": bytes("a") }),
     ).toThrow(/neither first load nor a lazy chunk/);
+  });
+});
+
+describe("elementProblems", () => {
+  const good = {
+    display: "block",
+    startZoom: 4,
+    both: { canvases: 2, regions: 2 },
+    movedZoom: MOVED_ZOOM,
+    writtenBack: [],
+    afterFirst: {
+      canvases: 1,
+      regions: 1,
+      firstChildren: 0,
+      firstMarked: false,
+    },
+    keptMap: true,
+    end: { canvases: 0, regions: 0, marked: 0, workers: { made: 1, ended: 1 } },
+    errorKind: "invalid-option",
+    errorMessage: "tools: nope",
+    logged: ["tools: nope"],
+  };
+
+  it("passes a run that did everything the element promises", () => {
+    expect(elementProblems(good)).toEqual([]);
+  });
+
+  it.each([
+    ["an inline element", { display: "inline" }, /display is inline/],
+    ["a start from the wrong zoom", { startZoom: 2 }, /not 4/],
+    [
+      "one canvas for two elements",
+      { both: { canvases: 1, regions: 2 } },
+      /1 canvases/,
+    ],
+    ["a view that never arrived", { movedZoom: undefined }, /zoom undefined/],
+    ["a write back", { writtenBack: ["zoom"] }, /wrote zoom back/],
+    ["a rebuilt map", { keptMap: false }, /rebuilt its map/],
+    [
+      "markup left by the first",
+      {
+        afterFirst: {
+          canvases: 1,
+          regions: 1,
+          firstChildren: 3,
+          firstMarked: false,
+        },
+      },
+      /3 children/,
+    ],
+    [
+      "a canvas left at the end",
+      {
+        end: {
+          canvases: 1,
+          regions: 0,
+          marked: 0,
+          workers: { made: 1, ended: 1 },
+        },
+      },
+      /1 canvases/,
+    ],
+    [
+      "a worker left running",
+      {
+        end: {
+          canvases: 0,
+          regions: 0,
+          marked: 0,
+          workers: { made: 2, ended: 1 },
+        },
+      },
+      /2 workers were made and 1 ended/,
+    ],
+    ["the wrong error kind", { errorKind: "server" }, /not invalid-option/],
+    ["a message that was not logged", { logged: [] }, /logs the message once/],
+  ])("fails %s", (_name, change, message) => {
+    expect(elementProblems({ ...good, ...change }).join("\n")).toMatch(message);
   });
 });
 
