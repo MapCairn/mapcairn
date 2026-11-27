@@ -196,6 +196,52 @@ function oklchToLinearSrgb(
   ];
 }
 
+/** An opaque colour in OKLCH: lightness 0 to 1, chroma, and hue in degrees. */
+export interface Oklch {
+  lightness: number;
+  chroma: number;
+  hue: number;
+}
+
+const HALF_TURN = 180;
+const FULL_TURN = HALF_TURN * 2;
+/** Bisection steps that narrow the gamut edge to well under one 8-bit channel step. */
+const GAMUT_SEARCH_STEPS = 24;
+/** An upper bound for the chroma of any sRGB colour. */
+const MAX_SRGB_CHROMA = 0.4;
+
+/** Converts an sRGB colour (0 to 255 channels, alpha ignored) to OKLCH. */
+export function toOklch(colour: Rgba): Oklch {
+  const [r, g, b] = [colour.r, colour.g, colour.b].map((channel) =>
+    srgbToLinear(channel / MAX_CHANNEL),
+  ) as [number, number, number];
+  const l = Math.cbrt(0.4122214708 * r + 0.5363325363 * g + 0.0514459929 * b);
+  const m = Math.cbrt(0.2119034982 * r + 0.6806995451 * g + 0.1073969566 * b);
+  const s = Math.cbrt(0.0883024619 * r + 0.2817188376 * g + 0.6299787005 * b);
+  const a = 1.9779984951 * l - 2.428592205 * m + 0.4505937099 * s;
+  const bAxis = 0.0259040371 * l + 0.7827717662 * m - 0.808675766 * s;
+  const degrees = (Math.atan2(bAxis, a) * HALF_TURN) / Math.PI;
+  return {
+    lightness: 0.2104542553 * l + 0.793617785 * m - 0.0040720468 * s,
+    chroma: Math.hypot(a, bAxis),
+    hue: (degrees + FULL_TURN) % FULL_TURN,
+  };
+}
+
+/** The largest chroma at this lightness and hue that stays inside the sRGB gamut. */
+export function maxSrgbChroma(lightness: number, hue: number): number {
+  const inside = (chroma: number): boolean =>
+    oklchToLinearSrgb(lightness, chroma, hue).every(
+      (channel) => channel >= 0 && channel <= 1,
+    );
+  let [low, high] = [0, MAX_SRGB_CHROMA];
+  for (let step = 0; step < GAMUT_SEARCH_STEPS; step += 1) {
+    const middle = (low + high) / 2;
+    [low, high] = inside(middle) ? [middle, high] : [low, middle];
+  }
+  return low;
+}
+
 /** Reads the `L C H [/ alpha]` arguments of text already matched as `oklch()`. */
 function readOklch(colour: string): {
   lightness: number;

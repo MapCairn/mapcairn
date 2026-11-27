@@ -5,9 +5,11 @@ import {
   compositeOver,
   contrastRatio,
   isInSrgbGamut,
+  maxSrgbChroma,
   parseColour,
   relativeLuminance,
   toHex,
+  toOklch,
 } from "./contrast";
 import { AA_NON_TEXT, contrastPairs, measurePair } from "./contrastPairs";
 import {
@@ -412,5 +414,56 @@ describe("parseColour on hostile input", () => {
     expect(parseColour("oklch(  0.5   0.1   200  )").r).toBeGreaterThanOrEqual(
       0,
     );
+  });
+});
+
+describe("toOklch", () => {
+  it.each(["oklch(0.5 0.1 255)", "oklch(0.8 0.095 255)", "oklch(0.3 0.06 25)"])(
+    "reads back what oklch() wrote for %s",
+    (text) => {
+      const [lightness, chroma, hue] = text
+        .slice(6, -1)
+        .split(" ")
+        .map(Number) as [number, number, number];
+      const read = toOklch(parseColour(text));
+      expect(read.lightness).toBeCloseTo(lightness, 2);
+      expect(read.chroma).toBeCloseTo(chroma, 2);
+      expect(read.hue).toBeCloseTo(hue, 0);
+    },
+  );
+
+  it("reads white and black as lightness 1 and 0 with no chroma", () => {
+    expect(toOklch(parseColour("#ffffff")).lightness).toBeCloseTo(1, 6);
+    expect(toOklch(parseColour("#ffffff")).chroma).toBeLessThan(1e-3);
+    expect(toOklch(parseColour("#000000")).lightness).toBe(0);
+  });
+
+  it("keeps the hue in 0 to 360", () => {
+    const { hue } = toOklch(parseColour("#ff00aa"));
+    expect(hue).toBeGreaterThanOrEqual(0);
+    expect(hue).toBeLessThan(360);
+  });
+});
+
+describe("maxSrgbChroma", () => {
+  it("is nothing at black and white", () => {
+    expect(maxSrgbChroma(0, 255)).toBeLessThan(1e-3);
+    expect(maxSrgbChroma(1, 255)).toBeLessThan(1e-3);
+  });
+
+  it("matches isInSrgbGamut: inside at the limit, outside above it", () => {
+    for (const [lightness, hue] of [
+      [0.5, 145],
+      [0.9, 100],
+      [0.3, 255],
+    ] as const) {
+      const limit = maxSrgbChroma(lightness, hue);
+      expect(isInSrgbGamut(`oklch(${lightness} ${limit * 0.99} ${hue})`)).toBe(
+        true,
+      );
+      expect(isInSrgbGamut(`oklch(${lightness} ${limit + 0.01} ${hue})`)).toBe(
+        false,
+      );
+    }
   });
 });

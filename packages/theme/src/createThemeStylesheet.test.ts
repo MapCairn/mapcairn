@@ -1019,6 +1019,187 @@ describe("createThemeStylesheet", () => {
   });
 });
 
+describe("createThemeStylesheet accent shorthand", () => {
+  const accentName = nameOf(tokens.color.accent);
+  const accentTintName = nameOf(tokens.color.accentTint);
+  const accentContrastName = nameOf(tokens.color.accentContrast);
+  const focusRingName = nameOf(tokens.color.focusRing);
+
+  /** The value a theme's data-theme rule writes for one property. */
+  function written(css: string, theme: string, property: string): string {
+    const rule = readRules(css).find(
+      (item) =>
+        item.selector === `:root:root[data-theme="${theme}"]` &&
+        item.conditions.length === 1,
+    );
+    return rule?.declarations[property] ?? "";
+  }
+
+  it("writes the accent, tint, text on accent and focus ring from one colour", () => {
+    const result = createThemeStylesheet(
+      { accent: "#0b5c3a", fontFamily: '"Brand Sans", sans-serif' },
+      { scope: ":root" },
+    );
+    const { css } = passed(result);
+
+    expect(written(css, "light", accentName)).toBe("#0b5c3a");
+    expect(written(css, "light", focusRingName)).toBe("#0b5c3a");
+    expect(written(css, "light", accentContrastName)).toBe("#ffffff");
+    expect(written(css, "light", accentTintName)).toMatch(/^#[0-9a-f]{6}$/);
+    expect(written(css, "dark", accentName)).not.toBe("#0b5c3a");
+    expect(css).toContain('"Brand Sans", sans-serif');
+  });
+
+  it("reports each role it chose in the derived list, matching what it wrote", () => {
+    const result = createThemeStylesheet(
+      { accent: "#2e8b57" },
+      { scope: ":root" },
+    );
+    const { css } = passed(result);
+    const derived = result.ok ? (result.derived ?? []) : [];
+
+    expect(derived).toHaveLength(8);
+    for (const entry of derived) {
+      const name = nameOf(tokens.color[entry.role]);
+      expect(written(css, entry.theme, name)).toBe(entry.value);
+    }
+    expect(
+      derived.find(
+        (entry) => entry.theme === "light" && entry.role === "accent",
+      )?.source,
+    ).toBe("moved");
+  });
+
+  it("has an empty derived list when no accent is set", () => {
+    const result = createThemeStylesheet(brand, { scope: ":root" });
+
+    expect(result.ok && result.derived).toEqual([]);
+  });
+
+  it.each(["#0b2545", "#0b5c3a", "#2e8b57", "#d62828", "#ffd60a", "#00ff00"])(
+    "accepts %s and every pair it writes passes in both themes",
+    (accent) => {
+      const result = createThemeStylesheet({ accent }, { scope: ":root" });
+      const { css } = passed(result);
+
+      expect(result.findings.every((finding) => finding.passes)).toBe(true);
+      const colour = {
+        light: Object.fromEntries(
+          (
+            ["accent", "accentTint", "accentContrast", "focusRing"] as const
+          ).map((role) => [
+            role,
+            written(css, "light", nameOf(tokens.color[role])),
+          ]),
+        ),
+        dark: Object.fromEntries(
+          (
+            ["accent", "accentTint", "accentContrast", "focusRing"] as const
+          ).map((role) => [
+            role,
+            written(css, "dark", nameOf(tokens.color[role])),
+          ]),
+        ),
+      };
+      const check = checkThemeContrast({ colour });
+      expect(check.invalid).toEqual([]);
+      expect(check.findings.filter((finding) => !finding.passes)).toEqual([]);
+    },
+  );
+
+  it("is deterministic", () => {
+    const first = createThemeStylesheet({ accent: "#d62828" }, { scope: ".a" });
+    const second = createThemeStylesheet(
+      { accent: "#d62828" },
+      { scope: ".a" },
+    );
+
+    expect(second).toEqual(first);
+  });
+
+  it("lets a role set in colour win over the shorthand", () => {
+    const result = createThemeStylesheet(
+      {
+        accent: "#d62828",
+        colour: { light: { accentTint: "#d9efe4", accent: "#0b5c3a" } },
+      },
+      { scope: ":root" },
+    );
+    const { css } = passed(result);
+
+    expect(written(css, "light", accentName)).toBe("#0b5c3a");
+    expect(written(css, "light", accentTintName)).toBe("#d9efe4");
+  });
+
+  it("refuses an accent role that fails and names the nearest passing colour", () => {
+    const result = createThemeStylesheet(
+      { accent: "#0b5c3a", colour: { light: { accent: "#7fd9aa" } } },
+      { scope: ":root" },
+    );
+
+    expect(result.ok).toBe(false);
+    if (result.ok) {
+      return;
+    }
+    expect(result.css).toBeUndefined();
+    expect(result.failures).toEqual([
+      expect.objectContaining({
+        theme: "light",
+        role: "accent",
+        nearest: expect.stringMatching(/^#[0-9a-f]{6}$/),
+        message: expect.stringContaining("nearest colour that passes"),
+      }),
+    ]);
+  });
+
+  it("refuses with a clear message when no lightness passes", () => {
+    const result = createThemeStylesheet(
+      {
+        accent: "#0b5c3a",
+        colour: { light: { surface: "#595959", surfaceRaised: "#595959" } },
+      },
+      { scope: ":root" },
+    );
+
+    expect(result.ok).toBe(false);
+    expect(!result.ok && result.failures?.[0]?.message).toMatch(
+      /no lightness/i,
+    );
+  });
+
+  it.each([
+    ["not a colour", "unparseable"],
+    [42, "unparseable"],
+    ["#0b5c3a80", "translucent"],
+    ["oklch(0.7 0.4 150)", "out-of-gamut"],
+  ])("lists an accent of %j as invalid (%s)", (accent, reason) => {
+    const result = createThemeStylesheet(
+      { accent } as unknown as ThemeOverride,
+      { scope: ":root" },
+    );
+
+    expect(result).toMatchObject({
+      ok: false,
+      css: undefined,
+      invalid: [{ theme: null, role: "accent", value: accent, reason }],
+    });
+  });
+
+  it("reports a bad accent together with a bad scope", () => {
+    const result = createThemeStylesheet({ accent: "nope" }, { scope: "body" });
+
+    expect(result).toMatchObject({
+      ok: false,
+      invalidScope: true,
+      invalid: [{ role: "accent", reason: "unparseable" }],
+    });
+  });
+
+  it("leaves accent out of checkThemeContrast's unknown keys", () => {
+    expect(checkThemeContrast({ accent: "#0b5c3a" }).invalid).toEqual([]);
+  });
+});
+
 const roleNames = [
   "surface",
   "surfaceRaised",

@@ -22,6 +22,16 @@ export type ThemeColours = Record<ThemeColourRole, string>;
 
 /** A proposed theme: some colour roles, per theme. A role left out keeps its default. */
 export interface ThemeOverride {
+  /**
+   * One brand colour for both themes: hex, `rgb()` or `oklch()`, opaque and
+   * inside sRGB. {@link createThemeStylesheet} derives the accent's tint, the
+   * text on it and the focus ring from it, and where it falls below WCAG 2.2
+   * AA in a theme moves its lightness to the nearest value that passes (see
+   * {@link resolveAccent}). A role set in `colour` is used as written and
+   * never moved, and wins over this. It is read by the resolver and the
+   * stylesheet, so {@link checkThemeContrast} leaves it alone.
+   */
+  accent?: string;
   /** Colour roles to change, per theme. */
   colour?: {
     light?: Partial<ThemeColours>;
@@ -49,7 +59,11 @@ export interface ThemeOverride {
 }
 
 /** Keys of an override that are not colours: they are not checked here, and not unknown. */
-const NON_COLOUR_KEYS: ReadonlySet<string> = new Set(["fontFamily", "shape"]);
+const NON_COLOUR_KEYS: ReadonlySet<string> = new Set([
+  "accent",
+  "fontFamily",
+  "shape",
+]);
 
 /** The measured contrast of one pair, in one theme, over one backdrop. */
 export interface ContrastFinding {
@@ -139,7 +153,8 @@ function isRole(role: string): role is keyof ThemeColours {
   return Object.hasOwn(overridable, role);
 }
 
-function invalidReason(
+/** Why a colour proposed for a role cannot be checked, or `null` when it can. */
+export function invalidReason(
   role: keyof ThemeColours,
   value: unknown,
 ): InvalidColourReason | null {
