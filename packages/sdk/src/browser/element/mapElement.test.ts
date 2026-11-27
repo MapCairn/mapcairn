@@ -1,11 +1,12 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
-import type { SearchProvider } from "@mapcairn/core";
+import { SAMPLE_TILE_LAYER, type SearchProvider } from "@mapcairn/core";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { MountMapError } from "../MountMapError";
 import { mount } from "../mount";
 import { harness } from "../testSupport";
 import type { MapHandle, MountMapOptions } from "../types";
+import { createElementClass } from "./createElementClass";
 import { defineElement } from "./defineElement";
 import type { MapCairnMapElement } from "./types";
 
@@ -56,10 +57,9 @@ function make(
   return element;
 }
 
-/** Lets every microtask the element queued run. */
+/** Lets every microtask the element queued run, however deep: a macrotask starts only when none is left. */
 async function settle(): Promise<void> {
-  await Promise.resolve();
-  await Promise.resolve();
+  await new Promise((resolve) => setTimeout(resolve, 0));
 }
 
 afterEach(() => {
@@ -84,7 +84,16 @@ describe("defining the element", () => {
     expect(() => defineElement("test-taken", vi.fn())).toThrow(
       /already used by another element.*different name/,
     );
-    for (const name of ["font-face", "annotation-xml", "missing-glyph"]) {
+    for (const name of [
+      "annotation-xml",
+      "color-profile",
+      "font-face",
+      "font-face-src",
+      "font-face-uri",
+      "font-face-format",
+      "font-face-name",
+      "missing-glyph",
+    ]) {
       expect(() => defineElement(name, vi.fn())).toThrow(/reserved/);
     }
   });
@@ -137,20 +146,72 @@ describe("an element upgraded with a view set before it was defined", () => {
     names += 1;
     const name = `test-order-${names}`;
     const element = document.createElement(name) as MapCairnMapElement;
+    element.getBoundingClientRect = () =>
+      ({ height: 300, width: 400 }) as DOMRect;
     element.setAttribute("zoom", "3");
     element.view = { center: { lat: 1, lng: 2 }, zoom: 8, bearing: 0 };
     (element as unknown as { map: string }).map = "mine";
     document.body.append(element);
     const tools = harness();
     const options: MountMapOptions[] = [];
-    defineElement(name, (host, given) => {
+    const Base = createElementClass((host, given) => {
       options.push(given);
       return mount(host, given, tools.dependencies);
     });
+    // A browser reports each attribute the element has to the upgraded element,
+    // after its constructor and before it connects. The test DOM does not, so
+    // this class does it, in that order.
+    class Upgraded extends Base {
+      constructor() {
+        super();
+        for (const attribute of this.getAttributeNames()) {
+          (
+            this as unknown as {
+              attributeChangedCallback(
+                name: string,
+                before: null,
+                value: string | null,
+              ): void;
+            }
+          ).attributeChangedCallback(
+            attribute,
+            null,
+            this.getAttribute(attribute),
+          );
+        }
+      }
+    }
+    customElements.define(name, Upgraded);
     await settle();
     expect(options[0]?.view?.zoom).toBe(8);
     expect(element.map).not.toBe("mine");
     expect(Object.hasOwn(element, "map")).toBe(false);
+  });
+
+  it("keeps the basemaps and languages it was given", async () => {
+    names += 1;
+    const name = `test-early-${names}`;
+    const element = document.createElement(name) as MapCairnMapElement;
+    const basemaps = [{ id: "x" }] as never;
+    const languages = [{ tag: "af", label: "Afrikaans", messages: {} }];
+    element.basemaps = basemaps;
+    element.languages = languages;
+    document.body.append(element);
+    const options: MountMapOptions[] = [];
+    const stub = {
+      getView: () => ({ center: { lat: 0, lng: 0 }, zoom: 1, bearing: 0 }),
+      on: () => () => {},
+      destroy: () => {},
+    } as unknown as MapHandle;
+    defineElement(name, (_host, given) => {
+      options.push(given);
+      return stub;
+    });
+    await settle();
+    expect(Object.hasOwn(element, "basemaps")).toBe(false);
+    expect(Object.hasOwn(element, "languages")).toBe(false);
+    expect(options[0]?.basemaps).toEqual(basemaps);
+    expect(options[0]?.languages).toEqual(languages);
   });
 });
 
@@ -307,8 +368,20 @@ describe("attributes that change after the map is drawn", () => {
     expect(handle.update).not.toHaveBeenCalled();
   });
 
-  it("draws the map again, once, when label, language or tools change in one tick, and not when set to what they were", async () => {
-    const { test, element, handle } = await drawn({ label: "One" });
+  it.each([
+    ["label", "Other"],
+    ["language", "en-GB"],
+    ["tools", "measure"],
+  ])("draws the map again when only %s changes", async (attribute, value) => {
+    const { test, handle, element } = await drawn();
+    element.setAttribute(attribute, value);
+    await settle();
+    expect(test.mountFn).toHaveBeenCalledTimes(2);
+    expect(handle.destroy).toHaveBeenCalledTimes(1);
+  });
+
+  it("draws the map again once when label, language and tools change in one tick, and not when set to what they were", async () => {
+    const { test, element } = await drawn({ label: "One" });
     element.setAttribute("label", "One");
     await settle();
     expect(test.mountFn).toHaveBeenCalledTimes(1);
@@ -317,12 +390,31 @@ describe("attributes that change after the map is drawn", () => {
     element.setAttribute("tools", "measure");
     await settle();
     expect(test.mountFn).toHaveBeenCalledTimes(2);
-    expect(handle.destroy).toHaveBeenCalledTimes(1);
     expect(test.options[1]).toMatchObject({
       label: "Other",
       language: "en-GB",
       tools: ["measure"],
     });
+  });
+
+  it("tries again when an attribute changes after the map could not be drawn", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    const test = setup();
+    const element = make(test, { basemap: "nowhere" });
+    document.body.append(element);
+    await settle();
+    expect(element.map).toBeUndefined();
+    element.setAttribute("basemap", "dark");
+    await settle();
+    expect(element.map).toBeDefined();
+    expect(test.mountFn).toHaveBeenCalledTimes(2);
+  });
+
+  it("does not move the map for a view attribute written the same way again", async () => {
+    const { element, handle } = await drawn({ latitude: "10" });
+    element.setAttribute("latitude", "10.0");
+    await settle();
+    expect(handle.setView).not.toHaveBeenCalled();
   });
 
   it("reports a view attribute that is not a number, and keeps the map where it is", async () => {
@@ -427,6 +519,23 @@ describe("view attributes written one after another", () => {
     expect(asked).toEqual([
       { center: { lat: 1, lng: 2 }, zoom: 8, bearing: 90 },
     ]);
+  });
+});
+
+describe("view attributes with the real map", () => {
+  it("keep both when latitude and longitude change in separate ticks before the engine is ready", async () => {
+    const test = setup();
+    const element = make(test);
+    document.body.append(element);
+    await settle();
+    element.setAttribute("latitude", "10");
+    await settle();
+    element.setAttribute("longitude", "20");
+    await settle();
+    await element.map?.ready;
+    await vi.waitFor(() =>
+      expect(element.map?.getView().center).toEqual({ lat: 10, lng: 20 }),
+    );
   });
 });
 
@@ -551,16 +660,16 @@ describe("data properties", () => {
     const test = setup();
     const element = make(test);
     element.services = { search };
-    element.layers = [{ id: "a", kind: "tile" } as never];
+    element.layers = [{ ...SAMPLE_TILE_LAYER }];
     element.languages = [{ tag: "af", label: "Afrikaans", messages: {} }];
     document.body.append(element);
     await settle();
     element.services = { search };
-    element.layers = [{ id: "a", kind: "tile" } as never];
+    element.layers = [{ ...SAMPLE_TILE_LAYER }];
     element.languages = [{ tag: "af", label: "Afrikaans", messages: {} }];
     await settle();
     expect(test.mountFn).toHaveBeenCalledTimes(1);
-    element.layers = [{ id: "b", kind: "tile" } as never];
+    element.layers = [{ ...SAMPLE_TILE_LAYER, id: "another" }];
     await settle();
     expect(test.mountFn).toHaveBeenCalledTimes(2);
   });
@@ -726,6 +835,22 @@ describe("events", () => {
 });
 
 describe("errors", () => {
+  it("sends the page's own mistake to a listener above the element, bubbling and composed", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    const test = setup();
+    const section = document.createElement("section");
+    const element = make(test, { tools: "warp-drive" });
+    section.append(element);
+    const seen = vi.fn();
+    section.addEventListener("mapcairn-error", seen);
+    document.body.append(section);
+    await settle();
+    expect(seen).toHaveBeenCalledTimes(1);
+    const event = seen.mock.calls[0]?.[0] as CustomEvent;
+    expect(event.bubbles).toBe(true);
+    expect(event.composed).toBe(true);
+  });
+
   it("logs an engine error the map reports, as well as sending it", async () => {
     vi.spyOn(console, "error").mockImplementation(() => {});
     const { element, listeners } = lagging();

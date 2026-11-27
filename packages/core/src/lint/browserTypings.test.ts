@@ -29,6 +29,9 @@ const TSC = path.join(REPO, "node_modules", "typescript", "lib", "tsc.js");
 const WORK = path.join(SDK, ".typings-check");
 let cases = 0;
 
+/** Each case starts `tsc` over declarations that are checked in full, which is slow on a loaded machine. */
+const TSC_TIMEOUT_MS = 60_000;
+
 beforeAll(() => {
   assertBuilt("sdk");
 });
@@ -85,7 +88,7 @@ function diagnosticsOf(
   }
 }
 
-describe("the main declarations", () => {
+describe("the main declarations", { timeout: TSC_TIMEOUT_MS }, () => {
   it("know the tag, its properties and its events", () => {
     expect(
       diagnosticsOf(`import "@mapcairn/sdk/browser";
@@ -108,17 +111,20 @@ const element = document.createElement("mapcairn-map");
 element.zoom = 3;
 element.addEventListener("mapcairn-click", (event) => event.detail.nope);
 `);
-    expect(problems).toHaveLength(2);
+    expect(problems.join("\n")).toContain("'zoom' does not exist");
+    expect(problems.join("\n")).toContain("'nope' does not exist");
   });
 });
 
-describe("the JSX entry", () => {
+describe("the JSX entry", { timeout: TSC_TIMEOUT_MS }, () => {
   const usage = `import "@mapcairn/sdk/browser";
 export const page = <mapcairn-map zoom={5} theme="dark" tools="measure settings" className="map" />;
 `;
 
   it("is needed before JSX accepts the tag", () => {
-    expect(diagnosticsOf(usage).join("\n")).toContain("mapcairn-map");
+    expect(diagnosticsOf(usage).join("\n")).toContain(
+      "'mapcairn-map' does not exist on type 'JSX.IntrinsicElements'",
+    );
   });
 
   it("makes JSX accept the tag with its attributes", () => {
@@ -132,11 +138,32 @@ export const page = <mapcairn-map zoom={5} theme="dark" tools="measure settings"
       diagnosticsOf(`import "@mapcairn/sdk/browser/react-jsx";
 export const page = <mapcairn-map theme="blue" />;
 `),
-    ).toHaveLength(1);
+    ).toEqual([expect.stringContaining('"blue"')]);
+  });
+
+  it("types the properties and the events, and refuses a payload field that is not there", () => {
+    const base = `import "@mapcairn/sdk/browser/react-jsx";
+export const page = (
+  <mapcairn-map
+    services={{}}
+    layers={[]}
+    view={{ center: { lat: 1, lng: 2 }, zoom: 3, bearing: 0 }}
+    onmapcairn-click={(event) => event.detail.lat.toFixed()}
+    onmapcairn-view-change={(event) => event.detail.zoom.toFixed()}
+    onmapcairn-error={(event) => event.detail.message}
+  />
+);
+`;
+    expect(diagnosticsOf(base)).toEqual([]);
+    const wrong = diagnosticsOf(
+      base.replace("event.detail.lat.toFixed()", "event.detail.nope"),
+    );
+    expect(wrong).toHaveLength(1);
+    expect(wrong[0]).toContain("'nope' does not exist");
   });
 });
 
-describe("the element entry on its own", () => {
+describe("the element entry on its own", { timeout: TSC_TIMEOUT_MS }, () => {
   const usage = `import "@mapcairn/sdk/browser/element";
 const found = document.querySelector("mapcairn-map");
 found?.addEventListener("mapcairn-click", (event) => event.detail.lat.toFixed());
