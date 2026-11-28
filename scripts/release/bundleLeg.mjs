@@ -463,12 +463,123 @@ export function hostilePageProblems({ clean, hostile }) {
 }
 
 /**
+ * @typedef {object} PrivateElementReading
+ * @property {{ tag: string, shadow: boolean }[]} groups The element that is each `radiogroup`.
+ * @property {string[]} writers The element inside each live region.
+ * @property {{ entered: string, afterArrow: string, checkedAfterArrow: string, checkedAfterSpace: string }} keyboard The label of the focused or checked radio at each step on the Theme control.
+ * @property {string} announced What the polite region said after a choice that is announced.
+ */
+
+/** The private element a segmented control is: its stem and a copy's number. */
+const SEGMENTED_TAG = /^mapcairn-segmented-\d+$/;
+const WRITER_TAG = /^mapcairn-announcement-\d+$/;
+
+/** What the keyboard steps must give, on a Theme control that starts on System. */
+const THEME_KEYS = {
+  entered: "System",
+  afterArrow: "Light",
+  checkedAfterArrow: "System",
+  checkedAfterSpace: "Light",
+};
+
+/**
+ * The problems with the private elements as a page under the policy drew and
+ * used them. The page's violations are judged beside this.
+ *
+ * @param {PrivateElementReading} reading
+ * @returns {string[]}
+ */
+export function privateElementProblems({
+  groups,
+  writers,
+  keyboard,
+  announced,
+}) {
+  const problems = [];
+  const isElement = (
+    /** @type {{ tag: string, shadow: boolean }} */ { tag, shadow },
+  ) => SEGMENTED_TAG.test(tag) && !shadow;
+  if (groups.length === 0 || !groups.every(isElement)) {
+    problems.push(
+      `a segmented control is not the private element in the light DOM: ${JSON.stringify(groups)}`,
+    );
+  }
+  if (writers.length === 0 || !writers.every((tag) => WRITER_TAG.test(tag))) {
+    problems.push(
+      `a live region is not written by the private element: ${JSON.stringify(writers)}`,
+    );
+  }
+  if (JSON.stringify(keyboard) !== JSON.stringify(THEME_KEYS)) {
+    problems.push(
+      `the segmented control's keys gave ${JSON.stringify(keyboard)}, not ${JSON.stringify(THEME_KEYS)}`,
+    );
+  }
+  if (announced === "") {
+    problems.push("the announcer said nothing after a choice it announces");
+  }
+  return problems;
+}
+
+/**
+ * The problem when the policy did not report a `style` binding planted in a
+ * Lit template: the violations the other pages collect would then show nothing
+ * by being empty.
+ *
+ * @param {{ violatedDirective: string, blockedURI: string }[]} violations
+ * @returns {string[]}
+ */
+export function plantedStyleProblems(violations) {
+  return violations.some(({ violatedDirective }) =>
+    violatedDirective.startsWith("style-src"),
+  )
+    ? []
+    : [
+        `the planted style binding was not reported by the policy (${JSON.stringify(violations)}), so an empty list of violations proves nothing`,
+      ];
+}
+
+/**
+ * @typedef {object} CopiesReading
+ * @property {{ tags: string[], chosen: string }[]} copies For each copy of the bundle on the page, the tags of the private elements its map drew and the Theme choice after Light was clicked in it.
+ * @property {boolean} classesShared Whether two of those tags run the same class.
+ */
+
+/**
+ * The problems with two copies of the package on one page: each must define
+ * its private elements under its own names and run its own classes.
+ *
+ * @param {CopiesReading} reading
+ * @returns {string[]}
+ */
+export function twoCopiesProblems({ copies, classesShared }) {
+  const tags = copies.flatMap((copy) => copy.tags);
+  const problems = [];
+  if (copies.length !== 2 || copies.some((copy) => copy.tags.length === 0)) {
+    problems.push(
+      `two copies of the bundle should each have drawn private elements: ${JSON.stringify(copies)}`,
+    );
+  }
+  if (new Set(tags).size !== tags.length || classesShared) {
+    problems.push(
+      `a copy ran another copy's private element: ${JSON.stringify({ tags, classesShared })}`,
+    );
+  }
+  if (copies.some((copy) => copy.chosen !== "Light")) {
+    problems.push(
+      `a copy's segmented control did not take a choice: ${JSON.stringify(copies)}`,
+    );
+  }
+  return problems;
+}
+
+/**
  * What a page downloads before the engine: the module, the chunk the module
- * and the element's file share, the runtime chunk, the stylesheet and the
- * element's file (a few lines, which a page that uses the tag loads too).
+ * and the element's file share, the runtime chunk, the stylesheet, the
+ * element's file (a few lines, which a page that uses the tag loads too) and
+ * the chunk of the private elements and Lit, which every map loads as it draws.
  */
 const FIRST_LOAD =
-  /^browser(?:-(?:rolldown-runtime|shared)-[\w-]+\.js|-element\.js|\.js|\.css)$/;
+  /^browser(?:-(?:rolldown-runtime|shared|elements)-[\w-]+\.js|-element\.js|\.js|\.css)$/;
 
 /** What the first map brings in after: the engine's chunk and the worker's text. */
 const LAZY = /^browser-(?:engine|worker)-[\w-]+\.js$/;

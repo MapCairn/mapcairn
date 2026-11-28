@@ -42,7 +42,10 @@ import {
   hostStyleProblems,
   leakProblems,
   MOVED_ZOOM,
+  plantedStyleProblems,
+  privateElementProblems,
   reachProblems,
+  twoCopiesProblems,
   workerRefusalProblems,
 } from "./bundleLeg.mjs";
 import { OPEN_FREE_MAP_ORIGIN } from "./openFreeMapFixtures.mjs";
@@ -431,6 +434,168 @@ async function readHostStyles(page) {
 }
 
 /**
+ * Draws and uses the private elements on a map with Settings: what each
+ * `radiogroup` and live region is made of, the Theme control's keys, and what
+ * the announcer says after the map's shape is chosen.
+ *
+ * @param {import("playwright-core").Page} page The leg's `parity.html`.
+ * @returns {Promise<import("./bundleLeg.mjs").PrivateElementReading>}
+ */
+async function readPrivateElements(page) {
+  await drawn(page);
+  await page.getByRole("button", { name: "Settings" }).first().click();
+  const theme = page.getByRole("radiogroup", { name: "Theme" });
+  await theme.waitFor();
+  const parts = await page.evaluate(() => ({
+    groups: [...document.querySelectorAll('#map [role="radiogroup"]')].map(
+      (group) => ({
+        tag: group.localName,
+        shadow: group.shadowRoot !== null,
+      }),
+    ),
+    writers: [...document.querySelectorAll("#map [aria-live]")].map(
+      (region) => region.firstElementChild?.localName ?? "",
+    ),
+  }));
+  const focused = () =>
+    page.evaluate(() => document.activeElement?.textContent?.trim() ?? "");
+  const checked = async () =>
+    (await theme.locator('[aria-checked="true"]').textContent())?.trim() ?? "";
+  await theme.focus();
+  const entered = await focused();
+  await page.keyboard.press("ArrowRight");
+  const afterArrow = await focused();
+  const checkedAfterArrow = await checked();
+  await page.keyboard.press("Space");
+  const checkedAfterSpace = await checked();
+  await page.getByRole("radio", { name: "Globe" }).click();
+  const announced = await page
+    .waitForFunction(
+      () =>
+        document.querySelector('#map [role="status"][aria-live]')?.textContent,
+      undefined,
+      { timeout: SETTLE_TIMEOUT },
+    )
+    .then((handle) => handle.jsonValue())
+    .catch(() => "");
+  return {
+    ...parts,
+    keyboard: { entered, afterArrow, checkedAfterArrow, checkedAfterSpace },
+    announced: String(announced),
+  };
+}
+
+/**
+ * Reads two copies of the bundle on one page, on `copies.html`: the private
+ * elements each map drew, whether any two names run one class, and whether
+ * each copy's Theme control takes a choice.
+ *
+ * @param {import("playwright-core").Page} page
+ * @returns {Promise<import("./bundleLeg.mjs").CopiesReading>}
+ */
+async function readCopies(page) {
+  await page.waitForFunction(
+    () =>
+      document.querySelectorAll("canvas.maplibregl-canvas").length === 2 &&
+      document.querySelectorAll('[data-map-host][aria-busy="false"]').length ===
+        2,
+    undefined,
+    { timeout: SERVER_TIMEOUT },
+  );
+  /** @type {{ tags: string[], chosen: string }[]} */
+  const copies = [];
+  for (const id of ["first", "second"]) {
+    const map = page.locator(`#${id}`);
+    await map.getByRole("button", { name: "Settings" }).first().click();
+    const theme = map.getByRole("radiogroup", { name: "Theme" });
+    // Light changes no basemap on a light system, so no other style is asked for.
+    await theme.getByRole("radio", { name: "Light" }).click();
+    const chosen =
+      (await theme.locator('[aria-checked="true"]').textContent())?.trim() ??
+      "";
+    const tags = await map.evaluate((container) => [
+      ...new Set(
+        [...container.querySelectorAll("*")]
+          .map((element) => element.localName)
+          .filter((name) => /^mapcairn-(?:segmented|announcement)-/.test(name)),
+      ),
+    ]);
+    copies.push({ tags, chosen });
+  }
+  const classesShared = await page.evaluate(
+    (tags) => {
+      const classes = tags.map((tag) => customElements.get(tag));
+      return new Set(classes).size !== classes.length;
+    },
+    copies.flatMap((copy) => copy.tags),
+  );
+  return { copies, classesShared };
+}
+
+/**
+ * The private elements' pages under the policy: one drawn and used, two copies
+ * of the package on one page, and a page whose planted style binding the policy
+ * must report.
+ *
+ * @param {import("playwright-core").Browser} browser
+ * @param {string} folder
+ * @returns {Promise<string[]>} Each problem, none when they all passed.
+ */
+async function privateElementPageProblems(browser, folder) {
+  /** @type {string[]} */
+  const problems = [];
+  /** @type {import("./bundleLeg.mjs").PrivateElementReading | undefined} */
+  let elements;
+  const used = await openUnder(
+    browser,
+    folder,
+    BUNDLE_POLICY,
+    async (page) => {
+      elements = await readPrivateElements(page);
+    },
+    { path: "/parity.html" },
+  );
+  problems.push(
+    ...violationProblems(used).map((line) => `private elements: ${line}`),
+    ...(elements === undefined ? [] : privateElementProblems(elements)),
+  );
+
+  /** @type {import("./bundleLeg.mjs").CopiesReading | undefined} */
+  let copies;
+  const twice = await openUnder(
+    browser,
+    folder,
+    BUNDLE_POLICY,
+    async (page) => {
+      copies = await readCopies(page);
+    },
+    { path: "/copies.html" },
+  );
+  problems.push(
+    ...violationProblems(twice).map((line) => `two copies: ${line}`),
+    ...(copies === undefined ? [] : twoCopiesProblems(copies)),
+  );
+
+  const planted = await openUnder(
+    browser,
+    folder,
+    BUNDLE_POLICY,
+    async (page) => {
+      await page
+        .waitForFunction(
+          () => /** @type {any} */ (window).__violations.length > 0,
+          undefined,
+          { timeout: REFUSAL_TIMEOUT },
+        )
+        .catch(() => undefined);
+    },
+    { path: "/planted.html" },
+  );
+  problems.push(...plantedStyleProblems(planted.violations));
+  return problems;
+}
+
+/**
  * Reads what a page's rules did to the interface, on `leaks.html`.
  *
  * @param {import("playwright-core").Page} page
@@ -639,11 +804,16 @@ async function checkPlainPage(browser, folder) {
     );
   }
 
+  problems.push(...(await privateElementPageProblems(browser, folder)));
+
   if (problems.length > 0) {
     throw new Error(problems.join("\n"));
   }
   const [first, second] = cycles;
   return [
+    "under the policy the segmented control and the announcer's writer drew as private elements in the light DOM with no violation, the Theme control took the keys as it should (arrows move, Space chooses) and the announcer spoke: ok",
+    "two copies of the bundle on one page defined their private elements under different names, each running its own class and taking a choice: ok",
+    "a style binding planted in a Lit template was reported by the policy, so the empty lists of violations above mean something: ok",
     `it drew the default basemap's frame from the fixtures, with its tile set, a vector tile and the sprite fetched from ${OPEN_FREE_MAP_ORIGIN}: ok`,
     "the engine's worker started from a blob of the bundle's own copy, the engine's chunk and the worker's text were fetched from beside the module, and the page asked for no worker file: ok",
     "no Content-Security-Policy violation, console error or uncaught error under the policy, and no script created a link, style or script element: ok",
