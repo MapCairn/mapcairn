@@ -14,12 +14,13 @@ import { createRequire } from "node:module";
 import path from "node:path";
 import { buildBundle } from "./buildBundle.mjs";
 import { hashBuildScripts } from "./buildInputs.mjs";
-import { bundleOf } from "./bundleSettings.mjs";
+import { bundleOf, NOTICES_FILE } from "./bundleSettings.mjs";
 import {
   declarationBlock,
   withDeclarationBlock,
 } from "./declarationBlocks.mjs";
 import { isEntryPoint } from "./entryPoint.mjs";
+import { buildIcons } from "./icons.mjs";
 import {
   MAIN_ENTRY,
   nameMainEntry,
@@ -344,6 +345,7 @@ export async function buildPackage(folder) {
   const dist = path.join(folder, "dist");
   rmSync(dist, { recursive: true, force: true });
   mkdirSync(dist, { recursive: true });
+  buildIcons(folder, NOTICES_FILE);
 
   await buildJavaScript(folder, entries, handWritten ? undefined : stylesheet);
   if (stylesheet !== undefined) {

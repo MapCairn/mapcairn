@@ -250,10 +250,15 @@ export function licenceSectionOfReadme(directory) {
  *
  * @param {readonly BundledPackage[]} packages
  * @param {{ licences: Record<string, string>, packages: Record<string, { licence: string, reason: string }> }} allowlist
+ * @param {string} [introduction] What the packages below are to the files that carry the notices.
  * @returns {string}
  * @throws {Error} When a package has no licence text to ship.
  */
-export function noticesOf(packages, allowlist) {
+export function noticesOf(
+  packages,
+  allowlist,
+  introduction = "The files of `@mapcairn/sdk/browser` contain the packages below, under the licences shown.",
+) {
   const allowed = allowedIdentifiers(allowlist);
   const sections = [...packages]
     .sort((a, b) => a.name.localeCompare(b.name))
@@ -291,7 +296,7 @@ export function noticesOf(packages, allowlist) {
   return [
     "# Third-party notices",
     "",
-    "The files of `@mapcairn/sdk/browser` contain the packages below, under the licences shown.",
+    introduction,
     "",
     ...sections.flatMap((section) => [section, ""]),
   ].join("\n");
@@ -367,6 +372,38 @@ export function withDependencies(packages) {
 }
 
 /**
+ * The packages whose files a bundled package copied into itself, such as the
+ * icon paths of `@mapcairn/map` (`mapcairn.icons` in its manifest). No module
+ * of the bundle comes from them, so the module graph cannot name them.
+ *
+ * @param {Iterable<string>} moduleIds
+ * @returns {{ directory: string }[]}
+ */
+function copiedSourcesOf(moduleIds) {
+  const owners = new Set(
+    [...moduleIds]
+      .filter((id) => !id.startsWith("\0") && path.isAbsolute(id.split("?")[0]))
+      .flatMap((id) => packageFolderOf(id) ?? []),
+  );
+  return [...owners].flatMap((owner) => {
+    const manifest = JSON.parse(
+      readFileSync(path.join(owner, "package.json"), "utf8"),
+    );
+    const from = manifest.mapcairn?.icons?.from;
+    if (from === undefined) {
+      return [];
+    }
+    const directory = installedFolder(owner, from);
+    if (directory === undefined) {
+      throw new Error(
+        `${manifest.name} copies from ${from}, which is not installed.`,
+      );
+    }
+    return [{ directory }];
+  });
+}
+
+/**
  * Judges everything the bundle holds, and writes the notices file.
  *
  * @param {object} input
@@ -378,8 +415,10 @@ export function withDependencies(packages) {
  * @throws {Error} When a package's licence is not allowed, or one has no licence file.
  */
 export function writeNotices({ moduleIds, embeddedFolders, allowlist, file }) {
+  const ids = [...moduleIds];
   const packages = withDependencies([
-    ...bundledPackagesOf(moduleIds),
+    ...bundledPackagesOf(ids),
+    ...copiedSourcesOf(ids),
     ...embeddedFolders.map((directory) => ({ directory })),
   ]);
   assertBundledLicences(packages, allowlist);

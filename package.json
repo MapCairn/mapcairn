@@ -27,6 +27,7 @@
     "lint:harmony": "node scripts/harmony/cli.mjs",
     "licence": "node scripts/licenceHeaders.mjs",
     "licence:write": "node scripts/licenceHeaders.mjs --write",
+    "icons:write": "node scripts/icons.mjs",
     "licence:sdk": "node scripts/sdkLicences.mjs",
     "agents:sync": "node scripts/agents/sync.mjs",
     "agents:check": "node scripts/agents/sync.mjs --check",

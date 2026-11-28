@@ -40,12 +40,21 @@
   },
   "files": [
     "dist",
-    "!dist/.built"
+    "!dist/.built",
+    "THIRD-PARTY-NOTICES.md"
   ],
   "sideEffects": [
     "**/*.css",
     "**/*.css.ts"
   ],
+  "mapcairn": {
+    "icons": {
+      "from": "@phosphor-icons/core",
+      "names": [
+        "check"
+      ]
+    }
+  },
   "scripts": {
     "build": "node ../../scripts/buildPackage.mjs",
     "test": "vitest run",
@@ -72,6 +81,7 @@
     "@mapcairn/core": "0.2.0",
     "@mapcairn/react": "0.2.0",
     "@mapcairn/theme": "0.2.0",
+    "@phosphor-icons/core": "^2.1.1",
     "@testing-library/jest-dom": "^8.0.0",
     "@testing-library/react": "^16.3.3",
     "@types/react": "^19.3.0",
