@@ -17,7 +17,8 @@ const onTheServer = () => ON_THE_SERVER;
  * hydrates its markup see them as loading, so both draw the same markup.
  * A `MapView` mounted in the browser waits for them before it draws, so a part
  * below it is given their names in its first render. One a server drew does
- * not wait, and each part below it draws nothing until they arrive.
+ * not wait: each part below it that is a private element draws nothing until
+ * they arrive.
  */
 export function useLoadedPrivateElements(): DefinitionState<PrivateElementTags> {
   const state = useSyncExternalStore(

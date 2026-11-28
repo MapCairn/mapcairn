@@ -6,7 +6,13 @@ import {
   message,
 } from "@mapcairn/core";
 import { useLatestRef } from "@mapcairn/react";
-import { useEffect, useRef } from "react";
+import {
+  type RefObject,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from "react";
 import { useMessages } from "../services";
 import { useAnnounce } from "../ui/LiveRegion";
 import * as styles from "./MapCannotStart.css";
@@ -25,6 +31,21 @@ export interface MapCannotStartProps {
 }
 
 /**
+ * Moves focus to the target when the element that had it is gone because the
+ * target replaced it. That element is read during the first render, while what
+ * is being replaced is still in the page. Focus that is anywhere else on the
+ * page stays where it is.
+ */
+function useFocusLeftBehind(target: RefObject<HTMLElement | null>) {
+  const [held] = useState(() => document.activeElement);
+  useLayoutEffect(() => {
+    if (held !== null && !held.isConnected) {
+      target.current?.focus();
+    }
+  }, [held, target]);
+}
+
+/**
  * What a map view draws in place of the map when its interface could not be
  * loaded: the notice that the map could not start, in a region named as the map
  * is. The engine is never started, because a map must not be drawn without its
@@ -33,7 +54,8 @@ export interface MapCannotStartProps {
  *
  * @remarks The notice is announced once, assertively, through the shared
  *   announcer, rather than being a live region itself, so it is spoken once.
- *   It has no button: reloading the page is what it asks for.
+ *   It has no button: reloading the page is what it asks for. When it takes
+ *   the place of a drawn view that had focus, the region takes the focus.
  */
 export function MapCannotStart({
   basemap,
@@ -48,6 +70,9 @@ export function MapCannotStart({
   const text = t("app.banner.engineFailed", {});
   const caller = useLatestRef({ onEngineError, basemap });
   const told = useRef(false);
+
+  const region = useRef<HTMLElement>(null);
+  useFocusLeftBehind(region);
 
   useEffect(() => {
     if (told.current) {
@@ -72,6 +97,7 @@ export function MapCannotStart({
 
   return (
     <section
+      ref={region}
       id={id}
       aria-label={landmarkName(messages, "host.map.label", label)}
       // The target of a skip link to the map, so it takes focus.

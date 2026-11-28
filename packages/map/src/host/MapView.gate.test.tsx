@@ -290,6 +290,7 @@ describe("a map view a server has drawn, before its interface has loaded", () =>
   afterEach(() => {
     vi.doUnmock("../lit/privateElements");
     vi.restoreAllMocks();
+    document.body.replaceChildren();
   });
 
   it("keeps the server's map region and chrome and hydrates them as they are", async () => {
@@ -328,6 +329,7 @@ describe("a map view a server has drawn, before its interface has loaded", () =>
   it("replaces what it had drawn with the notice, said once, when the load fails", async () => {
     vi.spyOn(console, "error").mockImplementation(() => undefined);
     const page = await hydratedColdPage();
+    const [engine] = page.cold.adapters;
 
     await page.cold.fail();
 
@@ -337,6 +339,31 @@ describe("a map view a server has drawn, before its interface has loaded", () =>
     );
     expect(assertive()).toHaveTextContent(NOTICE);
     expect(page.onEngineError).toHaveBeenCalledTimes(1);
+    expect(engine).toHaveProperty("destroyed", true);
+    page.close();
+  });
+
+  it("moves focus to the notice when the notice takes away what had it", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => undefined);
+    const page = await hydratedColdPage();
+    screen.getByRole("button", { name: "Open Draw" }).focus();
+
+    await page.cold.fail();
+
+    expect(document.activeElement).toBe(
+      screen.getByRole("region", { name: "Map" }),
+    );
+    page.close();
+  });
+
+  it("moves no focus when the person was not in what the notice takes away", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => undefined);
+    const page = await hydratedColdPage();
+    act(() => (document.activeElement as HTMLElement | null)?.blur());
+
+    await page.cold.fail();
+
+    expect(document.activeElement).toBe(document.body);
     page.close();
   });
 });
