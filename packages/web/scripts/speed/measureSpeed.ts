@@ -17,10 +17,17 @@
  * an empty cache, as on a first visit. The pages are found by role, name and
  * `data-testid`, which the move of the interface to Lit keeps.
  */
-import { type Browser, chromium, devices, type Page } from "@playwright/test";
+import {
+  type Browser,
+  type CDPSession,
+  chromium,
+  devices,
+  type Page,
+} from "@playwright/test";
 import { mockThirdPartyServices } from "../../e2e/support/network";
 import {
   type Build,
+  type MeasureOptions,
   measureOptions,
   runOrder,
   type Sample,
@@ -29,6 +36,9 @@ import {
 
 /** How long one step may take on a throttled processor. */
 const STEP_TIMEOUT_MS = 60_000;
+
+const BITS_PER_KILOBIT = 1000;
+const BITS_PER_BYTE = 8;
 
 /** The version of the tour the app ships, stored so no welcome card is drawn. */
 const TOUR_VERSION = 1;
@@ -110,10 +120,37 @@ function timeFromClick(
   );
 }
 
+/** Holds the page to the processor, and the link if one is asked for. */
+async function slowDown(
+  session: CDPSession,
+  { throttle, network }: MeasureOptions,
+): Promise<void> {
+  await session.send("Emulation.setCPUThrottlingRate", { rate: throttle });
+  if (network !== undefined) {
+    const bytesPerSecond = (network.kbps * BITS_PER_KILOBIT) / BITS_PER_BYTE;
+    await session.send("Network.enable");
+    await session.send("Network.emulateNetworkConditions", {
+      offline: false,
+      latency: network.latencyMs,
+      downloadThroughput: bytesPerSecond,
+      uploadThroughput: bytesPerSecond,
+    });
+  }
+}
+
+/** What the figures were taken with, for the line above the table. */
+function conditions({ throttle, network, rounds }: MeasureOptions): string {
+  const link =
+    network === undefined
+      ? "the network not slowed"
+      : `a ${network.kbps} kbit/s link with ${network.latencyMs} ms added to each request`;
+  return `Pixel 7 viewport, processor ${throttle} times slower, ${link}, ${rounds} rounds, interleaved`;
+}
+
 async function measureOnce(
   browser: Browser,
   address: string,
-  throttle: number,
+  options: MeasureOptions,
 ): Promise<Sample> {
   // The tour is stored as seen, so no welcome card is drawn over the chrome.
   const context = await browser.newContext({
@@ -141,9 +178,10 @@ async function measureOnce(
     );
     await mockThirdPartyServices(page);
     await page.addInitScript(noteWhenDrawn, SETTINGS_BUTTON);
-    const session = await context.newCDPSession(page);
-    await session.send("Emulation.setCPUThrottlingRate", { rate: throttle });
-    await page.goto(new URL("/map", address).href);
+    await slowDown(await context.newCDPSession(page), options);
+    await page.goto(new URL("/map", address).href, {
+      timeout: STEP_TIMEOUT_MS,
+    });
     await page.waitForFunction(
       () => (window as unknown as { __settled?: number }).__settled,
       undefined,
@@ -163,7 +201,7 @@ async function measureOnce(
       };
     });
     // The page goes quiet before the first click is timed.
-    await page.waitForLoadState("networkidle");
+    await page.waitForLoadState("networkidle", { timeout: STEP_TIMEOUT_MS });
     const openSheet = await timeFromClick(page, MAP_OPTIONS_BUTTON, {
       selector: `${SHEET} [role="switch"]`,
       count: 1,
@@ -198,16 +236,12 @@ async function main(): Promise<void> {
   try {
     // One unmeasured visit to each, so neither server's first answer counts.
     for (const build of ["base", "change"] as const) {
-      await measureOnce(browser, options[build], options.throttle);
+      await measureOnce(browser, options[build], options);
     }
     for (const build of runOrder(options.rounds)) {
-      samples[build].push(
-        await measureOnce(browser, options[build], options.throttle),
-      );
+      samples[build].push(await measureOnce(browser, options[build], options));
     }
-    console.log(
-      `Chromium ${browser.version()}, Pixel 7 viewport, processor ${options.throttle} times slower, ${options.rounds} rounds, interleaved.\n`,
-    );
+    console.log(`Chromium ${browser.version()}, ${conditions(options)}.\n`);
     console.log(summaryTable(MEASURES, samples));
   } finally {
     await browser.close();

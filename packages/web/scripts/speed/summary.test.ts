@@ -65,6 +65,18 @@ describe("measureOptions", () => {
     });
   });
 
+  it("slows the network only when given a rate, with no delay unless given one", () => {
+    expect(measureOptions(addresses).network).toBeUndefined();
+    expect(measureOptions([...addresses, "--kbps", "1600"]).network).toEqual({
+      kbps: 1600,
+      latencyMs: 0,
+    });
+    expect(
+      measureOptions([...addresses, "--kbps", "1600", "--latency", "150"])
+        .network,
+    ).toEqual({ kbps: 1600, latencyMs: 150 });
+  });
+
   it("takes the rounds and the throttle when given", () => {
     expect(
       measureOptions([...addresses, "--rounds", "3", "--throttle", "6"]),
@@ -75,6 +87,8 @@ describe("measureOptions", () => {
     ["an address is missing", ["--base", "http://localhost:4893"]],
     ["rounds is not a count", [...addresses, "--rounds", "0"]],
     ["throttle is not a rate", [...addresses, "--throttle", "fast"]],
+    ["the network rate is not one", [...addresses, "--kbps", "slow"]],
+    ["a delay is given with no rate", [...addresses, "--latency", "150"]],
   ])("refuses when %s", (_case, args) => {
     expect(() => measureOptions(args)).toThrow("Usage");
   });

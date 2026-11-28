@@ -18,13 +18,22 @@ export interface MeasureOptions {
   readonly rounds: number;
   /** How many times slower than the machine the page's processor runs. */
   readonly throttle: number;
+  /** The link the page's own requests are held to. Left alone when absent. */
+  readonly network?: SlowNetwork;
+}
+
+/** A slowed link: its rate each way, and the delay added to each request. */
+export interface SlowNetwork {
+  /** Kilobits each second. */
+  readonly kbps: number;
+  readonly latencyMs: number;
 }
 
 const DEFAULT_ROUNDS = 7;
 const DEFAULT_THROTTLE = 4;
 
 const USAGE =
-  "Usage: measure:speed -- --base <address> --change <address> [--rounds <count>] [--throttle <rate>]";
+  "Usage: measure:speed -- --base <address> --change <address> [--rounds <count>] [--throttle <rate>] [--kbps <rate> [--latency <ms>]]";
 
 /** The value after a flag, if the flag is there. */
 function flagValue(args: readonly string[], flag: string): string | undefined {
@@ -41,6 +50,22 @@ function countOf(value: string | undefined, fallback: number): number {
   return count;
 }
 
+/** The slowed link the command line asks for. A delay needs a rate. */
+function networkOf(args: readonly string[]): SlowNetwork | undefined {
+  const rate = flagValue(args, "--kbps");
+  const delay = flagValue(args, "--latency");
+  if (rate === undefined) {
+    if (delay !== undefined) {
+      throw new Error(USAGE);
+    }
+    return undefined;
+  }
+  return {
+    kbps: countOf(rate, 1),
+    latencyMs: delay === undefined ? 0 : countOf(delay, 1),
+  };
+}
+
 /** @throws {Error} With the usage line, for a command line that does not fit it. */
 export function measureOptions(args: readonly string[]): MeasureOptions {
   const base = flagValue(args, "--base");
@@ -53,6 +78,7 @@ export function measureOptions(args: readonly string[]): MeasureOptions {
     change,
     rounds: countOf(flagValue(args, "--rounds"), DEFAULT_ROUNDS),
     throttle: countOf(flagValue(args, "--throttle"), DEFAULT_THROTTLE),
+    network: networkOf(args),
   };
 }
 

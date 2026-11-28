@@ -54,6 +54,8 @@ MAPCAIRN_E2E_PORT=<port> npm run start -w @mapcairn/web
 npm run measure:speed -w @mapcairn/web -- --base <address> --change <address> --rounds 11
 ```
 
+The processor alone is throttled unless the network is asked for too: `--kbps 1600 --latency 150` holds each page's requests to the build's server to the 1.6 Mbit/s link this page cites, with 150 ms added to each (a delay chosen for these comparisons). `vite preview` sends scripts and style sheets uncompressed, so a page takes longer over that link than from a server that compresses them, and the difference between two builds is what to read.
+
 It finds the page by role, accessible name and `data-testid`, so the same command compares any two commits that keep them. The move of the interface to Lit (plan 0019) is measured with it against `193343e3`, the last commit in which nothing imports Lit.
 
 ## What was tried
