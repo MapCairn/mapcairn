@@ -353,6 +353,29 @@ describe("Claude Code, .claude/settings.json", () => {
     expect(unmatched(rules, "Bash", commands)).toEqual([]);
   });
 
+  it.each(["Bash", "PowerShell"])(
+    "denies a staged publish in %s through another launcher, whose publish rules would otherwise only ask",
+    (shell) => {
+      const staged = [
+        "pnpm",
+        "pnpm -r",
+        "pnpm exec npm",
+        "pnpm dlx npm",
+        "yarn",
+        "yarn npm",
+        "yarn dlx npm",
+        "bun",
+        "bun x npm",
+        "bunx npm",
+        "bunx npm@latest",
+      ].flatMap((launcher) => [
+        `${launcher} stage publish`,
+        `${launcher} stage publish --tag next`,
+      ]);
+      expect(unmatched(rules, shell, staged)).toEqual([]);
+    },
+  );
+
   it("asks about nothing but a publish and a deployment approval", () => {
     for (const shell of ["Bash", "PowerShell"]) {
       const others = [
@@ -365,7 +388,7 @@ describe("Claude Code, .claude/settings.json", () => {
     }
     for (const rule of askRules) {
       expect(rule).toMatch(
-        /publish( \*)?\)$|pending_deployments|approveDeployments/,
+        /[ (]publish( \*)?\)$|pending_deployments|approveDeployments/,
       );
       expect(rule).not.toContain("publish-existing");
     }

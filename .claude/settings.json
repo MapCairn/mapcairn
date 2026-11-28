@@ -550,7 +550,31 @@
       "PowerShell(gh workflow run *publish-existing*)",
       "PowerShell(gh api *publish-existing*)",
       "PowerShell(gh api *dispatches*)",
-      "PowerShell(gh api */rerun*)"
+      "PowerShell(gh api */rerun*)",
+      "Bash(pnpm stage publish *)",
+      "Bash(pnpm * stage publish)",
+      "Bash(pnpm * stage publish *)",
+      "Bash(yarn stage publish *)",
+      "Bash(yarn * stage publish)",
+      "Bash(yarn * stage publish *)",
+      "Bash(bun stage publish *)",
+      "Bash(bun * stage publish)",
+      "Bash(bun * stage publish *)",
+      "Bash(bunx stage publish *)",
+      "Bash(bunx * stage publish)",
+      "Bash(bunx * stage publish *)",
+      "PowerShell(pnpm stage publish *)",
+      "PowerShell(pnpm * stage publish)",
+      "PowerShell(pnpm * stage publish *)",
+      "PowerShell(yarn stage publish *)",
+      "PowerShell(yarn * stage publish)",
+      "PowerShell(yarn * stage publish *)",
+      "PowerShell(bun stage publish *)",
+      "PowerShell(bun * stage publish)",
+      "PowerShell(bun * stage publish *)",
+      "PowerShell(bunx stage publish *)",
+      "PowerShell(bunx * stage publish)",
+      "PowerShell(bunx * stage publish *)"
     ]
   }
 }
