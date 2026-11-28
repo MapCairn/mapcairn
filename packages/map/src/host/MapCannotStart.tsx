@@ -48,8 +48,9 @@ function useFocusLeftBehind(target: RefObject<HTMLElement | null>) {
 /**
  * What a map view draws in place of the map when its interface could not be
  * loaded: the notice that the map could not start, in a region named as the map
- * is. The engine is never started, because a map must not be drawn without its
- * controls and credits. The caller is told once, with an
+ * is. It shows no map, because a map must not be drawn without its controls and
+ * credits: a view mounted in the browser has started no engine, and in one a
+ * server drew, the engine is ended with the view this replaces. The caller is told once, with an
  * `interface-load-failed` `MapEngineError`, which is not about the basemap. It
  * is told from a layout effect, so what it removes or adds in answer is on
  * screen in the same paint as the notice.
