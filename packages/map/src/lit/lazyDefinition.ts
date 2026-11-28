@@ -16,35 +16,22 @@ export interface LazyDefinition<T> {
   readonly subscribe: (listener: () => void) => () => void;
 }
 
-/** Fails a load that has not arrived in time. What arrives later is dropped. */
-function within<T>(loading: Promise<T>, timeoutMs: number): Promise<T> {
-  return new Promise((resolve, reject) => {
-    const timer = setTimeout(
-      () => reject(new Error(`Nothing arrived within ${timeoutMs} ms.`)),
-      timeoutMs,
-    );
-    void loading.then(resolve, reject).finally(() => clearTimeout(timer));
-  });
-}
-
 /**
  * Defines something whose module must not be evaluated until a browser asks for
  * it. Lit's browser build extends `HTMLElement` as it is evaluated, which
  * breaks a server bundle, so `load` holds the dynamic `import()` that reaches
  * Lit and nothing outside it imports Lit.
  *
- * A load that fails, or does not arrive within `timeoutMs`, stays failed until
- * the page is loaded again: a browser may answer a repeated module request with
- * the same failure, and the page has by then told the person to reload.
+ * A load that fails stays failed until the page is loaded again: a browser may
+ * answer a repeated module request with the same failure, and the page has by
+ * then told the person to reload. A load that has not settled is waited for as
+ * long as it takes; a caller that cannot wait sets its own limit.
  *
  * @param load Imports the module and defines what it holds. It is not called
  *   until the first `define`.
- * @param options `timeoutMs` bounds the load; without it the load is waited for
- *   as long as it takes.
  */
 export function createLazyDefinition<T>(
   load: () => Promise<T>,
-  { timeoutMs }: { readonly timeoutMs?: number } = {},
 ): LazyDefinition<T> {
   let state: DefinitionState<T> = { status: "loading" };
   let pending: Promise<void> | undefined;
@@ -56,9 +43,7 @@ export function createLazyDefinition<T>(
     }
   };
   const define = () => {
-    pending ??= (
-      timeoutMs === undefined ? load() : within(load(), timeoutMs)
-    ).then(
+    pending ??= load().then(
       (value) => settle({ status: "ready", value }),
       (reason: unknown) => {
         console.error("MapCairn could not load part of its interface.", reason);

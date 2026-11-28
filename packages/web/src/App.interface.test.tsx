@@ -10,6 +10,8 @@ import { act, render, screen } from "@testing-library/react";
 import { createRoutesStub } from "react-router";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { App } from "./App";
+import { MAP_REGION_ID } from "./app/initialView";
+import type { useMapApp } from "./app/useMapApp";
 
 /**
  * Where the part of the interface that is fetched apart stands, as the test
@@ -55,8 +57,25 @@ vi.mock("../../map/src/lit/privateElements", async (importOriginal) => {
   };
 });
 
-function renderCold() {
-  const services = createFakeServices();
+/** What the app last held, read through the real hook. */
+const held = vi.hoisted(() => ({
+  app: undefined as ReturnType<typeof useMapApp> | undefined,
+}));
+
+vi.mock("./app/useMapApp", async (importOriginal) => {
+  const original = await importOriginal<typeof import("./app/useMapApp")>();
+  return {
+    ...original,
+    useMapApp: () => {
+      held.app = original.useMapApp();
+      return held.app;
+    },
+  };
+});
+
+const mapRegions = () => document.querySelectorAll(`[id="${MAP_REGION_ID}"]`);
+
+function renderCold(services = createFakeServices()) {
   const Stub = createRoutesStub([
     {
       path: "/",
@@ -107,5 +126,31 @@ describe("the map app while its interface loads", () => {
     );
     expect(screen.queryByTestId("map-placeholder")).toBeNull();
     expect(services.fakes.maps).toHaveLength(0);
+  });
+
+  it("keeps one main landmark, and one element with the map's id, around the notice", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => undefined);
+    renderCold();
+
+    await act(async () => load.settle("failed"));
+
+    const mains = screen.getAllByRole("main");
+    expect(mains).toHaveLength(1);
+    expect(mains[0]).toContainElement(screen.getByTestId("map-host"));
+    expect(mapRegions()).toHaveLength(1);
+    expect(mapRegions()[0]).toBe(screen.getByTestId("map-host"));
+  });
+
+  it("blames no basemap and keeps the saved one when the interface cannot load", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => undefined);
+    const services = createFakeServices();
+    services.fakes.settings.set({ basemapId: "positron" });
+    renderCold(services);
+
+    await act(async () => load.settle("failed"));
+
+    expect(held.app?.basemapFailure).toBeNull();
+    expect(held.app?.basemap.id).toBe("positron");
+    expect(services.fakes.settings.get().basemapId).toBe("positron");
   });
 });

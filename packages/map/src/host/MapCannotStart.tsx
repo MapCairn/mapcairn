@@ -49,8 +49,10 @@ function useFocusLeftBehind(target: RefObject<HTMLElement | null>) {
  * What a map view draws in place of the map when its interface could not be
  * loaded: the notice that the map could not start, in a region named as the map
  * is. The engine is never started, because a map must not be drawn without its
- * controls and credits. The caller is told once, with the error the engine's own
- * failures use.
+ * controls and credits. The caller is told once, with an
+ * `interface-load-failed` `MapEngineError`, which is not about the basemap. It
+ * is told from a layout effect, so what it removes or adds in answer is on
+ * screen in the same paint as the notice.
  *
  * @remarks The notice is announced once, assertively, through the shared
  *   announcer, rather than being a live region itself, so it is spoken once.
@@ -74,14 +76,14 @@ export function MapCannotStart({
   const region = useRef<HTMLElement>(null);
   useFocusLeftBehind(region);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (told.current) {
       return;
     }
     told.current = true;
     caller.current.onEngineError?.(
       new MapEngineError(
-        "load-failed",
+        "interface-load-failed",
         "The map could not start: part of its interface did not load.",
       ),
       caller.current.basemap,

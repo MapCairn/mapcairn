@@ -2,7 +2,7 @@
 // Copyright MapCairn contributors
 import { EN_GB_CATALOGUE } from "@mapcairn/core";
 import { act, render, screen } from "@testing-library/react";
-import { createElement, type ReactNode, useState } from "react";
+import { createElement, type ReactNode, useEffect, useState } from "react";
 import { hydrateRoot } from "react-dom/client";
 import { renderToString } from "react-dom/server";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -29,13 +29,10 @@ async function coldPage() {
     const { createLazyDefinition } = await import("../lit/lazyDefinition");
     return {
       ...original,
-      privateElements: createLazyDefinition(
-        async () => {
-          await gate;
-          return (await import("../lit/elements")).definePrivateElements();
-        },
-        { timeoutMs: original.ELEMENTS_LOAD_TIMEOUT_MS },
-      ),
+      privateElements: createLazyDefinition(async () => {
+        await gate;
+        return (await import("../lit/elements")).definePrivateElements();
+      }),
     };
   });
   const core = await import("@mapcairn/core");
@@ -47,9 +44,8 @@ async function coldPage() {
   const { DrawToolbar, useDraw } = await import("../tools/DrawToolbar");
   const { FocusRegistryProvider } = await import("../chrome/focusRegistry");
   const { MapView } = await import("./MapView");
-  const { privateElements, ELEMENTS_LOAD_TIMEOUT_MS } = await import(
-    "../lit/privateElements"
-  );
+  const { privateElements } = await import("../lit/privateElements");
+  const { ELEMENTS_LOAD_TIMEOUT_MS } = await import("./useWaitedTooLong");
   const adapters: unknown[] = [];
   const services = core.createFakeServices({
     createMapAdapter: core.createFakeMapAdapterFactory((adapter) => {
@@ -190,11 +186,40 @@ describe("a map view before its interface has loaded", () => {
       expect.any(cold.CoreEngineError),
       cold.basemap,
     );
+    // Not `load-failed`, which is about the engine and its basemap.
     expect(onEngineError.mock.calls[0]?.[0]).toMatchObject({
-      reason: "load-failed",
+      reason: "interface-load-failed",
     });
     expect(chrome).not.toHaveBeenCalled();
     expect(cold.adapters).toHaveLength(0);
+  });
+
+  it("tells its caller as the notice mounts, so a placeholder can go in the same pass", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => undefined);
+    const cold = await coldPage();
+    await cold.fail();
+    const order: string[] = [];
+    function EarlierPassiveEffect() {
+      useEffect(() => {
+        order.push("passive effect");
+      }, []);
+      return null;
+    }
+
+    render(
+      cold.page(
+        <>
+          <EarlierPassiveEffect />
+          <cold.MapView
+            initialView={VIEW}
+            basemap={cold.basemap}
+            onEngineError={() => order.push("told")}
+          />
+        </>,
+      ),
+    );
+
+    expect(order).toEqual(["told", "passive effect"]);
   });
 
   it("names the map the failure is about, when the page has more than one", async () => {
@@ -212,6 +237,29 @@ describe("a map view before its interface has loaded", () => {
       screen.getByRole("region", { name: "Map (Pine)" }),
     ).toHaveTextContent(NOTICE);
     expect(assertive()).toHaveTextContent(`Pine: ${NOTICE}`);
+  });
+
+  it("stops counting once the load has arrived", async () => {
+    vi.useFakeTimers();
+    const cold = await coldPage();
+    const onEngineError = vi.fn();
+    render(
+      cold.page(
+        <cold.MapView
+          initialView={VIEW}
+          basemap={cold.basemap}
+          onEngineError={onEngineError}
+        />,
+      ),
+    );
+    await act(() => vi.advanceTimersByTimeAsync(cold.bound - 1));
+
+    await cold.load();
+    await act(() => vi.advanceTimersByTimeAsync(cold.bound));
+
+    expect(screen.queryByText(NOTICE)).toBeNull();
+    expect(onEngineError).not.toHaveBeenCalled();
+    expect(cold.adapters).toHaveLength(1);
   });
 
   it("does not wait in silence for a load that never settles", async () => {
@@ -239,6 +287,14 @@ describe("a map view before its interface has loaded", () => {
     );
     expect(assertive()).toHaveTextContent(NOTICE);
     expect(onEngineError).toHaveBeenCalledTimes(1);
+
+    // What the view has said stays true when the part arrives after all.
+    await cold.load();
+
+    expect(screen.getByRole("region", { name: "Map" })).toHaveTextContent(
+      NOTICE,
+    );
+    expect(cold.adapters).toHaveLength(0);
   });
 });
 
@@ -289,8 +345,29 @@ async function hydratedColdPage() {
 describe("a map view a server has drawn, before its interface has loaded", () => {
   afterEach(() => {
     vi.doUnmock("../lit/privateElements");
+    vi.useRealTimers();
     vi.restoreAllMocks();
     document.body.replaceChildren();
+  });
+
+  it("keeps its working map while the load only stalls, and shows the controls when it arrives", async () => {
+    vi.useFakeTimers();
+    const page = await hydratedColdPage();
+    act(() => screen.getByRole("button", { name: "Open Draw" }).click());
+
+    await act(() => vi.advanceTimersByTimeAsync(page.cold.bound * 4));
+
+    expect(page.host()).toBe(page.served);
+    expect(page.onEngineError).not.toHaveBeenCalled();
+    expect(screen.queryByText(NOTICE)).toBeNull();
+    expect(page.cold.adapters[0]).toHaveProperty("destroyed", false);
+    expect(screen.queryByRole("radio")).toBeNull();
+
+    await page.cold.load();
+
+    expect(screen.getByRole("radio", { name: "Point" })).toBeInTheDocument();
+    expect(page.cold.adapters).toHaveLength(1);
+    page.close();
   });
 
   it("keeps the server's map region and chrome and hydrates them as they are", async () => {

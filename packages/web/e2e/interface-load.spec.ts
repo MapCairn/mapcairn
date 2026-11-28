@@ -8,7 +8,7 @@ import { TIMER_SLACK_MS } from "./support/timers";
 /** The chunk that has Lit and the private elements, which the map waits for. */
 const ELEMENTS_CHUNK = /\/assets\/js\/elements-[\w-]+\.js$/;
 
-/** `ELEMENTS_LOAD_TIMEOUT_MS` in the map package: how long the map waits. */
+/** `ELEMENTS_LOAD_TIMEOUT_MS` in the map package: how long a view that holds itself back waits. */
 const ELEMENTS_LOAD_TIMEOUT_MS = 30_000;
 
 const NOTICE = "The map could not start. Reload the page to try again.";
@@ -36,6 +36,9 @@ async function expectCannotStart(page: Page): Promise<void> {
   await expect(region).toBeVisible();
   await expect(page.getByTestId("live-region-assertive")).toHaveText(NOTICE);
   await expect(page.getByTestId("map-placeholder")).toHaveCount(0);
+  await expect(page.getByRole("main")).toHaveCount(1);
+  await expect(page.getByRole("main").getByRole("region")).toHaveText(NOTICE);
+  await expect(page.locator('[id="map"]')).toHaveCount(1);
   await expect(page.locator("canvas")).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Zoom in" })).toHaveCount(0);
 }

@@ -36,6 +36,7 @@ import { landmarkName } from "./useLandmarkName";
 import { type MapLongPressEvent, useLongPress } from "./useLongPress";
 import { useMapEngine } from "./useMapEngine";
 import { usePointerPosition } from "./usePointerPosition";
+import { ELEMENTS_LOAD_TIMEOUT_MS, useWaitedTooLong } from "./useWaitedTooLong";
 
 /** The pointer shown over the map: grab for panning, crosshair while measuring. */
 export type MapCursor = "grab" | "crosshair";
@@ -392,11 +393,16 @@ function DrawnMapView({
  *   that markup keeps it and starts the engine without waiting. In releases
  *   after `0.2.0` a segmented control in it is absent from the server's markup
  *   and is drawn once that part has arrived.
- * - If that part cannot be loaded, or has not arrived after 30 seconds, the
- *   view shows a notice that the map could not start, in a region named as the
- *   map is, in place of anything it had drawn. It announces the notice and
- *   calls `onEngineError` with a `load-failed` error once. Reloading the page
- *   tries again. This is not in `0.2.0` or any earlier release.
+ * - If that part cannot be loaded, the view shows a notice that the map could
+ *   not start, in a region named as the map is, in place of anything it had
+ *   drawn. A view mounted in the browser does the same when the part has not
+ *   arrived after 30 seconds, because it has nothing else to show. A view a
+ *   server drew has a working map by then, so it keeps it however long the
+ *   load takes, and draws the missing controls if they arrive. With the notice
+ *   the view announces it and calls `onEngineError` once, with an
+ *   `interface-load-failed` error, from a layout effect as the notice mounts,
+ *   so a placeholder removed there is never painted beside it. Reloading the
+ *   page tries again. None of this is in `0.2.0` or any earlier release.
  * - No style attributes are rendered, so it works under `style-src 'self'`.
  *   `data-zoom` is written with `setAttribute` once the engine reports a zoom.
  * - The host fills its parent; `MapChrome` owns its placement.
@@ -405,7 +411,12 @@ function DrawnMapView({
 export function MapView({ ...props }: MapViewProps) {
   const elements = useLoadedPrivateElements();
   const serverDrawn = useDrawnByAServer();
-  const failed = elements.status === "failed";
+  // Only a view that is holding itself back has a limit to its wait.
+  const gaveUp = useWaitedTooLong(
+    !serverDrawn && elements.status === "loading",
+    ELEMENTS_LOAD_TIMEOUT_MS,
+  );
+  const failed = gaveUp || elements.status === "failed";
   if (!failed && (serverDrawn || elements.status === "ready")) {
     return <DrawnMapView {...props} />;
   }

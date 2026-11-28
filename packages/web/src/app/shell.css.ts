@@ -27,6 +27,18 @@ export const mapPlaceholder = style({
 });
 
 /**
+ * Wraps the map view. It takes no box while the map is drawn, whose chrome has
+ * the page's `main`. When the interface cannot load there is no chrome, so the
+ * wrapper is made the `main` and fills the page as the map would.
+ */
+export const mapFrame = style({
+  display: "contents",
+  selectors: {
+    '&[role="main"]': { display: "block", width: "100%", height: "100%" },
+  },
+});
+
+/**
  * Wraps the placeholder's loading text and decorative chrome. It takes no box
  * of its own, so the skeleton lays out as if it were the placeholder's child.
  * Where scripts do not run the map never loads and the controls never come

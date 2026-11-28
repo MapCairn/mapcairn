@@ -39,7 +39,7 @@ describe("a mounted map whose interface cannot be loaded", () => {
     );
 
     expect(failure).toBeInstanceOf(MapEngineError);
-    expect(failure).toMatchObject({ reason: "load-failed" });
+    expect(failure).toMatchObject({ reason: "interface-load-failed" });
     expect(reported).toHaveBeenCalledExactlyOnceWith(failure);
     expect(element.querySelector("[data-map-host]")?.textContent).toBe(NOTICE);
     expect(tools.adapters).toHaveLength(0);
