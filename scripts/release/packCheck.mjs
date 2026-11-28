@@ -49,8 +49,9 @@ export const SIZE_CEILINGS = {
 /**
  * The most the files of a package's bundle may weigh, in gzipped bytes: each
  * of its `dist` files that starts with the name of a bundle entry (`browser`),
- * and the notices file, each gzipped alone and added up. About 1.06
- * times what the bundle weighs now (800,000 against about 752,000), so small growth passes and a
+ * and the notices file, each gzipped alone and added up. About 1.02
+ * times what the bundle weighs now (800,000 against about 786,000, with both
+ * React and Lit in it while the interface moves from one to the other), so a
  * second copy of the engine or of React (about 330 and 75 kilobytes gzipped)
  * does not. The rest of such a package is measured the same way and stays
  * under `SIZE_CEILINGS`. Raising one is a deliberate edit in a pull request.
