@@ -1,7 +1,10 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
+
+import elementsChunk from "virtual:mapcairn/elements-chunk";
 import { EN_GB_CATALOGUE } from "@mapcairn/core";
 import { SkipLink, useMessages, VisuallyHidden } from "@mapcairn/map";
+import { preloadModule } from "react-dom";
 import type { LinksFunction, MetaFunction } from "react-router";
 import { App } from "../App";
 import { ClientOnly } from "../app/ClientOnly";
@@ -94,6 +97,12 @@ function PlaygroundSummary() {
  *   boxes.
  */
 export default function MapRoute() {
+  // The map draws only once its elements chunk is in, so the server's page asks
+  // for it beside the other scripts. The client has no address and asks for
+  // nothing; React keeps the link out of what hydration compares.
+  if (elementsChunk !== null) {
+    preloadModule(elementsChunk, { as: "script" });
+  }
   return (
     <>
       <SkipLink targetId={MAP_REGION_ID} className={hiddenWithoutScripts} />

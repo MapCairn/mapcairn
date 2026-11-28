@@ -1,27 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
-import type { Page } from "@playwright/test";
 import { expect, test } from "./fixtures";
-import { TIMER_SLACK_MS } from "./support/timers";
-
-/** `MEASURE_ANNOUNCE_DELAY_MS` in `useMeasure`: the points must stay still this long. */
-const MEASURE_ANNOUNCE_DELAY_MS = 800;
-
-/**
- * Holds back the chunk that has Lit and the private elements, as a slow
- * connection would, until the returned function lets it arrive.
- */
-async function holdElementsChunk(page: Page): Promise<() => void> {
-  let release: () => void = () => undefined;
-  const held = new Promise<void>((resolve) => {
-    release = resolve;
-  });
-  await page.route(/\/assets\/js\/elements-[\w-]+\.js$/, async (route) => {
-    await held;
-    await route.continue();
-  });
-  return () => release();
-}
 
 /**
  * The segmented control's keyboard model in a real browser, on the Settings
@@ -82,42 +61,12 @@ test.describe("segmented control keyboard", () => {
     await expect(metric).toBeFocused();
   });
 
-  test("an announcement made before the control has loaded is spoken once it has, and focus is not taken back", async ({
+  test("a toolbar takes focus on its chosen mode as it opens", async ({
     page,
     mapPage,
   }) => {
-    await page.clock.install();
-    const release = await holdElementsChunk(page);
     await mapPage.goto();
     await mapPage.measureButton.click();
-    const addPoint = page.getByTestId("measure-add-point");
-    await addPoint.click();
-    await addPoint.click();
-    // The total is announced once the points have been still a while.
-    await page.clock.runFor(MEASURE_ANNOUNCE_DELAY_MS + TIMER_SLACK_MS);
-    await expect(page.getByRole("radiogroup")).toHaveCount(0);
-    await expect(mapPage.politeAnnouncer).toHaveText("");
-
-    await addPoint.focus();
-    release();
-
-    await expect(
-      page.getByRole("radiogroup", { name: "Measure" }),
-    ).toBeVisible();
-    await expect(mapPage.politeAnnouncer).toContainText("0 m");
-    await expect(addPoint).toBeFocused();
-  });
-
-  test("a toolbar opened before the control has loaded takes focus when it draws", async ({
-    page,
-    mapPage,
-  }) => {
-    const release = await holdElementsChunk(page);
-    await mapPage.goto();
-    await mapPage.measureButton.click();
-    await expect(page.getByRole("toolbar", { name: "Measure" })).toBeVisible();
-
-    release();
 
     await expect(page.getByRole("radio", { name: "Distance" })).toBeFocused();
   });

@@ -14,6 +14,7 @@ import {
   type Plugin,
 } from "vite";
 import { OFFERED_LANGUAGE_OPTIONS } from "./src/i18n/offeredLanguageOptions.ts";
+import { elementsPreload } from "./vite/elementsPreload.ts";
 
 /**
  * `@vanilla-extract/vite-plugin` marks its runtime packages external for the
@@ -92,6 +93,7 @@ export default defineConfig(async ({ mode, command, isPreview }) => {
       // need to resolve to plain CSS before route/SSR transformation or the
       // JSX transform ever sees them.
       vanillaExtractPlugin(),
+      elementsPreload(),
       ...(useCloudflare
         ? [bundleVanillaExtractIntoWorker(), keepBrowserEngineOutOfWorker()]
         : []),
