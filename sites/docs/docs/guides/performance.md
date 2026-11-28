@@ -45,6 +45,17 @@ Improve the Lighthouse scores where the cause is real, and stop where the remain
 - Do not defer content a visitor needs to hide its cost, remove a feature, or change what visitors see.
 - Do not change how the audit is served or throttled, and do not lower a threshold.
 
+### Comparing two builds
+
+`packages/web/scripts/speed/measureSpeed.ts` times two builds of the playground by those rules, in Chromium with the processor four times slower than the machine's and a Pixel 7 viewport: first contentful paint, when the interface is drawn, when the map settles, and from a click until the sheet is open, a layer is on and Settings is open, each until a frame has followed. It runs the two builds in turn on one machine, swapping which goes first each round, and prints each measure's median and range. Basemap styles and tiles come from the browser tests' mocks, so the map's figure leaves the network and most of the engine's drawing out. Serve each build from its own checkout, on a port of its own, then compare them:
+
+```bash
+MAPCAIRN_E2E_PORT=<port> npm run start -w @mapcairn/web
+npm run measure:speed -w @mapcairn/web -- --base <address> --change <address> --rounds 11
+```
+
+It finds the page by role, accessible name and `data-testid`, so the same command compares any two commits that keep them. The move of the interface to Lit (plan 0019) is measured with it against `193343e3`, the last commit in which nothing imports Lit.
+
 ## What was tried
 
 Neither change below was kept.
