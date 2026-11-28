@@ -5,8 +5,39 @@ import {
   type AnnouncePriority,
   type Announcer,
   createAnnouncer,
+  holdAnnouncements,
   THROTTLE_MS,
 } from "./announcer";
+
+describe("holding announcements until the regions can be written", () => {
+  it("sends nothing while held, then everything in order, then as it comes", () => {
+    const announce = vi.fn();
+    const held = holdAnnouncements(announce);
+    held.announce("First", { keep: true });
+    held.announce("Second", { priority: "assertive" });
+    expect(announce).not.toHaveBeenCalled();
+
+    held.release();
+    held.announce("Third");
+
+    expect(announce.mock.calls).toEqual([
+      ["First", { keep: true }],
+      ["Second", { priority: "assertive" }],
+      ["Third"],
+    ]);
+  });
+
+  it("repeats nothing when it is released again", () => {
+    const announce = vi.fn();
+    const held = holdAnnouncements(announce);
+    held.announce("First");
+
+    held.release();
+    held.release();
+
+    expect(announce).toHaveBeenCalledTimes(1);
+  });
+});
 
 /** Every text the announcer wrote to a region, in order, with its priority. */
 let written: { priority: AnnouncePriority; text: string }[] = [];

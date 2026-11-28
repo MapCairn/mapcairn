@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
 import {
+  existsSync,
   mkdirSync,
   mkdtempSync,
   readFileSync,
@@ -13,6 +14,7 @@ import { fileURLToPath } from "node:url";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { writeNotices } from "../../../../scripts/bundleLicences.mjs";
 import {
+  buildIcons,
   ICON_MODULE,
   iconModuleSource,
   iconStep,
@@ -97,6 +99,86 @@ describe("the map package's icons", () => {
 
     expect(manifest.devDependencies).toHaveProperty(["@phosphor-icons/core"]);
     expect(manifest.dependencies).not.toHaveProperty(["@phosphor-icons/core"]);
+  });
+});
+
+describe("the icon step in a package build", () => {
+  let folder = "";
+
+  beforeEach(() => {
+    folder = mkdtempSync(path.join(tmpdir(), "icon-build-"));
+    mkdirSync(path.join(folder, "node_modules/icon-set/assets/regular"), {
+      recursive: true,
+    });
+    mkdirSync(path.join(folder, "src/lit"), { recursive: true });
+    writeFileSync(
+      path.join(folder, "node_modules/icon-set/package.json"),
+      JSON.stringify({ name: "icon-set", version: "1.0.0", license: "MIT" }),
+    );
+    writeFileSync(
+      path.join(folder, "node_modules/icon-set/LICENSE"),
+      "ICON LICENCE",
+    );
+    writeFileSync(
+      path.join(folder, "node_modules/icon-set/assets/regular/check.svg"),
+      svg('<path d="M1,2Z"/>'),
+    );
+  });
+
+  afterEach(() => {
+    rmSync(folder, { recursive: true, force: true });
+  });
+
+  const manifest = (mapcairn: unknown) =>
+    writeFileSync(
+      path.join(folder, "package.json"),
+      JSON.stringify({ name: "@mapcairn/example", mapcairn }),
+    );
+  const icons = { icons: { from: "icon-set", names: ["check"] } };
+  const notices = () => path.join(folder, "NOTICES.md");
+
+  it("writes the notices when the committed module is what the dependency draws", () => {
+    manifest(icons);
+    writeFileSync(
+      path.join(folder, ICON_MODULE),
+      iconStep(folder, allowlist).module,
+    );
+
+    buildIcons(folder, "NOTICES.md");
+
+    expect(readFileSync(notices(), "utf8")).toContain("ICON LICENCE");
+  });
+
+  it.each([
+    ["there is no module", undefined],
+    ["the module has fallen behind", "// an older drawing\n"],
+  ])("fails, and writes no notices, when %s", (_case, committed) => {
+    manifest(icons);
+    if (committed !== undefined) {
+      writeFileSync(path.join(folder, ICON_MODULE), committed);
+    }
+
+    expect(() => buildIcons(folder, "NOTICES.md")).toThrow(
+      "Run npm run icons:write",
+    );
+    expect(existsSync(notices())).toBe(false);
+  });
+
+  it("leaves a package that copies no icon alone", () => {
+    manifest(undefined);
+
+    buildIcons(folder, "NOTICES.md");
+
+    expect(existsSync(notices())).toBe(false);
+    expect(() => iconStep(folder, allowlist)).toThrow("names no icons");
+  });
+
+  it("fails naming a dependency that is not installed", () => {
+    manifest({ icons: { from: "no-such-icons", names: ["check"] } });
+
+    expect(() => iconStep(folder, allowlist)).toThrow(
+      "no-such-icons, which draws the icons, is not installed.",
+    );
   });
 });
 

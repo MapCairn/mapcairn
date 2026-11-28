@@ -1,10 +1,12 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
 import { useReadingDirection } from "@mapcairn/react";
-import { Check } from "@phosphor-icons/react";
-import * as ToggleGroup from "@radix-ui/react-toggle-group";
-import type { ReactNode } from "react";
+import { type ReactNode, useLayoutEffect, useRef } from "react";
+import { createPortal } from "react-dom";
+import { usePrivateElements } from "../../lit/usePrivateElements";
 import * as styles from "./SegmentedControl.css";
+import type { SegmentedControlElement } from "./SegmentedControlElement";
+import { useIconNodes } from "./useIconNodes";
 
 /** One choice in a {@link SegmentedControl}. */
 export interface SegmentedControlOption {
@@ -40,19 +42,11 @@ export interface SegmentedControlProps {
 }
 
 /**
- * A single-choice control that shows all options at once, built on the Radix
- * ToggleGroup in single mode.
- *
- * Radix renders the group as a `radiogroup` and each item as a `radio`, which
- * is the right semantics for a mutually exclusive choice. Focus moves between
- * items with the arrow keys (one tab stop for the whole group) and Space or
- * Enter chooses the focused item.
- *
- * Unlike a raw toggle group, the selection can never be cleared: pressing the
- * active item again is ignored. The selected item is filled and shows a check
- * mark, so selection never relies on colour alone.
+ * Hands the props to the private element and has it render as React commits, so
+ * a parent's effect finds the buttons, as it would with markup of React's own.
  */
-export function SegmentedControl({
+function SegmentedControlPart({
+  tag,
   label,
   options,
   value,
@@ -60,42 +54,71 @@ export function SegmentedControl({
   disabled = false,
   className,
   "data-testid": testId,
-}: SegmentedControlProps) {
+}: SegmentedControlProps & { readonly tag: string }) {
   const direction = useReadingDirection();
+  const ref = useRef<SegmentedControlElement>(null);
+  const icons = useIconNodes(options, styles.icon);
+  useLayoutEffect(() => {
+    const element = ref.current;
+    if (element === null) {
+      return;
+    }
+    element.label = label;
+    element.options = options.map((option) => ({
+      value: option.value,
+      label: option.label,
+      lang: option.lang,
+      icon: icons.get(option.value),
+    }));
+    element.value = value;
+    element.disabled = disabled;
+    element.direction = direction;
+    element.itemTestId = testId;
+    element.choose = onValueChange;
+    element.flush();
+  });
+  // The tag is a name chosen when the element was defined, so it is a variable.
+  const Group = tag as "div";
   return (
-    <ToggleGroup.Root
-      type="single"
-      className={className ? `${styles.group} ${className}` : styles.group}
-      aria-label={label}
-      value={value}
-      disabled={disabled}
-      dir={direction}
-      onValueChange={(next) => {
-        if (next) {
-          onValueChange(next);
-        }
-      }}
-      data-testid={testId}
-    >
-      {options.map((option) => (
-        <ToggleGroup.Item
-          key={option.value}
-          className={styles.item}
-          value={option.value}
-          lang={option.lang}
-          data-testid={testId ? `${testId}-${option.value}` : undefined}
-        >
-          {option.icon ? (
-            <span className={styles.icon} aria-hidden="true">
-              {option.icon}
-            </span>
-          ) : null}
-          {option.label}
-          {option.value === value ? (
-            <Check aria-hidden="true" className={styles.check} />
-          ) : null}
-        </ToggleGroup.Item>
-      ))}
-    </ToggleGroup.Root>
+    <>
+      <Group
+        ref={ref as React.Ref<HTMLDivElement>}
+        className={className ? `${styles.group} ${className}` : styles.group}
+        data-testid={testId}
+      />
+      {options.map((option) => {
+        const node = icons.get(option.value);
+        return node === undefined
+          ? null
+          : createPortal(option.icon, node, option.value);
+      })}
+    </>
+  );
+}
+
+/**
+ * A single-choice control that shows all options at once, drawn by a private
+ * Lit element.
+ *
+ * The group is a `radiogroup` and each item a `radio`, which is the right
+ * semantics for a mutually exclusive choice. Focus moves between items with the
+ * arrow keys (one tab stop for the whole group) and Space or Enter chooses the
+ * focused item.
+ *
+ * The selection can never be cleared: pressing the active item again is
+ * ignored. The selected item is filled and shows a check mark, so selection
+ * never relies on colour alone.
+ *
+ * @remarks It draws only in a browser: a server's markup holds nothing for it,
+ *   and the first one on a page appears once its element has loaded.
+ */
+export function SegmentedControl({ ...props }: SegmentedControlProps) {
+  const elements = usePrivateElements();
+  return (
+    <>
+      {elements.status === "ready" ? (
+        <SegmentedControlPart {...props} tag={elements.value.segmented} />
+      ) : null}
+    </>
   );
 }

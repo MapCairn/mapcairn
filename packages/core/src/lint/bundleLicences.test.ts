@@ -413,6 +413,27 @@ describe("withDependencies", () => {
     ]);
   });
 
+  it("leaves out a dependency only a server build imports, unless a module of it is bundled", () => {
+    const shim = install("@lit-labs/ssr-dom-shim", {
+      license: "BSD-3-Clause",
+    });
+    const element = install("lit-element", {
+      license: "BSD-3-Clause",
+      dependencies: { "@lit-labs/ssr-dom-shim": "1" },
+    });
+
+    expect(
+      withDependencies([{ directory: element }]).map(
+        (found: Bundled) => found.name,
+      ),
+    ).toEqual(["lit-element"]);
+    expect(
+      withDependencies([{ directory: element }, { directory: shim }]).map(
+        (found: Bundled) => found.name,
+      ),
+    ).toEqual(["@lit-labs/ssr-dom-shim", "lit-element"]);
+  });
+
   it("fails naming a dependency that is not installed", () => {
     const top = install("needy", {
       license: "MIT",

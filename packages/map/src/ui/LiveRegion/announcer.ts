@@ -78,6 +78,38 @@ export interface Announcer {
   readonly dispose: () => void;
 }
 
+/** An announcer that waits until it is released. */
+export interface HeldAnnouncer {
+  readonly announce: AnnounceText;
+  /** Sends what waited, in order, and sends the rest as it comes. */
+  readonly release: () => void;
+}
+
+/**
+ * Holds announcements while the regions cannot be written yet, so none is lost
+ * and the first is the first spoken. Nothing is throttled or de-duplicated
+ * while it waits: `announce` does that when they are released.
+ */
+export function holdAnnouncements(announce: AnnounceText): HeldAnnouncer {
+  let waiting: Parameters<AnnounceText>[] | null = [];
+  return {
+    announce: (...message) => {
+      if (waiting === null) {
+        announce(...message);
+        return;
+      }
+      waiting.push(message);
+    },
+    release: () => {
+      const queued = waiting ?? [];
+      waiting = null;
+      for (const [message, options] of queued) {
+        announce(message, options);
+      }
+    },
+  };
+}
+
 function emptyChannel(): Channel {
   return {
     text: "",

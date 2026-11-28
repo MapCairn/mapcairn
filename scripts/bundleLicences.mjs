@@ -22,6 +22,14 @@ import {
  */
 const NOT_BUNDLED = /^(?:@mapcairn\/|vite$|rolldown$)/;
 
+/**
+ * Declared dependencies whose code no browser bundle holds, so the walk down
+ * the manifests leaves them out. One that did reach a bundle's modules would
+ * still be named from the module graph. Lit's DOM shim is imported by Lit's
+ * `node` build alone, and ships no licence text of its own.
+ */
+const SERVER_ONLY_DEPENDENCIES = new Set(["@lit-labs/ssr-dom-shim"]);
+
 /** A file name that holds a licence text. */
 const LICENCE_FILE = /^(?:licen[cs]e|copying)(?:[-.][\w.-]+)?$/i;
 
@@ -353,7 +361,10 @@ export function withDependencies(packages) {
           : NO_LICENCE,
       directory,
     });
-    for (const dependency of Object.keys(manifest.dependencies ?? {})) {
+    const shipped = Object.keys(manifest.dependencies ?? {}).filter(
+      (dependency) => !SERVER_ONLY_DEPENDENCIES.has(dependency),
+    );
+    for (const dependency of shipped) {
       const folder = installedFolder(directory, dependency);
       if (folder === undefined) {
         throw new Error(
