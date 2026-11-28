@@ -165,6 +165,34 @@ const RELEASE_GATE_COMMANDS = [
   "gh api repos/MapCairn/mapcairn/actions/runs/1/rerun-failed-jobs -X POST",
 ];
 
+/** The one command Claude Code asks about instead of denying. */
+const ASKED_NAME = "publish";
+
+/** The commands Claude Code still denies. */
+const CLAUDE_DENIED_NAMES = NAMES.filter((name) => name !== ASKED_NAME);
+
+/** Publish commands of the release guide and other forms that have to prompt. */
+const ASKED_PUBLISH = [
+  "npm publish mapcairn-core-0.1.0-rc.1.tgz --access public --tag next",
+  "npm publish /tmp/mapcairn-sdk-0.3.0.tgz --access public --provenance",
+  ...LAUNCHED_PUBLISH,
+  ...OTHERS.flatMap((words) => [
+    words.join(" "),
+    `${words.join(" ")} --tag next`,
+  ]),
+];
+
+/** Approving a deployment: asked, each time. */
+const ASKED_APPROVALS = [
+  APPROVAL_COMMAND,
+  `gh api graphql -f query='mutation { ${DEPLOYMENT_APPROVAL_TEXTS[1]}(input: {}) { clientMutationId } }'`,
+];
+
+/** Starting a publishing run another way, which stays denied. */
+const DENIED_GATE_COMMANDS = RELEASE_GATE_COMMANDS.filter(
+  (command) => !ASKED_APPROVALS.includes(command),
+);
+
 /**
  * Whether a wildcard pattern matches a whole command. `*` matches any text.
  * With `bareEnds`, a trailing ` *` also matches the command without
@@ -260,107 +288,121 @@ describe("the commands an agent never runs", () => {
 
 describe("Claude Code, .claude/settings.json", () => {
   const rules = denyRules(".claude/settings.json");
+  const askRules =
+    (
+      readJson(".claude/settings.json") as {
+        permissions: { ask?: string[] };
+      }
+    ).permissions.ask ?? [];
+
+  /** The commands of a list that no rule matches. */
+  function unmatched(from: string[], shell: string, commands: string[]) {
+    const patterns = innerPatterns(from, shell);
+    return commands.filter((command) => !listDenies(patterns, command, true));
+  }
+
+  /** The commands of a list that some rule matches. */
+  function matched(from: string[], shell: string, commands: string[]) {
+    const patterns = innerPatterns(from, shell);
+    return commands.filter((command) => listDenies(patterns, command, true));
+  }
+
+  /** Every command with one npm name, through every launcher and wrapper. */
+  function throughEveryLauncher(name: string): string[] {
+    return [...NPM_LAUNCHERS, ...WRAPPED_NPM_LAUNCHERS].flatMap((launcher) =>
+      ["", " @mapcairn/core --tag next"].map(
+        (tail) => `${launcher} ${name}${tail}`,
+      ),
+    );
+  }
+
+  const asked = [...throughEveryLauncher(ASKED_NAME), ...ASKED_PUBLISH];
 
   it.each(["Bash", "PowerShell"])(
-    "denies every command in %s however it is started",
+    "asks before a publish in %s however it is started, and before an approval",
     (shell) => {
-      const patterns = innerPatterns(rules, shell);
-      for (const name of NAMES) {
-        for (const command of npmCommands(name, false)) {
-          expect(
-            listDenies(patterns, command, true),
-            `${shell}: ${command}`,
-          ).toBe(true);
-        }
-      }
-      expect(listDenies(patterns, APPROVAL_COMMAND, true)).toBe(true);
-      for (const command of RELEASE_GATE_COMMANDS) {
-        expect(listDenies(patterns, command, true), command).toBe(true);
-      }
-      for (const words of OTHERS) {
-        expect(listDenies(patterns, words.join(" "), true)).toBe(true);
-        expect(
-          listDenies(patterns, `${words.join(" ")} --tag next`, true),
-        ).toBe(true);
-      }
+      expect(
+        unmatched(askRules, shell, [...asked, ...ASKED_APPROVALS]),
+      ).toEqual([]);
     },
   );
 
-  it("denies the commands through npx in Bash", () => {
-    const patterns = innerPatterns(rules, "Bash");
-    for (const name of COMMANDS) {
-      for (const command of npmCommands(name, true)) {
-        expect(listDenies(patterns, command, true), command).toBe(true);
-      }
-    }
+  it.each(["Bash", "PowerShell"])(
+    "has no deny rule in %s that would beat one of those prompts",
+    (shell) => {
+      expect(matched(rules, shell, [...asked, ...ASKED_APPROVALS])).toEqual([]);
+    },
+  );
+
+  it.each(["Bash", "PowerShell"])(
+    "denies every other command in %s however it is started, bare or with arguments",
+    (shell) => {
+      const commands = CLAUDE_DENIED_NAMES.flatMap(throughEveryLauncher);
+      expect(
+        unmatched(rules, shell, [...commands, ...DENIED_GATE_COMMANDS]),
+      ).toEqual([]);
+    },
+  );
+
+  it("denies the other commands through npx and a pinned npx in Bash", () => {
+    const commands = CLAUDE_DENIED_NAMES.flatMap((name) => [
+      ...(COMMANDS.includes(name) ? npmCommands(name, true) : []),
+      ...pinnedNpx(name),
+      `corepack npm ${name}`,
+    ]);
+    expect(unmatched(rules, "Bash", commands)).toEqual([]);
   });
 
-  it("denies a publish started through a pinned npx, another launcher or a workspace runner", () => {
-    for (const shell of ["Bash", "PowerShell"]) {
-      const patterns = innerPatterns(rules, shell);
-      for (const command of LAUNCHED_PUBLISH) {
-        expect(
-          listDenies(patterns, command, true),
-          `${shell}: ${command}`,
-        ).toBe(true);
-      }
-    }
-    const bash = innerPatterns(rules, "Bash");
-    for (const name of NAMES) {
-      for (const command of [...pinnedNpx(name), `corepack npm ${name}`]) {
-        expect(listDenies(bash, command, true), command).toBe(true);
-      }
-    }
-  });
+  it.each(["Bash", "PowerShell"])(
+    "denies a staged publish in %s through another launcher, whose publish rules would otherwise only ask",
+    (shell) => {
+      const staged = [
+        "pnpm",
+        "pnpm -r",
+        "pnpm exec npm",
+        "pnpm dlx npm",
+        "yarn",
+        "yarn npm",
+        "yarn dlx npm",
+        "bun",
+        "bun x npm",
+        "bunx npm",
+        "bunx npm@latest",
+      ].flatMap((launcher) => [
+        `${launcher} stage publish`,
+        `${launcher} stage publish --tag next`,
+      ]);
+      expect(unmatched(rules, shell, staged)).toEqual([]);
+    },
+  );
 
-  it("denies every command through every npm launcher in both shells, bare or with arguments", () => {
-    const missing: string[] = [];
+  it("asks about nothing but a publish and a deployment approval", () => {
     for (const shell of ["Bash", "PowerShell"]) {
-      const patterns = innerPatterns(rules, shell);
-      for (const name of NAMES) {
-        for (const launcher of NPM_LAUNCHERS) {
-          for (const tail of ["", " @mapcairn/core --tag next"]) {
-            const command = `${launcher} ${name}${tail}`;
-            if (!listDenies(patterns, command, true)) {
-              missing.push(`${shell}(${command})`);
-            }
-          }
-        }
-      }
+      const others = [
+        ...CLAUDE_DENIED_NAMES.map((name) => `npm ${name} @mapcairn/core`),
+        ...ALLOWED_COMMANDS,
+        ...REGISTRY_QUERIES,
+        ...DENIED_GATE_COMMANDS,
+      ];
+      expect(matched(askRules, shell, others)).toEqual([]);
     }
-    expect(missing).toEqual([]);
-  });
-
-  it("denies every command through npm's own wrappers and global flags in both shells, bare or with arguments", () => {
-    const missing: string[] = [];
-    for (const shell of ["Bash", "PowerShell"]) {
-      const patterns = innerPatterns(rules, shell);
-      for (const name of NAMES) {
-        for (const launcher of WRAPPED_NPM_LAUNCHERS) {
-          for (const tail of ["", " @mapcairn/core --tag next"]) {
-            const command = `${launcher} ${name}${tail}`;
-            if (!listDenies(patterns, command, true)) {
-              missing.push(`${shell}(${command})`);
-            }
-          }
-        }
-      }
+    for (const rule of askRules) {
+      expect(rule).toMatch(
+        /[ (]publish( \*)?\)$|pending_deployments|approveDeployments/,
+      );
+      expect(rule).not.toContain("publish-existing");
     }
-    expect(missing).toEqual([]);
   });
 
   it("leaves the release skill's commands and the checks alone", () => {
     for (const shell of ["Bash", "PowerShell"]) {
-      for (const command of [...ALLOWED_COMMANDS, ...REGISTRY_QUERIES]) {
-        expect(
-          listDenies(innerPatterns(rules, shell), command, true),
-          `${shell}: ${command}`,
-        ).toBe(false);
-      }
+      expect(
+        matched(rules, shell, [...ALLOWED_COMMANDS, ...REGISTRY_QUERIES]),
+      ).toEqual([]);
     }
   });
 
-  it("holds only a deny list and the reviewers' write guard, never a person's own permissions or an allowance for a release", () => {
+  it("holds only the publish rules and the reviewers' write guard, never a person's own permissions or an allowance for a release", () => {
     const settings = readJson(".claude/settings.json");
     expect(Object.keys(settings).sort()).toEqual(["hooks", "permissions"]);
     expect(settings.hooks).toEqual({
@@ -377,8 +419,13 @@ describe("Claude Code, .claude/settings.json", () => {
         },
       ],
     });
-    expect(Object.keys(settings.permissions as object)).toEqual(["deny"]);
-    expect(rules.filter((rule) => rule.includes("release.yml"))).toEqual([]);
+    expect(Object.keys(settings.permissions as object).sort()).toEqual([
+      "ask",
+      "deny",
+    ]);
+    expect(
+      [...rules, ...askRules].filter((rule) => rule.includes("release.yml")),
+    ).toEqual([]);
   });
 });
 
@@ -650,13 +697,15 @@ describe("the guide", () => {
 
   it("agrees with the release skill on the approval and the deny entries", () => {
     const agreed =
-      "still refuse the call, so the maintainer runs it or changes their own settings";
+      "still refuse the call, so in those tools the maintainer runs it or changes their own settings";
+    const prompts = "Claude Code prompts for the call";
     const skill = read(".claude/skills/release/SKILL.md");
     expect(guide).toContain(agreed);
     expect(skill).toContain(agreed);
+    expect(guide).toContain(prompts);
+    expect(skill).toContain(prompts);
     expect(skill).toContain("never reword the call");
-    const tools =
-      "the committed deny entries (Claude Code, opencode, Qwen Code, Cursor)";
+    const tools = "the committed deny entries (opencode, Qwen Code, Cursor)";
     expect(guide.toLowerCase()).toContain(tools.toLowerCase());
     expect(skill.toLowerCase()).toContain(tools.toLowerCase());
     expect(guide).not.toContain("env -u");
