@@ -11,8 +11,9 @@
  * @remarks Serve each build first, from its own checkout, on a port of its own:
  * `MAPCAIRN_E2E_PORT=<port> npm run start -w @mapcairn/web`. The script knows
  * nothing about how either was built, so the same command compares any two
- * commits. Basemap styles and tiles are answered by the browser tests' mocks,
- * so no figure depends on a network. Each run has a new browser context with
+ * commits. Basemap styles and tiles are answered by the browser tests' mocks
+ * and every other request to another host is refused, so no figure depends on
+ * a network. Each run has a new browser context with
  * an empty cache, as on a first visit. The pages are found by role, name and
  * `data-testid`, which the move of the interface to Lit keeps.
  */
@@ -92,17 +93,17 @@ function timeFromClick(
       if (target === null) {
         throw new Error(`Nothing to click at ${from}`);
       }
-      const frame = () =>
-        new Promise((resolve) => requestAnimationFrame(resolve));
+      // No named function in here: the TypeScript runner wraps one in a
+      // helper the page does not have.
       const start = performance.now();
       target.click();
       while (document.querySelectorAll(until.selector).length < until.count) {
         if (performance.now() - start > timeout) {
           throw new Error(`${until.selector} did not appear`);
         }
-        await frame();
+        await new Promise((resolve) => requestAnimationFrame(resolve));
       }
-      await frame();
+      await new Promise((resolve) => requestAnimationFrame(resolve));
       return performance.now() - start;
     },
     { from: click, until: drawn, timeout: STEP_TIMEOUT_MS },
@@ -131,6 +132,13 @@ async function measureOnce(
   });
   try {
     const page = await context.newPage();
+    // Registered first, so the mocks below answer before it: nothing else
+    // leaves the machine, such as the layer's request to its provider.
+    const own = new URL(address).host;
+    await page.route(
+      (url) => url.host !== own,
+      (route) => route.abort(),
+    );
     await mockThirdPartyServices(page);
     await page.addInitScript(noteWhenDrawn, SETTINGS_BUTTON);
     const session = await context.newCDPSession(page);
