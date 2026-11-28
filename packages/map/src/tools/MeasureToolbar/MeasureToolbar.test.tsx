@@ -128,8 +128,9 @@ describe("MeasureToolbar", () => {
       const toolbar = screen.getByTestId("measure-toolbar");
       expect(toolbar.querySelector("[aria-live]")).toBeNull();
       expect(toolbar.querySelector("[role=status], [role=alert]")).toBeNull();
-      // Radix puts a style on the mode switch's group (outline: none); that is
-      // the primitive's own, set through the CSSOM, not this component's.
+      // The segmented control puts a style on the mode switch's group (outline:
+      // none); that is the primitive's own, set through the CSSOM, not this
+      // component's.
       const styled = [...container.querySelectorAll("[style]")].filter(
         (element) => element.getAttribute("role") !== "radiogroup",
       );

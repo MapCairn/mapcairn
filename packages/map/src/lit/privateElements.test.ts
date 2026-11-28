@@ -97,6 +97,8 @@ describe("the private announcement text element", () => {
       flush: () => void;
     };
     expect(text.textContent).toBe("");
+    // No box of its own, so the hidden region lays out as it did around text.
+    expect(text.style.display).toBe("contents");
 
     text.message = "Saved <b>now</b>";
     text.flush();

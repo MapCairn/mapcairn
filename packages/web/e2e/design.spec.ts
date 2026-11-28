@@ -184,8 +184,8 @@ test.describe("design guide", () => {
   test("the keyboard reaches every interactive demo", async ({ page }) => {
     const design = new DesignPage(page);
     await design.goto();
-    // Natively disabled controls (the disabled Radix switch, slider and
-    // segmented control) are out of the Tab order by design, so they are left
+    // Natively disabled controls (the disabled switch, slider and segmented
+    // control) are out of the Tab order by design, so they are left
     // out; aria-disabled buttons stay focusable and are included. A segmented
     // control is one tab stop, which is its roving tabindex.
     const stops = await page.evaluate(() => {

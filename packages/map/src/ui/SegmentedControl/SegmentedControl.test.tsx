@@ -157,7 +157,7 @@ describe("SegmentedControl", () => {
     // Tabbing into the group lands on the selected item.
     group.focus();
     expect(document.activeElement).toBe(light);
-    // Radix moves focus in a timeout after the key press.
+    // The move may come after the key press has returned.
     fireEvent.keyDown(light, { key: "ArrowRight" });
     await waitFor(() => expect(document.activeElement).toBe(dark));
     fireEvent.keyDown(dark, { key: "ArrowLeft" });
@@ -180,7 +180,7 @@ describe("SegmentedControl", () => {
     );
     const dark = screen.getByRole("radio", { name: "Dark" });
     dark.focus();
-    // Radix items are native buttons, so Enter and Space arrive as clicks.
+    // The items are native buttons, so Enter and Space arrive as clicks.
     fireEvent.click(dark);
     expect(onValueChange).toHaveBeenCalledWith("dark");
   });

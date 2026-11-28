@@ -20,6 +20,13 @@ export class AnnouncementTextElement extends PrivateElement {
     this.message = "";
   }
 
+  override connectedCallback(): void {
+    super.connectedCallback();
+    // No box of its own: the region around the text stays the one pixel that
+    // hides it, as when the text sat in the region directly.
+    this.style.setProperty("display", "contents");
+  }
+
   protected override render(): unknown {
     return this.message;
   }
