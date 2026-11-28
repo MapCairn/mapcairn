@@ -2,6 +2,7 @@
 // Copyright MapCairn contributors
 import type { PropertyDeclarations } from "lit";
 import { defineUnderFreeName, PrivateElement } from "../../lit/PrivateElement";
+import { writer } from "./AnnouncementText.css";
 
 /**
  * The announcer's writer: the text inside one live region, as text and never as
@@ -22,9 +23,7 @@ export class AnnouncementTextElement extends PrivateElement {
 
   override connectedCallback(): void {
     super.connectedCallback();
-    // No box of its own: the region around the text stays the one pixel that
-    // hides it, as when the text sat in the region directly.
-    this.style.setProperty("display", "contents");
+    this.classList.add(writer);
   }
 
   protected override render(): unknown {

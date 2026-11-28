@@ -3,6 +3,7 @@
 import { screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { mountElement, unmountElements } from "../elementTestUtils";
+import { writer } from "../ui/LiveRegion/AnnouncementText.css";
 import type { SegmentedControlElement } from "../ui/SegmentedControl/SegmentedControlElement";
 import { definePrivateElements } from "./elements";
 
@@ -97,8 +98,10 @@ describe("the private announcement text element", () => {
       flush: () => void;
     };
     expect(text.textContent).toBe("");
-    // No box of its own, so the hidden region lays out as it did around text.
-    expect(text.style.display).toBe("contents");
+    // No box of its own, from a class, so the hidden region lays out as it did
+    // around text.
+    expect(text.classList.contains(writer)).toBe(true);
+    expect(text.hasAttribute("style")).toBe(false);
 
     text.message = "Saved <b>now</b>";
     text.flush();
