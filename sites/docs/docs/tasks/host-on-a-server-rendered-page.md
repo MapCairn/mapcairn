@@ -18,6 +18,7 @@ The SDK server-renders its chrome, but not the map. The map engine needs a canva
 - The packages import on a server without a browser. The root of `@mapcairn/sdk` carries no map engine, and the MapLibre adapter loads `maplibre-gl` only when a map mounts, so importing the adapter in server code starts no engine.
 - `ChromeSkeleton` is the server-rendered stand-in for the map's controls: the search box, the buttons and the credits button, in the places the live chrome uses, so nothing moves when the map takes over. It is decorative, so it is hidden from assistive technology and cannot take focus, and it sets no `style` attribute, so a strict Content Security Policy accepts it.
 - The map, with its chrome, mounts in the browser after hydration. Until then the server's markup stays, so the first paint does not wait for the engine.
+- In releases after `0.2.0`, `MapView` fetches part of its interface apart and renders nothing, on a server too, until that part has arrived: neither its `chrome` nor its children are mounted before then. This is not in `0.2.0` or any earlier release, where `MapView` renders the empty map region at once. The example below swaps the placeholder for `MapView` after hydration, so on a slow connection the space stays empty for a moment. To keep the placeholder until the map draws, render it beside `MapView` and remove it from a layout effect in a child of `MapView`, which mounts only then, and from `onEngineError`.
 
 ## Render the placeholder, then the map
 
@@ -164,6 +165,7 @@ Rendering the map itself on the server, or producing a map image where no one is
 ## When it goes wrong
 
 - **The map cannot start after hydration.** The placeholder is replaced by `MapView`, so if the engine then fails (no WebGL 2, a worker the policy blocks) the map region stays empty. `MapView` marks it `data-state="error"`, `useMap().error` holds the `MapEngineError`, and `onEngineError` is called. The chrome still shows, so tell the person: the English catalogue has "The map could not start. Reload the page to try again." as `app.banner.engineFailed`. [Troubleshooting](../troubleshooting.md#the-map-does-not-start) lists each message and fix.
+- **Part of the interface cannot be fetched.** In releases after `0.2.0`, if the part `MapView` fetches apart fails, or has not arrived after 30 seconds, `MapView` draws "The map could not start. Reload the page to try again." in a region named as the map is, announces it, calls `onEngineError` once with a `load-failed` error and never starts the engine. No chrome is drawn. This is not in `0.2.0` or any earlier release.
 - **The page's script never runs.** The server's placeholder stays, with `aria-busy="true"`. Put a `<noscript>` note beside it that says the map needs script.
 - **A hydration mismatch.** React reports it in the console when the server's markup and the first client render differ. Keep browser-only code, such as stored settings or `window`, inside what `ClientOnly` renders after hydration.
 

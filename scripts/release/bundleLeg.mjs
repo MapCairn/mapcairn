@@ -569,7 +569,7 @@ export function twoCopiesProblems({ copies, classesShared }) {
  * What a page downloads before the engine: the module, the chunk the module
  * and the element's file share, the runtime chunk, the stylesheet, the
  * element's file (a few lines, which a page that uses the tag loads too) and
- * the chunk of the private elements and Lit, which every map loads as it draws.
+ * the chunk of the private elements and Lit, which every map loads before it draws.
  */
 const FIRST_LOAD =
   /^browser(?:-(?:rolldown-runtime|shared|elements)-[\w-]+\.js|-element\.js|\.js|\.css)$/;

@@ -13,6 +13,8 @@ Find the message your app shows when the map does not start or the SDK stops wit
 
 `MapView` tells your app when the engine cannot start or stops later through its `onEngineError` prop, which receives a [`MapEngineError`](api/core/MapEngineError.md). The error's `reason` is one of `webgl-unavailable`, `load-failed`, `stopped` and `export-failed` ([`MapEngineErrorReason`](api/core/MapEngineErrorReason.md)). An engine that cannot start rejects the adapter's `mount`, and `MapView` turns that into the `onEngineError` call. The SDK decides nothing about what the visitor sees: your app shows its own message. The English catalogue has `app.banner.engineFailed` ("The map could not start. Reload the page to try again.") and `app.banner.engineStopped` ("The map stopped working. Reload the page to try again.") if you want words to start from.
 
+One failure is the exception, in releases after `0.2.0`: when the part of the interface that `MapView` fetches apart cannot be loaded, or has not arrived after 30 seconds, `MapView` shows the `app.banner.engineFailed` notice itself, in a region named as the map is, calls `onEngineError` once with a `load-failed` error and starts no engine. Check that your server serves every script file of your build. This is not in `0.2.0` or any earlier release.
+
 ### `MapLibre could not start: ...`
 
 Thrown by the adapter's `mount`, and reported through `onEngineError`. The reason is `webgl-unavailable` when MapLibre says it could not create a WebGL 2 context, and `load-failed` for any other failure when the map was created.

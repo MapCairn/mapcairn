@@ -97,8 +97,7 @@ function SegmentedControlPart({
 }
 
 /**
- * A single-choice control that shows all options at once, drawn by a private
- * Lit element.
+ * A single-choice control that shows all options at once.
  *
  * The group is a `radiogroup` and each item a `radio`, which is the right
  * semantics for a mutually exclusive choice. Focus moves between items with the
