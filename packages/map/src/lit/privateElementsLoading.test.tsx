@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
 import { act, render, screen } from "@testing-library/react";
-import { createElement } from "react";
+import { createElement, useEffect } from "react";
 import { hydrateRoot } from "react-dom/client";
 import { renderToString } from "react-dom/server";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 /**
  * The page before Lit has loaded: what is drawn, where focus goes and what is
@@ -61,14 +61,15 @@ function renderAnnouncer(page: ColdPage, onMount?: string) {
   let announce: ReturnType<ColdPage["useAnnounce"]> = () => undefined;
   const { useAnnounce, LiveRegionProvider } = page;
   function Child() {
-    announce = useAnnounce();
-    const [first] = [announce];
-    // An announcement from a child's own effect, in the first commit.
-    useMountEffect(() => {
+    const fromProvider = useAnnounce();
+    announce = fromProvider;
+    // An announcement from a child's own effect, in the first commit. The
+    // announcer is the same function across renders, so this runs once.
+    useEffect(() => {
       if (onMount !== undefined) {
-        first(onMount, { keep: true });
+        fromProvider(onMount, { keep: true });
       }
-    });
+    }, [fromProvider]);
     return null;
   }
   const view = render(
@@ -79,22 +80,7 @@ function renderAnnouncer(page: ColdPage, onMount?: string) {
   return { view, announce: () => announce };
 }
 
-let useMountEffect: (run: () => void) => void;
-
 describe("before the private elements have loaded", () => {
-  beforeEach(async () => {
-    const react = await import("react");
-    useMountEffect = (run) => {
-      const ran = react.useRef(false);
-      react.useEffect(() => {
-        if (!ran.current) {
-          ran.current = true;
-          run();
-        }
-      });
-    };
-  });
-
   afterEach(() => {
     vi.doUnmock("./privateElements");
     vi.useRealTimers();

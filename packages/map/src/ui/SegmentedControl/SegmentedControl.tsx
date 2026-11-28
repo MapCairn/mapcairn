@@ -112,6 +112,7 @@ function SegmentedControlPart({
  * @remarks It draws only in a browser: a server's markup holds nothing for it,
  *   and the first one on a page appears once its element has loaded.
  */
+// Destructured so the API report keeps naming the parameter `input`.
 export function SegmentedControl({ ...props }: SegmentedControlProps) {
   const elements = usePrivateElements();
   return (

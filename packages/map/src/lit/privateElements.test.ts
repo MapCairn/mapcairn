@@ -4,6 +4,7 @@ import { screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { mountElement, unmountElements } from "../elementTestUtils";
 import { writer } from "../ui/LiveRegion/AnnouncementText.css";
+import type { AnnouncementTextElement } from "../ui/LiveRegion/AnnouncementTextElement";
 import type { SegmentedControlElement } from "../ui/SegmentedControl/SegmentedControlElement";
 import { definePrivateElements } from "./elements";
 
@@ -87,16 +88,9 @@ describe("the private announcement text element", () => {
   afterEach(unmountElements);
 
   it("writes its message as text, and nothing when it has none", async () => {
-    const element = await mountElement(
-      document.createElement(tags.announcement) as HTMLElement & {
-        message: string;
-        updateComplete: Promise<boolean>;
-      } as never,
+    const text = await mountElement(
+      document.createElement(tags.announcement) as AnnouncementTextElement,
     );
-    const text = element as unknown as HTMLElement & {
-      message: string;
-      flush: () => void;
-    };
     expect(text.textContent).toBe("");
     // No box of its own, from a class, so the hidden region lays out as it did
     // around text.

@@ -57,7 +57,7 @@ The exact names are settled in steps 4 to 9, each with its API report. The outli
 - **Registration** is by function, never on import, except the existing `browser-element` entry. While React renders a private element, the React part calls its definition function on the client.
 - **Two copies on one page.** Element names are global to a page. A private element of one copy must never run another copy's class. Each copy defines its private elements under the first free numbered name, and its React part creates them by that name (`DESIGN.md`, "Private Lit elements").
 - **Replacing Radix.** The switch is a checkbox with `role="switch"` and the slider a range input. The segmented control stays `radiogroup` and `radio` on buttons with roving focus: arrow keys move, and Space or Enter chooses, as today. Native radio inputs would choose on each arrow press, which would load a language or redraw the map on the way past. `Tooltip` is deleted: no SDK component renders it.
-- **Icons** are Phosphor SVGs taken at build time from a development dependency, with its licence in the notices. The Biome restriction on that package is narrowed for the build step only. The reference host keeps `@phosphor-icons/react` for its own pages.
+- **Icons** are Phosphor SVGs taken at build time from a development dependency, with its licence in the notices (`DESIGN.md`, "Tokens"). The build step reads the files and imports nothing from that package, so the Biome restriction on it stands. The reference host keeps `@phosphor-icons/react` for its own pages.
 
 ### What must not change
 

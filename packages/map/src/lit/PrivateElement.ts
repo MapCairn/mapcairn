@@ -31,6 +31,7 @@ export class PrivateElement extends LitElement {
  * neither ever runs the other's class.
  *
  * @param stem What the element is, such as `segmented`.
+ * @param element This copy's class.
  * @returns The tag name it was defined under.
  */
 export function defineUnderFreeName(
