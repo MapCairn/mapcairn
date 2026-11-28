@@ -8,20 +8,16 @@ import {
   useCallback,
   useContext,
   useEffect,
-  useLayoutEffect,
   useMemo,
   useState,
 } from "react";
-import { usePrivateElements } from "../../lit/usePrivateElements";
 import { useOptionalMessages } from "../../services/hooks";
 import { VisuallyHidden } from "../VisuallyHidden";
 import {
   type Announce,
   type AnnouncePriority,
   createAnnouncer,
-  holdAnnouncements,
 } from "./announcer";
-import { RegionText } from "./RegionText";
 
 export type { Announce, AnnounceOptions, AnnouncePriority } from "./announcer";
 
@@ -56,9 +52,7 @@ export interface LiveRegionProviderProps {
  * Mounts the announcer for one React tree: a visually hidden polite `status`
  * region and a visually hidden assertive `alert` region. Nothing else in the
  * app may create a live region except `StatusMessage`, which is a visible
- * message. The regions are empty in a server's markup and from the first
- * render. A private Lit element writes the text inside them; what is announced
- * before it has loaded waits and is then spoken in order.
+ * message.
  * @remarks Mount one near the root of each React tree. Separate React roots
  *   each need their own provider and have their own announcer and throttle. A
  *   provider nested inside another shadows the outer one for the components
@@ -78,17 +72,6 @@ export function LiveRegionProvider({ children }: LiveRegionProviderProps) {
         setTexts((current) => ({ ...current, [priority]: text })),
     }),
   );
-  const [held] = useState(() => holdAnnouncements(announcer.announce));
-  const elements = usePrivateElements();
-  const waiting = elements.status === "loading";
-
-  // A layout effect runs after the writers below have mounted and before the
-  // effects of the app's own components, which may announce.
-  useLayoutEffect(() => {
-    if (!waiting) {
-      held.release();
-    }
-  }, [waiting, held]);
 
   useEffect(() => {
     if (nested && isDevelopment()) {
@@ -102,13 +85,13 @@ export function LiveRegionProvider({ children }: LiveRegionProviderProps) {
 
   const announce = useCallback<Announce>(
     (message, options) =>
-      held.announce(
+      announcer.announce(
         typeof message === "string"
           ? message
           : formatMessage(catalogueRef.current, message),
         options,
       ),
-    [held, catalogueRef],
+    [announcer, catalogueRef],
   );
 
   return (
@@ -121,7 +104,7 @@ export function LiveRegionProvider({ children }: LiveRegionProviderProps) {
         aria-atomic="true"
         data-testid="live-region-polite"
       >
-        <RegionText elements={elements} text={texts.polite} />
+        {texts.polite}
       </VisuallyHidden>
       <VisuallyHidden
         as="div"
@@ -130,7 +113,7 @@ export function LiveRegionProvider({ children }: LiveRegionProviderProps) {
         aria-atomic="true"
         data-testid="live-region-assertive"
       >
-        <RegionText elements={elements} text={texts.assertive} />
+        {texts.assertive}
       </VisuallyHidden>
     </LiveRegionContext.Provider>
   );

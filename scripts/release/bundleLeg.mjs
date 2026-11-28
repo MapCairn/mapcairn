@@ -465,14 +465,15 @@ export function hostilePageProblems({ clean, hostile }) {
 /**
  * @typedef {object} PrivateElementReading
  * @property {{ tag: string, shadow: boolean }[]} groups The element that is each `radiogroup`.
- * @property {string[]} writers The element inside each live region.
  * @property {{ entered: string, afterArrow: string, checkedAfterArrow: string, checkedAfterSpace: string }} keyboard The label of the focused or checked radio at each step on the Theme control.
- * @property {string} announced What the polite region said after a choice that is announced.
+ * @property {string} announced What the polite region said after the globe was chosen.
  */
+
+/** What the announcer says when the globe is chosen (`announce.projection.globe`; a test keeps them equal). */
+export const GLOBE_ANNOUNCEMENT = "Map shape: globe";
 
 /** The private element a segmented control is: its stem and a copy's number. */
 const SEGMENTED_TAG = /^mapcairn-segmented-\d+$/;
-const WRITER_TAG = /^mapcairn-announcement-\d+$/;
 
 /** What the keyboard steps must give, on a Theme control that starts on System. */
 const THEME_KEYS = {
@@ -489,12 +490,7 @@ const THEME_KEYS = {
  * @param {PrivateElementReading} reading
  * @returns {string[]}
  */
-export function privateElementProblems({
-  groups,
-  writers,
-  keyboard,
-  announced,
-}) {
+export function privateElementProblems({ groups, keyboard, announced }) {
   const problems = [];
   const isElement = (
     /** @type {{ tag: string, shadow: boolean }} */ { tag, shadow },
@@ -504,18 +500,15 @@ export function privateElementProblems({
       `a segmented control is not the private element in the light DOM: ${JSON.stringify(groups)}`,
     );
   }
-  if (writers.length === 0 || !writers.every((tag) => WRITER_TAG.test(tag))) {
-    problems.push(
-      `a live region is not written by the private element: ${JSON.stringify(writers)}`,
-    );
-  }
   if (JSON.stringify(keyboard) !== JSON.stringify(THEME_KEYS)) {
     problems.push(
       `the segmented control's keys gave ${JSON.stringify(keyboard)}, not ${JSON.stringify(THEME_KEYS)}`,
     );
   }
-  if (announced === "") {
-    problems.push("the announcer said nothing after a choice it announces");
+  if (announced !== GLOBE_ANNOUNCEMENT) {
+    problems.push(
+      `after the globe was chosen the announcer said ${JSON.stringify(announced)}, not "${GLOBE_ANNOUNCEMENT}"`,
+    );
   }
   return problems;
 }

@@ -3,8 +3,6 @@
 import { screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { mountElement, unmountElements } from "../elementTestUtils";
-import { writer } from "../ui/LiveRegion/AnnouncementText.css";
-import type { AnnouncementTextElement } from "../ui/LiveRegion/AnnouncementTextElement";
 import type { SegmentedControlElement } from "../ui/SegmentedControl/SegmentedControlElement";
 import { definePrivateElements } from "./elements";
 
@@ -84,28 +82,6 @@ describe("the private segmented control element", () => {
   });
 });
 
-describe("the private announcement text element", () => {
-  afterEach(unmountElements);
-
-  it("writes its message as text, and nothing when it has none", async () => {
-    const text = await mountElement(
-      document.createElement(tags.announcement) as AnnouncementTextElement,
-    );
-    expect(text.textContent).toBe("");
-    // No box of its own, from a class, so the hidden region lays out as it did
-    // around text.
-    expect(text.classList.contains(writer)).toBe(true);
-    expect(text.hasAttribute("style")).toBe(false);
-
-    text.message = "Saved <b>now</b>";
-    text.flush();
-
-    expect(text.textContent).toBe("Saved <b>now</b>");
-    expect(text.querySelector("b")).toBeNull();
-    expect(text.shadowRoot).toBeNull();
-  });
-});
-
 describe("two copies of the package on one page", () => {
   afterEach(unmountElements);
 
@@ -113,15 +89,13 @@ describe("two copies of the package on one page", () => {
     vi.resetModules();
     const second = (await import("./elements")).definePrivateElements();
 
-    for (const kind of ["segmented", "announcement"] as const) {
-      expect(second[kind]).not.toBe(tags[kind]);
-      const first = customElements.get(tags[kind]);
-      const other = customElements.get(second[kind]);
-      expect(first).toBeDefined();
-      expect(other).toBeDefined();
-      expect(other).not.toBe(first);
-      expect(document.createElement(tags[kind]).constructor).toBe(first);
-      expect(document.createElement(second[kind]).constructor).toBe(other);
-    }
+    expect(second.segmented).not.toBe(tags.segmented);
+    const first = customElements.get(tags.segmented);
+    const other = customElements.get(second.segmented);
+    expect(first).toBeDefined();
+    expect(other).toBeDefined();
+    expect(other).not.toBe(first);
+    expect(document.createElement(tags.segmented).constructor).toBe(first);
+    expect(document.createElement(second.segmented).constructor).toBe(other);
   });
 });

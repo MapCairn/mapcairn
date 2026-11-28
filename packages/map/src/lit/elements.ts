@@ -5,14 +5,10 @@
  * which needs a browser: only `privateElements` imports it, with a dynamic
  * `import()`.
  */
-import { defineAnnouncementText } from "../ui/LiveRegion/AnnouncementTextElement";
 import { defineSegmentedControl } from "../ui/SegmentedControl/SegmentedControlElement";
 import type { PrivateElementTags } from "./privateElements";
 
 /** Defines the private elements and gives the names they were defined under. */
 export function definePrivateElements(): PrivateElementTags {
-  return {
-    segmented: defineSegmentedControl(),
-    announcement: defineAnnouncementText(),
-  };
+  return { segmented: defineSegmentedControl() };
 }

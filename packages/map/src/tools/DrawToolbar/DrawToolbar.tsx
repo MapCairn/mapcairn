@@ -22,11 +22,10 @@ import {
   Warning,
   X,
 } from "@phosphor-icons/react";
-import { type KeyboardEvent, useCallback, useRef } from "react";
+import { type KeyboardEvent, useCallback, useEffect, useRef } from "react";
 import { useFocusTarget } from "../../chrome/focusRegistry";
 import { useScrollEdges } from "../../chrome/useScrollEdges";
 import { useLandmarkName } from "../../host/useLandmarkName";
-import { useFocusWhenDrawn } from "../../lit/useFocusWhenDrawn";
 import { useFormatMessage, useMessages } from "../../services";
 import { Button } from "../../ui/Button";
 import { Icon } from "../../ui/Icon";
@@ -216,13 +215,13 @@ export function DrawToolbar({ draw, onDone, onOpenShapes }: DrawToolbarProps) {
 
   // Coming back from the sheet, focus is put on the Shapes button before this
   // runs, and the toolbar leaves it there.
-  useFocusWhenDrawn(() => {
+  useEffect(() => {
     const root = rootRef.current;
     if (!root || root.contains(root.ownerDocument.activeElement)) {
       return;
     }
     root.querySelector<HTMLElement>('[role="radio"][data-state="on"]')?.focus();
-  });
+  }, []);
 
   const setRoot = useCallback(
     (root: HTMLElement | null) => {

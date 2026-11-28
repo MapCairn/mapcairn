@@ -15,6 +15,7 @@ import {
   elementProblems,
   FIRST_LOAD_BUILD,
   fileRequestProblems,
+  GLOBE_ANNOUNCEMENT,
   hostilePageProblems,
   hostParityProblems,
   leakProblems,
@@ -26,6 +27,7 @@ import {
   // @ts-expect-error The scripts are dependency-free JavaScript with JSDoc types.
 } from "../../../../scripts/release/bundleLeg.mjs";
 import { BUILT_IN_BASEMAP_CATALOGUE } from "../basemaps";
+import { EN_GB_CATALOGUE } from "../messages/en-GB";
 
 const PAGE = "http://127.0.0.1:4196";
 
@@ -381,18 +383,23 @@ describe("privateElementProblems", () => {
       { tag: "mapcairn-segmented-1", shadow: false },
       { tag: "mapcairn-segmented-1", shadow: false },
     ],
-    writers: ["mapcairn-announcement-1", "mapcairn-announcement-1"],
     keyboard: {
       entered: "System",
       afterArrow: "Light",
       checkedAfterArrow: "System",
       checkedAfterSpace: "Light",
     },
-    announced: "Globe view.",
+    announced: "Map shape: globe",
   };
 
-  it("passes when the elements drew in the light DOM, took the keys and spoke", () => {
+  it("passes when the elements drew in the light DOM, took the keys and the choice was announced", () => {
     expect(privateElementProblems(good)).toEqual([]);
+  });
+
+  it("waits for the words the English catalogue gives the globe", () => {
+    expect(GLOBE_ANNOUNCEMENT).toBe(
+      EN_GB_CATALOGUE["announce.projection.globe"],
+    );
   });
 
   it.each([
@@ -405,7 +412,6 @@ describe("privateElementProblems", () => {
       "a control has a shadow root",
       { groups: [{ tag: "mapcairn-segmented-1", shadow: true }] },
     ],
-    ["the announcer's writer is missing", { writers: [] }],
     [
       "an arrow key chose",
       { keyboard: { ...good.keyboard, checkedAfterArrow: "Light" } },
@@ -423,6 +429,10 @@ describe("privateElementProblems", () => {
       { keyboard: { ...good.keyboard, checkedAfterSpace: "System" } },
     ],
     ["nothing was announced", { announced: "" }],
+    [
+      "an earlier message was all that was said",
+      { announced: "Map shape: flat" },
+    ],
   ])("fails when %s", (_case, change) => {
     expect(privateElementProblems({ ...good, ...change })).not.toEqual([]);
   });
@@ -453,7 +463,7 @@ describe("plantedStyleProblems", () => {
 
 describe("twoCopiesProblems", () => {
   const copy = (n: number) => ({
-    tags: [`mapcairn-segmented-${n}`, `mapcairn-announcement-${n}`],
+    tags: [`mapcairn-segmented-${n}`],
     chosen: "Light",
   });
   const good = { copies: [copy(1), copy(2)], classesShared: false };

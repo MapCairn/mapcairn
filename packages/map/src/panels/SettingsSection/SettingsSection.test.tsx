@@ -280,17 +280,7 @@ describe("a failed language load", () => {
     expect(screen.getByTestId("live-region-polite")).toHaveTextContent(
       "Afrikaans could not be loaded.",
     );
-    // The region holds the announcer's writer and nothing else, and the writer
-    // holds no text and no element.
-    const [writer, ...others] = screen.getByTestId(
-      "live-region-assertive",
-    ).childNodes;
-    expect(others).toEqual([]);
-    expect(writer?.nodeName.toLowerCase()).toMatch(
-      /^mapcairn-announcement-\d+$/,
-    );
-    expect(writer?.textContent).toBe("");
-    expect((writer as Element).children).toHaveLength(0);
+    expect(screen.getByTestId("live-region-assertive")).toBeEmptyDOMElement();
   });
 
   it("is not a live region itself, so nothing is read twice", async () => {

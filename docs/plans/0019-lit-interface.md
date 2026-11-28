@@ -51,6 +51,7 @@ The exact names are settled in steps 4 to 9, each with its API report. The outli
 ### Inside the element
 
 - **Reactive properties** use `static properties` with `declare` fields set in the constructor, and no decorators. The base `tsconfig` keeps class fields on, where a plain field would hide Lit's accessor.
+- **What a template is for.** Behaviour that only writes DOM text or attributes does not go through a Lit template: it stays plain, synchronous DOM code. Live regions are plain nodes. A template written later cannot add anything to such code but a delay before what it writes is in the page.
 - **Light DOM.** `createRenderRoot()` returns the element, so Lit's `static styles` are not used and the vanilla-extract stylesheet ships as it does now.
 - **CSP.** No `style` attribute binding in a template: the production policy is `style-src 'self'`. Computed styles are set through `element.style.setProperty`.
 - **Wiring.** A parent hands each private element the controller or the values it needs as properties. There is no context lookup. Each map makes one id prefix, from a counter and a random suffix, for `aria-controls` and label ids.
@@ -83,7 +84,7 @@ Known changes to specs: `theme-override` loses its tooltip tests and `a11y` its 
 Each step is one pull request or a short run of them, with the build green.
 
 1. **Groundwork.** `lit` in `map` (`licence:sdk`); copy check and harmony scanner read Lit templates; the `style` binding rule; the dependency-cruiser rules that would refuse `lit`; the element test setup; the icon build step with `map`'s notices file; size and speed baselines and the temporary ceilings.
-2. **First element: the risk check.** One segmented control and the announcer in Lit, rendered by the React interface.
+2. **First element: the risk check.** The segmented control in Lit, rendered by the React interface. The announcer only writes text, so by the rule in "Inside the element" it stays plain DOM code (`announcer.ts` knows no framework), and its regions are plain nodes.
 3. **Message store** in `core`. `ServicesProvider` and the host read it.
 4. **The element moves to `map`,** with `MountMapError`, validation, tools, types, layers and languages. `sdk/src/browser` bundles it with its defaults. The layer table does not change. No behaviour change.
 5. **Controller, part one:** surfaces, pin, measure, focus return, the shared link and saved view. Full `Services`.

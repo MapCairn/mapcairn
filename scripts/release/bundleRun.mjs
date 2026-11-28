@@ -37,6 +37,7 @@ import {
   cycleProblems,
   elementProblems,
   fileRequestProblems,
+  GLOBE_ANNOUNCEMENT,
   hostilePageProblems,
   hostParityProblems,
   hostStyleProblems,
@@ -435,8 +436,8 @@ async function readHostStyles(page) {
 
 /**
  * Draws and uses the private elements on a map with Settings: what each
- * `radiogroup` and live region is made of, the Theme control's keys, and what
- * the announcer says after the map's shape is chosen.
+ * `radiogroup` is made of, the Theme control's keys, and what the announcer
+ * says after the map's shape is chosen.
  *
  * @param {import("playwright-core").Page} page The leg's `parity.html`.
  * @returns {Promise<import("./bundleLeg.mjs").PrivateElementReading>}
@@ -446,17 +447,12 @@ async function readPrivateElements(page) {
   await page.getByRole("button", { name: "Settings" }).first().click();
   const theme = page.getByRole("radiogroup", { name: "Theme" });
   await theme.waitFor();
-  const parts = await page.evaluate(() => ({
-    groups: [...document.querySelectorAll('#map [role="radiogroup"]')].map(
-      (group) => ({
-        tag: group.localName,
-        shadow: group.shadowRoot !== null,
-      }),
-    ),
-    writers: [...document.querySelectorAll("#map [aria-live]")].map(
-      (region) => region.firstElementChild?.localName ?? "",
-    ),
-  }));
+  const groups = await page.evaluate(() =>
+    [...document.querySelectorAll('#map [role="radiogroup"]')].map((group) => ({
+      tag: group.localName,
+      shadow: group.shadowRoot !== null,
+    })),
+  );
   const focused = () =>
     page.evaluate(() => document.activeElement?.textContent?.trim() ?? "");
   const checked = async () =>
@@ -469,19 +465,21 @@ async function readPrivateElements(page) {
   await page.keyboard.press("Space");
   const checkedAfterSpace = await checked();
   await page.getByRole("radio", { name: "Globe" }).click();
-  const announced = await page
+  const polite = '#map [role="status"][aria-live]';
+  // An earlier message may still be in the region, so the wait is for this one.
+  await page
     .waitForFunction(
-      () =>
-        document.querySelector('#map [role="status"][aria-live]')?.textContent,
-      undefined,
+      ({ selector, said }) =>
+        document.querySelector(selector)?.textContent === said,
+      { selector: polite, said: GLOBE_ANNOUNCEMENT },
       { timeout: SETTLE_TIMEOUT },
     )
-    .then((handle) => handle.jsonValue())
-    .catch(() => "");
+    .catch(() => undefined);
+  const announced = (await page.locator(polite).textContent()) ?? "";
   return {
-    ...parts,
+    groups,
     keyboard: { entered, afterArrow, checkedAfterArrow, checkedAfterSpace },
-    announced: String(announced),
+    announced,
   };
 }
 
@@ -517,7 +515,7 @@ async function readCopies(page) {
       ...new Set(
         [...container.querySelectorAll("*")]
           .map((element) => element.localName)
-          .filter((name) => /^mapcairn-(?:segmented|announcement)-/.test(name)),
+          .filter((name) => name.startsWith("mapcairn-segmented-")),
       ),
     ]);
     copies.push({ tags, chosen });
@@ -811,7 +809,7 @@ async function checkPlainPage(browser, folder) {
   }
   const [first, second] = cycles;
   return [
-    "under the policy the segmented control and the announcer's writer drew as private elements in the light DOM with no violation, the Theme control took the keys as it should (arrows move, Space chooses) and the announcer spoke: ok",
+    "under the policy the segmented control drew as a private element in the light DOM with no violation, the Theme control took the keys as it should (arrows move, Space chooses) and choosing the globe was announced: ok",
     "two copies of the bundle on one page defined their private elements under different names, each running its own class and taking a choice: ok",
     "a style binding planted in a Lit template was reported by the policy, so the empty lists of violations above mean something: ok",
     `it drew the default basemap's frame from the fixtures, with its tile set, a vector tile and the sprite fetched from ${OPEN_FREE_MAP_ORIGIN}: ok`,

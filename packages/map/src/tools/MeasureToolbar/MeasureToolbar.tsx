@@ -1,9 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
 import { ArrowUUpLeft, Crosshair, Trash } from "@phosphor-icons/react";
-import { useRef } from "react";
+import { useEffect, useRef } from "react";
 import { useLandmarkName } from "../../host/useLandmarkName";
-import { useFocusWhenDrawn } from "../../lit/useFocusWhenDrawn";
 import { useMessages } from "../../services";
 import { Button } from "../../ui/Button";
 import { IconButton } from "../../ui/IconButton";
@@ -56,10 +55,9 @@ export function MeasureToolbar({
   const rootRef = useRef<HTMLElement>(null);
   const empty = points.length === 0;
 
-  // The first button is in the mode switch, so focus waits for it to be drawn.
-  useFocusWhenDrawn(() => {
+  useEffect(() => {
     rootRef.current?.querySelector("button")?.focus();
-  });
+  }, []);
 
   return (
     <section

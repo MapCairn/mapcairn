@@ -9,13 +9,13 @@ import { ProductPage } from "./ProductPage";
 const RELEASE = { version: "0.1.0", date: "2026-11-21" } as const;
 
 /**
- * The announcer's regions come from the server and its writer is a private
- * element that draws only in a browser. The page runs no framework script in
- * production, so this is what holds a hydration of it, as a client render of
- * the route would do, to the server's markup.
+ * The page's copy script announces into the live regions the server sends. The
+ * page runs no framework script in production, so this is what holds a
+ * hydration of it, as a client render of the route would do, to the server's
+ * markup.
  */
 describe("the product page's server render", () => {
-  it("holds both live regions empty and hydrates them as they are, with the writers added after", async () => {
+  it("holds both live regions empty and hydrates them as they are", async () => {
     const page = <ProductPage release={RELEASE} />;
     const container = document.body.appendChild(document.createElement("div"));
     container.innerHTML = renderToString(page);
@@ -36,8 +36,7 @@ describe("the product page's server render", () => {
     expect(mismatch).not.toHaveBeenCalled();
     expect(regions()).toEqual(served);
     for (const region of served) {
-      expect(region.children).toHaveLength(1);
-      expect(region.textContent).toBe("");
+      expect(region.childNodes).toHaveLength(0);
     }
     act(() => root.unmount());
     container.remove();

@@ -5,7 +5,6 @@ import { createLazyDefinition } from "./lazyDefinition";
 /** The tag names this copy of the package defined its private elements under. */
 export interface PrivateElementTags {
   readonly segmented: string;
-  readonly announcement: string;
 }
 
 /**
