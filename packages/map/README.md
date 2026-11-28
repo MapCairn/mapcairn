@@ -34,7 +34,7 @@ import "@mapcairn/theme/tokens.css";
 import "@mapcairn/map/styles.css";
 ```
 
-The JavaScript imports no CSS, so the components render on the server as plain modules. In releases after `0.2.0` there are two exceptions, which render nothing on a server: `MapView`, which fetches part of the interface apart and draws nothing until that part has arrived, and `SegmentedControl`. This is not in `0.2.0` or any earlier release. A few things are yours to provide:
+The JavaScript imports no CSS, so the components render on the server as plain modules. Two things differ in releases after `0.2.0`, and neither is in `0.2.0` or any earlier release. Part of the interface is fetched apart. A `MapView` mounted in the browser renders nothing, its `chrome` included, until that part has arrived, so a test that renders one waits for it to appear. A server renders the `MapView` region and its `chrome` as before, but a server's markup holds nothing for a `SegmentedControl`. A few things are yours to provide:
 
 - `MapChrome` fills its container, so give `html`, `body` and the element you render into a height.
 - The tokens name the IBM Plex Sans Variable font, which your app loads (for example from `@fontsource-variable/ibm-plex-sans`; [Get started](https://docs.mapcairn.com/#add-the-font-optional) shows how). Without it the type uses the system font through the fallback stack, whose metric-matched face `tokens.css` already declares.

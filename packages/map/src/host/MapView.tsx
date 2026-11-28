@@ -31,6 +31,7 @@ import { VisuallyHidden } from "../ui/VisuallyHidden";
 import { MapCannotStart } from "./MapCannotStart";
 import { MapContext, type MapContextValue } from "./MapContext";
 import * as styles from "./MapView.css";
+import { useDrawnByAServer } from "./useDrawnByAServer";
 import { landmarkName } from "./useLandmarkName";
 import { type MapLongPressEvent, useLongPress } from "./useLongPress";
 import { useMapEngine } from "./useMapEngine";
@@ -382,17 +383,20 @@ function DrawnMapView({
  * - A new basemap is swapped in on the mounted engine, keeping the centre,
  *   zoom and bearing. This component, its children and the chrome around it
  *   stay mounted.
- * - Before it draws, it loads the part of the interface that is fetched apart,
- *   once for the page: until that has arrived it renders nothing, and neither
- *   `chrome` nor `children` are mounted, so every control is in the page when
- *   they are. A server renders nothing for it, so send a placeholder of your
- *   own where the map goes. This is not in `0.2.0` or any earlier release,
- *   where the empty map region is rendered at once, on a server too.
- * - If that part cannot be loaded, or has not arrived after 30 seconds, it
- *   draws a notice that the map could not start in a region named as the map
- *   is, announces it, calls `onEngineError` with a `load-failed` error once and
- *   never starts the engine. Reloading the page tries again. This too is not in
- *   `0.2.0` or any earlier release.
+ * - Part of the interface is fetched apart, once for the page. A map view
+ *   mounted in the browser renders nothing until that part has arrived, and
+ *   neither `chrome` nor `children` are mounted before then, so every control
+ *   is in the page when they are. This is not in `0.2.0` or any earlier
+ *   release, where the empty map region is rendered at once.
+ * - A server renders the empty region and `chrome`, and the view that hydrates
+ *   that markup keeps it and starts the engine without waiting. In releases
+ *   after `0.2.0` a segmented control in it is absent from the server's markup
+ *   and is drawn once that part has arrived.
+ * - If that part cannot be loaded, or has not arrived after 30 seconds, the
+ *   view shows a notice that the map could not start, in a region named as the
+ *   map is, in place of anything it had drawn. It announces the notice and
+ *   calls `onEngineError` with a `load-failed` error once. Reloading the page
+ *   tries again. This is not in `0.2.0` or any earlier release.
  * - No style attributes are rendered, so it works under `style-src 'self'`.
  *   `data-zoom` is written with `setAttribute` once the engine reports a zoom.
  * - The host fills its parent; `MapChrome` owns its placement.
@@ -400,12 +404,14 @@ function DrawnMapView({
  */
 export function MapView({ ...props }: MapViewProps) {
   const elements = useLoadedPrivateElements();
-  if (elements.status === "ready") {
+  const serverDrawn = useDrawnByAServer();
+  const failed = elements.status === "failed";
+  if (!failed && (serverDrawn || elements.status === "ready")) {
     return <DrawnMapView {...props} />;
   }
   return (
     <>
-      {elements.status === "failed" ? (
+      {failed ? (
         <MapCannotStart
           basemap={props.basemap}
           onEngineError={props.onEngineError}

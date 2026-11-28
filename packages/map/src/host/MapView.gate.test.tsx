@@ -2,7 +2,7 @@
 // Copyright MapCairn contributors
 import { EN_GB_CATALOGUE } from "@mapcairn/core";
 import { act, render, screen } from "@testing-library/react";
-import { createElement, type ReactNode } from "react";
+import { createElement, type ReactNode, useState } from "react";
 import { hydrateRoot } from "react-dom/client";
 import { renderToString } from "react-dom/server";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -44,6 +44,8 @@ async function coldPage() {
   const { MeasureToolbar, useMeasure } = await import(
     "../tools/MeasureToolbar"
   );
+  const { DrawToolbar, useDraw } = await import("../tools/DrawToolbar");
+  const { FocusRegistryProvider } = await import("../chrome/focusRegistry");
   const { MapView } = await import("./MapView");
   const { privateElements, ELEMENTS_LOAD_TIMEOUT_MS } = await import(
     "../lit/privateElements"
@@ -63,6 +65,32 @@ async function coldPage() {
       />
     );
   }
+  function Draw() {
+    return (
+      <DrawToolbar
+        draw={useDraw({
+          units: "metric",
+          active: true,
+          getAdapter: () => null,
+        })}
+        onDone={() => undefined}
+        onOpenShapes={() => undefined}
+      />
+    );
+  }
+  /** A tool that opens when asked, as the draw tool does from the map's chrome. */
+  function DrawOpener() {
+    const [open, setOpen] = useState(false);
+    return open ? (
+      <FocusRegistryProvider focusMap={() => undefined}>
+        <Draw />
+      </FocusRegistryProvider>
+    ) : (
+      <button type="button" onClick={() => setOpen(true)}>
+        Open Draw
+      </button>
+    );
+  }
   const page = (view: ReactNode) => (
     <ServicesProvider services={services}>
       <LiveRegionProvider>{view}</LiveRegionProvider>
@@ -73,6 +101,7 @@ async function coldPage() {
     page,
     MapView,
     Toolbar,
+    DrawOpener,
     basemap: core.FAKE_RASTER_BASEMAP,
     CoreEngineError: core.MapEngineError,
     bound: ELEMENTS_LOAD_TIMEOUT_MS,
@@ -125,33 +154,6 @@ describe("a map view before its interface has loaded", () => {
     expect(document.activeElement).toBe(
       screen.getByRole("radio", { name: "Distance" }),
     );
-  });
-
-  it("holds nothing in a server's markup and hydrates it as it is, even once loaded", async () => {
-    const cold = await coldPage();
-    const tree = cold.page(
-      <cold.MapView initialView={VIEW} basemap={cold.basemap} />,
-    );
-    const container = document.body.appendChild(document.createElement("div"));
-    container.innerHTML = renderToString(tree);
-    expect(container.querySelector("[data-map-host]")).toBeNull();
-    await cold.load();
-    const mismatch = vi.fn();
-
-    const root = await act(async () =>
-      hydrateRoot(
-        container,
-        createElement(() => tree),
-        {
-          onRecoverableError: mismatch,
-        },
-      ),
-    );
-
-    expect(mismatch).not.toHaveBeenCalled();
-    expect(container.querySelector("[data-map-host]")).not.toBeNull();
-    act(() => root.unmount());
-    container.remove();
   });
 
   it("says once, visibly and aloud, that the map could not start when the load fails", async () => {
@@ -237,5 +239,104 @@ describe("a map view before its interface has loaded", () => {
     );
     expect(assertive()).toHaveTextContent(NOTICE);
     expect(onEngineError).toHaveBeenCalledTimes(1);
+  });
+});
+
+/**
+ * Puts a server's markup of a map view, with a draw tool the page can open, in
+ * the document and hydrates it while the interface has not loaded.
+ */
+async function hydratedColdPage() {
+  const cold = await coldPage();
+  const onEngineError = vi.fn();
+  const tree = cold.page(
+    <cold.MapView
+      initialView={VIEW}
+      basemap={cold.basemap}
+      onEngineError={onEngineError}
+      chrome={(map) => (
+        <>
+          {map}
+          <cold.DrawOpener />
+        </>
+      )}
+    />,
+  );
+  const container = document.body.appendChild(document.createElement("div"));
+  container.innerHTML = renderToString(tree);
+  const served = container.querySelector("[data-map-host]");
+  const mismatch = vi.fn();
+  const root = await act(async () =>
+    hydrateRoot(
+      container,
+      createElement(() => tree),
+      { onRecoverableError: mismatch },
+    ),
+  );
+  return {
+    cold,
+    served,
+    mismatch,
+    onEngineError,
+    host: () => container.querySelector("[data-map-host]"),
+    close: () => {
+      act(() => root.unmount());
+      container.remove();
+    },
+  };
+}
+
+describe("a map view a server has drawn, before its interface has loaded", () => {
+  afterEach(() => {
+    vi.doUnmock("../lit/privateElements");
+    vi.restoreAllMocks();
+  });
+
+  it("keeps the server's map region and chrome and hydrates them as they are", async () => {
+    const page = await hydratedColdPage();
+
+    expect(page.served).not.toBeNull();
+    expect(page.host()).toBe(page.served);
+    expect(
+      screen.getByRole("button", { name: "Open Draw" }),
+    ).toBeInTheDocument();
+    expect(page.mismatch).not.toHaveBeenCalled();
+    expect(page.cold.adapters).toHaveLength(1);
+
+    await page.cold.load();
+
+    expect(page.host()).toBe(page.served);
+    expect(page.cold.adapters).toHaveLength(1);
+    page.close();
+  });
+
+  it("gives a tool opened before the load its focus, and keeps it there", async () => {
+    const page = await hydratedColdPage();
+
+    act(() => screen.getByRole("button", { name: "Open Draw" }).click());
+    const first = screen.getByTestId("draw-add-point");
+    expect(screen.queryByRole("radio")).toBeNull();
+    expect(document.activeElement).toBe(first);
+
+    await page.cold.load();
+
+    expect(screen.getByRole("radio", { name: "Point" })).toBeInTheDocument();
+    expect(document.activeElement).toBe(first);
+    page.close();
+  });
+
+  it("replaces what it had drawn with the notice, said once, when the load fails", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => undefined);
+    const page = await hydratedColdPage();
+
+    await page.cold.fail();
+
+    expect(screen.queryByRole("button", { name: "Open Draw" })).toBeNull();
+    expect(screen.getByRole("region", { name: "Map" })).toHaveTextContent(
+      NOTICE,
+    );
+    expect(assertive()).toHaveTextContent(NOTICE);
+    expect(page.onEngineError).toHaveBeenCalledTimes(1);
+    page.close();
   });
 });

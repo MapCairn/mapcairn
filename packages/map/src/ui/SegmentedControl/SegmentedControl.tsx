@@ -108,11 +108,12 @@ function SegmentedControlPart({
  * ignored. The selected item is filled and shows a check mark, so selection
  * never relies on colour alone.
  *
- * @remarks Part of it is fetched apart. Inside a `MapView`, which loads that
- *   before it draws anything, the control is there from its first render.
- *   Outside one it asks for the load itself and appears when it has arrived,
- *   and a server's markup holds nothing for it. This is not in `0.2.0` or any
- *   earlier release, where it renders anywhere at once, on a server too.
+ * @remarks Part of it is fetched apart. Inside a `MapView` mounted in the
+ *   browser, which loads that before it draws anything, the control is there
+ *   from its first render. Anywhere else it asks for the load itself and
+ *   appears when it has arrived, and a server's markup holds nothing for it.
+ *   This is not in `0.2.0` or any earlier release, where it renders anywhere at
+ *   once, on a server too.
  */
 // Destructured so the API report keeps naming the parameter `input`.
 export function SegmentedControl({ ...props }: SegmentedControlProps) {
