@@ -17,6 +17,7 @@ import { fileURLToPath } from "node:url";
 import { gzipSync } from "node:zlib";
 import { bundleOf, NOTICES_FILE } from "../bundleSettings.mjs";
 import { isEntryPoint } from "../entryPoint.mjs";
+import { iconSettingsOf } from "../icons.mjs";
 import { SDK_PACKAGES } from "../sdkPackages.mjs";
 import { parsePackListing, runNpm } from "./npm.mjs";
 
@@ -48,8 +49,9 @@ export const SIZE_CEILINGS = {
 /**
  * The most the files of a package's bundle may weigh, in gzipped bytes: each
  * of its `dist` files that starts with the name of a bundle entry (`browser`),
- * and the notices file, each gzipped alone and added up. About 1.06
- * times what the bundle weighs now (800,000 against about 752,000), so small growth passes and a
+ * and the notices file, each gzipped alone and added up. About 1.02
+ * times what the bundle weighs now (800,000 against about 786,000, with both
+ * React and Lit in it while the interface moves from one to the other), so a
  * second copy of the engine or of React (about 330 and 75 kilobytes gzipped)
  * does not. The rest of such a package is measured the same way and stays
  * under `SIZE_CEILINGS`. Raising one is a deliberate edit in a pull request.
@@ -461,11 +463,12 @@ export function gzippedBytes(files, readFile) {
  *
  * @param {string} file
  * @param {readonly string[]} extraRootFiles
+ * @param {string} writer The build that writes the extra file.
  * @returns {string}
  */
-function missingRootFile(file, extraRootFiles) {
+function missingRootFile(file, extraRootFiles, writer) {
   const hint = extraRootFiles.includes(file)
-    ? " (the bundle build writes it: run npm run build:sdk)"
+    ? ` (the ${writer} writes it: run npm run build:sdk)`
     : "";
   return `${file}: missing from the tarball${hint}`;
 }
@@ -557,7 +560,9 @@ export function checkPackage({
   /** @type {string[]} */
   const problems = [];
   const bundle = bundleOf(manifest);
-  const extraRootFiles = bundle === undefined ? [] : [NOTICES_FILE];
+  const copiesIcons = iconSettingsOf(manifest) !== undefined;
+  const extraRootFiles =
+    bundle === undefined && !copiesIcons ? [] : [NOTICES_FILE];
   const paths = listing.files.map((file) => file.path.replaceAll("\\", "/"));
   for (const file of paths) {
     const reason = classifyFile(file, extraRootFiles);
@@ -568,7 +573,13 @@ export function checkPackage({
   const present = new Set(paths);
   for (const required of [...ROOT_FILES, ...extraRootFiles]) {
     if (!present.has(required)) {
-      problems.push(missingRootFile(required, extraRootFiles));
+      problems.push(
+        missingRootFile(
+          required,
+          extraRootFiles,
+          bundle === undefined ? "build" : "bundle build",
+        ),
+      );
     }
   }
   const targets = exportTargetsOf(manifest);

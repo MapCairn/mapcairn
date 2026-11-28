@@ -23,16 +23,20 @@ import {
   useMemo,
   useRef,
 } from "react";
+import { useLoadedPrivateElements } from "../lit/usePrivateElements";
 import { useMessages, usePreferences } from "../services";
 import { LiveRegionScope } from "../ui/LiveRegion";
 import { StatusMessageFocusProvider } from "../ui/StatusMessage";
 import { VisuallyHidden } from "../ui/VisuallyHidden";
+import { MapCannotStart } from "./MapCannotStart";
 import { MapContext, type MapContextValue } from "./MapContext";
 import * as styles from "./MapView.css";
+import { useDrawnByAServer } from "./useDrawnByAServer";
 import { landmarkName } from "./useLandmarkName";
 import { type MapLongPressEvent, useLongPress } from "./useLongPress";
 import { useMapEngine } from "./useMapEngine";
 import { usePointerPosition } from "./usePointerPosition";
+import { ELEMENTS_LOAD_TIMEOUT_MS, useWaitedTooLong } from "./useWaitedTooLong";
 
 /** The pointer shown over the map: grab for panning, crosshair while measuring. */
 export type MapCursor = "grab" | "crosshair";
@@ -202,24 +206,8 @@ function runKeyAction(
   }
 }
 
-/**
- * The engine host: the map region and the single focus stop of the map. It
- * mounts the adapter the services build, without knowing which engine that
- * is, and provides the live map to `children` through `useMap`.
- *
- * @remarks
- * - Keyboard and long-press are implemented here once, against the adapter;
- *   the engine's own key handling is turned off.
- * - A new basemap is swapped in on the mounted engine, keeping the centre,
- *   zoom and bearing. This component, its children and the chrome around it
- *   stay mounted.
- * - Server rendering produces the empty region only; no style attributes are
- *   rendered, so it works under `style-src 'self'`. `data-zoom` is written
- *   with `setAttribute` once the engine reports a zoom.
- * - The host fills its parent; `MapChrome` owns its placement.
- * - The whole output, including `chrome`, is inside the map context.
- */
-export function MapView({
+/** The map view once its interface can be drawn: the engine, the region and the chrome. */
+function DrawnMapView({
   initialView,
   basemap,
   onViewChange,
@@ -382,5 +370,67 @@ export function MapView({
         </StatusMessageFocusProvider>
       </LiveRegionScope>
     </MapContext.Provider>
+  );
+}
+
+/**
+ * The engine host: the map region and the single focus stop of the map. It
+ * mounts the adapter the services build, without knowing which engine that
+ * is, and provides the live map to `children` through `useMap`.
+ *
+ * @remarks
+ * - Keyboard and long-press are implemented here once, against the adapter;
+ *   the engine's own key handling is turned off.
+ * - A new basemap is swapped in on the mounted engine, keeping the centre,
+ *   zoom and bearing. This component, its children and the chrome around it
+ *   stay mounted.
+ * - Part of the interface is fetched apart, once for the page. A map view
+ *   mounted in the browser renders nothing until that part has arrived, and
+ *   neither `chrome` nor `children` are mounted before then, so every control
+ *   is in the page when they are. This is not in `0.2.0` or any earlier
+ *   release, where the empty map region is rendered at once.
+ * - A server renders the empty region and `chrome`, and the view that hydrates
+ *   that markup keeps it and starts the engine without waiting. In releases
+ *   after `0.2.0` a segmented control in it is absent from the server's markup
+ *   and is drawn once that part has arrived.
+ * - If that part cannot be loaded, the view shows a notice that the map could
+ *   not start, in a region named as the map is, in place of anything it had
+ *   drawn. A view mounted in the browser does the same when the part has not
+ *   arrived after 30 seconds, because it has nothing else to show. A view a
+ *   server drew has a working map by then, so it keeps it however long the
+ *   load takes, and draws the missing controls if they arrive. With the notice
+ *   the view announces it and calls `onEngineError` once, with an
+ *   `interface-load-failed` error, from a layout effect as the notice mounts,
+ *   so a placeholder removed there is never painted beside it. Reloading the
+ *   page tries again. None of this is in `0.2.0` or any earlier release.
+ * - No style attributes are rendered, so it works under `style-src 'self'`.
+ *   `data-zoom` is written with `setAttribute` once the engine reports a zoom.
+ * - The host fills its parent; `MapChrome` owns its placement.
+ * - The whole output, including `chrome`, is inside the map context.
+ */
+export function MapView({ ...props }: MapViewProps) {
+  const elements = useLoadedPrivateElements();
+  const serverDrawn = useDrawnByAServer();
+  // Only a view that is holding itself back has a limit to its wait.
+  const gaveUp = useWaitedTooLong(
+    !serverDrawn && elements.status === "loading",
+    ELEMENTS_LOAD_TIMEOUT_MS,
+  );
+  const failed = gaveUp || elements.status === "failed";
+  if (!failed && (serverDrawn || elements.status === "ready")) {
+    return <DrawnMapView {...props} />;
+  }
+  return (
+    <>
+      {failed ? (
+        <MapCannotStart
+          basemap={props.basemap}
+          onEngineError={props.onEngineError}
+          id={props.id}
+          testId={props.testId}
+          label={props.label}
+        />
+      ) : null}
+    </>
   );
 }

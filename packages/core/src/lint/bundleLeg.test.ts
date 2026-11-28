@@ -15,14 +15,19 @@ import {
   elementProblems,
   FIRST_LOAD_BUILD,
   fileRequestProblems,
+  GLOBE_ANNOUNCEMENT,
   hostilePageProblems,
   hostParityProblems,
   leakProblems,
   MOVED_ZOOM,
+  plantedStyleProblems,
+  privateElementProblems,
+  twoCopiesProblems,
   workerRefusalProblems,
   // @ts-expect-error The scripts are dependency-free JavaScript with JSDoc types.
 } from "../../../../scripts/release/bundleLeg.mjs";
 import { BUILT_IN_BASEMAP_CATALOGUE } from "../basemaps";
+import { EN_GB_CATALOGUE } from "../messages/en-GB";
 
 const PAGE = "http://127.0.0.1:4196";
 
@@ -361,6 +366,123 @@ describe("bundleLoadSizes", () => {
     expect(() =>
       bundleLoadSizes({ "browser-other-AbC.js": bytes("a") }),
     ).toThrow(/neither first load nor a lazy chunk/);
+  });
+
+  it("counts the private elements' chunk, which the first map loads, in the first load", () => {
+    const [first, lazy] = bundleLoadSizes({
+      "browser-elements-AbC.js": bytes("a"),
+    });
+    expect(first.gzipBytes).toBeGreaterThan(0);
+    expect(lazy.gzipBytes).toBe(0);
+  });
+});
+
+describe("privateElementProblems", () => {
+  const good = {
+    groups: [
+      { tag: "mapcairn-segmented-1", shadow: false },
+      { tag: "mapcairn-segmented-1", shadow: false },
+    ],
+    keyboard: {
+      entered: "System",
+      afterArrow: "Light",
+      checkedAfterArrow: "System",
+      checkedAfterSpace: "Light",
+    },
+    announced: "Map shape: globe",
+  };
+
+  it("passes when the elements drew in the light DOM, took the keys and the choice was announced", () => {
+    expect(privateElementProblems(good)).toEqual([]);
+  });
+
+  it("waits for the words the English catalogue gives the globe", () => {
+    expect(GLOBE_ANNOUNCEMENT).toBe(
+      EN_GB_CATALOGUE["announce.projection.globe"],
+    );
+  });
+
+  it.each([
+    ["no segmented control was drawn", { groups: [] }],
+    [
+      "a control is not the private element",
+      { groups: [{ tag: "div", shadow: false }] },
+    ],
+    [
+      "a control has a shadow root",
+      { groups: [{ tag: "mapcairn-segmented-1", shadow: true }] },
+    ],
+    [
+      "an arrow key chose",
+      { keyboard: { ...good.keyboard, checkedAfterArrow: "Light" } },
+    ],
+    [
+      "an arrow key did not move focus",
+      { keyboard: { ...good.keyboard, afterArrow: "System" } },
+    ],
+    [
+      "focus did not enter on the chosen item",
+      { keyboard: { ...good.keyboard, entered: "" } },
+    ],
+    [
+      "Space did not choose",
+      { keyboard: { ...good.keyboard, checkedAfterSpace: "System" } },
+    ],
+    ["nothing was announced", { announced: "" }],
+    [
+      "an earlier message was all that was said",
+      { announced: "Map shape: flat" },
+    ],
+  ])("fails when %s", (_case, change) => {
+    expect(privateElementProblems({ ...good, ...change })).not.toEqual([]);
+  });
+});
+
+describe("plantedStyleProblems", () => {
+  it("passes when the policy reported the planted style binding", () => {
+    expect(
+      plantedStyleProblems([
+        { violatedDirective: "style-src-attr", blockedURI: "inline" },
+      ]),
+    ).toEqual([]);
+  });
+
+  it.each([
+    ["nothing was reported", []],
+    [
+      "only another directive was",
+      [{ violatedDirective: "script-src-elem", blockedURI: "inline" }],
+    ],
+  ])(
+    "fails when %s, since the clean pages would then prove nothing",
+    (_case, violations) => {
+      expect(plantedStyleProblems(violations).join()).toContain("planted");
+    },
+  );
+});
+
+describe("twoCopiesProblems", () => {
+  const copy = (n: number) => ({
+    tags: [`mapcairn-segmented-${n}`],
+    chosen: "Light",
+  });
+  const good = { copies: [copy(1), copy(2)], classesShared: false };
+
+  it("passes when each copy defined and ran its own elements", () => {
+    expect(twoCopiesProblems(good)).toEqual([]);
+  });
+
+  it.each([
+    ["only one copy drew", { copies: [copy(1)] }],
+    ["both copies used one name", { copies: [copy(1), copy(1)] }],
+    ["both names run one class", { classesShared: true }],
+    [
+      "a copy's control did not answer",
+      { copies: [copy(1), { ...copy(2), chosen: "System" }] },
+    ],
+    ["a copy drew no element", { copies: [copy(1), { ...copy(2), tags: [] }] }],
+  ])("fails when %s", (_case, change) => {
+    expect(twoCopiesProblems({ ...good, ...change })).not.toEqual([]);
   });
 });
 

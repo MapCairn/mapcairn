@@ -166,7 +166,11 @@ export function mount(
               }}
               onClick={(position) => emit("click", position)}
               onFeatureTap={(featureTap) => emit("featuretap", featureTap)}
-              onEngineError={(error: MapEngineError) => emit("error", error)}
+              onEngineError={(error: MapEngineError) => {
+                // A no-op once the engine's own mount has settled `ready`.
+                tap.fail(error);
+                emit("error", error);
+              }}
             />
           </TooltipProvider>
         </LiveRegionProvider>

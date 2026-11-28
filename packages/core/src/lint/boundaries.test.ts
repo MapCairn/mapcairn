@@ -153,7 +153,7 @@ describe("dependency-cruiser boundaries", () => {
     "packages/map/src/ui/goodPhosphor.ts":
       'import { MagnifyingGlass } from "@phosphor-icons/react";\nexport const x = MagnifyingGlass;\n',
 
-    // Radix is wrapped in four primitives.
+    // Radix is wrapped in a few primitives only.
     "packages/map/src/ui/Button/badRadix.ts":
       'import * as Switch from "@radix-ui/react-switch";\nexport const x = Switch;\n',
     "packages/map/src/ui/Switch/goodRadix.ts":

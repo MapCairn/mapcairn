@@ -19,6 +19,11 @@ export interface AdapterTap {
   getView(): ViewState;
   /** Records a view the interface reported while the engine was not asked. */
   rememberView(view: ViewState): void;
+  /**
+   * Rejects `ready` if it is still pending, for a failure the adapter cannot
+   * see, such as an interface that could not be loaded, so no engine is made.
+   */
+  fail(error: unknown): void;
   /** The mounted adapter, or undefined before it is drawing and after it is gone. */
   mountedAdapter(): MapAdapter | undefined;
   /** Rejects `ready` if it is still pending and forgets the adapter. */
@@ -97,6 +102,9 @@ export function createAdapterTap(initialView: ViewState): AdapterTap {
     getView: () => (mounted && adapter ? adapter.getView() : view),
     rememberView: (next) => {
       view = next;
+    },
+    fail: (error) => {
+      settle.reject(error);
     },
     mountedAdapter: () => (mounted ? adapter : undefined),
     release: () => {

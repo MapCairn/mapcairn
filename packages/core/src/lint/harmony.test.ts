@@ -594,6 +594,17 @@ const cases: readonly Case[] = [
   },
   {
     rule: "icon-only-button",
+    name: "an unnamed button that holds only a drawn icon in a Lit template",
+    file: TS,
+    bad: lit(
+      '<button type="button">${drawIcon(CHECK_ICON, styles.check)}</button>',
+    ),
+    good: lit(
+      '<button type="button">${t("done")}${drawIcon(CHECK_ICON, styles.check)}</button>',
+    ),
+  },
+  {
+    rule: "icon-only-button",
     name: "a button whose conditional content is only icons in a Lit template",
     file: TS,
     bad: lit("<button>${on ? svg`<svg></svg>` : html`<svg></svg>`}</button>"),
@@ -938,6 +949,14 @@ describe("ways round the Lit template rules", () => {
 
   it.each([
     ["an svg in a wrapper", "<button><span><svg></svg></span></button>"],
+    [
+      "a drawn icon in a wrapper",
+      "<button><span>${drawIcon(CHECK_ICON, a)}</span></button>",
+    ],
+    [
+      "a drawn icon on one branch",
+      '<button>${on ? drawIcon(CHECK_ICON, "a") : nothing}</button>',
+    ],
     [
       "an svg two wrappers down",
       "<button><span><i><svg></svg></i></span></button>",

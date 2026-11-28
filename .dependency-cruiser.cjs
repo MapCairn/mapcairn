@@ -32,8 +32,7 @@ const OTHER_ICON_SPECIFIERS = `^${OTHER_ICON_NAMES}`;
 const CORE_ALLOWED_PACKAGES = "(^|/)node_modules/(@turf|@types/geojson)(/|$)";
 
 /** The `ui` primitives that may wrap Radix. */
-const RADIX_WRAPPERS =
-  "^packages/map/src/ui/(Switch|Slider|SegmentedControl|Tooltip)/";
+const RADIX_WRAPPERS = "^packages/map/src/ui/(Switch|Slider|Tooltip)/";
 
 /**
  * The places an engine library may be imported: the MapLibre adapter package,
@@ -333,7 +332,7 @@ module.exports = {
       name: "radix-only-in-ui-primitives",
       severity: "error",
       comment:
-        "Radix primitives are wrapped once, in packages/map/src/ui/{Switch,Slider,SegmentedControl,Tooltip}. Everything else uses the wrapper.",
+        "Radix primitives are wrapped once, in packages/map/src/ui/{Switch,Slider,Tooltip}. Everything else uses the wrapper.",
       from: { path: "^packages/", pathNot: RADIX_WRAPPERS },
       to: { path: "(^|/)node_modules/@radix-ui/" },
     },

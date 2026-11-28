@@ -719,8 +719,8 @@ describe("markup rules", () => {
   it("sets no style attribute of its own", () => {
     renderSettings({ persistent: false });
     const region = screen.getByTestId("sheet-section-settings");
-    // Radix puts `outline: none` on the segmented control groups through its
-    // roving focus. That comes from the primitive, not from this section.
+    // The segmented control sets `outline: none` on its group through the
+    // CSSOM. That comes from the primitive, not from this section.
     expect(
       region.querySelectorAll("[style]:not([role='radiogroup'])"),
     ).toHaveLength(0);

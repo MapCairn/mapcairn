@@ -587,6 +587,24 @@ describe("a package that names declaration blocks", () => {
   });
 });
 
+describe("a package that copies icons", () => {
+  const files = [...GOOD_FILES, "THIRD-PARTY-NOTICES.md"];
+  const copying = {
+    mapcairn: { icons: { from: "@phosphor-icons/core", names: ["check"] } },
+    files: ["dist", "!dist/.built", "THIRD-PARTY-NOTICES.md"],
+  };
+
+  it("passes with its notices file, listed in `files`", () => {
+    expect(problems(files, copying)).toEqual([]);
+  });
+
+  it("fails without the notices, saying which build writes them", () => {
+    expect(problems(GOOD_FILES, copying)).toEqual([
+      "THIRD-PARTY-NOTICES.md: missing from the tarball (the build writes it: run npm run build:sdk)",
+    ]);
+  });
+});
+
 describe("a package that builds a bundle", () => {
   it("passes with its notices, its bundle files and no source map for them", () => {
     expect(bundleProblems()).toEqual([]);

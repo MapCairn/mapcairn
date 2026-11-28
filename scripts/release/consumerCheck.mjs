@@ -1520,6 +1520,15 @@ function checkBrowserBundle(app, prefix) {
     [path.join(page, "copyFiles.mjs")],
     page,
   );
+  // A second copy of every file, for the page that loads the package twice.
+  cpSync(path.join(page, "mapcairn"), path.join(page, "mapcairn-copy"), {
+    recursive: true,
+  });
+  // Lit's own renderer, for the page that plants a style binding.
+  copyFileSync(
+    path.join(app, "node_modules", "lit-html", "lit-html.js"),
+    path.join(page, "lit-html.js"),
+  );
   lines.push(
     ...runBundleRun("page", page, chromium, app).map(
       (line) => `the example page in Chromium, ${line}`,

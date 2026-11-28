@@ -115,13 +115,17 @@ export class FeatureQueryError extends Error {
 }
 
 /**
- * Why a map engine failed: it could not start without WebGL, it could not
- * load, it `stopped` working after it had loaded, `toImage` could not
- * produce an image (`export-failed`).
+ * Why a map failed: its engine could not start without WebGL, the engine or
+ * its basemap could not load (`load-failed`), the engine `stopped` working
+ * after it had loaded, or `toImage` could not produce an image
+ * (`export-failed`). `interface-load-failed` is not the engine's or the
+ * basemap's failure: part of the interface that `MapView` fetches apart did not
+ * load, so no map is shown. It is not in `0.2.0` or any earlier release.
  */
 export type MapEngineErrorReason =
   | "webgl-unavailable"
   | "load-failed"
+  | "interface-load-failed"
   | "stopped"
   | "export-failed";
 
@@ -130,7 +134,7 @@ export type MapEngineErrorReason =
  * the payload of its `fatalError` event when the engine stops later.
  */
 export class MapEngineError extends Error {
-  /** Why the engine failed: `webgl-unavailable`, `load-failed`, `stopped` or `export-failed`. */
+  /** Why the map failed. See {@link MapEngineErrorReason}. */
   readonly reason: MapEngineErrorReason;
 
   constructor(reason: MapEngineErrorReason, message?: string) {

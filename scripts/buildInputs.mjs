@@ -23,6 +23,7 @@ export const BUILD_SCRIPTS = [
   "scripts/sdkLicences.mjs",
   "scripts/sdkLicences.allowlist.json",
   "scripts/entryPoint.mjs",
+  "scripts/icons.mjs",
   "scripts/sdkPackages.mjs",
   "scripts/shareDeclarations.mjs",
 ];

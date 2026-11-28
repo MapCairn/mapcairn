@@ -175,7 +175,7 @@ Under a strict Content Security Policy, this page needs only the default basemap
 default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data: blob: https://tiles.openfreemap.org; font-src 'self'; connect-src 'self' https://tiles.openfreemap.org; worker-src 'self' blob:
 ```
 
-[Content Security Policy](https://docs.mapcairn.com/guides/content-security-policy/) says what each directive is for, including when `worker-src` needs `blob:`. A Vite 8 build prints 18 `"use client"` warnings (`MODULE_LEVEL_DIRECTIVE`) from the Radix UI packages that `@mapcairn/map` depends on; they are expected and harmless.
+[Content Security Policy](https://docs.mapcairn.com/guides/content-security-policy/) says what each directive is for, including when `worker-src` needs `blob:`. A Vite 8 build prints `"use client"` warnings (`MODULE_LEVEL_DIRECTIVE`) from the Radix UI packages that `@mapcairn/map` depends on; they are expected and harmless.
 
 [Show a real map](https://docs.mapcairn.com/guides/extending/#show-a-real-map) says what the adapter needs from another bundler and from a server-rendered build. A test compiles `main.tsx` as written, and the release's consumer check builds this page's blocks as written and draws the map from them in Chromium under the policy line above. Plain Vite and Chromium only: other bundlers and browsers are not tried.
 

@@ -348,7 +348,8 @@ describe("SDK package manifests", () => {
     (name) => {
       const manifest = manifestOf(name);
       expect(manifest.files).toEqual(
-        name === "sdk"
+        // The umbrella's bundle and the icons map copies carry notices.
+        name === "sdk" || name === "map"
           ? ["dist", "!dist/.built", "THIRD-PARTY-NOTICES.md"]
           : ["dist", "!dist/.built"],
       );

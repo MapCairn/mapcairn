@@ -214,13 +214,17 @@ export function DrawToolbar({ draw, onDone, onOpenShapes }: DrawToolbarProps) {
   useScrollEdges(scrollerRef);
 
   // Coming back from the sheet, focus is put on the Shapes button before this
-  // runs, and the toolbar leaves it there.
+  // runs, and the toolbar leaves it there. In a map view a server drew, the
+  // shape switch may still be loading, so the first button takes focus.
   useEffect(() => {
     const root = rootRef.current;
     if (!root || root.contains(root.ownerDocument.activeElement)) {
       return;
     }
-    root.querySelector<HTMLElement>('[role="radio"][data-state="on"]')?.focus();
+    const chosen = root.querySelector<HTMLElement>(
+      '[role="radio"][data-state="on"]',
+    );
+    (chosen ?? root.querySelector("button"))?.focus();
   }, []);
 
   const setRoot = useCallback(

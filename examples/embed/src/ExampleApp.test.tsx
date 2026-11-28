@@ -34,8 +34,10 @@ function renderPine() {
 }
 
 describe("ExampleApp", () => {
-  it("shows two maps, each in a wrapper with its own theme class and its own ids", () => {
+  it("shows two maps, each in a wrapper with its own theme class and its own ids", async () => {
     render(<ExampleApp />);
+    // A map draws once the part of its interface that is fetched apart is in.
+    await screen.findByRole("region", { name: "Map (Pine)" });
 
     const wrappers = EXAMPLE_THEMES.map((theme) =>
       screen.getByTestId(theme.className),

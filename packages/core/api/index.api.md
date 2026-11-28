@@ -2284,7 +2284,7 @@ export class MapEngineError extends Error {
 }
 
 // @public
-export type MapEngineErrorReason = "webgl-unavailable" | "load-failed" | "stopped" | "export-failed";
+export type MapEngineErrorReason = "webgl-unavailable" | "load-failed" | "interface-load-failed" | "stopped" | "export-failed";
 
 // @public
 export interface MapEvents {

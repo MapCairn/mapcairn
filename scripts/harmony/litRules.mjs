@@ -69,6 +69,9 @@ const NAME_PROPERTIES = new Set([
   "title",
 ]);
 
+/** A call that draws an icon in a Lit template (`packages/map/src/lit/drawIcon.ts`). */
+const DRAWN_ICON = /^drawIcon\(/;
+
 /** The elements whose content names the icon that holds them. */
 const NAMING_ELEMENTS = new Set(["title", "text"]);
 
@@ -231,6 +234,25 @@ function templateDrawing(template) {
 }
 
 /**
+ * What a hole draws: what its templates and `drawIcon` calls do, and something
+ * else when it may give anything besides those and nothing.
+ * @param {Extract<LitNode, { kind: "hole" }>} hole
+ * @returns {Drawing}
+ */
+function holeDrawing(hole) {
+  const values = branchValues(hole.expr);
+  const rest = values.filter((value) => !DRAWN_ICON.test(value));
+  if (!rest.every((value) => DRAWS_NOTHING.has(value))) {
+    return "other";
+  }
+  const calls = values.length - rest.length;
+  return together([
+    ...(calls > 0 ? [/** @type {const} */ ("icon")] : []),
+    ...hole.templates.map(templateDrawing),
+  ]);
+}
+
+/**
  * What a node draws. An `svg` element is an icon, and so is an element that
  * holds only icons; any other element is something else, even an empty one. A
  * hole draws what its values do. An icon held in a variable is not seen.
@@ -246,10 +268,7 @@ function drawing(node) {
       node.name === "svg" || together(node.children.map(drawing)) === "icon";
     return isIcon ? "icon" : "other";
   }
-  const values = branchValues(node.expr);
-  return values.every((value) => DRAWS_NOTHING.has(value))
-    ? together(node.templates.map(templateDrawing))
-    : "other";
+  return holeDrawing(node);
 }
 
 /** @param {LitAttribute} attr @returns {boolean} */

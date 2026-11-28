@@ -79,9 +79,10 @@ export interface DesignGuideProps {
  * e2e builds only (see `designGuideRoutes.ts`).
  *
  * @remarks It server-renders like any page of the host. Demos built on Radix
- *   and the theme control render after hydration, because Radix writes
- *   inline styles that the strict style CSP blocks and the theme depends on
- *   stored settings.
+ *   or on a segmented control, and the theme control, render after hydration,
+ *   because Radix writes inline styles that the strict style CSP blocks, a
+ *   segmented control draws only in a browser and the theme depends on stored
+ *   settings.
  */
 export function DesignGuide({ checkFont }: DesignGuideProps) {
   return (
