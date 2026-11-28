@@ -12,12 +12,13 @@ const ON_THE_SERVER: DefinitionState<PrivateElementTags> = {
 const onTheServer = () => ON_THE_SERVER;
 
 /**
- * The private elements as a React part sees them, loading them on the client.
- * A server and the hydrating render see them as loading, so both draw the same
- * markup. Once they are loaded, a part that mounts gets their names in its
- * first render.
+ * Where the private elements stand, as a React part sees them, loading them on
+ * the client the first time any part asks. A server and the render that
+ * hydrates its markup see them as loading, so both draw the same markup.
+ * `MapView` waits for them before it draws, so a part below it is given their
+ * names in its first render.
  */
-export function usePrivateElements(): DefinitionState<PrivateElementTags> {
+export function useLoadedPrivateElements(): DefinitionState<PrivateElementTags> {
   const state = useSyncExternalStore(
     privateElements.subscribe,
     privateElements.state,

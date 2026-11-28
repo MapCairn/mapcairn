@@ -10,7 +10,6 @@ import {
 } from "@mapcairn/core";
 import { act, render, screen } from "@testing-library/react";
 import type { ReactNode } from "react";
-import { renderToString } from "react-dom/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ServicesProvider } from "../../services";
 import { MapView } from "../MapView";
@@ -110,11 +109,12 @@ describe("MapOverlayLayer", () => {
     expect(screen.getByTestId("map").contains(layer)).toBe(true);
   });
 
-  it("server-renders empty, with no style attributes", () => {
-    const html = renderToString(
+  it("draws empty before the engine is drawing, with no style attributes", () => {
+    // Read before the engine's mount has resolved.
+    const view = render(
       <ServicesProvider services={createFakeServices()}>
         <MapView initialView={VIEW} basemap={FAKE_VECTOR_BASEMAP}>
-          <MapOverlayLayer>
+          <MapOverlayLayer testId="overlays">
             <PinMarker position={A} testId="pin" />
             <MeasureOverlay points={[A, B]} mode="distance" testId="m" />
             <AccuracyCircle center={A} accuracyMetres={50} testId="acc" />
@@ -123,9 +123,14 @@ describe("MapOverlayLayer", () => {
         </MapView>
       </ServicesProvider>,
     );
-    expect(html).toMatch(/aria-hidden="true"/);
-    expect(html).not.toMatch(/style=/);
-    expect(html).not.toMatch(/data-testid="(pin|m|acc|cross)"/);
+    expect(screen.getByTestId("overlays")).toHaveAttribute(
+      "aria-hidden",
+      "true",
+    );
+    expect(view.container.querySelector("[style]")).toBeNull();
+    for (const testId of ["pin", "m", "acc", "cross"]) {
+      expect(screen.queryByTestId(testId)).toBeNull();
+    }
   });
 });
 

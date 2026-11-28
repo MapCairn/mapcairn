@@ -1,10 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
 
-/**
- * Where a lazy definition stands. A failed one is loaded again when next asked,
- * though a browser may answer a repeated module request with the same failure.
- */
+/** Where a lazy definition stands. `ready` and `failed` are final. */
 export type DefinitionState<T> =
   | { readonly status: "loading" }
   | { readonly status: "ready"; readonly value: T }
@@ -12,11 +9,22 @@ export type DefinitionState<T> =
 
 /** Something that is loaded and defined once, on demand, and can be watched. */
 export interface LazyDefinition<T> {
-  /** Starts the load unless it is under way or done. Never rejects. */
+  /** Starts the load the first time. Never rejects. */
   readonly define: () => Promise<void>;
   /** The same object until the state changes. */
   readonly state: () => DefinitionState<T>;
   readonly subscribe: (listener: () => void) => () => void;
+}
+
+/** Fails a load that has not arrived in time. What arrives later is dropped. */
+function within<T>(loading: Promise<T>, timeoutMs: number): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(
+      () => reject(new Error(`Nothing arrived within ${timeoutMs} ms.`)),
+      timeoutMs,
+    );
+    void loading.then(resolve, reject).finally(() => clearTimeout(timer));
+  });
 }
 
 /**
@@ -25,11 +33,18 @@ export interface LazyDefinition<T> {
  * breaks a server bundle, so `load` holds the dynamic `import()` that reaches
  * Lit and nothing outside it imports Lit.
  *
+ * A load that fails, or does not arrive within `timeoutMs`, stays failed until
+ * the page is loaded again: a browser may answer a repeated module request with
+ * the same failure, and the page has by then told the person to reload.
+ *
  * @param load Imports the module and defines what it holds. It is not called
  *   until the first `define`.
+ * @param options `timeoutMs` bounds the load; without it the load is waited for
+ *   as long as it takes.
  */
 export function createLazyDefinition<T>(
   load: () => Promise<T>,
+  { timeoutMs }: { readonly timeoutMs?: number } = {},
 ): LazyDefinition<T> {
   let state: DefinitionState<T> = { status: "loading" };
   let pending: Promise<void> | undefined;
@@ -41,10 +56,11 @@ export function createLazyDefinition<T>(
     }
   };
   const define = () => {
-    pending ??= load().then(
+    pending ??= (
+      timeoutMs === undefined ? load() : within(load(), timeoutMs)
+    ).then(
       (value) => settle({ status: "ready", value }),
       (reason: unknown) => {
-        pending = undefined;
         console.error("MapCairn could not load part of its interface.", reason);
         settle({ status: "failed" });
       },

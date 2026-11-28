@@ -23,10 +23,12 @@ import {
   useMemo,
   useRef,
 } from "react";
+import { useLoadedPrivateElements } from "../lit/usePrivateElements";
 import { useMessages, usePreferences } from "../services";
 import { LiveRegionScope } from "../ui/LiveRegion";
 import { StatusMessageFocusProvider } from "../ui/StatusMessage";
 import { VisuallyHidden } from "../ui/VisuallyHidden";
+import { MapCannotStart } from "./MapCannotStart";
 import { MapContext, type MapContextValue } from "./MapContext";
 import * as styles from "./MapView.css";
 import { landmarkName } from "./useLandmarkName";
@@ -202,24 +204,8 @@ function runKeyAction(
   }
 }
 
-/**
- * The engine host: the map region and the single focus stop of the map. It
- * mounts the adapter the services build, without knowing which engine that
- * is, and provides the live map to `children` through `useMap`.
- *
- * @remarks
- * - Keyboard and long-press are implemented here once, against the adapter;
- *   the engine's own key handling is turned off.
- * - A new basemap is swapped in on the mounted engine, keeping the centre,
- *   zoom and bearing. This component, its children and the chrome around it
- *   stay mounted.
- * - Server rendering produces the empty region only; no style attributes are
- *   rendered, so it works under `style-src 'self'`. `data-zoom` is written
- *   with `setAttribute` once the engine reports a zoom.
- * - The host fills its parent; `MapChrome` owns its placement.
- * - The whole output, including `chrome`, is inside the map context.
- */
-export function MapView({
+/** The map view once its interface can be drawn: the engine, the region and the chrome. */
+function DrawnMapView({
   initialView,
   basemap,
   onViewChange,
@@ -382,5 +368,52 @@ export function MapView({
         </StatusMessageFocusProvider>
       </LiveRegionScope>
     </MapContext.Provider>
+  );
+}
+
+/**
+ * The engine host: the map region and the single focus stop of the map. It
+ * mounts the adapter the services build, without knowing which engine that
+ * is, and provides the live map to `children` through `useMap`.
+ *
+ * @remarks
+ * - Keyboard and long-press are implemented here once, against the adapter;
+ *   the engine's own key handling is turned off.
+ * - A new basemap is swapped in on the mounted engine, keeping the centre,
+ *   zoom and bearing. This component, its children and the chrome around it
+ *   stay mounted.
+ * - Before it draws, it loads the part of the interface that is fetched apart,
+ *   once for the page: until that has arrived it renders nothing, and neither
+ *   `chrome` nor `children` are mounted, so every control is in the page when
+ *   they are. A server renders nothing for it, so send a placeholder of your
+ *   own where the map goes. This is not in `0.2.0` or any earlier release,
+ *   where the empty map region is rendered at once, on a server too.
+ * - If that part cannot be loaded, or has not arrived after 30 seconds, it
+ *   draws a notice that the map could not start in a region named as the map
+ *   is, announces it, calls `onEngineError` with a `load-failed` error once and
+ *   never starts the engine. Reloading the page tries again. This too is not in
+ *   `0.2.0` or any earlier release.
+ * - No style attributes are rendered, so it works under `style-src 'self'`.
+ *   `data-zoom` is written with `setAttribute` once the engine reports a zoom.
+ * - The host fills its parent; `MapChrome` owns its placement.
+ * - The whole output, including `chrome`, is inside the map context.
+ */
+export function MapView({ ...props }: MapViewProps) {
+  const elements = useLoadedPrivateElements();
+  if (elements.status === "ready") {
+    return <DrawnMapView {...props} />;
+  }
+  return (
+    <>
+      {elements.status === "failed" ? (
+        <MapCannotStart
+          basemap={props.basemap}
+          onEngineError={props.onEngineError}
+          id={props.id}
+          testId={props.testId}
+          label={props.label}
+        />
+      ) : null}
+    </>
   );
 }

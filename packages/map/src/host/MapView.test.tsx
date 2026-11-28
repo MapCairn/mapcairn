@@ -391,36 +391,46 @@ describe("mounting and accessibility", () => {
     expect(background).toContainElement(help);
   });
 
-  it("server-renders the chrome around the empty host", () => {
+  it("renders nothing on a server, with no chrome, no child and no engine", () => {
+    const services = createFakeServices();
+    const factory = vi.fn(services.createMapAdapter);
+    const chrome = vi.fn((region: ReactNode) => region);
     const html = renderToString(
+      <ServicesProvider services={{ ...services, createMapAdapter: factory }}>
+        <MapView
+          initialView={VIEW}
+          basemap={FAKE_VECTOR_BASEMAP}
+          testId="map"
+          chrome={chrome}
+        >
+          <span>child</span>
+        </MapView>
+      </ServicesProvider>,
+    );
+    expect(html).toBe("");
+    expect(chrome).not.toHaveBeenCalled();
+    expect(factory).not.toHaveBeenCalled();
+  });
+
+  it("draws the chrome around the busy empty host, with no style attribute, before any engine is drawing", () => {
+    const view = render(
       <ServicesProvider services={createFakeServices()}>
         <MapView
           initialView={VIEW}
           basemap={FAKE_VECTOR_BASEMAP}
           testId="map"
-          chrome={(region) => <div data-testid="chrome">{region}</div>}
-        />
-      </ServicesProvider>,
-    );
-    expect(html).toMatch(/data-testid="chrome"><section/);
-    expect(html).not.toMatch(/style=/);
-  });
-
-  it("server-renders an empty host with no style attribute and no engine", () => {
-    const services = createFakeServices();
-    const factory = vi.fn(services.createMapAdapter);
-    const html = renderToString(
-      <ServicesProvider services={{ ...services, createMapAdapter: factory }}>
-        <MapView initialView={VIEW} basemap={FAKE_VECTOR_BASEMAP} testId="map">
+          chrome={(mapRegion) => <div data-testid="chrome">{mapRegion}</div>}
+        >
           <span>child</span>
         </MapView>
       </ServicesProvider>,
     );
-    expect(html).not.toMatch(/style=/);
-    expect(html).toMatch(/data-map-host=""/);
-    expect(html).toMatch(/aria-busy="true"/);
-    expect(html).toMatch(/child/);
-    expect(factory).not.toHaveBeenCalled();
+    const region = screen.getByTestId("map");
+    expect(screen.getByTestId("chrome").firstElementChild).toBe(region);
+    expect(region).toHaveAttribute("data-map-host", "");
+    expect(region).toHaveAttribute("aria-busy", "true");
+    expect(region).toHaveTextContent("child");
+    expect(view.container.querySelector("[style]")).toBeNull();
   });
 });
 
@@ -1554,12 +1564,18 @@ describe("Map shape", () => {
     for (const projection of ["globe", "flat"] as const) {
       const services = createFakeServices();
       services.fakes.settings.set({ projection });
-      const html = renderToString(
+      // Read before the engine's mount has resolved.
+      const view = render(
         <ServicesProvider services={services}>
           <MapView initialView={VIEW} basemap={FAKE_VECTOR_BASEMAP} />
         </ServicesProvider>,
       );
-      expect(html).toContain(`data-projection="${projection}"`);
+      expect(
+        view.container
+          .querySelector("[data-map-host]")
+          ?.getAttribute("data-projection"),
+      ).toBe(projection);
+      view.unmount();
     }
   });
 

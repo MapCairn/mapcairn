@@ -3,7 +3,7 @@
 import { useReadingDirection } from "@mapcairn/react";
 import { type ReactNode, useLayoutEffect, useRef } from "react";
 import { createPortal } from "react-dom";
-import { usePrivateElements } from "../../lit/usePrivateElements";
+import { useLoadedPrivateElements } from "../../lit/usePrivateElements";
 import * as styles from "./SegmentedControl.css";
 import type { SegmentedControlElement } from "./SegmentedControlElement";
 import { useIconNodes } from "./useIconNodes";
@@ -109,12 +109,17 @@ function SegmentedControlPart({
  * ignored. The selected item is filled and shows a check mark, so selection
  * never relies on colour alone.
  *
- * @remarks It draws only in a browser: a server's markup holds nothing for it,
- *   and the first one on a page appears once its element has loaded.
+ * @remarks Part of it is fetched apart. Inside a `MapView`, which loads that
+ *   before it draws anything, the control is there from its first render.
+ *   Outside one it asks for the load itself and appears when it has arrived,
+ *   and a server's markup holds nothing for it. This is not in `0.2.0` or any
+ *   earlier release, where it renders anywhere at once, on a server too.
  */
 // Destructured so the API report keeps naming the parameter `input`.
 export function SegmentedControl({ ...props }: SegmentedControlProps) {
-  const elements = usePrivateElements();
+  // The same one load `MapView` waits for; for a control outside any map view,
+  // such as the design guide's.
+  const elements = useLoadedPrivateElements();
   return (
     <>
       {elements.status === "ready" ? (

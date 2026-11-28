@@ -52,7 +52,7 @@ describe("createLazyDefinition", () => {
     expect(definition.state()).toBe(definition.state());
   });
 
-  it("says the load failed, reports why, and tries again when asked again", async () => {
+  it("says the load failed, reports why, and stays failed however it is asked again", async () => {
     const error = vi
       .spyOn(console, "error")
       .mockImplementation(() => undefined);
@@ -66,15 +66,72 @@ describe("createLazyDefinition", () => {
     definition.subscribe(listener);
 
     await definition.define();
+    await definition.define();
 
     expect(definition.state()).toEqual({ status: "failed" });
-    expect(error).toHaveBeenCalledWith(expect.any(String), reason);
+    expect(load).toHaveBeenCalledTimes(1);
+    expect(error).toHaveBeenCalledExactlyOnceWith(expect.any(String), reason);
     expect(listener).toHaveBeenCalledTimes(1);
+    error.mockRestore();
+  });
+
+  it("gives up on a load that never settles, at the bound and not before", async () => {
+    vi.useFakeTimers();
+    const error = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => undefined);
+    const definition = createLazyDefinition(
+      () => new Promise<string>(() => undefined),
+      { timeoutMs: 1000 },
+    );
+    const settled = vi.fn();
+    void definition.define().then(settled);
+
+    await vi.advanceTimersByTimeAsync(999);
+    expect(definition.state()).toEqual({ status: "loading" });
+    await vi.advanceTimersByTimeAsync(1);
+
+    expect(definition.state()).toEqual({ status: "failed" });
+    expect(settled).toHaveBeenCalled();
+    expect(error).toHaveBeenCalledExactlyOnceWith(
+      expect.any(String),
+      expect.objectContaining({ message: "Nothing arrived within 1000 ms." }),
+    );
+    error.mockRestore();
+    vi.useRealTimers();
+  });
+
+  it("ignores a load that arrives after it gave up, so what the page said stays true", async () => {
+    vi.useFakeTimers();
+    vi.spyOn(console, "error").mockImplementation(() => undefined);
+    const pending = deferred<string>();
+    const definition = createLazyDefinition(() => pending.promise, {
+      timeoutMs: 1000,
+    });
+    const listener = vi.fn();
+    definition.subscribe(listener);
+    void definition.define();
+    await vi.advanceTimersByTimeAsync(1000);
+
+    pending.resolve("tags");
+    await vi.advanceTimersByTimeAsync(0);
+
+    expect(definition.state()).toEqual({ status: "failed" });
+    expect(listener).toHaveBeenCalledTimes(1);
+    vi.restoreAllMocks();
+    vi.useRealTimers();
+  });
+
+  it("leaves no timer behind once the load has arrived", async () => {
+    vi.useFakeTimers();
+    const definition = createLazyDefinition(() => Promise.resolve("tags"), {
+      timeoutMs: 1000,
+    });
 
     await definition.define();
 
-    expect(definition.state()).toEqual({ status: "ready", value: "tags" });
-    error.mockRestore();
+    expect(vi.getTimerCount()).toBe(0);
+    vi.useRealTimers();
   });
 
   it("stops telling a listener that has unsubscribed", async () => {

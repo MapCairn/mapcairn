@@ -1,23 +1,13 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
 import { EN_GB_CATALOGUE } from "@mapcairn/core";
-import {
-  ChromeSkeleton,
-  chromeSkeletonCopy,
-  SkipLink,
-  useMessages,
-  VisuallyHidden,
-} from "@mapcairn/map";
+import { SkipLink, useMessages, VisuallyHidden } from "@mapcairn/map";
 import type { LinksFunction, MetaFunction } from "react-router";
 import { App } from "../App";
 import { ClientOnly } from "../app/ClientOnly";
 import { MAP_REGION_ID } from "../app/initialView";
-import { NoScriptNotice } from "../app/NoScriptNotice";
-import {
-  hiddenWithoutScripts,
-  mapPlaceholder,
-  placeholderChrome,
-} from "../app/shell.css";
+import { MapPlaceholder } from "../app/MapPlaceholder";
+import { hiddenWithoutScripts } from "../app/shell.css";
 import { buildPageMeta } from "../buildPageMeta";
 import { PLAYGROUND_PATH, SITE_URL } from "../constants/siteConfig";
 import {
@@ -98,13 +88,12 @@ function PlaygroundSummary() {
  *   `ChromeSkeleton` (the search pill, map controls and credits button in
  *   their final places). The app mounts after hydration, because it depends
  *   on stored settings and device preferences the server cannot know;
- *   rendering it on the server would make the two disagree. Its own `main`
- *   (inside `MapChrome`) then replaces the placeholder and the skeleton in the
- *   same boxes.
+ *   rendering it on the server would make the two disagree. It keeps the
+ *   placeholder up until `MapView` draws, and its own `main` (inside
+ *   `MapChrome`) then replaces the placeholder and the skeleton in the same
+ *   boxes.
  */
 export default function MapRoute() {
-  const messages = useMessages();
-  const { t } = messages;
   return (
     <>
       <SkipLink targetId={MAP_REGION_ID} className={hiddenWithoutScripts} />
@@ -112,28 +101,7 @@ export default function MapRoute() {
         <VisuallyHidden as="h1">MapCairn</VisuallyHidden>
         <PlaygroundSummary />
       </header>
-      <ClientOnly
-        fallback={
-          <main
-            className={mapPlaceholder}
-            aria-busy="true"
-            id={MAP_REGION_ID}
-            data-testid="map-placeholder"
-          >
-            <noscript>
-              <NoScriptNotice />
-            </noscript>
-            <div className={placeholderChrome}>
-              <VisuallyHidden>{t("app.loadingMap", {})}</VisuallyHidden>
-              <ChromeSkeleton
-                copy={chromeSkeletonCopy(messages)}
-                directions
-                draw
-              />
-            </div>
-          </main>
-        }
-      >
+      <ClientOnly fallback={<MapPlaceholder />}>
         <App />
       </ClientOnly>
     </>

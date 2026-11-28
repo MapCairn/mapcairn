@@ -20,9 +20,10 @@ import {
   useSettings,
   useTheme,
 } from "@mapcairn/map";
-import { useCallback } from "react";
+import { useCallback, useState } from "react";
 import { AppChrome } from "./app/AppChrome";
 import { MAP_REGION_ID } from "./app/initialView";
+import { MapPlaceholder, WhenDrawn } from "./app/MapPlaceholder";
 import { MapUnavailable } from "./app/MapUnavailable";
 import { useMapApp } from "./app/useMapApp";
 import { useMapModelContextTools } from "./webmcp/useMapModelContextTools";
@@ -60,9 +61,14 @@ export function App() {
     units: settings.units,
   });
 
+  // The placeholder stays until the map view draws, or says it cannot.
+  const [covered, setCovered] = useState(true);
+  const uncover = useCallback(() => setCovered(false), []);
+
   const fix = app.locate.fix;
   return (
     <SelectionProvider selection={app.selection}>
+      {covered ? <MapPlaceholder /> : null}
       <MapView
         id={MAP_REGION_ID}
         testId="map-host"
@@ -79,7 +85,10 @@ export function App() {
         onBasemapApplied={app.onBasemapApplied}
         onBasemapError={app.onBasemapError}
         onBasemapUnavailable={app.onBasemapUnavailable}
-        onEngineError={app.onEngineError}
+        onEngineError={(error, failed) => {
+          uncover();
+          app.onEngineError(error, failed);
+        }}
         onClick={app.onMapClick}
         onLongPress={app.onLongPress}
         onPointerMove={app.setCursor}
@@ -136,6 +145,7 @@ export function App() {
         <MapDirections result={app.directions.result} />
         <DrawMapBindings draw={app.draw} />
         <MapUnavailable />
+        <WhenDrawn onDrawn={uncover} />
       </MapView>
     </SelectionProvider>
   );
