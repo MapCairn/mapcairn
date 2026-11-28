@@ -1,7 +1,10 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
 
-/** Where a lazy definition stands. A failed one is tried again when next asked. */
+/**
+ * Where a lazy definition stands. A failed one is loaded again when next asked,
+ * though a browser may answer a repeated module request with the same failure.
+ */
 export type DefinitionState<T> =
   | { readonly status: "loading" }
   | { readonly status: "ready"; readonly value: T }

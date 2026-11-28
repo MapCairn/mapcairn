@@ -100,9 +100,9 @@ function Demo({
 }
 
 /**
- * Stands in for a demo built on Radix until the page hydrates. Radix writes
- * inline styles during server rendering, which the strict style CSP blocks,
- * so these demos render in the browser only.
+ * Stands in for a demo that renders in the browser only, until the page
+ * hydrates. Radix writes inline styles during server rendering, which the
+ * strict style CSP blocks, and a segmented control draws nothing on a server.
  */
 function BrowserOnly({ children }: { readonly children: ReactNode }) {
   return (
