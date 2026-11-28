@@ -590,6 +590,9 @@ export interface CreateMessageCatalogueOptions {
 }
 
 // @public
+export function createMessageStore(services: MessageStoreServices): MessageStore;
+
+// @public
 export function createNamedRegistry<T>(entries: Iterable<readonly [string, T]>): NamedRegistry<T>;
 
 // @public
@@ -2837,6 +2840,25 @@ export type MessageParams = {
 
 // @public
 export type MessagePart = string | Message | HostText;
+
+// @public
+export interface MessageStore {
+    getInitialState(): MessageStoreState;
+    getState(): MessageStoreState;
+    retry(): void;
+    setServices(services: MessageStoreServices): void;
+    subscribe(listener: () => void): () => void;
+}
+
+// @public
+export type MessageStoreServices = Pick<Services, "messages" | "languages" | "settings" | "preferences">;
+
+// @public
+export interface MessageStoreState {
+    readonly failed: string | null;
+    readonly messages: MessageCatalogue;
+    readonly retrying: boolean;
+}
 
 // @public
 export type MessageValue = string | number | Date | readonly string[];

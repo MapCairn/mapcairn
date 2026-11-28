@@ -1,18 +1,17 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
 import {
-  type LanguageCatalogue,
+  createMessageStore,
   type MessageCatalogue,
-  resolveLanguage,
+  type MessageStore,
+  type MessageStoreState,
   type Services,
 } from "@mapcairn/core";
 import {
   createContext,
   type ReactNode,
-  useCallback,
   useEffect,
   useMemo,
-  useRef,
   useState,
   useSyncExternalStore,
 } from "react";
@@ -41,76 +40,30 @@ export interface LanguageLoad {
  */
 export const LanguageLoadContext = createContext<LanguageLoad | null>(null);
 
-/** Subscribes to a store whose server snapshot is its client one, as the other hooks do. */
-function useStoreValue<T>(
-  subscribe: (listener: () => void) => () => void,
-  get: () => T,
-): T {
-  return useSyncExternalStore(subscribe, get, get);
-}
-
 /**
- * The load in flight, or the last one to finish, for one language, with the
- * inputs it was made under. A failed one is tried again only once the setting
- * or the browser's languages have changed, so a failure never loops.
+ * Reads a message store. A server render and the hydration of it read the
+ * store's initial state, so they match even for a store that has since loaded
+ * another language.
  */
-interface LanguageRequest {
-  readonly tag: string;
-  readonly messages: MessageCatalogue;
-  readonly languages: LanguageCatalogue;
-  readonly choice: string | null;
-  readonly browserLanguages: readonly string[];
-  readonly failed: boolean;
-}
-
-/** Whether two language lists hold the same tags in the same order. */
-function sameTags(a: readonly string[], b: readonly string[]): boolean {
-  return a.length === b.length && a.every((tag, index) => tag === b[index]);
-}
-
-/** Whether `request` already answers for `next`, so no load is needed. */
-function answers(
-  request: LanguageRequest | undefined,
-  next: Omit<LanguageRequest, "failed">,
-): boolean {
-  if (
-    request === undefined ||
-    request.tag !== next.tag ||
-    request.messages !== next.messages ||
-    request.languages !== next.languages
-  ) {
-    return false;
-  }
-  return (
-    !request.failed ||
-    (request.choice === next.choice &&
-      sameTags(request.browserLanguages, next.browserLanguages))
+export function useMessageStoreState(store: MessageStore): MessageStoreState {
+  return useSyncExternalStore(
+    store.subscribe,
+    store.getState,
+    store.getInitialState,
   );
-}
-
-/** Whether a load returned a promise rather than a ready catalogue. */
-function isPending(
-  loaded: MessageCatalogue | Promise<MessageCatalogue>,
-): loaded is Promise<MessageCatalogue> {
-  return loaded instanceof Promise;
 }
 
 /**
  * Keeps the catalogue the ui speaks, in one place for the whole tree, so a
- * language loads once however many components read it.
+ * language loads once however many components read it. It reads `core`'s
+ * message store (see `createMessageStore`), which it makes from the services
+ * and keeps for as long as it is mounted, handing it the services of each
+ * render.
  *
  * @remarks Without `Services.languages` the catalogue is `Services.messages`,
- *   always. With it, the language is resolved from the person's setting and
- *   the browser's languages and then loaded. The first render, and every
- *   render until a load finishes, uses `Services.messages` or the last
- *   catalogue that loaded, so the first client render matches the server's
- *   and a slow load never blanks the text. A load that finishes after
- *   another language was asked for is dropped. One that fails keeps the
- *   previous catalogue and warns, and the language is requested again the
- *   next time the setting or the browser's languages resolve, even to the
- *   same tag; a load that is in flight or has succeeded is not repeated.
- *   `LanguageLoadContext` says which language failed and offers a retry that
- *   asks for it again whatever the setting is. {@link ServicesProvider} mounts it.
+ *   always, and `LanguageLoadContext` is null. With it, `LanguageLoadContext`
+ *   says which language failed and offers a retry that asks for it again
+ *   whatever the setting is. {@link ServicesProvider} mounts it.
  */
 export function ActiveMessagesProvider({
   services,
@@ -120,94 +73,14 @@ export function ActiveMessagesProvider({
   readonly children: ReactNode;
 }) {
   const { messages, languages, settings, preferences } = services;
-  const subscribeSettings = useCallback(
-    (listener: () => void) => settings.subscribe(listener),
-    [settings],
-  );
-  const subscribePreferences = useCallback(
-    (listener: () => void) => preferences.subscribe(listener),
-    [preferences],
-  );
-  const choice = useStoreValue(subscribeSettings, () =>
-    settings.get(),
-  ).language;
-  const browserLanguages = useStoreValue(subscribePreferences, () =>
-    preferences.get(),
-  ).languages;
-  const [active, setActive] = useState<MessageCatalogue>(messages);
-  const requested = useRef<LanguageRequest>(undefined);
-  const [failed, setFailed] = useState<string | null>(null);
-  const [pending, setPending] = useState<string | null>(null);
-
-  const tag =
-    languages === undefined
-      ? undefined
-      : resolveLanguage(
-          choice,
-          languages.languages.map((language) => language.tag),
-          browserLanguages,
-          languages.defaultLanguage,
-        );
-
-  const startLoad = useCallback((inputs: Omit<LanguageRequest, "failed">) => {
-    const { tag: wanted, languages: offered } = inputs;
-    const request = { ...inputs, failed: false };
-    requested.current = request;
-    setFailed((previous) => (previous === wanted ? previous : null));
-    setPending(wanted);
-    const succeed = (catalogue: MessageCatalogue) => {
-      if (requested.current === request) {
-        setActive(catalogue);
-        setFailed(null);
-        setPending(null);
-      }
-    };
-    const fail = (error: unknown) => {
-      if (requested.current === request) {
-        requested.current = { ...request, failed: true };
-        setFailed(wanted);
-        setPending(null);
-      }
-      console.warn(`Could not load the "${wanted}" language.`, error);
-    };
-    try {
-      const loaded = offered.load(wanted);
-      if (isPending(loaded)) {
-        loaded.then(succeed, fail);
-      } else {
-        succeed(loaded);
-      }
-    } catch (error) {
-      fail(error);
-    }
-  }, []);
-
+  const [store] = useState(() => createMessageStore(services));
   useEffect(() => {
-    if (languages === undefined || tag === undefined) {
-      return;
-    }
-    if (tag === messages.language) {
-      requested.current = undefined;
-      setActive(messages);
-      setFailed(null);
-      setPending(null);
-      return;
-    }
-    const inputs = { tag, messages, languages, choice, browserLanguages };
-    if (!answers(requested.current, inputs)) {
-      startLoad(inputs);
-    }
-  }, [languages, messages, tag, choice, browserLanguages, startLoad]);
-
-  const retry = useCallback(() => {
-    const last = requested.current;
-    if (last?.failed) {
-      startLoad(last);
-    }
-  }, [startLoad]);
+    store.setServices({ messages, languages, settings, preferences });
+  }, [store, messages, languages, settings, preferences]);
+  const { messages: active, failed, retrying } = useMessageStoreState(store);
   const load = useMemo(
-    () => ({ failed, retrying: failed !== null && pending === failed, retry }),
-    [failed, pending, retry],
+    () => ({ failed, retrying, retry: store.retry }),
+    [failed, retrying, store],
   );
 
   return (

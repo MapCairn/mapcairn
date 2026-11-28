@@ -8,5 +8,6 @@ export * from "./formatMessage";
 export * from "./isolate";
 export * from "./languageCatalogue";
 export * from "./languageDirection";
+export * from "./messageStore";
 export * from "./resolveLanguage";
 export * from "./resolveText";
