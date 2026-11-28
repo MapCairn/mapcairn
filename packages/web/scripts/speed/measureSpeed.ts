@@ -114,14 +114,24 @@ async function measureOnce(
   address: string,
   throttle: number,
 ): Promise<Sample> {
-  const context = await browser.newContext({ ...devices["Pixel 7"] });
+  // The tour is stored as seen, so no welcome card is drawn over the chrome.
+  const context = await browser.newContext({
+    ...devices["Pixel 7"],
+    storageState: {
+      cookies: [],
+      origins: [
+        {
+          origin: new URL(address).origin,
+          localStorage: [
+            { name: "mapcairn:tourSeen", value: JSON.stringify(TOUR_VERSION) },
+          ],
+        },
+      ],
+    },
+  });
   try {
     const page = await context.newPage();
     await mockThirdPartyServices(page);
-    await page.addInitScript((version: number) => {
-      // biome-ignore lint/style/noRestrictedGlobals: runs in the measured page, which has no settings port to go through.
-      localStorage.setItem("mapcairn:tourSeen", JSON.stringify(version));
-    }, TOUR_VERSION);
     await page.addInitScript(noteWhenDrawn, SETTINGS_BUTTON);
     const session = await context.newCDPSession(page);
     await session.send("Emulation.setCPUThrottlingRate", { rate: throttle });
